@@ -85,6 +85,26 @@ Prefer finding things the way a user does — `screen.getByRole('button', { name
 `getByLabelText('Email')` — over CSS classes; that also keeps the
 accessibility labels honest.
 
+### Accessibility
+
+Every new page, and every part of the app shell, gets one test that runs
+axe-core over what it renders ([CONSTRAINTS.md](../CONSTRAINTS.md)):
+
+```tsx
+import { expectNoA11yViolations } from '@/test/a11y'
+
+it('/sign-in has no critical or serious problems', async () => {
+    renderAt('/sign-in')
+    await screen.findByLabelText('Email') // wait for the page, not the spinner
+    await expectNoA11yViolations()
+})
+```
+
+It fails on a critical or serious WCAG 2.1 A / AA problem (a button with no
+name, an input with no label, a broken ARIA attribute) and names the rule
+and the element. Colour contrast is not checked: jsdom computes no colours.
+`src/test/__tests__/a11y.test.tsx` proves the check fails on a real problem.
+
 ### A hook
 
 ```tsx

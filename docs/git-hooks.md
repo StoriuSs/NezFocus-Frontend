@@ -22,12 +22,18 @@ two tools for them:
 - **lint-staged** runs commands on the files you are committing only (the
   *staged* files), not on the whole project, so the commit hook stays fast.
 
-## The two hooks
+## The three hooks
 
 | Hook | When | Runs | Why |
 |------|--------------|--------------|-----|
-| `pre-commit` | Before each commit | `npx lint-staged`: `eslint --fix` then `prettier --write` on the staged `.ts` and `.tsx` files, and on `k6/**/*.js` | Fixes what can be fixed and lays the code out the house way; stops the commit on a lint error it cannot fix |
+| `pre-commit` | Before each commit | gitleaks on the staged files, then `npx lint-staged`: `eslint --fix` then `prettier --write` on the staged `.ts` and `.tsx` files, and on `k6/**/*.js` | No secret is committed; fixes what can be fixed and lays the code out the house way; stops the commit on a lint error it cannot fix |
+| `commit-msg` | After you write the message | The [CONSTRAINTS.md](../CONSTRAINTS.md) floor on what the commit holds | No new `@ts-ignore` / `eslint-disable`, stubs, skipped tests, or tests removed without a `Tests-removed:` line |
 | `pre-push` | Before each push | `pnpm test` | No push with a failing unit test |
+
+The pre-commit hook needs [gitleaks](https://github.com/gitleaks/gitleaks)
+on the PATH and fails, saying how to install it, when it is missing
+(Windows: `winget install --id Gitleaks.Gitleaks -e`, then restart the
+terminal or editor).
 
 ## When you commit
 

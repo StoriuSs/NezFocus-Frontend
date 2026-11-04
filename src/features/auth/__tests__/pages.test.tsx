@@ -5,6 +5,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import i18n from '@/i18n'
 import { forgetSignUpPassword } from '@/features/auth/lib/sign-up-password'
 import { apiError, mockAuthStore, queryWrapper } from '@/test/helpers'
+import { expectNoA11yViolations } from '@/test/a11y'
 
 const authApi = {
     register: vi.fn(),
@@ -99,6 +100,14 @@ describe('the auth pages', () => {
         delete window.turnstile
         sessionStorage.clear()
         forgetSignUpPassword()
+    })
+
+    describe('accessibility', () => {
+        it.each(['/sign-in', '/sign-up'])('%s has no critical or serious problems', async (path) => {
+            renderAt(path)
+            await screen.findByLabelText('Email')
+            await expectNoA11yViolations()
+        })
     })
 
     describe('sign in', () => {

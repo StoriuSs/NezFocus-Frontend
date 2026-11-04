@@ -5,6 +5,13 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import jsxA11y from 'eslint-plugin-jsx-a11y'
 import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
+import { readdirSync } from 'node:fs'
+
+// Every folder under src/features is a feature, so a new one is held by the
+// boundary rule below from its first file (CONSTRAINTS.md, architecture).
+const FEATURES = readdirSync(new URL('./src/features', import.meta.url), { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
 
 export default defineConfig([
     globalIgnores(['dist', 'coverage', '.agents', 'playwright-report', 'test-results', 'src/lib/api-schema.d.ts']),
@@ -80,21 +87,19 @@ export default defineConfig([
         }
     },
     // A feature uses another only through its index.ts (`@/features/users`),
-    // so its insides stay free to move (docs/project-structure.md). Add a new
-    // feature's folder name to this list.
-    ...['auth', 'users'].map((self) => ({
+    // so its insides stay free to move (docs/project-structure.md). The
+    // features are FEATURES, read from src/features at the top of this file.
+    ...FEATURES.map((self) => ({
         files: [`src/features/${self}/**/*.{ts,tsx}`],
         ignores: [`src/features/${self}/**/__tests__/**`],
         rules: {
             'no-restricted-imports': [
                 'error',
                 {
-                    patterns: ['auth', 'users']
-                        .filter((other) => other !== self)
-                        .map((other) => ({
-                            group: [`@/features/${other}/*`],
-                            message: `Import from '@/features/${other}' (its index.ts), or add what you need there.`
-                        }))
+                    patterns: FEATURES.filter((other) => other !== self).map((other) => ({
+                        group: [`@/features/${other}/*`],
+                        message: `Import from '@/features/${other}' (its index.ts), or add what you need there.`
+                    }))
                 }
             ]
         }

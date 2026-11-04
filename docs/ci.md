@@ -112,8 +112,10 @@ Every check is a command you can run yourself, from the project folder.
 |---|---|---|
 | Lint (ESLint) | Code mistakes a program can spot: a missing hook dependency, an unhandled promise, an accessibility problem | `pnpm lint` |
 | Format (Prettier) | Code not laid out the house way | `pnpm format:check` (`pnpm format` fixes it) |
-| Unit tests (Vitest) | A component or function that no longer does what its test says | `pnpm test` |
+| Unit tests (Vitest) | A component or function that no longer does what its test says, or a page with a critical or serious accessibility problem (axe-core, [testing.md](./testing.md#accessibility)) | `pnpm test` |
+| Changed-line coverage | New or changed lines in the logic files (`src/lib`, `src/hooks`, a feature's `api/`, `hooks/`, `lib/`, the stores) that fewer than 80% of are run by a test ([CONSTRAINTS.md](../CONSTRAINTS.md)); read from the coverage report of the unit run | `pnpm check:task` |
 | Build | Type errors anywhere (`tsc -b`), and anything that stops `vite build` | `pnpm build` |
+| Bundle size | What the first screen downloads, gzipped (`.size-limit.mjs`); reports only until CONSTRAINTS.md records a budget | `pnpm build && pnpm size` |
 
 The build checks no settings: the image holds none, and the container gets
 them when it starts. The settings are checked by `pnpm dev`, by `deploy.sh`
@@ -125,6 +127,16 @@ the unit tests (`src/config/__tests__/env-files.test.ts`).
 ships has a known security hole rated high or critical. The list of known
 holes (*advisories*) is public and grows every day, so this check can fail
 on a day you changed nothing. Yourself: `pnpm audit --prod --audit-level high`.
+
+**Constraints floor and secrets** (under a minute, documentation-only
+pushes included, since weakening [CONSTRAINTS.md](../CONSTRAINTS.md) is one):
+no new suppression comments, stubs, skipped tests, tests removed without a
+`Tests-removed:` line in a commit message, or loosened constraints; and
+gitleaks finds no secret in the pushed commits. Yourself: `pnpm check:fast`.
+
+**Code scan** (a few minutes): Semgrep's `p/default` rules over the source
+files the push changed; a finding rated high, critical or `ERROR` fails it.
+CI only, since Semgrep is heavy for a laptop.
 
 ## The production image
 
