@@ -1,0 +1,87 @@
+# ============================================================================
+# Docker Compose — Production (React Frontend)
+# ============================================================================
+# Usage — deploy with ./deploy.sh (see docs/deploy.md). It tags the image with
+# the commit, waits for health and rolls back on failure. By hand:
+#   pnpm docker:prod
+#   (= docker compose --env-file .env.production -f docker-compose.prod.yaml up -d --build)
+#
+# NOTE: the addresses are NOT built into the bundle. The container writes
+# /config.js from its own environment when it starts, so one image runs
+# anywhere and changing an address needs only a restart. --env-file is what
+# passes them from .env.production. See docs/environment.md.
+# ============================================================================
+
+# Explicit project name — see docker-compose.dev.yaml.
+name: react-starter-auth-prod
+
+services:
+  # ── React App (nginx serving static files) ──
+  app:
+    container_name: react-starter-auth-prod
+    # deploy.sh sets APP_TAG to the commit being deployed, so every release is
+    # its own image and the previous one stays available for rollback.
+    # DEPLOY_IMAGE names the image: any local name when the server builds it,
+    # the registry path (ghcr.io/you/app) when CI builds it.
+    image: ${DEPLOY_IMAGE:-react-starter-auth-prod-app}:${APP_TAG:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: prod
+      # The addresses are not built in (they reach the container below), so
+      # the build needs only error tracking's release and where to send the
+      # sourcemaps.
+      args:
+        # The release errors are filed under: the commit deploy.sh deploys.
+        VITE_SENTRY_RELEASE: ${APP_TAG:-}
+        SENTRY_ORG: ${SENTRY_ORG:-}
+        SENTRY_PROJECT: ${SENTRY_PROJECT:-}
+      # Sourcemap upload token (docs/error-tracking.md); unset: no upload.
+      secrets:
+        - sentry_auth_token
+    # What this deployment talks to. The container writes them into
+    # /config.js when it starts, and refuses to start without VITE_API_URL or
+    # with a malformed value (nginx/40-runtime-config.sh). Changing one needs no rebuild, only
+    # ./deploy.sh.
+    environment:
+      VITE_API_URL: ${VITE_API_URL:?set VITE_API_URL in the env file (docs/deploy.md)}
+      # Optional; see .env.example.
+      VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
+      VITE_SENTRY_RELEASE: ${APP_TAG:-}
+      CSP_IMG_SRC: ${CSP_IMG_SRC:-}
+    ports:
+      # Bind to 127.0.0.1, NOT 0.0.0.0. In production, Nginx on the host
+      # terminates TLS and reverse-proxies to this container. The container
+      # itself shouldn't be reachable from the public internet directly.
+      # Pick a host port that doesn't collide with other services on the box
+      # (the host Nginx owns 80 and 443).
+      - "127.0.0.1:${FRONTEND_PORT:-8081}:8080"
+    restart: unless-stopped
+    healthcheck:
+      # 127.0.0.1, not localhost (which can resolve to IPv6 first); the
+      # unprivileged nginx listens on 8080.
+      test: ["CMD-SHELL", "wget -qO /dev/null http://127.0.0.1:8080/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      # Failures in the first 30s don't count; nginx itself starts in under a second.
+      start_period: 30s
+      # Probe every 2s while starting (Docker Engine 25+), so a deploy sees the
+      # new release healthy in seconds rather than after the first 30s interval.
+      start_interval: 2s
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: "0.5"
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+# Build secrets: read from the environment deploy.sh or CI runs compose in, never
+# written into the image. An unset one is passed empty (no sourcemap upload).
+secrets:
+  sentry_auth_token:
+    environment: SENTRY_AUTH_TOKEN

@@ -1,0 +1,43 @@
+# ============================================================================
+# Docker Compose — Development (React Frontend)
+# ============================================================================
+# Usage:
+#   pnpm docker:dev
+#   (= docker compose --env-file .env.development -f docker-compose.dev.yaml up -d --build)
+# ============================================================================
+
+# Explicit project name. Without it both compose files resolve to the same
+# project (named after the directory), so `down` on one also removes the
+# other's containers.
+name: react-starter-auth-dev
+
+services:
+  # ── React App (Vite Dev Server) ──
+  app:
+    container_name: react-starter-auth-dev
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev
+    env_file:
+      - .env.development
+    environment:
+      # Hot reload through the bind mount. On Docker Desktop (Windows, and
+      # macOS without VirtioFS events) host file changes raise no inotify
+      # events inside the container, so Vite kept serving the old module until
+      # a restart. Polling picks the changes up; set here only, so running
+      # `pnpm dev` on the host keeps event-based watching.
+      CHOKIDAR_USEPOLLING: "true"
+    ports:
+      # Bind to 127.0.0.1 even in dev — keeps the Vite dev server off the
+      # public network if you run docker-compose on a shared/remote machine.
+      # If you genuinely need LAN access (e.g., testing on a phone over wifi),
+      # change to "0.0.0.0:3001:3001" temporarily.
+      - "127.0.0.1:3001:3001"
+    volumes:
+      - .:/app                # Source code bind-mount for HMR
+      # Prevent host node_modules from overriding the container's. `pnpm docker:dev`
+      # passes --renew-anon-volumes, so this is refreshed from the rebuilt image;
+      # otherwise a dependency added later never reaches the container.
+      - /app/node_modules
+    restart: unless-stopped

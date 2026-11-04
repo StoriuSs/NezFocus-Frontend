@@ -1,0 +1,39 @@
+{
+  "home": {
+    "hero": {
+      "title": "React Starter",
+      "subtitle": "Kết hợp với NestJS",
+      "description": "Được xây dựng với Vite, React, TypeScript, Tailwind CSS, Zustand và TanStack Query. Thiết kế để sử dụng API NestJS một cách an toàn và hiệu quả."
+    },
+    "features": {
+      "security": {
+        "title": "Bảo mật mặc định",
+        "description": "Content-Security-Policy chặt chẽ, xử lý lỗi an toàn và yêu cầu idempotent có sẵn."
+      },
+      "serverState": {
+        "title": "Server State",
+        "description": "Sử dụng TanStack Query để cache và đồng bộ với NestJS."
+      },
+      "fastTyped": {
+        "title": "Nhanh & Type-safe",
+        "description": "Vite + TypeScript + Tailwind đảm bảo trải nghiệm phát triển tốt nhất."
+      }
+    }
+  },
+  "notFound": {
+    "title": "404 - Không tìm thấy trang",
+    "description": "Trang bạn tìm kiếm không tồn tại.",
+    "goHome": "Về trang chủ"
+  },
+  "formExample": {
+    "title": "Ví dụ Form",
+    "subtitle": "Sử dụng React Hook Form + Zod",
+    "email": "Email",
+    "password": "Mật khẩu",
+    "submit": "Gửi form",
+    "submitting": "Đang gửi...",
+    "successToast": "Gửi form thành công!",
+    "successDescription": "Kiểm tra console để xem giá trị.",
+    "failedToast": "Gửi form thất bại"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.node.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.e2e.tsbuildinfo",
+    // Node for the runner and setup; DOM for code passed to the browser
+    // (page.addInitScript, page.evaluate).
+    "lib": ["ES2023", "DOM"]
+  },
+  "include": ["playwright.config.ts", "e2e/**/*.ts"]
+}

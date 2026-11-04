@@ -1,0 +1,142 @@
+# End-to-end tests (Playwright)
+
+`pnpm test:e2e` drives real Chromium and Firefox browsers through the app:
+six tests, one per main flow. The suites have different needs:
+
+| Suite | Needs | What it checks |
+|---|---|---|
+| `e2e/oauth.spec.ts` | This app and **the API with Google configured** (skipped otherwise) | "Continue with Google" on sign-in, pointing at the API with the page to return to; the API's redirect to Google with PKCE, the registered return address and the `oauth_state` cookie. Not the sign-in at Google itself, which needs a real Google account: that is a manual test |
+| `e2e/two-step.spec.ts` | What the account suite needs | Two-step sign-in: turning it on in settings (the key, a code from an "app", the ten recovery codes), then signing in with a code (a wrong one's tries left) and coming back to the page it was heading for; the account is deleted at the end, with a recovery code. The app is [otpauth](https://github.com/hectorm/otpauth), computing codes from the key the page shows |
+| `e2e/account.spec.ts` | This app, **the API**, and the **Mailpit** it sends email to | An account's whole life: sign up (a common password refused), confirm with the code read from Mailpit (the address shown, not editable; the code signs in), choose a username; a deep link coming back after sign-in; a reload keeping the session (the refresh cookie crossing origins); a forgotten password reset, which signs in (the old password refused after); the account deleted |
+
+Any CSP violation or uncaught page error fails a run.
+
+The browser tests are not in CI: they need the whole API
+running, with its Mailpit and with Turnstile off or on Cloudflare's test keys.
+Run them before a release, and after changing anything around sign-in, the
+API client, the CSP or nginx. They create accounts, so run them against your
+own development stack, not a live site.
+
+## Running it
+
+Once, to install the browsers:
+
+```bash
+pnpm exec playwright install chromium firefox
+```
+
+Start the API with its development stack (in the API repository):
+
+```bash
+pnpm docker:dev     # the API on :8888 by default, Postgres, Redis, Mailpit on :8025
+```
+
+What the API's `.env.development` needs (its `.env.example` already has the
+first three):
+
+| API setting | Why |
+| --- | --- |
+| `CORS_ORIGINS` includes `http://localhost:3001`, `CORS_CREDENTIALS=true` | The browser may call the API, and send the refresh cookie |
+| `FRONTEND_URL=http://localhost:3001` | The return from Google (the OAuth suite) comes back to this app |
+| `EMAIL_*` pointing at Mailpit | The codes are read from Mailpit. The API's development stack sets this up |
+| `TURNSTILE_*` empty, or Cloudflare's test keys | A real key can show a real challenge; the suites refuse to start with one ([Turnstile](#turnstile)) |
+| `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` | Only for the OAuth suite, which is skipped without them |
+| Trusts one proxy hop | `asOwnClient()` gives each browser its own address with `X-Forwarded-For` ([below](#how-the-account-suite-avoids-the-apis-limits)). The API starter trusts one hop by default |
+
+Then this app, and the tests.
+
+**Against the dev server** (quickest, but no CSP):
+
+```bash
+pnpm dev          # http://localhost:3001
+pnpm test:e2e
+```
+
+**Against the production image** (where the CSP and nginx apply — do this
+before a release):
+
+```bash
+docker build --target prod -t react-starter:e2e .
+docker run -d --name react-e2e -p 127.0.0.1:3001:8080 \
+  -e VITE_API_URL=http://localhost:8888/api/v1 react-starter:e2e
+
+pnpm test:e2e
+
+docker rm -f react-e2e
+```
+
+## Options
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `E2E_BASE_URL` | `http://localhost:3001` | The app under test |
+| `E2E_API_URL` | `http://localhost:8888/api/v1` | The API, for the account suite |
+| `E2E_MAILPIT_URL` | `http://localhost:8025` | Where the codes are read from |
+
+Useful flags: `pnpm test:e2e --headed` shows the browsers,
+`pnpm test:e2e --project=firefox` runs one browser, `pnpm test:e2e --ui` opens
+Playwright's interactive runner. After a failure, screenshots and traces are in
+`test-results/`; open a trace with `pnpm exec playwright show-trace <trace.zip>`.
+
+## How the account suite avoids the API's limits
+
+The API limits new accounts and failed sign-ins per client address, and every
+test run comes from `127.0.0.1` — the second or third run in an hour would be
+refused. So each browser gets an address of its own: `asOwnClient()` in
+`e2e/helpers.ts` adds a random `X-Forwarded-For` to every request to the API,
+which the API trusts from one proxy hop.
+
+The limit per email address (one code email a minute) is met head-on instead:
+the reset asks for an email within a minute of sign-up's, the page says "Too
+many attempts. Try again in N seconds", and `submitPatiently()` waits that long
+and submits again. That checks the message along the way. It is why that test
+takes up to a minute.
+
+Each run makes one account per browser and suite (`e2e-chromium…@example.test`,
+`e2e-2fa-chromium…@example.test`). The account suite deletes its account at
+the end (that is its last test), and the two-step test deletes its own. One
+left behind by a failed run is harmless in a development database, and the
+`example.test` addresses make it easy to find.
+
+## Turnstile
+
+With Turnstile on, sign-up and "forgot password" show Cloudflare's widget, and
+the suites wait for it to be solved (`solveTurnstile()` in `e2e/helpers.ts`).
+A real site key can show a real challenge, which a test browser is not meant
+to pass, so the suites **refuse to start** with one. Run the API either:
+
+- with Turnstile off: `TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY` empty, or
+- with [Cloudflare's test keys](https://developers.cloudflare.com/turnstile/troubleshooting/testing/),
+  whose widget always passes. This is the better run: the widget really loads
+  from Cloudflare, through the Content-Security-Policy.
+
+  | | Site key | Secret key |
+  |---|---|---|
+  | Always passes | `1x00000000000000000000AA` | `1x0000000000000000000000000000000AA` |
+
+  The widget then says "For testing only". Put your real keys back afterwards.
+
+## When it fails
+
+| Message | Cause |
+| --- | --- |
+| `net::ERR_CONNECTION_REFUSED` | Nothing is serving the app at `E2E_BASE_URL` |
+| `The API is not answering at …` | Start the API (`pnpm docker:dev` there) or set `E2E_API_URL` |
+| `a "Verify" email to …` timed out | The API could not send mail: look at Mailpit, and at the `auth` queue on the API's `/admin/queues` |
+| The reload test finds the user signed out | The refresh cookie is not coming back: the API's `CORS_ORIGINS` or `CORS_CREDENTIALS`, or cookies blocked ([auth/session.md](./auth/session.md)) |
+| `port is already allocated` | Something else uses 3001; pick another and set `E2E_BASE_URL` |
+| `CSP violation: …` | The policy blocks something the page needs. The directive and the blocked address are in the message; the policy is built by `scripts/csp.mjs` |
+| The container exits at once | It was started without `VITE_API_URL`; `docker logs react-e2e` names it |
+
+## Adding a test
+
+Tests live in `e2e/`; shared helpers in `e2e/helpers.ts`:
+`watchForProblems(page)` (collects CSP violations and page errors to assert on
+at the end), `codeFromEmail()` (reads a code from Mailpit), `asOwnClient()`,
+`openAccountMenuItem()`. Prefer role and label selectors
+(`getByRole('button', { name: 'Sign in' })`) over CSS classes; they also keep
+the accessibility labels honest.
+
+Keep these suites to the few flows that must never break. Component behaviour
+belongs in the Vitest tests ([testing.md](./testing.md)), which are much
+faster.

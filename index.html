@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>%SITE_NAME%</title>
+    <!--
+      Applies the saved theme before anything paints. React renders only after
+      the app has started, so without this a dark-mode user saw a white page
+      first.
+      Mirrors src/hooks/useTheme.ts (storage key "theme").
+    -->
+    <script>
+      (function () {
+        try {
+          var theme = localStorage.getItem('theme')
+          var dark = theme === 'dark' || ((theme === null || theme === 'system') && matchMedia('(prefers-color-scheme: dark)').matches)
+          if (dark) document.documentElement.classList.add('dark')
+        } catch (e) {}
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <!--
+      This deployment's settings (the API address, error tracking).
+      In production the container writes it at start, so one image runs
+      anywhere; in development it is the empty file in public/, and the app
+      falls back to the VITE_* values Vite inlines. Loaded before the app, and
+      not a module, so window.__APP_CONFIG__ is set before any of it runs.
+    -->
+    <script src="/config.js"></script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

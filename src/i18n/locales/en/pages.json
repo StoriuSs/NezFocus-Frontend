@@ -1,0 +1,39 @@
+{
+  "home": {
+    "hero": {
+      "title": "React Starter",
+      "subtitle": "Matched for NestJS",
+      "description": "Built with Vite, React, TypeScript, Tailwind CSS, Zustand, and TanStack Query. Designed to consume your NestJS API securely and efficiently."
+    },
+    "features": {
+      "security": {
+        "title": "Secure by Default",
+        "description": "A strict Content-Security-Policy, safe error handling and idempotent requests out of the box."
+      },
+      "serverState": {
+        "title": "Server State",
+        "description": "Powered by TanStack Query for caching and syncing with NestJS."
+      },
+      "fastTyped": {
+        "title": "Fast & Typed",
+        "description": "Vite + TypeScript + Tailwind ensures a premium DX."
+      }
+    }
+  },
+  "notFound": {
+    "title": "404 - Page Not Found",
+    "description": "The page you are looking for does not exist.",
+    "goHome": "Go Home"
+  },
+  "formExample": {
+    "title": "Form Example",
+    "subtitle": "Using React Hook Form + Zod",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Submit Form",
+    "submitting": "Submitting...",
+    "successToast": "Form submitted successfully!",
+    "successDescription": "Check the console for values.",
+    "failedToast": "Failed to submit form"
+  }
+}

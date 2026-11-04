@@ -1,0 +1,16 @@
+# pnpm v10+ settings. Docs: https://pnpm.io/settings#onlybuiltdependencies
+#
+# pnpm v10 skips dependency install scripts unless the package is listed
+# here. esbuild's script only verifies that its platform binary is installed
+# (Vite bundles with it); allowing it removes the "Ignored build scripts"
+# warning from every install. The Docker build installs with --ignore-scripts
+# and is unaffected.
+onlyBuiltDependencies:
+  - esbuild
+
+# @sentry/cli (used by @sentry/vite-plugin to upload sourcemaps) gets its
+# binary from a platform package (@sentry/cli-linux-x64 and so on); its
+# install script only downloads one when that package is missing. Skipped on
+# purpose, like every script in the Docker build.
+ignoredBuiltDependencies:
+  - '@sentry/cli'

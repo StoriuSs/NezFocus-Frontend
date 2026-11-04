@@ -1,0 +1,46 @@
+{
+  "buttons": {
+    "cancel": "Hủy",
+    "edit": "Chỉnh sửa",
+    "retry": "Thử lại",
+    "getStarted": "Bắt đầu",
+    "documentation": "Tài liệu",
+    "logout": "Đăng xuất",
+    "signIn": "Đăng nhập",
+    "savePicture": "Lưu ảnh",
+    "saveChanges": "Lưu thay đổi",
+    "close": "Đóng",
+    "tryAgain": "Thử lại",
+    "refreshPage": "Tải lại trang",
+    "home": "Trang chủ"
+  },
+  "labels": {
+    "roles": "Vai trò",
+    "zoom": "Phóng to"
+  },
+  "nav": {
+    "formExample": "Ví dụ Form",
+    "profile": "Hồ sơ",
+    "settings": "Cài đặt",
+    "accountMenu": "Menu tài khoản"
+  },
+  "toasts": {
+    "loggingOut": "Đang đăng xuất..."
+  },
+  "theme": {
+    "toggle": "Đổi giao diện",
+    "light": "Sáng",
+    "dark": "Tối",
+    "system": "Hệ thống"
+  },
+  "errorBoundary": {
+    "title": "Đã xảy ra lỗi",
+    "description": "Đã có lỗi không mong muốn. Vui lòng thử lại hoặc tải lại trang.",
+    "newVersion": "Đã có phiên bản mới của ứng dụng. Tải lại trang để sử dụng.",
+    "routeDescription": "Đã có lỗi không mong muốn. Tải lại trang hoặc quay về trang chủ."
+  },
+  "validation": {
+    "emailInvalid": "Vui lòng nhập email hợp lệ",
+    "passwordTooShort": "Mật khẩu phải có ít nhất 6 ký tự"
+  }
+}

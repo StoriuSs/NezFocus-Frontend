@@ -1,0 +1,46 @@
+{
+  "buttons": {
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "retry": "Retry",
+    "getStarted": "Get Started",
+    "documentation": "Documentation",
+    "logout": "Log out",
+    "signIn": "Sign In",
+    "savePicture": "Save Picture",
+    "saveChanges": "Save changes",
+    "close": "Close",
+    "tryAgain": "Try again",
+    "refreshPage": "Refresh page",
+    "home": "Home"
+  },
+  "labels": {
+    "roles": "Roles",
+    "zoom": "Zoom"
+  },
+  "nav": {
+    "formExample": "Form Example",
+    "profile": "Profile",
+    "settings": "Settings",
+    "accountMenu": "Account menu"
+  },
+  "toasts": {
+    "loggingOut": "Logging out..."
+  },
+  "theme": {
+    "toggle": "Toggle theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "description": "An unexpected error occurred. Please try again or refresh the page.",
+    "newVersion": "A new version of the app is available. Refresh the page to load it.",
+    "routeDescription": "An unexpected error occurred. Refresh the page, or go back to the home page."
+  },
+  "validation": {
+    "emailInvalid": "Enter a valid email address",
+    "passwordTooShort": "Password must be at least 6 characters"
+  }
+}

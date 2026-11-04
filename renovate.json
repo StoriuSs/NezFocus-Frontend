@@ -1,0 +1,158 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "Dependency updates. What each rule does and why: docs/renovate.md.",
+  "extends": [
+    "config:recommended"
+  ],
+  "timezone": "Asia/Ho_Chi_Minh",
+  "schedule": [
+    "before 6am on monday"
+  ],
+  "labels": [
+    "dependencies"
+  ],
+  "prConcurrentLimit": 10,
+  "osvVulnerabilityAlerts": true,
+  "vulnerabilityAlerts": {
+    "labels": [
+      "dependencies",
+      "security"
+    ],
+    "dependencyDashboardApproval": false,
+    "schedule": [
+      "at any time"
+    ],
+    "minimumReleaseAge": null
+  },
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": [
+      "before 6am on the first day of the month"
+    ]
+  },
+  "packageRules": [
+    {
+      "description": "Patch updates, and minor updates of 1.0 and later: one pull request a week, \"Update all non-major dependencies\".",
+      "matchUpdateTypes": [
+        "patch"
+      ],
+      "groupName": "all non-major dependencies",
+      "groupSlug": "all-minor-patch"
+    },
+    {
+      "description": "Minor updates join the weekly pull request, except below 1.0 (0.x), where a minor version may break things: those get their own.",
+      "matchUpdateTypes": [
+        "minor"
+      ],
+      "matchCurrentVersion": "!/^v?0\\./",
+      "groupName": "all non-major dependencies",
+      "groupSlug": "all-minor-patch"
+    },
+    {
+      "description": "npm releases wait 3 days: a broken or malicious release is usually pulled by then.",
+      "matchDatasources": [
+        "npm"
+      ],
+      "minimumReleaseAge": "3 days"
+    },
+    {
+      "description": "Major updates wait in the Dependency Dashboard until you tick them: each is a task, not a routine update.",
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "dependencyDashboardApproval": true,
+      "labels": [
+        "dependencies",
+        "major"
+      ]
+    },
+    {
+      "description": "nginx: stable versions only. Even minor versions (1.30, 1.32) are stable; odd ones are mainline.",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "nginxinc/nginx-unprivileged"
+      ],
+      "allowedVersions": "/^\\d+\\.\\d*[02468](\\.|-|$)/"
+    },
+    {
+      "description": "Node's major version is in the Dockerfile, .nvmrc and @types/node: one pull request for all of them.",
+      "matchPackageNames": [
+        "node",
+        "@types/node"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "groupName": "Node.js major",
+      "groupSlug": "node-major",
+      "prBodyNotes": [
+        "⚠️ **Node.js major version.** Use an LTS release (even-numbered, and marked LTS on nodejs.org; a new even version becomes LTS in October). Keep the Dockerfile, `.nvmrc` and `@types/node` on the same major."
+      ]
+    },
+    {
+      "description": "The UI framework and the build tool: each major has its own migration guide and needs the app clicked through, not only the tests (docs/renovate.md).",
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "matchPackageNames": [
+        "react",
+        "react-dom",
+        "react-router",
+        "react-router-dom",
+        "vite",
+        "tailwindcss",
+        "@tailwindcss/**"
+      ],
+      "prBodyNotes": [
+        "⚠️ **A major version of the framework or the build tool.** Follow its migration guide, then run the app and click through it: the tests don't cover the look, and Tailwind's major versions change its configuration completely."
+      ]
+    },
+    {
+      "description": "GitHub Actions: one pull request for all of them, majors included (their majors rarely need changes here).",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "groupName": "GitHub Actions",
+      "groupSlug": "github-actions",
+      "dependencyDashboardApproval": false
+    },
+    {
+      "description": "The runners' Ubuntu version (runs-on): on request, like other majors; a new one can change the preinstalled tools.",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchDepNames": [
+        "ubuntu"
+      ],
+      "groupName": null,
+      "dependencyDashboardApproval": true
+    },
+    {
+      "description": "Security overrides in pnpm-workspace.yaml, if any, stay within the major version the parent package asks for.",
+      "matchFileNames": [
+        "pnpm-workspace.yaml"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "enabled": false
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Images named in commands, which the built-in managers don't read: package.json scripts, scripts/*.sh, the workflow's run steps.",
+      "managerFilePatterns": [
+        "/^package\\.json$/",
+        "/^scripts/[^/]+\\.sh$/",
+        "/^\\.github/workflows/[^/]+\\.ya?ml$/"
+      ],
+      "matchStrings": [
+        "(?:^|[\\s\"'])(?<depName>[a-z0-9][a-z0-9.-]*(?:/[a-z0-9._-]+)+):(?<currentValue>v?\\d[\\w.-]*)"
+      ],
+      "datasourceTemplate": "docker"
+    }
+  ]
+}

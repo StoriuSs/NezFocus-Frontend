@@ -1,0 +1,58 @@
+# Dependencies
+node_modules
+npm-debug.log*
+
+# Build output
+dist
+dist-ssr
+
+# Environment files. The image holds no settings: the container gets them at
+# start (nginx/40-runtime-config.sh). An env file in the context would be
+# baked into the build layers.
+.env*
+!.env.example
+*.local
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentation
+docs
+AI-DEV-TASKS
+README.md
+
+# Testing
+coverage
+playwright-report
+test-results
+
+# Load-test script (run from a workstation against a running site)
+k6
+
+# Docker files
+Dockerfile
+docker-compose.dev.yaml
+docker-compose.prod.yaml
+.dockerignore
+
+# Logs
+logs
+*.log
+
+# Husky
+.husky
+
+# Agents
+.agents
+
+# Deploy state on the server (deploy.sh)
+.deploy

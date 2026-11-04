@@ -1,0 +1,50 @@
+{
+  "profile": {
+    "backendCard": {
+      "title": "Backend Profile (PostgreSQL)",
+      "subtitle": "Data fetched from NestJS `/users/me`"
+    },
+    "editDialog": {
+      "title": "Edit Profile",
+      "description": "Make changes to your profile here. Click save when you're done.",
+      "displayName": "Display Name",
+      "bio": "Bio"
+    },
+    "cropDialog": {
+      "title": "Edit Profile Picture",
+      "description": "Zoom and move the image to frame your profile picture."
+    },
+    "noBio": "No bio set in database.",
+    "failedToLoad": "Failed to load profile from backend.",
+    "dangerZone": {
+      "title": "Danger Zone",
+      "subtitle": "Irreversible and destructive actions"
+    },
+    "changeAvatar": "Change profile picture"
+  },
+  "usernamePrompt": {
+    "title": "Choose your username",
+    "description": "This will be your unique identifier. You can only set it once!",
+    "label": "Username",
+    "placeholder": "cool_username",
+    "hint": "3-25 characters. Letters, numbers, and underscores only.",
+    "taken": "This username is already taken.",
+    "confirm": "Confirm Username",
+    "setting": "Setting username...",
+    "checkFailed": "Couldn't check availability.",
+    "retryCheck": "Check again",
+    "notYou": "Not you?",
+    "signOut": "Sign out"
+  },
+  "validation": {
+    "displayNameRequired": "Display name is required",
+    "displayNameTooLong": "Display name must be at most 100 characters",
+    "bioTooLong": "Bio must be at most 500 characters"
+  },
+  "toasts": {
+    "profileUpdated": "Profile updated successfully",
+    "avatarUpdated": "File uploaded successfully",
+    "usernameSet": "Username set successfully",
+    "cropFailed": "Failed to crop image"
+  }
+}
