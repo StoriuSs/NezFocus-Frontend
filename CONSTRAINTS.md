@@ -56,9 +56,9 @@ Kiểm bởi `node scripts/constraints/floor-guard.mjs` (cùng script với back
 
 | Chỉ số | Hiện tại | Hướng | Ghi chú |
 |---|---|---|---|
-| Coverage toàn dự án (dòng, `src/`) | đo sau lát dọn base của M0 | must not fall (dung sai 0.5%) | Số đo nằm trong dòng `text-summary` của bước `pnpm test --coverage.enabled` trên CI |
-| JS tải trước màn hình đầu (gzip) | đo sau lát dọn base của M0 | must not grow (dung sai 0.5%) | `pnpm size` sau `pnpm build` (`.size-limit.mjs` đọc `dist/index.html`). Trước khi dọn: 249.28 kB (05/11/2026). Khi có số: ghi `limit` vào `.size-limit.mjs` để size-limit chặn thật. Lý do: LiveKit (M4), dnd-kit, biểu đồ phải tải lười theo trang, giữ NFR-PERF-04 |
-| CSS tải trước màn hình đầu (gzip) | đo sau lát dọn base của M0 | must not grow (dung sai 0.5%) | Như trên. Trước khi dọn: 6.07 kB |
+| Coverage toàn dự án (dòng, `src/`) | 54.77% | must not fall (dung sai 0.5%) | Đo 05/11/2026 sau lát dọn base của M0 (700/1278 dòng). Số đo nằm trong dòng `text-summary` của bước `pnpm test --coverage.enabled` trên CI. Xuống dưới 54.27% là một phát hiện cần giải thích |
+| JS tải trước màn hình đầu (gzip) | 245.83 kB | must not grow (dung sai 0.5%) | Đo 05/11/2026 sau lát dọn base của M0; trước khi dọn: 249.28 kB. `pnpm size` sau `pnpm build` (`.size-limit.mjs` đọc `dist/index.html`); `limit` ở đó là 247.06 kB (số đo cộng dung sai), nên size-limit chặn thật ở `check:full` và CI. Lý do: LiveKit (M4), dnd-kit, biểu đồ phải tải lười theo trang, giữ NFR-PERF-04 |
+| CSS tải trước màn hình đầu (gzip) | 5.92 kB | must not grow (dung sai 0.5%) | Như trên. Trước khi dọn: 6.07 kB; `limit` 5.95 kB |
 
 ## Không chọn
 
