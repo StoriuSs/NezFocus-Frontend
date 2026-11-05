@@ -134,7 +134,6 @@ if (isPending) return <ProfileSkeleton />
 
 - **The logo**, linking home.
 - **The language and theme switchers**.
-- **"Form example"**, a link to the demo form.
 - **Signed out: a "Sign In" button.** On any page but home and the auth pages
   themselves, it remembers the page (`/sign-in?redirect=/that/page`), so
   signing in comes back to it.

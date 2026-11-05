@@ -53,12 +53,8 @@ interface AuthState {
     user: AuthUser | null
     /** Restore the session on page load, if there is one. Resolves true when signed in. */
     initAuth: () => Promise<boolean>
-    /**
-     * Sign in with an address and password, and the Turnstile answer when the
-     * API asks for one. Rejects with the API's error — including 403
-     * AUTH_TWO_FACTOR_REQUIRED, which the two-step page finishes.
-     */
-    signIn: (email: string, password: string, turnstileToken?: string) => Promise<void>
+    /** Sign in with an address and password. Rejects with the API's error. */
+    signIn: (email: string, password: string) => Promise<void>
     /**
      * Take up a session the API started another way: confirming the address
      * or resetting the password answer with tokens, as sign-in does.
@@ -217,8 +213,8 @@ export const useAuthStore = create<AuthState>((set, get) => {
             return true
         },
 
-        signIn: async (email, password, turnstileToken) => {
-            await get().startSession(await authApi.login(email, password, turnstileToken))
+        signIn: async (email, password) => {
+            await get().startSession(await authApi.login(email, password))
         },
 
         startSession: async (tokens) => {

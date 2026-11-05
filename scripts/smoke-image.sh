@@ -57,7 +57,7 @@ headers /config.js | grep -qi 'Cache-Control: no-store' || fail "/config.js may 
 policy=$(headers / | grep -i 'Content-Security-Policy:')
 grep -qF "https://api.smoke.example" <<<"$policy" || fail "the policy does not allow the API origin: $policy"
 grep -qF "https://o1.ingest.smoke.example" <<<"$policy" || fail "the policy does not allow Sentry's origin: $policy"
-grep -qF "frame-src https://challenges.cloudflare.com;" <<<"$policy" || fail "the policy allows frames other than Turnstile's: $policy"
+grep -qF "frame-src 'none';" <<<"$policy" || fail "the policy allows frames: $policy"
 grep -q '__[A-Z_]*__' <<<"$policy" && fail "the policy still holds a placeholder: $policy"
 
 # Nothing the build could have baked in: an address in the bundle would mean

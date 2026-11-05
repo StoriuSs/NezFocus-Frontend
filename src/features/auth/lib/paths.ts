@@ -5,8 +5,6 @@ export const AUTH_PATHS = {
     verifyEmail: '/verify-email',
     forgotPassword: '/forgot-password',
     resetPassword: '/reset-password',
-    /** The second step of signing in, for accounts with two-step sign-in on. */
-    twoStep: '/sign-in/two-step',
     /** Where the API sends the browser back after signing in with Google. */
     oauthCallback: '/auth/callback',
     settings: '/settings'
@@ -51,13 +49,4 @@ export function withRedirect(path: string, redirect: string | null | undefined):
 /** The sign-in page, remembering where to come back to. */
 export function signInPath(redirect?: string): string {
     return redirect ? `${AUTH_PATHS.signIn}?redirect=${encodeURIComponent(redirect)}` : AUTH_PATHS.signIn
-}
-
-/**
- * The two-step page, remembering where to go once signed in. In the URL, not
- * the navigation state: the moment the session starts, GuestOnlyRoute sends
- * the visitor on to `?redirect=`.
- */
-export function twoStepPath(redirect?: string | null): string {
-    return redirect ? `${AUTH_PATHS.twoStep}?redirect=${encodeURIComponent(redirect)}` : AUTH_PATHS.twoStep
 }

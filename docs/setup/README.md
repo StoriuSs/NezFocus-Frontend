@@ -15,7 +15,7 @@ them up.
 
 The web app needs **almost no outside services of its own**. It is a set of
 static files in the visitor's browser. Everything about sign-in (passwords,
-codes, Google, the Turnstile check, email, avatars) is done by the API, which
+codes, Google, email, avatars) is done by the API, which
 is a separate starter (the Nest API starter, `Nest-Hexagonal-No-Keycloak`).
 So most "keys" you will collect go into the **API's** env file, not this one.
 
@@ -68,7 +68,6 @@ are cloned separately):
 | Service | API starter page | What changes in the web app |
 |---|---|---|
 | Sign in with Google | `docs/setup/google-sign-in.md` | The "Continue with Google" button appears by itself |
-| Cloudflare Turnstile (the "are you human" check) | `docs/setup/cloudflare-turnstile.md` | The widget appears on the forms by itself. In production the widget's hostname list must include **this site's** name (see [prepare-for-production.md](./prepare-for-production.md#step-9-make-the-api-accept-this-site)) |
 | Email (the codes people type to sign up and reset a password) | `docs/setup/email.md` | Nothing. Without email, nobody can finish signing up |
 | Storage for avatars (S3, R2) | `docs/setup/storage-s3-r2.md` | Nothing, as long as the bucket is served over `https`. See `CSP_IMG_SRC` in [prepare-for-production.md](./prepare-for-production.md#step-5-fill-in-envproduction) |
 | Off-site backups | `docs/setup/offsite-backups.md` | Nothing: the web app stores no data |
@@ -90,10 +89,8 @@ When a page with a sign-in form opens, the web app asks the API
 
 - `providers`: the sign-in providers the API has keys for (`google`, or none).
   The app shows a button for each one it knows.
-- `turnstile_site_key`: Turnstile's public site key, or `null` when the API has
-  Turnstile off. The app draws the widget only when there is one.
 
-So turning Google or Turnstile on or off is a change to the API's env file and
+So turning Google on or off is a change to the API's env file and
 an API restart. The web app needs no new setting, no rebuild and no deploy.
 
 The one address the web app does need is the API's: `VITE_API_URL`

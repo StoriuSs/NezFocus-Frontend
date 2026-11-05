@@ -6,7 +6,6 @@ import { mockAuthStore, queryWrapper } from '@/test/helpers'
 
 const authApi = {
     signInMethods: vi.fn(),
-    twoFactorStatus: vi.fn(),
     sendAccountDeletionCode: vi.fn(),
     deleteAccount: vi.fn()
 }
@@ -22,7 +21,6 @@ describe('deleting your account', () => {
         await i18n.changeLanguage('en')
         for (const fn of [...Object.values(authApi), authState.logout]) fn.mockReset()
         authApi.signInMethods.mockResolvedValue({ password: true, providers: [] })
-        authApi.twoFactorStatus.mockResolvedValue({ enabled: false, recoveryCodesLeft: 0 })
         sessionStorage.clear()
     })
 

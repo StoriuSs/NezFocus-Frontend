@@ -347,11 +347,9 @@ then has nothing to download, so deploy with `DEPLOY_IMAGE_SOURCE=build`
   server ([deploy.md](./deploy.md)). Deploying automatically after CI is
   *CD* (continuous deployment), not set up here.
 - **Run the end-to-end tests** ([e2e-testing.md](./e2e-testing.md)), in real
-  browsers against the production image. The account, two-step and Google
-  suites need the API running,
-  its Mailpit to read the emailed codes from, and Turnstile off or on
-  Cloudflare's test keys. So they are run by hand, against your development
-  stack. (The image check CI does run starts the image and checks nginx, the
+  browsers against the production image. The account and Google suites need
+  the API running and its Mailpit to read the emailed codes from. So they are
+  run by hand, against your development stack. (The image check CI does run starts the image and checks nginx, the
   CSP and `/config.js`.)
 - **Check the API types.** `pnpm api:types:check` compares
   `src/lib/api-schema.d.ts` with the backend's `openapi.json`, which lives in

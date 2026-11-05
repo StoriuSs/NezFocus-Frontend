@@ -11,8 +11,8 @@ import { Input } from '@/components/ui/input'
 import { FormField } from '@/components/form/FormField'
 import { authApi } from '@/features/auth/api/auth.api'
 import { useAuthStore } from '@/features/auth/auth.store'
-import { AUTH_PATHS, safeRedirect, twoStepPath, withRedirect } from '@/features/auth/lib/paths'
-import { authPageState, twoStepState, useAuthPageState } from '@/features/auth/lib/page-state'
+import { AUTH_PATHS, safeRedirect, withRedirect } from '@/features/auth/lib/paths'
+import { authPageState, useAuthPageState } from '@/features/auth/lib/page-state'
 import { authFormError } from '@/features/auth/lib/form-errors'
 import { authFields, newPasswordCheck } from '@/features/auth/lib/schemas'
 import type { PasswordRule } from '@/features/auth/lib/password-rules'
@@ -84,12 +84,6 @@ export default function ResetPassword() {
             void navigate(safeRedirect(redirect), { replace: true })
         } catch (error) {
             const failure = authFormError(error)
-            if (failure.challenge) {
-                // The password is changed; signing in needs the second step.
-                toast.success(t('resetPassword.doneTwoStep'))
-                void navigate(twoStepPath(redirect), { replace: true, state: twoStepState(failure.challenge) })
-                return
-            }
             if (failure.passwordRules.length > 0) setServerRules(failure.passwordRules)
             else setFormError(failure.message)
         }

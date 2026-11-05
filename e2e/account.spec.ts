@@ -5,8 +5,6 @@ import {
     codeFromEmail,
     emailTo,
     openAccountMenuItem,
-    requireTestableTurnstile,
-    solveTurnstile,
     submitPatiently,
     watchForProblems
 } from './helpers'
@@ -36,7 +34,6 @@ test.beforeAll(async ({ browserName }) => {
     if (!live?.ok) {
         throw new Error(`The API is not answering at ${apiUrl}/health/live. Start it (pnpm docker:dev in the API).`)
     }
-    await requireTestableTurnstile()
     const id = `${browserName}${Date.now().toString(36)}`
     email = `e2e-${id}@example.test`
     username = `e2e_${id}`.slice(0, 25)
@@ -61,14 +58,12 @@ test('sign up, confirm the address (which signs in), choose a username', async (
     await page.getByLabel('Email').fill(email)
     await page.getByLabel('Password', { exact: true }).fill('Password1!')
     await page.getByLabel('Confirm password').fill('Password1!')
-    await solveTurnstile(page, { always: true })
     await page.getByRole('button', { name: 'Create account' }).click()
     await expect(page.getByText('Not a common password', { exact: false })).toBeVisible()
 
     const sentAt = new Date()
     await page.getByLabel('Password', { exact: true }).fill(PASSWORD)
     await page.getByLabel('Confirm password').fill(PASSWORD)
-    await solveTurnstile(page, { always: true })
     await page.getByRole('button', { name: 'Create account' }).click()
     await page.waitForURL(/\/verify-email$/)
     // The address is shown, not editable: the code belongs to that account.

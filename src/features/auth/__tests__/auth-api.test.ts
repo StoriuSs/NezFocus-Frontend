@@ -17,4 +17,21 @@ describe('authApi', () => {
             expect.objectContaining({ skipAuth: true, withCredentials: true })
         )
     })
+
+    it.each([
+        ['/auth/login', () => authApi.login('ada@example.test', 'Harbour-Lantern-42')],
+        ['/auth/register', () => authApi.register('ada@example.test', 'Harbour-Lantern-42')],
+        ['/auth/forgot-password', () => authApi.forgotPassword('ada@example.test')]
+    ])('sends %s the address (and password) without a bearer token, with the cookie', async (path, call) => {
+        post.mockResolvedValue({ data: { data: { accessToken: 'a' } } })
+
+        await call()
+
+        const body = path === '/auth/forgot-password' ? {} : { password: 'Harbour-Lantern-42' }
+        expect(post).toHaveBeenLastCalledWith(
+            path,
+            { email: 'ada@example.test', ...body },
+            expect.objectContaining({ skipAuth: true, withCredentials: true })
+        )
+    })
 })

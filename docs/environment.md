@@ -67,13 +67,11 @@ exist, the container's value wins, and an empty one counts as unset.
 
 ## No sign-in settings here
 
-The app has **no sign-in settings**. Google sign-in and Cloudflare Turnstile
-are configured on the API (`GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`,
-`TURNSTILE_SITE_KEY`/`TURNSTILE_SECRET_KEY` in the API starter). This app asks
-the API what is on (`GET /auth/options`: the providers to offer as buttons, and
-Turnstile's public site key) and shows the matching buttons and widget. To turn
-either on, see the API starter's `docs/setup/google-sign-in.md` and
-`docs/setup/cloudflare-turnstile.md`.
+The app has **no sign-in settings**. Google sign-in is configured on the API
+(`GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` in the API starter). This app asks
+the API what is on (`GET /auth/options`: the providers to offer as buttons)
+and shows the matching buttons. To turn it on, see the API starter's
+`docs/setup/google-sign-in.md`.
 
 What the API must know about this app is set on the API too: `CORS_ORIGINS`
 (this app's address, with `CORS_CREDENTIALS=true`) and `FRONTEND_URL` (where

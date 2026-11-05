@@ -8,12 +8,7 @@ export const authFields = (t: TFunction<'auth'>) => ({
     code: z
         .string()
         .transform((code) => code.replace(/\s/g, ''))
-        .pipe(z.string().regex(/^\d{6}$/, t('validation.codeInvalid'))),
-    /** Six digits from the authenticator app, or a recovery code (the dash optional). */
-    twoStepCode: z
-        .string()
-        .transform((value) => value.replace(/\s/g, ''))
-        .pipe(z.string().regex(/^(\d{6}|[A-Za-z0-9]{5}-?[A-Za-z0-9]{5})$/, t('settings.twoStep.turnOffCodeInvalid')))
+        .pipe(z.string().regex(/^\d{6}$/, t('validation.codeInvalid')))
 })
 
 /**

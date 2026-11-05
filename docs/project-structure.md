@@ -46,14 +46,14 @@ react-starter/
     │   └── ErrorBoundary.tsx, PageLoader.tsx, ThemeSwitcher.tsx, …
     ├── config/                # env.ts and its zod schema
     ├── features/              # ← most new code goes here
-    │   ├── auth/              # The session, the eight auth pages, Turnstile, Google, route guards
-    │   │   ├── pages/         # SignIn, SignUp, VerifyEmail, TwoStep, ForgotPassword,
+    │   ├── auth/              # The session, the seven auth pages, Google, route guards
+    │   │   ├── pages/         # SignIn, SignUp, VerifyEmail, ForgotPassword,
     │   │   │                  #   ResetPassword, OAuthCallback, Settings
-    │   │   ├── components/    # AuthCard, PasswordInput, PasswordChecklist, Turnstile, OAuthButtons,
-    │   │   │                  #   TwoStepSettings, SetPasswordSettings, DeleteAccountDialog, SentTo,
+    │   │   ├── components/    # AuthCard, PasswordInput, PasswordChecklist, OAuthButtons,
+    │   │   │                  #   SetPasswordSettings, DeleteAccountDialog, SentTo,
     │   │   │                  #   ProtectedRoute, RequireRole
     │   │   ├── api/           # auth.api.ts (every call to /auth), keys.ts, the query hooks
-    │   │   ├── hooks/         # useTurnstile, useResendCooldown, useOAuthProviders
+    │   │   ├── hooks/         # useResendCooldown, useOAuthProviders
     │   │   ├── lib/           # The pages' paths, the access token (in memory only), tab sync,
     │   │   │                  #   form errors, password rules, sign-out reasons
     │   │   ├── auth.store.ts  # Who is signed in; sign-in, refresh, sign-out
@@ -72,7 +72,7 @@ react-starter/
     ├── hooks/                 # Shared hooks: useTheme, useDebouncedValue…
     ├── i18n/                  # i18next setup and the translation catalogues
     ├── lib/                   # Shared, feature-free: the API client, and friends
-    ├── pages/                 # Pages that belong to no feature: Home, FormExample, NotFound
+    ├── pages/                 # Pages that belong to no feature: Home, NotFound
     ├── test/                  # Vitest setup
     ├── main.tsx               # Entry point
     └── index.css              # Tailwind and the theme variables
@@ -129,8 +129,8 @@ hooks and its types.
 
 `auth/` is a capability as much as a set of pages: the auth store,
 `ProtectedRoute`, `GuestOnlyRoute` and `RequireRole` are used by everything
-else, beside the eight pages — sign-in, sign-up, confirm the address,
-two-step, forgotten and reset password, the Google return page, and settings
+else, beside the seven pages — sign-in, sign-up, confirm the address,
+forgotten and reset password, the Google return page, and settings
 ([auth/in-the-code.md](./auth/in-the-code.md)). Deleting an account is the one
 auth piece that lives on another feature's page: `DeleteAccountDialog`, opened
 from the profile page.
@@ -154,7 +154,7 @@ Shared and feature-free.
 
 ### `src/pages/`
 
-Only pages that belong to no feature: `Home`, `FormExample`, `NotFound`.
+Only pages that belong to no feature: `Home`, `NotFound`.
 Anything with its own data or components belongs in `features/`.
 
 ## Adding a page
@@ -171,7 +171,6 @@ const MyPage = lazy(() => import('@/pages/MyPage'))
 
 export const publicRoutes: RouteObject[] = [
     { path: '/', element: <Home /> },
-    { path: '/form', element: <FormExample /> },
     { path: '/my-page', element: <MyPage /> }
 ]
 ```

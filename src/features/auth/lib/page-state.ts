@@ -19,26 +19,6 @@ export interface AuthPageState {
 
 const NOTICES = new Set<string>(['code-sent', 'unverified'])
 
-/**
- * What the two-step page needs: the challenge from the first step. Absent
- * after Google, whose challenge is in a cookie the page never sees. In the
- * tab's history like the rest: the challenge is worth something only with a
- * code from the app, and only for five minutes. (Where to go afterwards is the
- * URL's `?redirect=`, as on the sign-in page: see twoStepPath.)
- */
-export interface TwoStepState {
-    challenge?: string
-}
-
-export function twoStepState(challenge: string | undefined): TwoStepState {
-    return challenge ? { challenge } : {}
-}
-
-export function useTwoStepState(): TwoStepState {
-    const state = useLocation().state as Record<string, unknown> | null
-    return { challenge: typeof state?.challenge === 'string' ? state.challenge : undefined }
-}
-
 /** The state for `navigate(path, { state })` or `<Link state>`. */
 export function authPageState(email: string | undefined, notice?: AuthNotice): AuthPageState {
     return { ...(email ? { email } : {}), ...(notice ? { notice } : {}) }

@@ -24,16 +24,5 @@
     "title": "404 - Không tìm thấy trang",
     "description": "Trang bạn tìm kiếm không tồn tại.",
     "goHome": "Về trang chủ"
-  },
-  "formExample": {
-    "title": "Ví dụ Form",
-    "subtitle": "Sử dụng React Hook Form + Zod",
-    "email": "Email",
-    "password": "Mật khẩu",
-    "submit": "Gửi form",
-    "submitting": "Đang gửi...",
-    "successToast": "Gửi form thành công!",
-    "successDescription": "Kiểm tra console để xem giá trị.",
-    "failedToast": "Gửi form thất bại"
   }
 }

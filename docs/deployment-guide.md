@@ -163,8 +163,6 @@ settings ([environment.md](./environment.md#no-sign-in-settings-here)).
 - [ ] With Google sign-in: the redirect URI registered at Google is **the
       API's** (`https://api.example.com/api/v1/auth/google/callback`), not
       this site's
-- [ ] With Turnstile: the widget's hostname list in Cloudflare includes your
-      site's domain (`app.example.com`), or the widget refuses to load there
 
 The API starter's `docs/setup/prepare-for-production.md` walks through each.
 
@@ -209,7 +207,7 @@ The middle two are also checked under load by `k6/spa.js`
 | --- | --- | --- |
 | Deploying by hand gets annoying | Turn on the **Deploy button** | [deploy.md](./deploy.md) |
 | First load feels slow | Look at the chunk sizes `pnpm build` prints | [code-splitting.md](./code-splitting.md) |
-| You want the sign-in path checked on every release | Run the **Playwright** suites against the **production image** on your machine, with the API's development stack. Not against the live site: the suites need Mailpit, refuse a real Turnstile key, and create accounts | [e2e-testing.md](./e2e-testing.md) |
+| You want the sign-in path checked on every release | Run the **Playwright** suites against the **production image** on your machine, with the API's development stack. Not against the live site: the suites need Mailpit and create accounts | [e2e-testing.md](./e2e-testing.md) |
 | You need something this starter does not have | PWA, Storybook, analytics, feature flags | [extensions.md](./extensions.md) |
 
 ## Related

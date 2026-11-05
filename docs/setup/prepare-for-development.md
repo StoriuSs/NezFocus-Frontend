@@ -13,7 +13,7 @@ before moving on. Plan about an hour, most of it for the API in step 2.
 - [Step 4: Create .env.development](#step-4-create-envdevelopment)
 - [Step 5: Start the web app](#step-5-start-the-web-app)
 - [Step 6: Make your first account](#step-6-make-your-first-account)
-- [Step 7 (optional): Google, Turnstile and avatar storage](#step-7-optional-google-turnstile-and-avatar-storage)
+- [Step 7 (optional): Google and avatar storage](#step-7-optional-google-and-avatar-storage)
 - [Step 8 (optional): Error tracking](#step-8-optional-error-tracking)
 - [Step 9: Run the checks](#step-9-run-the-checks)
 - [Step 10: Run the end-to-end tests](#step-10-run-the-end-to-end-tests)
@@ -196,22 +196,21 @@ If no email arrives, the problem is on the API: see its
 `docs/setup/email.md` and its Mailpit section. To make yourself an admin, the
 API has a command for it: see its `docs/auth/accounts.md`.
 
-## Step 7 (optional): Google, Turnstile and avatar storage
+## Step 7 (optional): Google and avatar storage
 
-All three are switched on **in the API's env file**, never here. The web app
+Both are switched on **in the API's env file**, never here. The web app
 asks the API what is on (`GET /api/v1/auth/options`) every time a sign-in page
 opens, so after you restart the API they simply appear.
 
 | Feature | Set up on the API with | What you then see here |
 |---|---|---|
 | Sign in with Google | The API starter's `docs/setup/google-sign-in.md` (a development OAuth client whose redirect URI is `http://localhost:8888/api/v1/auth/google/callback`) | "Continue with Google" on the sign-in and sign-up pages |
-| Turnstile (the "are you human" check) | The API starter's `docs/setup/cloudflare-turnstile.md`. For development, Cloudflare's test keys are enough: site key `1x00000000000000000000AA`, secret key `1x0000000000000000000000000000000AA` | A small widget on sign-up and "forgot password", and on sign-in after two wrong passwords. With the test keys it says "For testing only" and always passes |
 | Avatars in S3-style storage | The API starter's `docs/setup/storage-s3-r2.md` (locally: its RustFS container) | Nothing different: the avatar shows as before. In development there is no Content-Security-Policy, so an `http://localhost:9100` bucket works without `CSP_IMG_SRC` |
 
 **You are done when** the feature you turned on shows up after a reload of the
 sign-in page. If it does not, open
-`http://localhost:8888/api/v1/auth/options`: `providers` should list `google`,
-and `turnstile_site_key` should not be `null`. If they don't, the API did not
+`http://localhost:8888/api/v1/auth/options`: `providers` should list `google`.
+If it doesn't, the API did not
 pick up its new settings: restart it.
 
 ## Step 8 (optional): Error tracking
@@ -259,14 +258,10 @@ changing anything around sign-in.
 | Suite | Needs |
 |---|---|
 | `e2e/account.spec.ts` | This app, the API on `8888`, and Mailpit on `8025` (it reads the codes from there) |
-| `e2e/two-step.spec.ts` | The same as the account suite |
 | `e2e/oauth.spec.ts` | The API with Google set up (step 7). Skipped when the API does not offer Google |
 
 And on the API's side:
 
-- Turnstile **off** (both `TURNSTILE_*` keys empty) or **Cloudflare's test
-  keys** (step 7). With a real site key the suites refuse to start, because a
-  real challenge can stop a test browser.
 - `CORS_ORIGINS` containing `http://localhost:3001` (the default).
 
 **Run them:**
@@ -312,8 +307,7 @@ say "skipped" if you have no Google keys). Each run makes test accounts with
 | The browser console shows a CORS error on every API call | The API's `CORS_ORIGINS` does not contain `http://localhost:3001` exactly | Fix it in the API's `.env.development` and restart the API |
 | You are signed out after a reload | The refresh cookie did not come back: usually the same `CORS_ORIGINS` problem, or you opened the app as `http://127.0.0.1:3001` instead of `http://localhost:3001` (a different origin for the browser) | Use `http://localhost:3001` |
 | No email in Mailpit | The API cannot reach Mailpit, or its email queue is stuck | The API starter's `docs/setup/email.md` |
-| The Google button or the Turnstile widget does not appear | The API has no keys for it, or was not restarted | Step 7's check |
-| The e2e suites stop with "The API has Turnstile on with a real site key" | Real Turnstile keys in the API | Use the test keys or empty them while testing |
+| The Google button does not appear | The API has no keys for it, or was not restarted | Step 7's check |
 | `pnpm test` fails in many React tests with odd errors | Your shell sets `NODE_ENV=production` (some setups do) | Run `unset NODE_ENV` (bash) or `Remove-Item Env:NODE_ENV` (PowerShell) first |
 | `pnpm docker:dev` says `port is already allocated` | `pnpm dev` (or something else) already uses 3001 | Stop the other one |
 | Changes don't show up with `pnpm docker:dev` | You added a dependency: the container still has the old `node_modules` | Run `pnpm docker:dev` again; it rebuilds and refreshes them |

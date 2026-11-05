@@ -76,8 +76,8 @@ tries again by itself.
 
 | How | Called by | What arrives |
 |---|---|---|
-| `signIn(email, password, turnstileToken?)` | the sign-in page | `POST /auth/login` answers with tokens; then `startSession` |
-| `startSession(tokens)` | the confirm, reset and two-step pages (their answer is like a sign-in's) | tokens in the answer body. Tells the other tabs `signed-in` |
+| `signIn(email, password)` | the sign-in page | `POST /auth/login` answers with tokens; then `startSession` |
+| `startSession(tokens)` | the confirm and reset pages (their answer is like a sign-in's) | tokens in the answer body. Tells the other tabs `signed-in` |
 | `resumeFromCookie()` | `/auth/callback`, after Google | only the cookie: it calls `POST /auth/refresh` first. Tells the other tabs `signed-in`. Resolves `false` when there was no session |
 | `initAuth()` | `App.tsx`, once per page load | only the cookie, as above ([next section](#a-page-load)) |
 
@@ -175,9 +175,9 @@ API's `/auth` routes. Two request options matter:
 
 | Routes | `skipAuth` | Bearer token | `withCredentials` | Why |
 |---|---|---|---|---|
-| `POST /auth/login`, `/register`, `/verify-email`, `/resend-verification`, `/forgot-password`, `/reset-password`, `/login/2fa`, `/refresh`, `/logout`; `GET /auth/options` | yes | no | yes | Public routes; some set or read the cookie. `/auth/logout` gives up after 5 seconds |
+| `POST /auth/login`, `/register`, `/verify-email`, `/resend-verification`, `/forgot-password`, `/reset-password`, `/refresh`, `/logout`; `GET /auth/options` | yes | no | yes | Public routes; some set or read the cookie. `/auth/logout` gives up after 5 seconds |
 | `POST /auth/logout-all`, `POST /auth/account/delete` | no | yes | yes | Signed in, and the answer clears the cookie |
-| `POST /auth/change-password`, `GET /auth/sign-in-methods`, `POST /auth/password/code`, `POST /auth/password`, `POST /auth/account/delete-code`, `GET /auth/2fa`, `POST /auth/2fa/setup`, `/2fa/confirm`, `/2fa/recovery-codes`, `/2fa/disable`; `GET /users/me` | no | yes | no | Ordinary signed-in requests |
+| `POST /auth/change-password`, `GET /auth/sign-in-methods`, `POST /auth/password/code`, `POST /auth/password`, `POST /auth/account/delete-code`; `GET /users/me` | no | yes | no | Ordinary signed-in requests |
 
 ## Several tabs
 

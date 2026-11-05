@@ -42,9 +42,6 @@ The theme switcher is in the header. The choices:
    one to draw its toasts. (It used to be state inside the hook, so each
    caller had its own copy and the toaster never saw the user's choice.)
 
-The Turnstile widget on the auth pages is drawn in the same light or dark
-theme.
-
 ## Using the theme in a component
 
 ```tsx

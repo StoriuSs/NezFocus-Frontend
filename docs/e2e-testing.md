@@ -1,18 +1,17 @@
 # End-to-end tests (Playwright)
 
 `pnpm test:e2e` drives real Chromium and Firefox browsers through the app:
-six tests, one per main flow. The suites have different needs:
+five tests, one per main flow. The suites have different needs:
 
 | Suite | Needs | What it checks |
 |---|---|---|
 | `e2e/oauth.spec.ts` | This app and **the API with Google configured** (skipped otherwise) | "Continue with Google" on sign-in, pointing at the API with the page to return to; the API's redirect to Google with PKCE, the registered return address and the `oauth_state` cookie. Not the sign-in at Google itself, which needs a real Google account: that is a manual test |
-| `e2e/two-step.spec.ts` | What the account suite needs | Two-step sign-in: turning it on in settings (the key, a code from an "app", the ten recovery codes), then signing in with a code (a wrong one's tries left) and coming back to the page it was heading for; the account is deleted at the end, with a recovery code. The app is [otpauth](https://github.com/hectorm/otpauth), computing codes from the key the page shows |
 | `e2e/account.spec.ts` | This app, **the API**, and the **Mailpit** it sends email to | An account's whole life: sign up (a common password refused), confirm with the code read from Mailpit (the address shown, not editable; the code signs in), choose a username; a deep link coming back after sign-in; a reload keeping the session (the refresh cookie crossing origins); a forgotten password reset, which signs in (the old password refused after); the account deleted |
 
 Any CSP violation or uncaught page error fails a run.
 
 The browser tests are not in CI: they need the whole API
-running, with its Mailpit and with Turnstile off or on Cloudflare's test keys.
+running, with its Mailpit.
 Run them before a release, and after changing anything around sign-in, the
 API client, the CSP or nginx. They create accounts, so run them against your
 own development stack, not a live site.
@@ -39,7 +38,6 @@ first three):
 | `CORS_ORIGINS` includes `http://localhost:3001`, `CORS_CREDENTIALS=true` | The browser may call the API, and send the refresh cookie |
 | `FRONTEND_URL=http://localhost:3001` | The return from Google (the OAuth suite) comes back to this app |
 | `EMAIL_*` pointing at Mailpit | The codes are read from Mailpit. The API's development stack sets this up |
-| `TURNSTILE_*` empty, or Cloudflare's test keys | A real key can show a real challenge; the suites refuse to start with one ([Turnstile](#turnstile)) |
 | `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` | Only for the OAuth suite, which is skipped without them |
 | Trusts one proxy hop | `asOwnClient()` gives each browser its own address with `X-Forwarded-For` ([below](#how-the-account-suite-avoids-the-apis-limits)). The API starter trusts one hop by default |
 
@@ -92,29 +90,10 @@ many attempts. Try again in N seconds", and `submitPatiently()` waits that long
 and submits again. That checks the message along the way. It is why that test
 takes up to a minute.
 
-Each run makes one account per browser and suite (`e2e-chromium…@example.test`,
-`e2e-2fa-chromium…@example.test`). The account suite deletes its account at
-the end (that is its last test), and the two-step test deletes its own. One
+Each run makes one account per browser (`e2e-chromium…@example.test`). The
+account suite deletes its account at the end (that is its last test). One
 left behind by a failed run is harmless in a development database, and the
 `example.test` addresses make it easy to find.
-
-## Turnstile
-
-With Turnstile on, sign-up and "forgot password" show Cloudflare's widget, and
-the suites wait for it to be solved (`solveTurnstile()` in `e2e/helpers.ts`).
-A real site key can show a real challenge, which a test browser is not meant
-to pass, so the suites **refuse to start** with one. Run the API either:
-
-- with Turnstile off: `TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY` empty, or
-- with [Cloudflare's test keys](https://developers.cloudflare.com/turnstile/troubleshooting/testing/),
-  whose widget always passes. This is the better run: the widget really loads
-  from Cloudflare, through the Content-Security-Policy.
-
-  | | Site key | Secret key |
-  |---|---|---|
-  | Always passes | `1x00000000000000000000AA` | `1x0000000000000000000000000000000AA` |
-
-  The widget then says "For testing only". Put your real keys back afterwards.
 
 ## When it fails
 

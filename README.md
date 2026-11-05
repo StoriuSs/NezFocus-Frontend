@@ -33,11 +33,9 @@ languages, dark mode, tests, and a production image with CI and deploys.
 
 - **Sign-in, done by the API itself** (no identity server): sign up with an
   email and password and confirm the address with an emailed code, sign in,
-  "Continue with Google", two-step sign-in with an authenticator app and
-  recovery codes, forgotten-password reset, a session that survives a reload
-  and stays in step across tabs, sign out everywhere, and deleting the account
-- **Cloudflare Turnstile** on the sign-up, sign-in and forgotten-password forms,
-  shown only when the API has it on
+  "Continue with Google", forgotten-password reset, a session that survives a
+  reload and stays in step across tabs, sign out everywhere, and deleting the
+  account
 - **Internationalization** — i18next, English and Vietnamese
 - **Dark mode** — light, dark or the system's setting, remembered, with no
   flash of the wrong one on load
@@ -84,10 +82,9 @@ trades the cookie for a new one. The pages:
 | `/sign-up` | Create an account; the API emails a 6-digit code |
 | `/verify-email` | Enter the code; confirming the address also signs you in |
 | `/sign-in` | Email and password, or "Continue with Google" |
-| `/sign-in/two-step` | The code from the authenticator app (or a recovery code), when two-step sign-in is on |
 | `/forgot-password`, `/reset-password` | An emailed code, then a new password; that also signs you in |
 | `/auth/callback` | Where the API sends the browser back after Google |
-| `/settings` | Change the password, set a first one (accounts made with Google), two-step sign-in, sign out everywhere |
+| `/settings` | Change the password, set a first one (accounts made with Google), sign out everywhere |
 | `/profile` | The profile, the avatar, and deleting the account |
 
 The details: [docs/auth/README.md](./docs/auth/README.md).
@@ -102,8 +99,8 @@ The details: [docs/auth/README.md](./docs/auth/README.md).
 
 Sign-up needs the API's **email**: the confirmation code arrives by mail. In
 development the API's stack catches every email in **Mailpit**, at
-http://localhost:8025. Google sign-in and Turnstile need **no setting in this
-app**: they are configured on the API, and this app asks it what is on
+http://localhost:8025. Google sign-in needs **no setting in this app**: it is
+configured on the API, and this app asks it whether it is on
 (`GET /auth/options`).
 
 ## Quick start
@@ -173,12 +170,12 @@ src/
 │   └── form/         # FormField: label, control and error
 ├── config/           # Settings and their schema
 ├── features/         # One folder per feature
-│   ├── auth/         # Session store, the eight auth pages, Turnstile, Google, route and role guards
+│   ├── auth/         # Session store, the seven auth pages, Google, route and role guards
 │   └── users/        # Profile: api/ (queries), components/, pages/, routes.tsx, types.ts
 ├── hooks/            # Shared React hooks
 ├── i18n/             # Translations (en, vi)
 ├── lib/              # The API client, query client, error tracking, helpers
-├── pages/            # Pages outside any feature (home, form example, not found)
+├── pages/            # Pages outside any feature (home, not found)
 └── test/             # Test setup
 ```
 
@@ -314,9 +311,8 @@ it('can set theme to dark', () => {
 
 Only what is absolutely necessary gets a test: the bar is in
 [docs/testing.md](./docs/testing.md#what-we-test), along with how the auth
-tests stand in for the API. The browser tests need the API, its
-Mailpit, and Turnstile off or on Cloudflare's test keys:
-[docs/e2e-testing.md](./docs/e2e-testing.md).
+tests stand in for the API. The browser tests need the API and its
+Mailpit: [docs/e2e-testing.md](./docs/e2e-testing.md).
 
 ## The paired backend
 

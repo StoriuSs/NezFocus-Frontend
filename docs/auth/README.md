@@ -21,22 +21,22 @@ built sign-in before.
 **The API owns every rule. The app shows pages and follows the API's answers.**
 
 The API (the NestJS starter, `Nest-Hexagonal-No-Keycloak`) checks passwords,
-sends the emails, decides when a session ends, counts failed attempts and asks
-for a security check. This app never decides any of that. It:
+sends the emails, decides when a session ends and counts failed attempts. This
+app never decides any of that. It:
 
 1. shows the pages (sign in, sign up, the code pages, settings);
 2. sends what the person typed to the API;
 3. keeps the **access token** (the short-lived pass that proves who you are)
    in memory, and gets a new one before it runs out;
 4. does what the API's answer says: go on to the next page, show a message,
-   ask for a second code, or sign out.
+   or sign out.
 
 There is no identity server and no redirect to another site, except Google's
 own page when someone picks "Continue with Google".
 
 **Nothing to configure here.** The app's only setting is `VITE_API_URL`, the
-API's address. Google sign-in, Cloudflare Turnstile and email are all set up on
-the API, and the app finds out at run time what the API has turned on
+API's address. Google sign-in and email are both set up on the API, and the
+app finds out at run time what the API has turned on
 (`GET /auth/options`). One build works whatever the API offers.
 
 ## What a person can do
@@ -46,12 +46,10 @@ the API, and the app finds out at run time what the API has turned on
 | Create an account with an email and a password, then confirm the address with a 6-digit emailed code. The right code also signs in | `/sign-up`, `/verify-email` | [pages-and-flows.md](./pages-and-flows.md#sign-up) |
 | Sign in with an email and a password | `/sign-in` | [pages-and-flows.md](./pages-and-flows.md#sign-in) |
 | "Continue with Google", when the API has Google set up | `/sign-in`, `/sign-up`, then `/auth/callback` | [pages-and-flows.md](./pages-and-flows.md#continue-with-google) |
-| Two-step sign-in: after the password (or Google), a 6-digit code from an authenticator app on the phone, or a recovery code | `/sign-in/two-step` | [pages-and-flows.md](./pages-and-flows.md#two-step-sign-in) |
 | Forgot the password: get an emailed code, choose a new password. This signs in, and signs out every other device | `/forgot-password`, `/reset-password` | [pages-and-flows.md](./pages-and-flows.md#forgot-and-reset-the-password) |
 | Choose a username after the first sign-in | a dialog over any page | [../username-prompt.md](../username-prompt.md) |
 | Change the password (other devices are signed out, this one stays) | `/settings` | [account-settings.md](./account-settings.md#change-the-password) |
 | Set a first password on an account made with Google | `/settings` | [account-settings.md](./account-settings.md#set-a-first-password) |
-| Turn two-step sign-in on or off, make new recovery codes | `/settings` | [account-settings.md](./account-settings.md#two-step-sign-in) |
 | Sign out, or sign out on every device | the account menu, `/settings` | [account-settings.md](./account-settings.md#sign-out-everywhere) |
 | Delete the account, with proof it is you | `/profile` | [account-settings.md](./account-settings.md#delete-the-account) |
 | Stay signed in across reloads and new tabs; sign in or out in every open tab at once | everywhere | [session.md](./session.md) |
@@ -76,10 +74,6 @@ the API, and the app finds out at run time what the API has turned on
 | **Refresh token** | A long-lived secret the API keeps in a **cookie** the app cannot read (an *httpOnly* cookie). The browser sends it to the API by itself. The app trades it for a new access token |
 | **Session** | One sign-in on one browser, as the API records it. It ends when the person signs out, after 30 days by default, or when the API ends it (a password change, "sign out everywhere", a deleted account) |
 | **Emailed code** | Six digits the API emails to confirm an address, reset a password, set a first password or delete an account. It works for 10 minutes, and only the newest one works |
-| **Two-step sign-in** | A second check after the password: a 6-digit code from an authenticator app. The person's phone and the API share a secret; the app turns it into a new code every 30 seconds |
-| **Challenge** | What the API hands back when the password was right but a second step is needed: a one-off ticket for the two-step page, valid 5 minutes |
-| **Recovery code** | One of 10 single-use codes, shaped `XXXXX-XXXXX`, that replace the phone's code when the phone is lost |
-| **Turnstile** | Cloudflare's check that a person, not a script, is filling in a form. Usually solves itself in a second or two |
 | **`?redirect=`** | The page to go to after signing in, carried in the address from one auth page to the next |
 
 The API starter's `docs/auth/concepts.md` explains these terms from the
@@ -92,9 +86,7 @@ ground up, with the reasons behind each.
 | Password rules | Ticks them off while you type (`password-rules.ts`) | Decides; also checks two rules the app cannot (a common password, the username) |
 | Emailed codes | Shows the code field; waits a minute before offering another | Makes, emails and checks them; 10 minutes, 5 tries |
 | Too many attempts | Shows how long to wait, keeps the button disabled | Counts and refuses (`429`, with `Retry-After`) |
-| Turnstile | Draws the widget when the API asks, sends its token | Decides when it is needed, checks the token with Cloudflare |
 | Google | A link to the API, and a page to land on afterwards | The whole conversation with Google, account linking |
-| Two-step sign-in | The code pages, the QR code, the recovery codes on screen | The secret, checking codes, the challenge |
 | The session | Keeps the access token in memory; refreshes it; signs out on the API's word | Issues, rotates and ends sessions; sets the cookie |
 | Roles | Hides what a role may not use | Enforces roles on every route |
 
@@ -120,10 +112,10 @@ ground up, with the reasons behind each.
 
 | Page | What it covers |
 |---|---|
-| [pages-and-flows.md](./pages-and-flows.md) | Every auth page: its address, who may open it, what it shows, what it asks the API, where it goes next. `?redirect=`, Google, two-step, the "already signed in" card, the username prompt. Diagrams of sign-up, sign-in and Google |
+| [pages-and-flows.md](./pages-and-flows.md) | Every auth page: its address, who may open it, what it shows, what it asks the API, where it goes next. `?redirect=`, Google, the "already signed in" card, the username prompt. Diagrams of sign-up, sign-in and Google |
 | [session.md](./session.md) | Where the session lives, the page load, getting a fresh token, what the API client does with each answer, tabs, every reason a session ends and what the person sees |
-| [forms-and-errors.md](./forms-and-errors.md) | How forms check input, turn API refusals into messages, handle "too many attempts", Turnstile, the password checklist, and the "send another code" timers |
-| [account-settings.md](./account-settings.md) | The settings page (change or set a password, two-step sign-in, sign out everywhere) and deleting an account |
+| [forms-and-errors.md](./forms-and-errors.md) | How forms check input, turn API refusals into messages, handle "too many attempts", the password checklist, and the "send another code" timers |
+| [account-settings.md](./account-settings.md) | The settings page (change or set a password, sign out everywhere) and deleting an account |
 | [in-the-code.md](./in-the-code.md) | The files, the guards, the store, the tests, and how to add a page |
 | [../username-prompt.md](../username-prompt.md) | The one-time username step after a first sign-in |
 
@@ -138,12 +130,10 @@ its cookie. On the API (its `docs/auth/operations.md` and
 | `CORS_ORIGINS` | include this app's exact origin: `http://localhost:3001` in development (the default), `https://app.example.com` in production | Otherwise the browser blocks the answers, and `POST /auth/refresh` and `/auth/logout` answer `403 AUTH_FORBIDDEN` |
 | `FRONTEND_URL` | this app's address | The links in the emails and the return from Google go there (`/auth/callback`) |
 | The cookie | the app and the API on the same site (`app.example.com` and `api.example.com`), or the API set for cross-site cookies (`AUTH_COOKIE_SAMESITE=none` over HTTPS) | Otherwise the browser drops the refresh cookie: sign-in works, then every reload signs out, and the session ends when the access token does |
-| Turnstile widget hostnames (in Cloudflare) | include this app's hostname (`localhost` for development) | Otherwise the widget refuses to load on this site |
 | Google redirect URI (in Google Cloud) | the **API's** callback, `https://api.example.com/api/v1/auth/google/callback` | Google returns to the API, never to this app |
 
 On this side: `VITE_API_URL` is the API's address, and the
-Content-Security-Policy already allows it and Turnstile
-(`scripts/csp.mjs`). Nothing else.
+Content-Security-Policy already allows it (`scripts/csp.mjs`). Nothing else.
 
 ## Troubleshooting
 
@@ -157,7 +147,3 @@ Content-Security-Policy already allows it and Turnstile
 | Google shows `redirect_uri_mismatch` or "Access blocked" | Google Cloud configuration | The API starter's `docs/setup/google-sign-in.md` |
 | Back from Google with "Sign-in with Google didn't work" | The API logged why | Also check the browser keeps cookies for the API's address: the short-lived `oauth_state` cookie has to come back |
 | "Too many attempts. Try again in ..." | The API's limits, per address and per network | Wait the time shown. On a shared office or school network, other people's attempts count too |
-| No Turnstile widget where you expect one | Turnstile is off on the API, or the widget could not load | `GET <VITE_API_URL>/auth/options` should have a `turnstile_site_key`. If it does, the browser console says why (an extension blocking `challenges.cloudflare.com`, or an old image's Content-Security-Policy) |
-| "The security check couldn't load" | The browser cannot reach `challenges.cloudflare.com`, or the site key does not list this hostname | Cloudflare dashboard → Turnstile → the widget → Hostnames |
-| "Two-step verification can't be checked for this account right now" | The API cannot open the account's secret (its `AUTH_ENCRYPTION_KEY` changed) | The API starter's `docs/auth/two-step-sign-in.md` |
-| Lost the phone with the authenticator app | | Sign in with a recovery code ("Use a recovery code instead"), then in settings turn two-step sign-in off and on again with the new phone. Without the codes either, only the API's operator can turn it off (`pnpm auth:two-factor:off`, the API starter's `docs/auth/operations.md`) |

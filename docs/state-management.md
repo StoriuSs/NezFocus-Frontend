@@ -38,7 +38,7 @@ sign-in so the header does not ask twice.
 | `isSigningOut` | A sign-out is under way: guards wait instead of sending anyone to sign in |
 | `user` | `{ id, email, username, displayName, roles }`, or `null` |
 | `initAuth()` | On page load: restore the session from the refresh cookie, if this browser has one |
-| `signIn()`, `startSession()`, `resumeFromCookie()` | Start a session: with a password, from tokens the API returned (confirming the address, resetting the password, the two-step page), or after Google |
+| `signIn()`, `startSession()`, `resumeFromCookie()` | Start a session: with a password, from tokens the API returned (confirming the address, resetting the password), or after Google |
 | `getToken()`, `refreshToken()` | The access token for a request, refreshed when it is about to expire |
 | `logout(reason?, to?)` | End the session here, on the API and in the other tabs, then reload the app |
 

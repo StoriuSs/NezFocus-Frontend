@@ -83,47 +83,6 @@ export async function openAccountMenuItem(page: Page, item: string): Promise<voi
     await page.getByRole('menuitem', { name: item }).click()
 }
 
-let siteKey: Promise<string | null> | undefined
-
-/** The API's Turnstile site key (GET /auth/options); null when Turnstile is off. */
-function turnstileSiteKey(): Promise<string | null> {
-    siteKey ??= fetch(`${apiUrl}/auth/options`)
-        .then((answer) => answer.json() as Promise<{ data: { turnstile_site_key: string | null } }>)
-        .then(({ data }) => data.turnstile_site_key)
-    return siteKey
-}
-
-/**
- * Cloudflare's test site keys (1x…, 2x…, 3x…) answer the same way every time;
- * a real key shows a real challenge, which a test browser may not pass. Fail
- * with the fix rather than time out on a widget (docs/e2e-testing.md).
- */
-export async function requireTestableTurnstile(): Promise<void> {
-    const key = await turnstileSiteKey()
-    if (key && !/^[123]x0{20}AA$/.test(key)) {
-        throw new Error(
-            'The API has Turnstile on with a real site key. For end-to-end tests, run it with ' +
-                'Cloudflare\'s test keys, or with Turnstile off (docs/e2e-testing.md, "Turnstile").'
-        )
-    }
-}
-
-/**
- * With Turnstile on, wait until the form's widget is solved. With Cloudflare's
- * always-passes test key that takes a second or two, for real, through the
- * Content-Security-Policy.
- *
- * `always`: the form asks for it every time (sign-up, forgot password), so
- * wait for the widget to appear — the page draws it once the API's options
- * arrive. Otherwise (sign-in) only a widget already on the page is waited on.
- */
-export async function solveTurnstile(page: Page, { always = false } = {}): Promise<void> {
-    if (!(await turnstileSiteKey())) return
-    const widget = page.getByTestId('turnstile')
-    if (!always && (await widget.count()) === 0) return
-    await expect(widget).toHaveAttribute('data-state', 'solved', { timeout: 30_000 })
-}
-
 /**
  * Submit a form whose request may be refused for going too fast (the API
  * sends at most one code email a minute to an address). Waits as long as the
@@ -132,8 +91,6 @@ export async function solveTurnstile(page: Page, { always = false } = {}): Promi
 export async function submitPatiently(page: Page, button: string): Promise<void> {
     for (let attempt = 0; attempt < 2; attempt++) {
         const before = page.url()
-        // A refused attempt spent the token: the form drew a new widget.
-        await solveTurnstile(page, { always: true })
         await page.getByRole('button', { name: button, exact: true }).click()
         const tooFast = page.getByText(/Try again in (\d+) seconds?\./)
         const outcome = await Promise.race([

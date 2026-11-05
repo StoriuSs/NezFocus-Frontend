@@ -11,8 +11,8 @@ import { Input } from '@/components/ui/input'
 import { FormField } from '@/components/form/FormField'
 import { authApi } from '@/features/auth/api/auth.api'
 import { useAuthStore } from '@/features/auth/auth.store'
-import { AUTH_PATHS, safeRedirect, twoStepPath, withRedirect } from '@/features/auth/lib/paths'
-import { twoStepState, useAuthPageState } from '@/features/auth/lib/page-state'
+import { AUTH_PATHS, safeRedirect, withRedirect } from '@/features/auth/lib/paths'
+import { useAuthPageState } from '@/features/auth/lib/page-state'
 import { authFormError } from '@/features/auth/lib/form-errors'
 import { authFields } from '@/features/auth/lib/schemas'
 import { useResendCooldown } from '@/features/auth/hooks/useResendCooldown'
@@ -95,12 +95,6 @@ export default function VerifyEmail() {
             void navigate(safeRedirect(redirect), { replace: true })
         } catch (error) {
             const failure = authFormError(error)
-            if (failure.challenge) {
-                forgetSignUpPassword()
-                toast.success(t('verifyEmail.done'))
-                void navigate(twoStepPath(redirect), { replace: true, state: twoStepState(failure.challenge) })
-                return
-            }
             // The API gives a wrong code and a wrong password one answer.
             const text = failure.type === 'AUTH_CODE_INVALID' ? t('verifyEmail.codeOrPasswordWrong') : failure.message
             setMessage({ tone: 'error', text })

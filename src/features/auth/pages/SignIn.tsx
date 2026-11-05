@@ -9,11 +9,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { FormField } from '@/components/form/FormField'
 import { useAuthStore } from '@/features/auth/auth.store'
-import { AUTH_PATHS, safeRedirect, twoStepPath, withRedirect } from '@/features/auth/lib/paths'
-import { authPageState, twoStepState, useAuthPageState } from '@/features/auth/lib/page-state'
+import { AUTH_PATHS, safeRedirect, withRedirect } from '@/features/auth/lib/paths'
+import { authPageState, useAuthPageState } from '@/features/auth/lib/page-state'
 import { holdSignUpPassword } from '@/features/auth/lib/sign-up-password'
 import { authFormError } from '@/features/auth/lib/form-errors'
-import { useTurnstile } from '@/features/auth/hooks/useTurnstile'
 import { useAuthOptions } from '@/features/auth/api/useAuthOptions'
 import { AuthCard, Notice } from '@/features/auth/components/AuthCard'
 import { PasswordInput } from '@/features/auth/components/PasswordInput'
@@ -31,9 +30,6 @@ type Values = z.infer<ReturnType<typeof createSchema>>
  * Sign in with an address and a password. `?redirect=` is where to go
  * afterwards (a page on this site only). A page that sends someone here may
  * hand over the address to fill in (page-state.ts).
- *
- * After a few failures the API asks for Turnstile as well: the widget appears
- * then, not before, so most people never see it.
  */
 export default function SignIn() {
     const { t } = useTranslation('auth')
@@ -47,8 +43,6 @@ export default function SignIn() {
     // everyone, so it says nothing about which accounts those are.
     const [googleHint, setGoogleHint] = useState(false)
     const { providers } = useAuthOptions()
-    const [captchaNeeded, setCaptchaNeeded] = useState(false)
-    const captcha = useTurnstile(captchaNeeded, { offerGoogle: true })
     const schema = useMemo(() => createSchema(t), [t])
     const {
         register,
@@ -60,19 +54,11 @@ export default function SignIn() {
     async function onSubmit({ email, password }: Values) {
         setFormError(null)
         setGoogleHint(false)
-        if (captcha.active && !captcha.token) {
-            setFormError(captcha.notReadyMessage)
-            return
-        }
         try {
-            await signIn(email, password, captcha.token ?? undefined)
+            await signIn(email, password)
             void navigate(safeRedirect(params.get('redirect')), { replace: true })
         } catch (error) {
             const failure = authFormError(error)
-            if (failure.challenge) {
-                void navigate(twoStepPath(params.get('redirect')), { state: twoStepState(failure.challenge) })
-                return
-            }
             // The password was right: the address only needs confirming.
             if (failure.type === 'AUTH_EMAIL_NOT_VERIFIED') {
                 // Right, so the confirm page can send it with the code.
@@ -82,12 +68,6 @@ export default function SignIn() {
                 })
                 return
             }
-            if (failure.captchaRequired) {
-                if (!captcha.active) captcha.refresh()
-                setCaptchaNeeded(true)
-            }
-            // The token was spent on this attempt, whatever the answer.
-            if (captcha.active) captcha.reset()
             setGoogleHint(failure.type === 'AUTH_INVALID_CREDENTIALS')
             setFormError(failure.type === 'AUTH_INVALID_CREDENTIALS' ? t('signIn.wrongCredentials') : failure.message)
         }
@@ -143,7 +123,6 @@ export default function SignIn() {
                         {t('signIn.forgot')}
                     </Link>
                 </div>
-                {captcha.widget}
                 <Button type='submit' className='w-full' disabled={isSubmitting}>
                     {isSubmitting ? t('signIn.submitting') : t('signIn.submit')}
                 </Button>

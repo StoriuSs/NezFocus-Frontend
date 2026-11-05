@@ -8,7 +8,6 @@ const SignUp = lazy(() => import('@/features/auth/pages/SignUp'))
 const VerifyEmail = lazy(() => import('@/features/auth/pages/VerifyEmail'))
 const ForgotPassword = lazy(() => import('@/features/auth/pages/ForgotPassword'))
 const ResetPassword = lazy(() => import('@/features/auth/pages/ResetPassword'))
-const TwoStep = lazy(() => import('@/features/auth/pages/TwoStep'))
 const Settings = lazy(() => import('@/features/auth/pages/Settings'))
 const OAuthCallback = lazy(() => import('@/features/auth/pages/OAuthCallback'))
 
@@ -23,7 +22,6 @@ export const authRoutes: RouteObject[] = [
     { path: AUTH_PATHS.verifyEmail, element: guestOnly(<VerifyEmail />) },
     { path: AUTH_PATHS.forgotPassword, element: guestOnlyExplained(<ForgotPassword />) },
     { path: AUTH_PATHS.resetPassword, element: guestOnlyExplained(<ResetPassword />) },
-    { path: AUTH_PATHS.twoStep, element: guestOnly(<TwoStep />) },
     // Not guest-only: it is the page that makes the visitor signed in.
     { path: AUTH_PATHS.oauthCallback, element: <OAuthCallback /> },
     {

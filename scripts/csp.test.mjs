@@ -21,30 +21,24 @@ describe('the Content-Security-Policy template', () => {
         ])
         expect(directive(policy, 'script-src')).toEqual([
             "'self'",
-            'https://challenges.cloudflare.com',
             sha256('var a = 1'),
             sha256('parent.postMessage(1)')
         ])
         expect(policy).not.toMatch(/script-src[^;]*unsafe-inline/)
         expect(directive(policy, 'object-src')).toEqual(["'none'"])
-        // Turnstile draws its challenge in a frame: blocked, nobody can sign in while it is on.
-        expect(directive(policy, 'frame-src')).toContain('https://challenges.cloudflare.com')
+        expect(directive(policy, 'frame-src')).toEqual(["'none'"])
     })
 
     it('hashes a script as the browser sees it, with CRLF line endings turned into LF', () => {
         // A Windows checkout produced hashes no browser matched, and the page's own scripts were blocked.
         const policy = cspTemplate(['<script>\r\n  go()\r\n</script>'])
-        expect(directive(policy, 'script-src')).toEqual([
-            "'self'",
-            'https://challenges.cloudflare.com',
-            sha256('\n  go()\n')
-        ])
+        expect(directive(policy, 'script-src')).toEqual(["'self'", sha256('\n  go()\n')])
     })
 
-    it("leaves every origin the server knows as a placeholder, and holds no address of its own but Turnstile's", () => {
+    it('leaves every origin the server knows as a placeholder, and holds no address of its own', () => {
         const policy = cspTemplate(['<head><script>var a = 1</script></head>'])
         expect(directive(policy, 'connect-src')).toEqual(["'self'", PLACEHOLDERS.api, PLACEHOLDERS.errorTracking])
         expect(directive(policy, 'img-src')).toContain(PLACEHOLDERS.images)
-        expect(policy.replaceAll('https://challenges.cloudflare.com', '')).not.toMatch(/https?:\/\/(?!__)/)
+        expect(policy).not.toMatch(/https?:\/\/(?!__)/)
     })
 })

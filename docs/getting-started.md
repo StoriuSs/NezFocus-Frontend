@@ -51,11 +51,11 @@ In Docker instead (hot reload through a bind mount): `pnpm docker:dev`, and
 3. The first time, a prompt asks you to choose a username
    ([username-prompt.md](./username-prompt.md)).
 4. The avatar menu (top right) has **Profile**, **Settings** (password,
-   two-step sign-in, sign out everywhere) and **Log out**.
+   sign out everywhere) and **Log out**.
 
-"Continue with Google" and the Turnstile widget appear only when the API has
-them configured. Nothing in this app turns them on: see the API starter's
-`docs/setup/google-sign-in.md` and `docs/setup/cloudflare-turnstile.md`.
+"Continue with Google" appears only when the API has it configured. Nothing
+in this app turns it on: see the API starter's
+`docs/setup/google-sign-in.md`.
 
 How all of it works: [auth/README.md](./auth/README.md).
 

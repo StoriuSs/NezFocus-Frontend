@@ -161,7 +161,7 @@ exist on plain-HTTP origins (a deployment opened by LAN IP, say).
 **A form that shows its own errors** (field by field) calls the hook's
 `mutateAsync` in a `try`, and the hook sets `meta: { errorToast: false }` so
 the failure is not toasted as well. The auth settings do this
-(`src/features/auth/api/useDisableTwoFactor.ts`): the hook still refreshes
+(`src/features/auth/api/useSetPassword.ts`): the hook still refreshes
 what the page reads, after a change and when the API says the account changed
 in another tab, so the component only decides where each error shows.
 
@@ -209,8 +209,8 @@ useIdempotentMutation({
 })
 ```
 
-The auth pages go one step further, with field errors, `Retry-After` waits
-and Turnstile: [auth/forms-and-errors.md](./auth/forms-and-errors.md).
+The auth pages go one step further, with field errors and `Retry-After`
+waits: [auth/forms-and-errors.md](./auth/forms-and-errors.md).
 
 ## Retries
 

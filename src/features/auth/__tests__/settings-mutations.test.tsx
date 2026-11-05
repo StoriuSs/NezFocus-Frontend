@@ -4,10 +4,9 @@ import { act, renderHook } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { apiError } from '@/test/helpers'
 
-const authApi = { disableTwoFactor: vi.fn(), deleteAccount: vi.fn() }
+const authApi = { deleteAccount: vi.fn() }
 vi.mock('@/features/auth/api/auth.api', () => ({ authApi }))
 
-const { useDisableTwoFactor } = await import('@/features/auth/api/useDisableTwoFactor')
 const { useDeleteAccount } = await import('@/features/auth/api/useDeleteAccount')
 const { authKeys } = await import('@/features/auth/api/keys')
 
@@ -28,31 +27,7 @@ function withClient() {
  */
 describe('settings mutations', () => {
     beforeEach(() => {
-        authApi.disableTwoFactor.mockReset()
         authApi.deleteAccount.mockReset()
-    })
-
-    it('reloads the two-step status after turning it off', async () => {
-        authApi.disableTwoFactor.mockResolvedValue(undefined)
-        const { wrapper, keys } = withClient()
-        const { result } = renderHook(() => useDisableTwoFactor(), { wrapper })
-
-        await act(() => result.current.mutateAsync('123456'))
-
-        expect(keys()).toEqual([authKeys.twoFactorStatus()])
-    })
-
-    it('reloads it when it was already off, and not for a wrong code', async () => {
-        const { wrapper, keys } = withClient()
-        const { result } = renderHook(() => useDisableTwoFactor(), { wrapper })
-
-        authApi.disableTwoFactor.mockRejectedValueOnce(apiError(400, 'AUTH_TWO_FACTOR_CODE_INVALID'))
-        await act(() => result.current.mutateAsync('000000').catch(() => {}))
-        expect(keys()).toEqual([])
-
-        authApi.disableTwoFactor.mockRejectedValueOnce(apiError(409, 'AUTH_TWO_FACTOR_NOT_ON'))
-        await act(() => result.current.mutateAsync('123456').catch(() => {}))
-        expect(keys()).toEqual([authKeys.twoFactorStatus()])
     })
 
     it('reads again what the account needs when deleting it asked for more proof', async () => {
@@ -62,6 +37,6 @@ describe('settings mutations', () => {
 
         await act(() => result.current.mutateAsync({ password: 'Harbour-Lantern-42' }).catch(() => {}))
 
-        expect(keys()).toEqual([authKeys.signInMethods(), authKeys.twoFactorStatus()])
+        expect(keys()).toEqual([authKeys.signInMethods()])
     })
 })

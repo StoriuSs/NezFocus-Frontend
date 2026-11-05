@@ -13,7 +13,6 @@ import { AUTH_PATHS, withRedirect } from '@/features/auth/lib/paths'
 import { authPageState, useAuthPageState } from '@/features/auth/lib/page-state'
 import { authFormError } from '@/features/auth/lib/form-errors'
 import { authFields } from '@/features/auth/lib/schemas'
-import { useTurnstile } from '@/features/auth/hooks/useTurnstile'
 import { useResendCooldown } from '@/features/auth/hooks/useResendCooldown'
 import { recordCodeSent, secondsUntilResend } from '@/features/auth/lib/code-sent'
 import { AuthCard, Notice } from '@/features/auth/components/AuthCard'
@@ -33,7 +32,6 @@ export default function ForgotPassword() {
     const [params] = useSearchParams()
     const redirect = params.get('redirect')
     const [formError, setFormError] = useState<string | null>(null)
-    const captcha = useTurnstile(true)
     // After a refusal by a limit: how long until the API takes another request.
     // Counted from when the last code went to the address handed over, if one did in this tab.
     const wait = useResendCooldown(secondsUntilResend('password-reset', handedOver.email))
@@ -46,22 +44,15 @@ export default function ForgotPassword() {
 
     async function onSubmit({ email }: Values) {
         setFormError(null)
-        if (captcha.active && !captcha.token) {
-            setFormError(captcha.notReadyMessage)
-            return
-        }
         try {
-            await authApi.forgotPassword(email, captcha.token ?? undefined)
+            await authApi.forgotPassword(email)
             recordCodeSent('password-reset', email)
             void navigate(withRedirect(AUTH_PATHS.resetPassword, redirect), {
                 state: authPageState(email, 'code-sent')
             })
         } catch (error) {
             const failure = authFormError(error)
-            if (failure.captchaRequired && !captcha.active) captcha.refresh()
-            // A limit refuses before Turnstile is asked: the token is still good.
             if (failure.retryAfterSeconds) wait.start(failure.retryAfterSeconds)
-            else captcha.reset()
             setFormError(failure.message)
         }
     }
@@ -84,7 +75,6 @@ export default function ForgotPassword() {
                 <FormField label={t('fields.email')} error={errors.email?.message}>
                     {(control) => <Input type='email' autoComplete='email' {...control} {...register('email')} />}
                 </FormField>
-                {captcha.widget}
                 <Button type='submit' className='w-full' disabled={isSubmitting || wait.remaining > 0}>
                     {isSubmitting
                         ? t('forgotPassword.submitting')

@@ -44,8 +44,8 @@ don't add another in its `onError`
 
 A form is a **zod schema** (the rules), **React Hook Form** (the state), and
 **`FormField`** (`src/components/form/FormField.tsx`), which lays out a label,
-the control and its error, and wires them for screen readers. The complete
-example is `src/pages/FormExample.tsx`, at `/form`.
+the control and its error, and wires them for screen readers. A complete
+example is the sign-in page, `src/features/auth/pages/SignIn.tsx`.
 
 1. **The schema** — built with `t()`, so the messages follow the language:
 
@@ -81,7 +81,7 @@ example is `src/pages/FormExample.tsx`, at `/form`.
 
    ```tsx
    <form onSubmit={handleSubmit(onSubmit)}>
-       <FormField label={t('formExample.email')} error={errors.email?.message}>
+       <FormField label={t('myForm.email')} error={errors.email?.message}>
            {(control) => <Input type='email' {...control} {...register('email')} />}
        </FormField>
        <Button type='submit' disabled={isSubmitting}>

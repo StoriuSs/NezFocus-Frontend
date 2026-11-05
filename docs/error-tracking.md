@@ -166,7 +166,7 @@ reportError(error, { feature: 'avatar-crop' })
   Query parameters named like credentials are replaced by `[REDACTED]`: the
   fields below, plus `code`, `state` and `session_state`. Google's own `code`
   and `state` go to the API, not to this app — the app's `/auth/callback`
-  only ever receives `redirect`, `error`, `notice` and `two_factor` — so this
+  only ever receives `redirect`, `error` and `notice` — so this
   is a safety net.
 - **Breadcrumbs**: what happened before the error, such as navigations,
   clicks (the element's tag, id, classes and a few attributes such as
@@ -177,9 +177,7 @@ reportError(error, { feature: 'avatar-crop' })
   `-` or `_`: `Authorization`, `Cookie`, `Set-Cookie`, `X-Api-Key`,
   `Idempotency-Key`, every password field (`password`, `currentPassword`,
   `newPassword`, …), every token (`token`, `accessToken`, `refreshToken`,
-  `idToken`), and what the two-step and Turnstile forms send:
-  `twoFactorCode`, `recoveryCodes`, `challenge`, `secret`, `otpauthUri`,
-  `turnstileToken`.
+  `idToken`), and `secret`.
 - **Sessions**: a small record at each page load and navigation, marked when
   an error happens in it. No page content. Not billed; they give each release
   a crash-free rate under **Releases**.

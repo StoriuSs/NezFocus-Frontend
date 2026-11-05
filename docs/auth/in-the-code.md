@@ -31,17 +31,14 @@ src/features/auth/
 ├── api/
 │   ├── auth.api.ts        every call to the API's /auth routes
 │   ├── keys.ts            the auth query keys (authKeys)
-│   ├── useAuthOptions.ts  GET /auth/options: Google on? Turnstile's site key?
+│   ├── useAuthOptions.ts  GET /auth/options: Google on?
 │   ├── useSignInMethods.ts    GET /auth/sign-in-methods
-│   ├── useTwoFactorStatus.ts  GET /auth/2fa
 │   └── use*.ts            the settings' mutations, one per file: useChangePassword,
-│                          useLogoutEverywhere, useSetUpTwoFactor, useConfirmTwoFactor,
-│                          useReplaceRecoveryCodes, useDisableTwoFactor, useSendPasswordSetCode,
-│                          useSetPassword, useSendAccountDeletionCode, useDeleteAccount
+│                          useLogoutEverywhere, useSendPasswordSetCode, useSetPassword,
+│                          useSendAccountDeletionCode, useDeleteAccount
 ├── hooks/
 │   ├── useOAuthProviders.ts   the providers both the API and this app know
-│   ├── useResendCooldown.ts   the countdown on "send another code"
-│   └── useTurnstile.tsx   Turnstile on a form
+│   └── useResendCooldown.ts   the countdown on "send another code"
 ├── lib/
 │   ├── paths.ts           the pages' paths, safeRedirect()
 │   ├── access-token.ts    the access token, in memory
@@ -55,7 +52,7 @@ src/features/auth/
 │   ├── password-rules.ts  the API's password rules, mirrored
 │   ├── oauth.ts           Google: the button's address, the callback's errors
 │   └── code-sent.ts       when a code was last emailed (for the timers)
-├── pages/                 the eight pages
+├── pages/                 the seven pages
 ├── components/            the pieces the pages share, the settings sections, and the route guards
 │                          (ProtectedRoute, GuestOnlyRoute, RequireRole)
 └── __tests__/             unit tests
@@ -78,8 +75,8 @@ src/features/auth/
 | File | What it holds |
 |---|---|
 | [auth.api.ts](../../src/features/auth/api/auth.api.ts) | `authApi`: one method per route ([below](#authapi-call-by-call)) |
-| [types.ts](../../src/features/auth/types.ts) | The types of the answers, taken from the API's OpenAPI document (`TokenResponse`, `AuthOptions`, `TwoFactorStatus`, `TwoFactorSetUp`, `SignInMethods`, `RecoveryCodes`) |
-| [useAuthOptions.ts](../../src/features/auth/api/useAuthOptions.ts) | `useAuthOptions()`: `GET /auth/options` once per page load. `providers` (empty while loading or when the API cannot be asked), `turnstileSiteKey` (`null` when off, `undefined` while unknown), `refetch` |
+| [types.ts](../../src/features/auth/types.ts) | The types of the answers, taken from the API's OpenAPI document (`TokenResponse`, `AuthOptions`, `SignInMethods`) |
+| [useAuthOptions.ts](../../src/features/auth/api/useAuthOptions.ts) | `useAuthOptions()`: `GET /auth/options` once per page load. `providers` (empty while loading or when the API cannot be asked) |
 | [oauth.ts](../../src/features/auth/lib/oauth.ts) | `oauthStartUrl(provider, redirect)`; [useOAuthProviders()](../../src/features/auth/hooks/useOAuthProviders.ts) (the providers both the API and this app know: `google`); `oauthFailure(value)` (the callback's `?error=`) |
 | [form-errors.ts](../../src/features/auth/lib/form-errors.ts) | `authFormError(error)`, `formatWait(seconds)` ([forms-and-errors.md](./forms-and-errors.md#turning-a-refusal-into-a-message)) |
 
@@ -87,10 +84,10 @@ src/features/auth/
 
 | File | What it holds |
 |---|---|
-| [paths.ts](../../src/features/auth/lib/paths.ts) | `AUTH_PATHS`, `isSignInFlowPage`, `safeRedirect`, `withRedirect`, `signInPath`, `twoStepPath` |
-| [page-state.ts](../../src/features/auth/lib/page-state.ts) | `authPageState(email, notice)`, `useAuthPageState()`, `twoStepState(challenge)`, `useTwoStepState()` |
+| [paths.ts](../../src/features/auth/lib/paths.ts) | `AUTH_PATHS`, `isSignInFlowPage`, `safeRedirect`, `withRedirect`, `signInPath` |
+| [page-state.ts](../../src/features/auth/lib/page-state.ts) | `authPageState(email, notice)`, `useAuthPageState()` |
 | [sign-up-password.ts](../../src/features/auth/lib/sign-up-password.ts) | `holdSignUpPassword(email, password)`, `heldSignUpPassword(email)`, `forgetSignUpPassword()` |
-| [routes.tsx](../../src/features/auth/routes.tsx) | `authRoutes`: the eight pages, lazily loaded, each wrapped in its guard |
+| [routes.tsx](../../src/features/auth/routes.tsx) | `authRoutes`: the seven pages, lazily loaded, each wrapped in its guard |
 | [ProtectedRoute.tsx](../../src/features/auth/components/ProtectedRoute.tsx) | `ProtectedRoute`, `GuestOnlyRoute` (with `explainIfSignedIn`), and the "You're already signed in" card |
 | [RequireRole.tsx](../../src/features/auth/components/RequireRole.tsx) | `RequireRole`, `useHasRole` |
 
@@ -98,11 +95,10 @@ src/features/auth/
 
 | File | What it holds |
 |---|---|
-| [schemas.ts](../../src/features/auth/lib/schemas.ts) | `authFields(t)`: `email`, `code` (6 digits), `twoStepCode` (6 digits or a recovery code); `newPasswordCheck` (the rules, and the confirmation) |
+| [schemas.ts](../../src/features/auth/lib/schemas.ts) | `authFields(t)`: `email`, `code` (6 digits); `newPasswordCheck` (the rules, and the confirmation) |
 | [password-rules.ts](../../src/features/auth/lib/password-rules.ts) | `brokenPasswordRules(password, email)`, `rejectedRules(data.rules)`, `CHECKLIST_RULES`, the lengths |
 | [code-sent.ts](../../src/features/auth/lib/code-sent.ts) | `recordCodeSent(kind, email)`, `secondsUntilResend(kind, email)`, `RESEND_AFTER_SECONDS` (60) |
 | [useResendCooldown.ts](../../src/features/auth/hooks/useResendCooldown.ts) | A seconds countdown: `remaining`, `start(seconds)` |
-| [useTurnstile.tsx](../../src/features/auth/hooks/useTurnstile.tsx) | `useTurnstile(needed, { offerGoogle })`: `active`, `token`, `widget`, `notReadyMessage`, `reset()`, `refresh()` |
 
 **Pages** (`pages/`)
 
@@ -113,7 +109,6 @@ src/features/auth/
 | [VerifyEmail.tsx](../../src/features/auth/pages/VerifyEmail.tsx) | `/verify-email` | [pages-and-flows.md](./pages-and-flows.md#confirm-the-email-address) |
 | [ForgotPassword.tsx](../../src/features/auth/pages/ForgotPassword.tsx) | `/forgot-password` | [pages-and-flows.md](./pages-and-flows.md#forgot-and-reset-the-password) |
 | [ResetPassword.tsx](../../src/features/auth/pages/ResetPassword.tsx) | `/reset-password` | same |
-| [TwoStep.tsx](../../src/features/auth/pages/TwoStep.tsx) | `/sign-in/two-step` | [pages-and-flows.md](./pages-and-flows.md#two-step-sign-in) |
 | [OAuthCallback.tsx](../../src/features/auth/pages/OAuthCallback.tsx) | `/auth/callback` | [pages-and-flows.md](./pages-and-flows.md#continue-with-google) |
 | [Settings.tsx](../../src/features/auth/pages/Settings.tsx) | `/settings` | [account-settings.md](./account-settings.md) |
 
@@ -126,8 +121,6 @@ src/features/auth/
 | [PasswordChecklist.tsx](../../src/features/auth/components/PasswordChecklist.tsx) | The rules, ticked off as they are met, and the API's refusals |
 | [SentTo.tsx](../../src/features/auth/components/SentTo.tsx) | The address a code went to, as text, with "Use a different address" |
 | [OAuthButtons.tsx](../../src/features/auth/components/OAuthButtons.tsx) | "Continue with Google", when the API offers it |
-| [Turnstile.tsx](../../src/features/auth/components/Turnstile.tsx) | The Turnstile widget, and `loadTurnstile()`: Cloudflare's script, once, on demand |
-| [TwoStepSettings.tsx](../../src/features/auth/components/TwoStepSettings.tsx) | The two-step section of settings: setup with the QR code, recovery codes, new codes, turning off |
 | [SetPasswordSettings.tsx](../../src/features/auth/components/SetPasswordSettings.tsx) | "Set a password", for an account made with Google |
 | [DeleteAccountDialog.tsx](../../src/features/auth/components/DeleteAccountDialog.tsx) | "Delete account", used on the profile page |
 
@@ -141,14 +134,14 @@ src/features/auth/
 | [src/lib/safe-storage.ts](../../src/lib/safe-storage.ts) | `localStorage` and `sessionStorage` that never throw (some browsers block them) |
 | [src/lib/navigation.ts](../../src/lib/navigation.ts) | `hardNavigate(url)`: the full page load a sign-out ends with |
 | [src/lib/query-client.ts](../../src/lib/query-client.ts) | The React Query cache a sign-out clears |
-| [src/lib/error-tracking.ts](../../src/lib/error-tracking.ts) | `setErrorTrackingUser(id)`; removes passwords, codes, recovery codes, the two-step secret and Turnstile tokens from error reports |
+| [src/lib/error-tracking.ts](../../src/lib/error-tracking.ts) | `setErrorTrackingUser(id)`; removes passwords, tokens and codes from error reports |
 | [src/app/App.tsx](../../src/app/App.tsx) | Runs `initAuth()` once, with a spinner until it is done, then shows the sign-out message |
 | [src/app/router.tsx](../../src/app/router.tsx) | Puts `authRoutes` in the app; renders the username prompt on every page |
 | [src/app/layout/MainLayout.tsx](../../src/app/layout/MainLayout.tsx) | The header: "Sign In", or the account menu (Profile, Settings, Log out) |
 | [src/features/users/](../../src/features/users/) | The profile page (with Delete account), the username prompt ([../username-prompt.md](../username-prompt.md)), `useProfile` |
 | [src/config/env.ts](../../src/config/env.ts) | `VITE_API_URL`, the only setting sign-in uses |
 | `src/i18n/locales/<language>/auth.json`, `api.json` | The pages' texts, and a sentence per API error type |
-| `scripts/csp.mjs` | The Content-Security-Policy: the API's address, and Turnstile's origin |
+| `scripts/csp.mjs` | The Content-Security-Policy: the API's address |
 
 ## How the routes fit together
 
@@ -158,7 +151,7 @@ src/features/auth/
 ```
 AppRoot           NavigationProgress, UsernamePromptWrapper, then the page
 └── MainLayout    the header, an error boundary, the page
-    ├── publicRoutes   /, /form                    (src/app/public-routes.tsx)
+    ├── publicRoutes   /                           (src/app/public-routes.tsx)
     ├── authRoutes     the auth pages and /settings (src/features/auth/routes.tsx)
     ├── usersRoutes    /profile                     (src/features/users/routes.tsx)
     └── *              NotFound
@@ -253,8 +246,8 @@ Read state with a selector (`useAuthStore((s) => s.user)`); outside React,
 | `isSigningOut` | A sign-out is reloading the app; guards should not send anyone anywhere |
 | `user` | `{ id, email, username, displayName, roles }`, or `null` |
 | `initAuth()` | On page load: restore the session from the cookie, if this browser may have one. Resolves `true` when signed in |
-| `signIn(email, password, turnstileToken?)` | `POST /auth/login`, then start the session. Rejects with the API's error, `403 AUTH_TWO_FACTOR_REQUIRED` included |
-| `startSession(tokens)` | Take up a session another route answered with (confirm, reset, two-step) |
+| `signIn(email, password)` | `POST /auth/login`, then start the session. Rejects with the API's error |
+| `startSession(tokens)` | Take up a session another route answered with (confirm, reset) |
 | `resumeFromCookie()` | Take up a session from the cookie alone (after Google). Resolves `false` if there is none |
 | `logout(reason?, to?)` | Sign out here, on the API and in other tabs, then reload at `to` (default: [by reason](./session.md#why-a-session-ended-every-reason)) |
 | `getToken()` | A token for a request: the current one, or a fresh one when it has under a minute left |
@@ -265,14 +258,13 @@ Read state with a selector (`useAuthStore((s) => s.user)`); outside React,
 
 | Method | Route | Returns |
 |---|---|---|
-| `login(email, password, turnstileToken?)` | `POST /auth/login` | tokens |
-| `register(email, password, turnstileToken?)` | `POST /auth/register` | — |
+| `login(email, password)` | `POST /auth/login` | tokens |
+| `register(email, password)` | `POST /auth/register` | — |
 | `verifyEmail(email, code, password)` | `POST /auth/verify-email` | tokens |
 | `resendVerification(email)` | `POST /auth/resend-verification` | — |
-| `forgotPassword(email, turnstileToken?)` | `POST /auth/forgot-password` | — |
+| `forgotPassword(email)` | `POST /auth/forgot-password` | — |
 | `resetPassword(email, code, password)` | `POST /auth/reset-password` | tokens |
-| `completeTwoFactor(code, challenge?)` | `POST /auth/login/2fa` | tokens |
-| `options()` | `GET /auth/options` | `{ providers, turnstileSiteKey }` |
+| `options()` | `GET /auth/options` | `{ providers }` |
 | `refresh()` | `POST /auth/refresh` | tokens |
 | `logout()` | `POST /auth/logout` (5-second timeout) | — |
 | `logoutEverywhere()` | `POST /auth/logout-all` | — |
@@ -281,12 +273,7 @@ Read state with a selector (`useAuthStore((s) => s.user)`); outside React,
 | `sendPasswordSetCode()` | `POST /auth/password/code` | — |
 | `setPassword(code, newPassword)` | `POST /auth/password` | — |
 | `sendAccountDeletionCode()` | `POST /auth/account/delete-code` | — |
-| `deleteAccount({ password?, code?, twoFactorCode? })` | `POST /auth/account/delete` | — |
-| `twoFactorStatus()` | `GET /auth/2fa` | `{ enabled, recoveryCodesLeft }` |
-| `setUpTwoFactor()` | `POST /auth/2fa/setup` | `{ secret, otpauthUri }` |
-| `confirmTwoFactor(code)` | `POST /auth/2fa/confirm` | the 10 recovery codes |
-| `replaceRecoveryCodes(code)` | `POST /auth/2fa/recovery-codes` | the 10 new recovery codes |
-| `disableTwoFactor(code)` | `POST /auth/2fa/disable` | — |
+| `deleteAccount({ password?, code? })` | `POST /auth/account/delete` | — |
 
 "Tokens" is `{ accessToken, tokenType, expiresIn }`. Which of these send the
 bearer token and the cookie: [session.md](./session.md#which-requests-carry-what).
@@ -304,7 +291,6 @@ What every route accepts and answers: the API starter's
 | `sessionStorage` | `auth:password-set-code-sent` | `{ email, at }` | Set a password |
 | React Query | `['auth', 'options']` | the API's options, for the page load | `useAuthOptions` |
 | React Query | `['auth', 'sign-in-methods']` | `{ password, providers }` | Settings, the delete dialog |
-| React Query | `['auth', 'two-factor']` | `{ enabled, recoveryCodesLeft }` | the two-step section, the delete dialog |
 | React Query | `['users', 'profile']` | the profile from `/users/me` | the store at sign-in, `useProfile` |
 
 The refresh cookie is not in this list: the app cannot see it.
@@ -317,7 +303,7 @@ The refresh cookie is not in this list: the app cannot see it.
 |---|---|
 | `src/features/auth/__tests__/auth.store.test.ts` | The access token in memory only, never in `localStorage` or `sessionStorage`; a refused refresh ends the session with its reason; signing out clears the token and the cached data, tells the other tabs and never lands off-site; a sign-out in another tab followed here |
 | `src/lib/__tests__/api.test.ts` | The client: the bearer token, refresh and retry once (never twice), sign-out only when the session really ended (not on a 503 or an ordinary 403), the auth routes left alone |
-| `src/features/auth/__tests__/pages.test.tsx` | The two-step challenge handed from sign-in to the code page; an unconfirmed address led to the confirm page, which sends the held password with the code; the password held in memory, never in history, and `?redirect=` kept through sign-up and confirm; the password asked for after a reload; the wrong code-or-password message; a Turnstile token used once; two-step tries left and the wait; turning two-step off needs a code; Google's return address never off-site |
+| `src/features/auth/__tests__/pages.test.tsx` | An unconfirmed address led to the confirm page, which sends the held password with the code; the password held in memory, never in history, and `?redirect=` kept through sign-up and confirm; the password asked for after a reload; the wrong code-or-password message; the wait after too many sign-ins; Google's return address never off-site |
 | `src/features/auth/__tests__/delete-account.test.tsx` | The delete dialog: nothing happens before the password |
 | `src/features/auth/__tests__/auth-api.test.ts` | Confirming an address sends the password chosen at sign-up |
 | `src/features/auth/__tests__/paths.test.ts` | `safeRedirect` never leaves the site |
@@ -325,8 +311,8 @@ The refresh cookie is not in this list: the app cannot see it.
 | `src/features/auth/__tests__/RequireRole.test.tsx` | Children for the role, the fallback otherwise |
 
 How they are built: `pages.test.tsx` replaces `authApi` and the store with
-stand-ins (`vi.mock`), renders `authRoutes` in a memory router, and puts a fake
-`window.turnstile` in place of Cloudflare's script. `auth.store.test.ts`
+stand-ins (`vi.mock`) and renders `authRoutes` in a memory router.
+`auth.store.test.ts`
 replaces `authApi`, the query client, `hardNavigate`, error tracking and
 tab-sync. `api.test.ts` replaces the store. None of them needs the API. If
 your shell sets `NODE_ENV=production`, unset it before running them: React's
@@ -337,12 +323,10 @@ test helpers need the development build.
 | Suite | Covers | Needs |
 |---|---|---|
 | `e2e/account.spec.ts` | Sign up, confirm, choose a username; a reload keeps the session; a deep link after sign-in; reset a forgotten password (the old one refused after); delete the account | the API (`E2E_API_URL`, default `http://localhost:8888/api/v1`) and its Mailpit (`E2E_MAILPIT_URL`, default `http://localhost:8025`) |
-| `e2e/two-step.spec.ts` | Turn it on (a code computed from the key the page shows, as an app would), then sign in with a code, coming back to the deep link | the same |
 | `e2e/oauth.spec.ts` | The Google button and the API's redirect to Google (PKCE, the state cookie) | the API with Google set up; skipped otherwise |
 
-The app is at `E2E_BASE_URL` (default `http://localhost:3001`). The API must
-run with Turnstile off or with Cloudflare's test keys: the suites refuse a
-real site key. Signing in *at* Google is a manual test: a test has no Google
+The app is at `E2E_BASE_URL` (default `http://localhost:3001`). Signing in
+*at* Google is a manual test: a test has no Google
 account. To do it by hand, start both apps with Google set up on the API,
 click "Continue with Google" on `/sign-in?redirect=/profile`, and check you
 land on `/profile`, signed in.
@@ -367,9 +351,7 @@ Say, a page where a signed-out person confirms a new email address.
    `navigate(safeRedirect(redirect), { replace: true })`, and hand the address
    to the next page with `authPageState()`, never in the URL.
 6. **If it signs in:** call `startSession(tokens)` (tokens in the answer) or
-   `resumeFromCookie()` (only a cookie). If the API may answer
-   `AUTH_TWO_FACTOR_REQUIRED`, move to `twoStepPath(redirect)` with
-   `twoStepState(failure.challenge)`.
+   `resumeFromCookie()` (only a cookie).
 7. **The texts:** a new block in `auth.json`, in English and Vietnamese (the
    catalogue test fails until both have the same keys).
 8. **Tests:** add the page to the list `pages.test.tsx` loads at the top, and a

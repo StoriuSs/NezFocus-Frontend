@@ -1,13 +1,6 @@
 import api from '@/lib/api'
 import type { ApiEnvelope } from '@/lib/api-types'
-import type {
-    AuthOptions,
-    RecoveryCodes,
-    SignInMethods,
-    TokenResponse,
-    TwoFactorSetUp,
-    TwoFactorStatus
-} from '@/features/auth/types'
+import type { AuthOptions, SignInMethods, TokenResponse } from '@/features/auth/types'
 
 /**
  * The API's auth routes (the API starter's docs/auth/api-reference.md).
@@ -20,27 +13,15 @@ import type {
  */
 const auth = { skipAuth: true, withCredentials: true } as const
 
-/**
- * Signing in (login, verify-email, reset-password) answers with tokens, or,
- * when the account has two-step sign-in on, with a 403
- * AUTH_TWO_FACTOR_REQUIRED carrying a challenge: see authFormError() in
- * form-errors.ts, and the two-step page that finishes it.
- *
- * `turnstileToken` is the Turnstile widget's answer, sent when the API asks
- * for one (useTurnstile.tsx); left out otherwise.
- */
+/** Signing in (login, verify-email, reset-password) answers with tokens. */
 export const authApi = {
-    async login(email: string, password: string, turnstileToken?: string): Promise<TokenResponse> {
-        const response = await api.post<ApiEnvelope<TokenResponse>>(
-            '/auth/login',
-            { email, password, turnstileToken },
-            auth
-        )
+    async login(email: string, password: string): Promise<TokenResponse> {
+        const response = await api.post<ApiEnvelope<TokenResponse>>('/auth/login', { email, password }, auth)
         return response.data.data
     },
 
-    async register(email: string, password: string, turnstileToken?: string): Promise<void> {
-        await api.post('/auth/register', { email, password, turnstileToken }, auth)
+    async register(email: string, password: string): Promise<void> {
+        await api.post('/auth/register', { email, password }, auth)
     },
 
     /**
@@ -62,8 +43,8 @@ export const authApi = {
         await api.post('/auth/resend-verification', { email }, auth)
     },
 
-    async forgotPassword(email: string, turnstileToken?: string): Promise<void> {
-        await api.post('/auth/forgot-password', { email, turnstileToken }, auth)
+    async forgotPassword(email: string): Promise<void> {
+        await api.post('/auth/forgot-password', { email }, auth)
     },
 
     /** Ends every earlier session, then signs in here: tokens, and a new refresh cookie. */
@@ -76,21 +57,7 @@ export const authApi = {
         return response.data.data
     },
 
-    /**
-     * The second step of signing in: a code from the authenticator app, or a
-     * recovery code. `challenge` came with the first step's 403; after Google
-     * it is in a cookie instead, and left out here.
-     */
-    async completeTwoFactor(code: string, challenge?: string): Promise<TokenResponse> {
-        const response = await api.post<ApiEnvelope<TokenResponse>>('/auth/login/2fa', { code, challenge }, auth)
-        return response.data.data
-    },
-
-    /**
-     * What the sign-in pages need from the API's configuration: the other
-     * providers (`google`), to offer as buttons, and Turnstile's site key, or
-     * null when Turnstile is off.
-     */
+    /** The other sign-in providers the API is configured for (`google`), to offer as buttons. */
     async options(): Promise<AuthOptions> {
         const response = await api.get<ApiEnvelope<AuthOptions>>('/auth/options', auth)
         return response.data.data
@@ -140,42 +107,9 @@ export const authApi = {
 
     /**
      * Delete this account, with proof it is you: the password, or the emailed
-     * code for an account without one, and a two-step code when that is on.
-     * Every session ends, this one included.
+     * code for an account without one. Every session ends, this one included.
      */
-    async deleteAccount(proof: { password?: string; code?: string; twoFactorCode?: string }): Promise<void> {
+    async deleteAccount(proof: { password?: string; code?: string }): Promise<void> {
         await api.post('/auth/account/delete', proof, { withCredentials: true })
-    },
-
-    async twoFactorStatus(): Promise<TwoFactorStatus> {
-        const response = await api.get<ApiEnvelope<TwoFactorStatus>>('/auth/2fa')
-        return response.data.data
-    },
-
-    /** A new secret for the authenticator app. Not asked for at sign-in until confirmed. */
-    async setUpTwoFactor(): Promise<TwoFactorSetUp> {
-        const response = await api.post<ApiEnvelope<TwoFactorSetUp>>('/auth/2fa/setup')
-        return response.data.data
-    },
-
-    /** Turns two-step sign-in on with a code from the app. Resolves with the recovery codes, shown this once. */
-    async confirmTwoFactor(code: string): Promise<string[]> {
-        const response = await api.post<ApiEnvelope<RecoveryCodes>>('/auth/2fa/confirm', {
-            code
-        })
-        return response.data.data.recoveryCodes
-    },
-
-    /** New recovery codes, with a code from the app: the old ones stop working. Resolves with the new ones, shown this once. */
-    async replaceRecoveryCodes(code: string): Promise<string[]> {
-        const response = await api.post<ApiEnvelope<RecoveryCodes>>('/auth/2fa/recovery-codes', {
-            code
-        })
-        return response.data.data.recoveryCodes
-    },
-
-    /** Turns it off, with a code from the app or a recovery code. */
-    async disableTwoFactor(code: string): Promise<void> {
-        await api.post('/auth/2fa/disable', { code })
     }
 }

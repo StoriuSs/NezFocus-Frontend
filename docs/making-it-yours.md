@@ -75,8 +75,8 @@ In `.env.development`, and later `.env.production` on the server:
 | `VITE_API_URL` | Your API, **including** `/api/v1` |
 
 That is the only required setting. Error tracking is optional; see the
-reference. There are no sign-in settings here: Google and Turnstile are
-turned on in the API, which also needs this app's address in its
+reference. There are no sign-in settings here: Google sign-in is turned on in
+the API, which also needs this app's address in its
 `CORS_ORIGINS` and `FRONTEND_URL`.
 
 The full reference, including what is read at build time versus container

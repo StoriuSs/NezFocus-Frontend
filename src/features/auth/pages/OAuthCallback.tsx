@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { PageLoader } from '@/components/PageLoader'
 import { useAuthStore } from '@/features/auth/auth.store'
-import { AUTH_PATHS, safeRedirect, twoStepPath, withRedirect } from '@/features/auth/lib/paths'
+import { AUTH_PATHS, safeRedirect, withRedirect } from '@/features/auth/lib/paths'
 import { oauthFailure, type OAuthFailure } from '@/features/auth/lib/oauth'
 import { AuthCard, Notice } from '@/features/auth/components/AuthCard'
 
@@ -14,9 +14,8 @@ import { AuthCard, Notice } from '@/features/auth/components/AuthCard'
  * On success the API has set the refresh cookie and nothing else: this page
  * trades it for an access token, as a reload does, then goes where the person
  * was heading (`?redirect=`, checked again here). On failure the API names
- * the reason in `?error=`. With two-step sign-in on, `?two_factor=1`: the
- * code is asked for on the two-step page. With `?notice=password_removed`,
- * it says a never-confirmed sign-up's password was removed on linking.
+ * the reason in `?error=`. With `?notice=password_removed`, it says a
+ * never-confirmed sign-up's password was removed on linking.
  */
 export default function OAuthCallback() {
     const { t } = useTranslation('auth')
@@ -34,12 +33,6 @@ export default function OAuthCallback() {
         // never confirmed: say so, rather than let it vanish unannounced.
         if (params.get('notice') === 'password_removed') {
             toast.info(t('oauthCallback.passwordRemoved'), { duration: 15_000 })
-        }
-        // Two-step sign-in is on: the API kept the challenge in a cookie for
-        // the two-step page, and started no session yet.
-        if (params.get('two_factor') === '1') {
-            void navigate(twoStepPath(params.get('redirect')), { replace: true })
-            return
         }
         void resumeFromCookie().then((signedIn) => {
             if (signedIn) void navigate(safeRedirect(params.get('redirect')), { replace: true })

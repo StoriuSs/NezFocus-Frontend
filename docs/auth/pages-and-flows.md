@@ -12,7 +12,6 @@ messages a form shows, [forms-and-errors.md](./forms-and-errors.md).
 - [Sign up](#sign-up)
 - [Confirm the email address](#confirm-the-email-address)
 - [Sign in](#sign-in)
-- [Two-step sign-in](#two-step-sign-in)
 - [Forgot and reset the password](#forgot-and-reset-the-password)
 - [Continue with Google](#continue-with-google)
 - [Already signed in: what visitor pages do](#already-signed-in-what-visitor-pages-do)
@@ -28,14 +27,13 @@ loaded only when first opened (`lazy`).
 
 | Path | Who may open it | What it does | Asks the API | Goes next |
 |---|---|---|---|---|
-| `/sign-in` | visitors | Email and password; "Continue with Google" | `POST /auth/login` | `?redirect=` or home; the two-step page; the confirm page |
+| `/sign-in` | visitors | Email and password; "Continue with Google" | `POST /auth/login` | `?redirect=` or home; the confirm page |
 | `/sign-up` | visitors | Email, password, confirmation; the rules ticked off as you type | `POST /auth/register` | always the confirm page |
-| `/verify-email` | visitors | The 6-digit code from the email. The right code signs in | `POST /auth/verify-email`, `POST /auth/resend-verification` | `?redirect=` or home; the two-step page |
+| `/verify-email` | visitors | The 6-digit code from the email. The right code signs in | `POST /auth/verify-email`, `POST /auth/resend-verification` | `?redirect=` or home |
 | `/forgot-password` | visitors (a signed-in person sees a card) | Asks for a code to choose a new password | `POST /auth/forgot-password` | always the reset page |
-| `/reset-password` | visitors (a signed-in person sees a card) | The code and a new password. Signs in, and signs out every other device | `POST /auth/reset-password` | `?redirect=` or home; the two-step page |
-| `/sign-in/two-step` | visitors | The second step: a code from the authenticator app, or a recovery code | `POST /auth/login/2fa` | `?redirect=` or home |
-| `/auth/callback` | anyone | Where the API sends the browser back after Google | `POST /auth/refresh` | `?redirect=` or home; the two-step page; or says why it failed |
-| `/settings` | signed in | Password, two-step sign-in, sign out everywhere ([account-settings.md](./account-settings.md)) | several | stays |
+| `/reset-password` | visitors (a signed-in person sees a card) | The code and a new password. Signs in, and signs out every other device | `POST /auth/reset-password` | `?redirect=` or home |
+| `/auth/callback` | anyone | Where the API sends the browser back after Google | `POST /auth/refresh` | `?redirect=` or home; or says why it failed |
+| `/settings` | signed in | Password, sign out everywhere ([account-settings.md](./account-settings.md)) | several | stays |
 | `/profile` | signed in | The profile, and "Delete account" ([account-settings.md](./account-settings.md#delete-the-account)) | several | stays |
 
 "Visitors" means the page is wrapped in `GuestOnlyRoute`: a signed-in person
@@ -46,15 +44,14 @@ afterwards ([below](#pages-for-signed-in-people)).
 ## Where the person goes afterwards: `?redirect=`
 
 Someone who opens `/profile` while signed out should land on `/profile` once
-signed in, even if they first sign up, confirm their address and enter a
-two-step code. The page they were heading for travels in the address as
+signed in, even if they first sign up and confirm their address. The page
+they were heading for travels in the address as
 `?redirect=`:
 
 1. `ProtectedRoute` sends them to `/sign-in?redirect=%2Fprofile`. The header's
    "Sign In" link does the same with the current page.
 2. Every link between auth pages keeps it (`withRedirect()` in `paths.ts`):
-   sign-in → sign-up → confirm, sign-in → forgot → reset, and the two-step
-   page.
+   sign-in → sign-up → confirm, sign-in → forgot → reset.
 3. "Continue with Google" hands it to the API, which hands it back on
    `/auth/callback`.
 4. Once signed in, the page goes to `safeRedirect(redirect)`, with `replace`,
@@ -81,7 +78,6 @@ holds the shapes:
 | `email` | sign-in ("Forgot your password?"), sign-up, forgot-password, "Use a different address" | the next page | Fill the address in, or show it as text |
 | `notice: 'code-sent'` | sign-up, forgot-password | confirm, reset | "Check your inbox" |
 | `notice: 'unverified'` | sign-in | confirm | "Your email isn't confirmed yet" |
-| `challenge` | sign-in, confirm, reset | two-step | The API's one-off ticket for the second step |
 
 Why not the address bar: an email address in the URL ends up in the browser's
 history, the web server's access log and the page addresses error tracking
@@ -93,8 +89,8 @@ they read (`useAuthPageState`): a history entry can hold anything.
 
 [SignUp.tsx](../../src/features/auth/pages/SignUp.tsx). Email, password (with
 the [rules checklist](./forms-and-errors.md#the-password-rules)), and the
-password again. When the API has Turnstile on, the widget is always on this
-form. "Continue with Google" sits under it when the API offers Google.
+password again. "Continue with Google" sits under it when the API offers
+Google.
 
 ```mermaid
 sequenceDiagram
@@ -102,7 +98,7 @@ sequenceDiagram
     participant App as Web app
     participant API
     participant Inbox
-    P->>App: /sign-up - email, password, Turnstile if on
+    P->>App: /sign-up - email, password
     App->>App: checks the form first
     App->>API: POST /auth/register
     API-->>App: 202, the same answer for every address
@@ -120,8 +116,7 @@ Step by step:
 
 1. The form checks the address, the password rules the browser knows, and that
    both passwords match. Nothing is sent until they pass.
-2. `POST /auth/register` with `email`, `password` and, when shown, the
-   Turnstile token (`turnstile_token`).
+2. `POST /auth/register` with `email` and `password`.
 3. The API answers `202` whatever the address: new, already taken, or signed
    up but never confirmed. The page records that a code was sent (for the
    ["send another" timer](./forms-and-errors.md#send-another-code-timers)),
@@ -138,9 +133,8 @@ their inbox instead: the API emails them how to sign in, and no code.
 
 | Refusal | What the page does |
 |---|---|
-| `422 AUTH_PASSWORD_REJECTED` | Marks the broken rules on the checklist, including the ones only the API checks (a common password). Keeps the solved Turnstile: the API checks the password before Turnstile, so the token was not used |
-| `429` (too many sign-ups from this network, or emails to this address) | Says how long to wait. Keeps the Turnstile token: the limit refuses before Turnstile is asked |
-| Turnstile errors | Says so; draws a fresh widget ([forms-and-errors.md](./forms-and-errors.md#turnstile)) |
+| `422 AUTH_PASSWORD_REJECTED` | Marks the broken rules on the checklist, including the ones only the API checks (a common password) |
+| `429` (too many sign-ups from this network, or emails to this address) | Says how long to wait |
 
 Sent back from the confirm page with "Use a different address", the form opens
 with that address filled in.
@@ -182,10 +176,6 @@ sets the refresh cookie. The page starts the session
 confirmed. Welcome!", and goes to `?redirect=` or home. A first sign-in then
 shows the [username prompt](#after-the-first-sign-in-the-username).
 
-With two-step sign-in on (an account that confirmed long ago and turned it
-on), the API answers `403 AUTH_TWO_FACTOR_REQUIRED` instead: the address is
-confirmed, and the page moves to the two-step page.
-
 **Send a new code:** `POST /auth/resend-verification`. The button waits out
 the minute since the last code went to this address, counted from the real
 send time, even across a reload
@@ -207,20 +197,17 @@ password (with a show/hide button), "Forgot your password?", "Create one", and
 flowchart TD
     F["/sign-in: email and password"] --> L{"POST /auth/login"}
     L -->|"200: token, cookie set"| S["Session started"]
-    L -->|"403 AUTH_TWO_FACTOR_REQUIRED, with a challenge"| T["/sign-in/two-step"]
     L -->|"403 AUTH_EMAIL_NOT_VERIFIED"| V["/verify-email"]
     L -->|"401 AUTH_INVALID_CREDENTIALS"| E["Incorrect email or password"]
     L -->|"429"| W["Try again in ..."]
-    E -->|"the API asks for Turnstile"| F
-    T -->|"POST /auth/login/2fa: 200"| S
     S --> R["?redirect= or home"]
 ```
 
 1. The form checks the address is an address and the password is not empty.
    It does not check the password rules: an old password may predate them, and
    the API does not check them at sign-in either.
-2. `signIn()` in the store sends `POST /auth/login` with `email`, `password`
-   and, when shown, the Turnstile token.
+2. `signIn()` in the store sends `POST /auth/login` with `email` and
+   `password`.
 3. On `200` the store starts the session; the page goes to `?redirect=` or
    home.
 
@@ -228,58 +215,12 @@ flowchart TD
 
 | Answer | What the page does |
 |---|---|
-| `403 AUTH_TWO_FACTOR_REQUIRED` | The password was right; the account has two-step sign-in on. Goes to `/sign-in/two-step`, the challenge in navigation state |
 | `403 AUTH_EMAIL_NOT_VERIFIED` | The password was right; the address was never confirmed. Goes to `/verify-email` with the address and `unverified`, rather than a dead end |
 | `401 AUTH_INVALID_CREDENTIALS` | "Incorrect email or password." The same for a wrong password and an address with no account, so the page says nothing about which addresses exist. When Google is on, it adds: "Signed up with Google? Use Continue with Google below..." (shown to everyone, so it reveals nothing either) |
-| `captcha_required` on that answer | The API wants Turnstile from the next attempt (after two failures). The widget appears. Most people never see it |
 | `429` | Too many failed sign-ins for this address, or from this network: says how long to wait |
-| `503 AUTH_CAPTCHA_UNAVAILABLE` | Cloudflare could not be reached: try again in a minute |
 
 "Forgot your password?" carries the address typed so far to the next page.
 A page that sends someone here may hand over an address; it is filled in.
-
-## Two-step sign-in
-
-[TwoStep.tsx](../../src/features/auth/pages/TwoStep.tsx), at
-`/sign-in/two-step`. For an account with two-step sign-in on: the password (or
-Google, or an emailed code) was right, and the API answered with a
-**challenge** instead of a session. Turning it on is in
-[account-settings.md](./account-settings.md#two-step-sign-in).
-
-It is reached from four places:
-
-| From | The challenge travels |
-|---|---|
-| Sign-in | in navigation state, from the `403`'s `data.challenge` |
-| Confirming the address | same |
-| Resetting the password (the new password is already saved) | same |
-| Google | in an httpOnly cookie, `two_factor`, which only the API reads. The callback page arrives with `?two_factor=1`, never the challenge itself |
-
-**What the person does:**
-
-1. Types the 6 digits the authenticator app shows. Or chooses "Use a recovery
-   code instead" and types one (`XXXXX-XXXXX`; the dash and the case do not
-   matter).
-2. The page checks the shape, then sends `POST /auth/login/2fa` with `code`
-   and `challenge` (left out after Google: the API reads its cookie).
-3. The answer is like a sign-in: an access token and the refresh cookie. The
-   page starts the session and goes to `?redirect=` or home.
-
-**The limits, and what the page shows:**
-
-| Answer | The page |
-|---|---|
-| `400 AUTH_TWO_FACTOR_CODE_INVALID` | "That code isn't right. 2 tries left." Empties the field, keeps the form |
-| The last try used, or `401 AUTH_TWO_FACTOR_CHALLENGE_EXPIRED` | The challenge lasts 5 minutes and allows 5 wrong codes. The form goes; the link reads "Sign in again" |
-| `429` with reason `wrong_codes` | The account also allows 5 wrong codes per 15 minutes, across sign-ins. The form goes; the message says how long to wait, since signing in again at once would only be refused |
-| `503 AUTH_TWO_FACTOR_UNAVAILABLE` | The API cannot open this account's secret: "Contact support." The form stays |
-
-A recovery code works once. The API emails the owner when one is used, with
-how many are left.
-
-Where to go afterwards is in the address (`?redirect=`), not in navigation
-state: the moment the session starts, `GuestOnlyRoute` sends the now
-signed-in person on to `?redirect=`.
 
 ## Forgot and reset the password
 
@@ -289,7 +230,7 @@ sequenceDiagram
     participant App as Web app
     participant API
     participant Inbox
-    P->>App: /forgot-password - email, Turnstile if on
+    P->>App: /forgot-password - email
     App->>API: POST /auth/forgot-password
     API-->>App: 202, the same answer for every address
     API--)Inbox: a 6-digit code, if the address has an account
@@ -302,9 +243,8 @@ sequenceDiagram
 
 **`/forgot-password`** ([ForgotPassword.tsx](../../src/features/auth/pages/ForgotPassword.tsx)):
 
-1. The address (filled in when handed over). The Turnstile widget, always,
-   when the API has it on.
-2. `POST /auth/forgot-password` with `email` and the token. The API answers
+1. The address (filled in when handed over).
+2. `POST /auth/forgot-password` with `email`. The API answers
    `202` whether or not the address has an account, so the page always moves
    on to `/reset-password`.
 3. "Send code" stays disabled, with a countdown, for what is left of the
@@ -322,10 +262,6 @@ sequenceDiagram
    here: an access token and a new refresh cookie.
 4. The page starts the session, says "Password changed. You're signed in, and
    every other device was signed out.", and goes to `?redirect=` or home.
-
-With two-step sign-in on, the password is changed all the same, and the page
-moves on to the two-step page ("Enter your two-step code to finish signing
-in").
 
 "No email? Send another code" links back to forgot-password with the address;
 until the minute is up it reads "Send another code in 42 s" instead.
@@ -386,7 +322,6 @@ What the page reads from its address:
 | `?error=email_unverified` | Google has not verified the account's address | "Google hasn't verified this account's email address, so it can't be used to sign in here." |
 | `?error=account_deleted` | The account linked to this Google account was deleted | "The account linked to this Google account has been deleted." |
 | any other `?error=` | Something failed (the API logged why) | "Sign-in with Google didn't work. Try again, or sign in with your email." |
-| `?two_factor=1` | Two-step sign-in is on; the API kept the challenge in a cookie | Goes to `/sign-in/two-step`, keeping `?redirect=` |
 | `?notice=password_removed` | Someone had signed up with this address and a password but never confirmed it; linking Google removed that password | A message for 15 seconds, which also says how to set a password in Settings |
 | none of these | Success | Takes up the session as above. No session to take up: the "didn't work" message |
 
@@ -409,7 +344,7 @@ this app.
 `GuestOnlyRoute` ([ProtectedRoute.tsx](../../src/features/auth/components/ProtectedRoute.tsx))
 wraps the visitor pages. A signed-in person who opens one:
 
-- `/sign-in`, `/sign-up`, `/verify-email`, `/sign-in/two-step`: is sent on, at
+- `/sign-in`, `/sign-up`, `/verify-email`: is sent on, at
   once, to `safeRedirect(?redirect=)`, or home.
 - `/forgot-password` and `/reset-password`: these are the pages emails link
   to, so the person may well be signed in to another account. They see a card

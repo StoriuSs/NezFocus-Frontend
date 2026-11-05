@@ -14,7 +14,6 @@ import { authPageState, useAuthPageState } from '@/features/auth/lib/page-state'
 import { authFormError, formatWait } from '@/features/auth/lib/form-errors'
 import { authFields, newPasswordCheck } from '@/features/auth/lib/schemas'
 import type { PasswordRule } from '@/features/auth/lib/password-rules'
-import { useTurnstile } from '@/features/auth/hooks/useTurnstile'
 import { recordCodeSent } from '@/features/auth/lib/code-sent'
 import { holdSignUpPassword } from '@/features/auth/lib/sign-up-password'
 import { useResendCooldown } from '@/features/auth/hooks/useResendCooldown'
@@ -46,7 +45,6 @@ export default function SignUp() {
     const handedOver = useAuthPageState()
     const [formError, setFormError] = useState<string | null>(null)
     const [serverRules, setServerRules] = useState<PasswordRule[]>([])
-    const captcha = useTurnstile(true, { offerGoogle: true })
     // After a 429: the button waits as long as the API asked, and says so.
     const wait = useResendCooldown(0)
     const schema = useMemo(() => createSchema(t), [t])
@@ -67,12 +65,8 @@ export default function SignUp() {
     async function onSubmit(values: Values) {
         setFormError(null)
         setServerRules([])
-        if (captcha.active && !captcha.token) {
-            setFormError(captcha.notReadyMessage)
-            return
-        }
         try {
-            await authApi.register(values.email, values.password, captcha.token ?? undefined)
+            await authApi.register(values.email, values.password)
             recordCodeSent('email-verify', values.email)
             // The confirm page sends it with the code (sign-up-password.ts).
             holdSignUpPassword(values.email, values.password)
@@ -82,14 +76,10 @@ export default function SignUp() {
         } catch (error) {
             const failure = authFormError(error)
             if (failure.passwordRules.length > 0) {
-                // The API checks the password before Turnstile: the token is still good.
                 setServerRules(failure.passwordRules)
                 return
             }
-            if (failure.captchaRequired && !captcha.active) captcha.refresh()
-            // A limit refuses before Turnstile is asked: the token is still good.
             if (failure.retryAfterSeconds) wait.start(failure.retryAfterSeconds)
-            else captcha.reset()
             setFormError(failure.message)
         }
     }
@@ -132,7 +122,6 @@ export default function SignUp() {
                         <PasswordInput autoComplete='new-password' {...control} {...register('confirmPassword')} />
                     )}
                 </FormField>
-                {captcha.widget}
                 <Button type='submit' className='w-full' disabled={isSubmitting || wait.remaining > 0}>
                     {isSubmitting
                         ? t('signUp.submitting')

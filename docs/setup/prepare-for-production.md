@@ -193,8 +193,8 @@ Rules for the values:
 The Content-Security-Policy is a header that tells the browser which servers
 the page may load things from. This app's policy is built when the container
 starts, from your settings: it already allows the API (`VITE_API_URL`), the
-Sentry host (from `VITE_SENTRY_DSN`), Cloudflare Turnstile, and **images from
-any `https://` address**.
+Sentry host (from `VITE_SENTRY_DSN`), and **images from any `https://`
+address**.
 
 Where do avatars come from?
 
@@ -330,22 +330,13 @@ do not.
 The API starter's `docs/auth/sessions-and-tokens.md` explains the cookie in
 full.
 
-### Turnstile and Google
+### Google
 
-- **Turnstile**, if the API has it on: in the Cloudflare dashboard
-  (**Turnstile** → your widget → its settings), the **Hostname management**
-  list must contain `app.example.com`, or `example.com`, which covers its
-  subdomains. That is the name of the site where the widget is **shown**, not
-  the API's name, written bare (no `https://`, no path). Otherwise the widget
-  shows an error instead of the check (Cloudflare's error code `110200`), and
-  nobody can sign up. If the screen differs, look for the widget's list of
-  hostnames or domains. The API starter's `docs/setup/cloudflare-turnstile.md`
-  has the clicks.
-- **Google**, if the API has it on: nothing here. The address Google sends
-  people back to belongs to the API
-  (`https://api.example.com/api/v1/auth/google/callback`, registered in Google
-  Cloud as the API starter's `docs/setup/google-sign-in.md` says). The API
-  then sends them on to `FRONTEND_URL/auth/callback`.
+If the API has Google sign-in on: nothing here. The address Google sends
+people back to belongs to the API
+(`https://api.example.com/api/v1/auth/google/callback`, registered in Google
+Cloud as the API starter's `docs/setup/google-sign-in.md` says). The API then
+sends them on to `FRONTEND_URL/auth/callback`.
 
 After changing the API's env file, restart the API (in its folder:
 `./deploy.sh`). It reads its settings only when it starts.
@@ -414,8 +405,6 @@ could have checked them. Tick each one.
 - [ ] Leave the tab open longer than the access-token lifetime (15 minutes by
       default), then click to another page: still signed in. This is the
       refresh cookie crossing from `app.` to `api.`.
-- [ ] If the API has Turnstile on: the widget appears on the sign-up page and
-      passes.
 - [ ] If the API has Google on: **Continue with Google** takes you to Google
       and back, signed in.
 - [ ] If avatars use S3 or R2: upload one in Profile; it shows, and the
@@ -435,8 +424,8 @@ could have checked them. Tick each one.
 - [ ] Delete the test account (Profile → delete account), or keep it as your
       own.
 
-Do not run the end-to-end tests against production: they create accounts, read
-codes from Mailpit, and refuse real Turnstile keys ([../e2e-testing.md](../e2e-testing.md)).
+Do not run the end-to-end tests against production: they create accounts and
+read codes from Mailpit ([../e2e-testing.md](../e2e-testing.md)).
 
 ## Common mistakes
 
@@ -449,7 +438,6 @@ codes from Mailpit, and refuse real Turnstile keys ([../e2e-testing.md](../e2e-t
 | A CORS error on every API call in the console | `CORS_ORIGINS` on the API does not contain `https://app.example.com` exactly (often a trailing `/`, `http` instead of `https`, or `www.` missing) | Step 9, then restart the API |
 | Signed in, but signed out again at every reload or after about 15 minutes | The refresh cookie does not reach the API: the site and the API are on different domains, or `CORS_ORIGINS` is wrong | Step 9's two tables |
 | "Can't reach the server" on every form | `VITE_API_URL` is wrong (missing `/api/v1`, `http` instead of `https`), or the API is down | `curl https://app.example.com/config.js` and try that address plus `/health/live` |
-| The Turnstile widget shows an error | `app.example.com` is not in the widget's hostname list | Step 9, "Turnstile and Google" |
 | Links in the emails open `localhost` | The API's `FRONTEND_URL` | Step 9 |
 | Odd failures in the browser when the site is opened over `http://` | The app needs HTTPS: some browser features it uses (`crypto.randomUUID`) exist only on secure pages | Always use `https://`; step 8 redirects HTTP for you |
 | `Could not pull ghcr.io/...` | CI has not published that commit yet, or the server is not logged in to the registry | [github.md](./github.md#common-mistakes) |

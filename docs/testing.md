@@ -60,9 +60,9 @@ Next to the code, in a `__tests__` folder:
 
 | Folder | What is tested |
 | --- | --- |
-| `src/features/auth/__tests__/` | The auth pages (`pages.test.tsx`: the two-step hand-over, the confirm page and the password held for it, the redirect kept through sign-up, Turnstile tokens used once, two-step tries and waits, turning two-step off, the Google return address), deleting an account (`delete-account.test.tsx`), the verify-email request (`auth-api.test.ts`), the store (`auth.store.test.ts`: the token in memory only, a refused refresh, sign-out, other tabs), `ProtectedRoute` and `GuestOnlyRoute`, `RequireRole`, `safeRedirect` |
+| `src/features/auth/__tests__/` | The auth pages (`pages.test.tsx`: the confirm page and the password held for it, the redirect kept through sign-up, the wait after too many sign-ins, the Google return address), deleting an account (`delete-account.test.tsx`), the verify-email request (`auth-api.test.ts`), the store (`auth.store.test.ts`: the token in memory only, a refused refresh, sign-out, other tabs), `ProtectedRoute` and `GuestOnlyRoute`, `RequireRole`, `safeRedirect` |
 | `src/lib/__tests__/` | The API client (token, refresh and retry, sign-out only when the session ended, the auth routes), idempotency keys without `crypto.randomUUID`, error tracking's scrubbing (one file runs the real Sentry SDK), and the app still starting when an ad blocker stops the Sentry SDK (`error-tracking.start.test.ts`) |
-| `src/features/auth/__tests__/settings-mutations.test.tsx` | The settings hooks refresh what the page reads: after a change, and when the API says the account changed in another tab (not for a wrong code) |
+| `src/features/auth/__tests__/settings-mutations.test.tsx` | Deleting the account reads again what the account needs when the API asks for more proof than the page knew of |
 | `src/features/users/__tests__/` | The username check never shows the answer for a name that is no longer in the field, and asks nothing about a name the API would refuse; setting a name someone took meanwhile marks it taken, one already set reloads the profile (`username.test.tsx`); the profile dialog closes after a save, and keeps what was typed when it fails (`profile.test.tsx`) |
 | `src/hooks/__tests__/` | `useIdempotentMutation`: one key per intent |
 | `src/config/`, `src/i18n/`, `scripts/` | The repository itself ([below](#tests-that-guard-the-repository)) |
@@ -182,7 +182,7 @@ instead of a deploy:
 | `src/config/__tests__/env-files.test.ts` | A build value is missing from the Dockerfile's build stage or from CI's build arguments, or a runtime setting from the compose file or the start-up script's checks ([environment.md](./environment.md#adding-a-variable)) |
 | `src/config/__tests__/env.schema.test.ts`, `env.test.ts` | A missing API address is accepted, a trailing slash kept, or the container's `/config.js` not preferred over the build's values |
 | `src/i18n/__tests__/catalogues.test.ts` | Vietnamese and English have different keys |
-| `scripts/csp.test.mjs` | The Content-Security-Policy template allows inline scripts other than by hash, hashes a CRLF checkout wrongly, blocks Turnstile's frame, or holds an address of its own |
+| `scripts/csp.test.mjs` | The Content-Security-Policy template allows inline scripts other than by hash, hashes a CRLF checkout wrongly, or holds an address of its own |
 
 ## Coverage
 

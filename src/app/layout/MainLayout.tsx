@@ -65,10 +65,6 @@ export default function MainLayout() {
                         <LanguageSwitcher />
                         <ThemeSwitcher />
 
-                        <Button asChild variant='ghost' size='sm' className='text-muted-foreground hover:text-primary'>
-                            <Link to='/form'>{t('nav.formExample')}</Link>
-                        </Button>
-
                         {isAuthenticated ? (
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>

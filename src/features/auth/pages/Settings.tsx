@@ -16,7 +16,6 @@ import type { PasswordRule } from '@/features/auth/lib/password-rules'
 import { Notice } from '@/features/auth/components/AuthCard'
 import { PasswordInput } from '@/features/auth/components/PasswordInput'
 import { PasswordChecklist } from '@/features/auth/components/PasswordChecklist'
-import { TwoStepSettings } from '@/features/auth/components/TwoStepSettings'
 import { SetPasswordSettings } from '@/features/auth/components/SetPasswordSettings'
 import { useSignInMethods } from '@/features/auth/api/useSignInMethods'
 
@@ -31,7 +30,7 @@ const createSchema = (t: TFunction<'auth'>, email: string | undefined) =>
 
 type Values = z.infer<ReturnType<typeof createSchema>>
 
-/** The signed-in user's password, two-step sign-in and sessions. */
+/** The signed-in user's password and sessions. */
 export default function Settings() {
     const { t } = useTranslation('auth')
     const user = useAuthStore((state) => state.user)
@@ -169,8 +168,6 @@ export default function Settings() {
                     </form>
                 </section>
             )}
-
-            <TwoStepSettings />
 
             <section className='space-y-4 rounded-xl border bg-background p-6' aria-labelledby='sign-out-everywhere'>
                 <div className='space-y-1'>

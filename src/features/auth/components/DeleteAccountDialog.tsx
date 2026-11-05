@@ -27,28 +27,25 @@ import { recordCodeSent, RESEND_AFTER_SECONDS, secondsUntilResend } from '@/feat
 import { Notice } from '@/features/auth/components/AuthCard'
 import { PasswordInput } from '@/features/auth/components/PasswordInput'
 import { useSignInMethods } from '@/features/auth/api/useSignInMethods'
-import { useTwoFactorStatus } from '@/features/auth/api/useTwoFactorStatus'
 
 /** What this account must give to prove it is the owner, as the API asks. */
 interface Needs {
     /** The password; false for an account made with Google, which gets an emailed code instead. */
     password: boolean
-    /** A code from the authenticator app (or a recovery code). */
-    twoStep: boolean
 }
 
 const createSchema = (t: TFunction<'auth'>, needs: Needs) =>
-    z.object({ password: z.string(), code: z.string(), twoFactorCode: z.string() }).superRefine((values, ctx) => {
-        const fields = authFields(t)
-        const check = (path: 'code' | 'twoFactorCode', result: { success: boolean; error?: z.ZodError }) => {
-            if (!result.success)
-                ctx.addIssue({ code: 'custom', path: [path], message: result.error?.issues[0]?.message ?? '' })
+    z.object({ password: z.string(), code: z.string() }).superRefine((values, ctx) => {
+        if (needs.password) {
+            if (!values.password) {
+                ctx.addIssue({ code: 'custom', path: ['password'], message: t('validation.passwordRequired') })
+            }
+            return
         }
-        if (needs.password && !values.password) {
-            ctx.addIssue({ code: 'custom', path: ['password'], message: t('validation.passwordRequired') })
+        const result = authFields(t).code.safeParse(values.code)
+        if (!result.success) {
+            ctx.addIssue({ code: 'custom', path: ['code'], message: result.error.issues[0]?.message ?? '' })
         }
-        if (!needs.password) check('code', fields.code.safeParse(values.code))
-        if (needs.twoStep) check('twoFactorCode', fields.twoStepCode.safeParse(values.twoFactorCode))
     })
 
 type Values = z.input<ReturnType<typeof createSchema>>
@@ -56,8 +53,8 @@ type Values = z.input<ReturnType<typeof createSchema>>
 /**
  * "Delete account", for the profile page: a dialog that says what deleting
  * means and asks for proof it is the owner before anything happens — the
- * password, or for an account made with Google a code emailed to it, and a
- * two-step code when that is on. A signed-in session alone is not enough:
+ * password, or for an account made with Google a code emailed to it. A
+ * signed-in session alone is not enough:
  * the API refuses without the proof (the backend's POST /auth/account/delete).
  */
 export function DeleteAccountDialog() {
@@ -72,16 +69,14 @@ export function DeleteAccountDialog() {
 
     // Read when the dialog opens: they decide which fields it shows.
     const methods = useSignInMethods(open)
-    const twoStep = useTwoFactorStatus(open)
     const sendDeletionCode = useSendAccountDeletionCode()
     const deleteAccount = useDeleteAccount()
     const needs = useMemo<Needs | null>(
-        () =>
-            methods.data && twoStep.data ? { password: methods.data.password, twoStep: twoStep.data.enabled } : null,
-        [methods.data, twoStep.data]
+        () => (methods.data ? { password: methods.data.password } : null),
+        [methods.data]
     )
 
-    const schema = useMemo(() => createSchema(t, needs ?? { password: true, twoStep: false }), [t, needs])
+    const schema = useMemo(() => createSchema(t, needs ?? { password: true }), [t, needs])
     const {
         register,
         handleSubmit,
@@ -91,13 +86,10 @@ export function DeleteAccountDialog() {
         formState: { errors, isSubmitting }
     } = useForm<Values>({
         resolver: zodResolver(schema),
-        defaultValues: { password: '', code: '', twoFactorCode: '' }
+        defaultValues: { password: '', code: '' }
     })
-    const [password, code, twoFactorCode] = useWatch({ control, name: ['password', 'code', 'twoFactorCode'] })
-    const filled =
-        needs !== null &&
-        (needs.password ? password.length > 0 : code.trim().length > 0) &&
-        (!needs.twoStep || twoFactorCode.trim().length > 0)
+    const [password, code] = useWatch({ control, name: ['password', 'code'] })
+    const filled = needs !== null && (needs.password ? password.length > 0 : code.trim().length > 0)
 
     function onOpenChange(next: boolean) {
         setOpen(next)
@@ -132,12 +124,10 @@ export function DeleteAccountDialog() {
     async function onSubmit(values: Values) {
         if (!needs) return
         setFormError(null)
-        const fields = authFields(t)
         try {
-            await deleteAccount.mutateAsync({
-                ...(needs.password ? { password: values.password } : { code: fields.code.parse(values.code) }),
-                ...(needs.twoStep ? { twoFactorCode: fields.twoStepCode.parse(values.twoFactorCode) } : {})
-            })
+            await deleteAccount.mutateAsync(
+                needs.password ? { password: values.password } : { code: authFields(t).code.parse(values.code) }
+            )
             logout('account-deleted')
         } catch (error) {
             const failure = authFormError(error)
@@ -145,8 +135,6 @@ export function DeleteAccountDialog() {
                 setError('password', { message: t('deleteAccount.wrongPassword') })
             } else if (failure.type === 'AUTH_CODE_INVALID' || failure.type === 'AUTH_CODE_EXPIRED') {
                 setError('code', { message: failure.message })
-            } else if (failure.type === 'AUTH_TWO_FACTOR_CODE_INVALID') {
-                setError('twoFactorCode', { message: failure.message })
             } else {
                 setFormError(failure.message)
             }
@@ -154,7 +142,7 @@ export function DeleteAccountDialog() {
     }
 
     const body = () => {
-        if (methods.isError || twoStep.isError) return <Notice tone='error'>{t('deleteAccount.loadFailed')}</Notice>
+        if (methods.isError) return <Notice tone='error'>{t('deleteAccount.loadFailed')}</Notice>
         if (!needs) return <p className='text-sm text-muted-foreground'>{t('deleteAccount.loading')}</p>
         return (
             <form id='delete-account' onSubmit={handleSubmit(onSubmit)} className='space-y-4' noValidate>
@@ -200,23 +188,6 @@ export function DeleteAccountDialog() {
                         </FormField>
                     </>
                 )}
-                {needs.twoStep ? (
-                    <>
-                        <p className='text-sm'>{t('deleteAccount.twoStep')}</p>
-                        <FormField label={t('fields.twoStepCode')} error={errors.twoFactorCode?.message}>
-                            {(field) => (
-                                <Input
-                                    autoComplete='one-time-code'
-                                    spellCheck={false}
-                                    maxLength={13}
-                                    className='max-w-60 font-mono'
-                                    {...field}
-                                    {...register('twoFactorCode')}
-                                />
-                            )}
-                        </FormField>
-                    </>
-                ) : null}
             </form>
         )
     }

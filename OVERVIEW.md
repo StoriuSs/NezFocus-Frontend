@@ -35,7 +35,7 @@ already done.
 
 | | |
 | --- | --- |
-| **Sign-in** | Sign-up with an emailed code, sign-in, Google, two-step sign-in, password reset, deleting the account — the rules in the API, the pages here |
+| **Sign-in** | Sign-up with an emailed code, sign-in, Google, password reset, deleting the account — the rules in the API, the pages here |
 | **Server data** | TanStack Query, with the retry and invalidation rules already thought through |
 | **A real API client** | Case conversion both ways, idempotency keys, an error catalogue |
 | **Types from the backend** | Generated from its OpenAPI document, so a changed response is a compile error |
@@ -55,8 +55,8 @@ Three things this app needs from the API, set **on the API**, not here:
 | `FRONTEND_URL` is this app's address | The links in the API's emails and the return from Google point there |
 | Email works | Sign-up and password reset send a 6-digit code. In development the API's stack catches every email in **Mailpit**, at http://localhost:8025 |
 
-Google sign-in and Turnstile have **no setting in this app**: they are turned
-on in the API, and this app asks it what is on (`GET /auth/options`).
+Google sign-in has **no setting in this app**: it is turned on in the API, and
+this app asks it whether it is on (`GET /auth/options`).
 
 ## Is it the right starting point for you?
 
@@ -71,8 +71,8 @@ authentication and data-fetching decisions already made.
   Next.js or Remix.
 - **You have no backend.** Half of what is here is about talking to one.
 - **You need single sign-on across several apps, SAML or LDAP.** Sign-in here
-  is done by the paired API itself: email and password, Google, and two-step
-  sign-in, for this one app. Sign-in shared by several apps, or a company
+  is done by the paired API itself: email and password, and Google, for this
+  one app. Sign-in shared by several apps, or a company
   directory, wants an identity server (Keycloak, Auth0, Entra ID) in front of
   them, which this starter does not have.
 - **It is a static page.** This is a lot of machinery for something with no
@@ -91,7 +91,7 @@ flowchart TB
 
     RP --> Root["AppRoot<br/>progress bar · username prompt"]
     Root --> Layout["MainLayout<br/>header · nav · ErrorBoundary"]
-    Layout --> Public["public routes<br/>Home, Form"]
+    Layout --> Public["public routes<br/>Home"]
     Layout --> Guest["visitor-only routes<br/>GuestOnlyRoute → Sign in, Sign up, …"]
     Layout --> Guarded["guarded routes<br/>ProtectedRoute → Profile, Settings"]
     Layout --> NF["NotFound"]
@@ -130,11 +130,6 @@ sequenceDiagram
     participant B as Browser (this app)
     participant A as API
     B->>A: POST /auth/login (email, password)
-    alt two-step sign-in is on
-        A-->>B: 403 AUTH_TWO_FACTOR_REQUIRED + challenge
-        B->>B: /sign-in/two-step asks for the app's code
-        B->>A: POST /auth/login/2fa (code, challenge)
-    end
     A-->>B: access token (kept in memory) + refresh cookie (httpOnly)
     B->>A: GET /users/me with the token
     Note over B,A: later, or after a reload
@@ -145,14 +140,8 @@ sequenceDiagram
 - **Google.** "Continue with Google" appears when the API offers it (its
   `GET /auth/options` lists `google`). It is a page navigation, not a request:
   the browser goes to the API, the API to Google and back, and the API then
-  sends the browser to this app's `/auth/callback` — with `?two_factor=1` when
-  the account still owes a two-step code, or `?error=` when it did not work.
-- **Two-step sign-in**, turned on in `/settings`: a QR code for an
-  authenticator app, a code to confirm it, and ten recovery codes shown once.
-- **Turnstile on demand.** When the API has Cloudflare Turnstile on (its
-  `GET /auth/options` returns a site key), the widget appears on sign-up and
-  forgotten-password always, and on sign-in after failed attempts. Nothing to
-  set here.
+  sends the browser to this app's `/auth/callback` — with `?error=` when it
+  did not work.
 - **A reload asks the API only when it has reason to.** A small
   `auth:session` flag in `localStorage` (no secret in it) says this browser
   signed in before; without it, a visitor's page load sends no refresh at all.
@@ -218,7 +207,7 @@ src/
 ├── components/     # Shared UI — ui/ (shadcn), form/, boundaries
 ├── config/         # Settings, validated with zod
 ├── features/       # ← most new code goes here
-│   ├── auth/       # Session store, the auth pages, Turnstile, Google, route and role guards
+│   ├── auth/       # Session store, the auth pages, Google, route and role guards
 │   └── users/      # api/ · components/ · pages/ · routes.tsx · types.ts
 ├── hooks/          # Shared hooks
 ├── i18n/           # Translations
@@ -240,7 +229,7 @@ editing a central list of every route in the application.
 
 | | What it does for you | Where |
 | --- | --- | --- |
-| **Authentication** | Eight auth pages, Google, two-step sign-in, Turnstile when the API asks for it, route and role guards, and the right behaviour when the API ends a session | [docs/auth/README.md](./docs/auth/README.md) |
+| **Authentication** | Seven auth pages, Google, route and role guards, and the right behaviour when the API ends a session | [docs/auth/README.md](./docs/auth/README.md) |
 | **Server data** | Query keys per feature, sensible retries — 4xx is not retried — and cache updates after mutations | [data-fetching.md](./docs/data-fetching.md) |
 | **API types** | Generated from the backend's OpenAPI document; a changed response shape is a build error, not a runtime surprise | [api-types.md](./docs/api-types.md) |
 | **Errors the user reads** | The API answers with a `type`, not a sentence, and the catalogue turns it into a translated message | [i18n.md](./docs/i18n.md) |

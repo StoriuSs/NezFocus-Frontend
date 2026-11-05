@@ -187,27 +187,6 @@ export interface paths {
         patch?: never
         trace?: never
     }
-    '/api/v1/auth/login/2fa': {
-        parameters: {
-            query?: never
-            header?: never
-            path?: never
-            cookie?: never
-        }
-        get?: never
-        put?: never
-        /**
-         * The second step of signing in: a code from the authenticator app (or a
-         *     recovery code) for the challenge the first step answered with. Sets the
-         *     refresh cookie.
-         */
-        post: operations['AuthController_completeTwoFactorSignIn_v1']
-        delete?: never
-        options?: never
-        head?: never
-        patch?: never
-        trace?: never
-    }
     '/api/v1/auth/refresh': {
         parameters: {
             query?: never
@@ -268,7 +247,7 @@ export interface paths {
         }
         /**
          * What the sign-in pages need to know: the other providers configured
-         *     (`google`), and Turnstile's site key when it is on.
+         *     (`google`).
          */
         get: operations['AuthController_authOptions_v1']
         put?: never
@@ -387,97 +366,6 @@ export interface paths {
         patch?: never
         trace?: never
     }
-    '/api/v1/auth/2fa': {
-        parameters: {
-            query?: never
-            header?: never
-            path?: never
-            cookie?: never
-        }
-        /** Whether two-step sign-in is on, and how many recovery codes are left. */
-        get: operations['TwoFactorController_status_v1']
-        put?: never
-        post?: never
-        delete?: never
-        options?: never
-        head?: never
-        patch?: never
-        trace?: never
-    }
-    '/api/v1/auth/2fa/setup': {
-        parameters: {
-            query?: never
-            header?: never
-            path?: never
-            cookie?: never
-        }
-        get?: never
-        put?: never
-        /**
-         * Start turning two-step sign-in on: a new secret, for the authenticator
-         *     app. Not asked for at sign-in until confirmed with a code.
-         */
-        post: operations['TwoFactorController_setUp_v1']
-        delete?: never
-        options?: never
-        head?: never
-        patch?: never
-        trace?: never
-    }
-    '/api/v1/auth/2fa/confirm': {
-        parameters: {
-            query?: never
-            header?: never
-            path?: never
-            cookie?: never
-        }
-        get?: never
-        put?: never
-        /** Turn it on with a code from the app. Answers with the recovery codes, this once. */
-        post: operations['TwoFactorController_confirm_v1']
-        delete?: never
-        options?: never
-        head?: never
-        patch?: never
-        trace?: never
-    }
-    '/api/v1/auth/2fa/recovery-codes': {
-        parameters: {
-            query?: never
-            header?: never
-            path?: never
-            cookie?: never
-        }
-        get?: never
-        put?: never
-        /**
-         * New recovery codes, with a code from the app. The earlier ones stop
-         *     working; the new ones are in the answer, this once.
-         */
-        post: operations['TwoFactorController_replaceRecoveryCodes_v1']
-        delete?: never
-        options?: never
-        head?: never
-        patch?: never
-        trace?: never
-    }
-    '/api/v1/auth/2fa/disable': {
-        parameters: {
-            query?: never
-            header?: never
-            path?: never
-            cookie?: never
-        }
-        get?: never
-        put?: never
-        /** Turn it off, with a code from the app or a recovery code. */
-        post: operations['TwoFactorController_disable_v1']
-        delete?: never
-        options?: never
-        head?: never
-        patch?: never
-        trace?: never
-    }
     '/api/v1/auth/account/delete-code': {
         parameters: {
             query?: never
@@ -509,8 +397,7 @@ export interface paths {
         put?: never
         /**
          * Delete your own account, with proof it is you: the password (or the
-         *     emailed code, for an account without one), and a two-step code when that
-         *     is on. Every session ends, this one included; the owner is emailed.
+         *     emailed code, for an account without one). Every session ends, this one included; the owner is emailed.
          */
         post: operations['AccountDeletionController_delete_v1']
         delete?: never
@@ -624,8 +511,6 @@ export interface components {
         RegisterRequestDto: {
             /** @description At least 8 characters with an upper-case letter, a lower-case letter, a digit and a symbol. */
             password: string
-            /** @description Required when Turnstile is on. */
-            turnstile_token?: string
             /**
              * Format: email
              * @description The sign-in address. Compared case-insensitively.
@@ -664,22 +549,11 @@ export interface components {
         }
         LoginRequestDto: {
             password: string
-            /** @description Needed from the third failed attempt when Turnstile is on (`data.captcha_required` says so). */
-            turnstile_token?: string
             /**
              * Format: email
              * @description The sign-in address. Compared case-insensitively.
              */
             email: string
-        }
-        TwoFactorSignInRequestDto: {
-            /**
-             * @description The challenge from the 403 AUTH_TWO_FACTOR_REQUIRED answer. Omitted after
-             *     signing in with Google: the challenge is then in a cookie.
-             */
-            challenge?: string
-            /** @description Six digits from the authenticator app, or (where accepted) a recovery code: `K7Q2M-X9HDP`. */
-            code: string
         }
         AuthOptionsResponseDto: {
             /**
@@ -687,15 +561,8 @@ export interface components {
              *     none are. Start one with `GET /auth/<id>`.
              */
             providers: string[]
-            /**
-             * @description The Turnstile widget's site key, when Turnstile is on; null when it is
-             *     off. Public: it is meant to be in the page.
-             */
-            turnstile_site_key: string | null
         }
         ForgotPasswordRequestDto: {
-            /** @description Required when Turnstile is on. */
-            turnstile_token?: string
             /**
              * Format: email
              * @description The sign-in address. Compared case-insensitively.
@@ -728,32 +595,11 @@ export interface components {
             code: string
             new_password: string
         }
-        TwoFactorStatusResponseDto: {
-            enabled: boolean
-            /** @description Unused recovery codes; 0 when two-step sign-in is off. */
-            recovery_codes_left: number
-        }
-        TwoFactorSetUpResponseDto: {
-            /** @description For typing into the app by hand, when the QR code cannot be scanned. Base32. */
-            secret: string
-            /** @description The QR code's content: `otpauth://totp/…`. */
-            otpauth_uri: string
-        }
-        RecoveryCodesResponseDto: {
-            /** @description Ten codes, each usable once. Shown this once: only their fingerprints are kept. */
-            recovery_codes: string[]
-        }
-        TwoFactorCodeRequestDto: {
-            /** @description Six digits from the authenticator app, or (where accepted) a recovery code: `K7Q2M-X9HDP`. */
-            code: string
-        }
         DeleteAccountRequestDto: {
             /** @description The account's password; for an account that has one. */
             password?: string
             /** @description The six digits emailed by POST /auth/account/delete-code; for an account without a password. */
             code?: string
-            /** @description With two-step sign-in on: six digits from the app, or a recovery code. */
-            two_factor_code?: string
         }
     }
     responses: never
@@ -1257,32 +1103,6 @@ export interface operations {
             }
         }
     }
-    AuthController_completeTwoFactorSignIn_v1: {
-        parameters: {
-            query?: never
-            header?: never
-            path?: never
-            cookie?: never
-        }
-        requestBody: {
-            content: {
-                'application/json': components['schemas']['TwoFactorSignInRequestDto']
-            }
-        }
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown
-                }
-                content: {
-                    'application/json': {
-                        meta: components['schemas']['ApiResponseMetaDto']
-                        data: components['schemas']['TokenResponseDto']
-                    }
-                }
-            }
-        }
-    }
     AuthController_refresh_v1: {
         parameters: {
             query?: never
@@ -1503,128 +1323,6 @@ export interface operations {
         requestBody: {
             content: {
                 'application/json': components['schemas']['SetPasswordRequestDto']
-            }
-        }
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown
-                }
-                content: {
-                    'application/json': {
-                        meta: components['schemas']['ApiResponseMetaDto']
-                        data: null
-                    }
-                }
-            }
-        }
-    }
-    TwoFactorController_status_v1: {
-        parameters: {
-            query?: never
-            header?: never
-            path?: never
-            cookie?: never
-        }
-        requestBody?: never
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown
-                }
-                content: {
-                    'application/json': {
-                        meta: components['schemas']['ApiResponseMetaDto']
-                        data: components['schemas']['TwoFactorStatusResponseDto']
-                    }
-                }
-            }
-        }
-    }
-    TwoFactorController_setUp_v1: {
-        parameters: {
-            query?: never
-            header?: never
-            path?: never
-            cookie?: never
-        }
-        requestBody?: never
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown
-                }
-                content: {
-                    'application/json': {
-                        meta: components['schemas']['ApiResponseMetaDto']
-                        data: components['schemas']['TwoFactorSetUpResponseDto']
-                    }
-                }
-            }
-        }
-    }
-    TwoFactorController_confirm_v1: {
-        parameters: {
-            query?: never
-            header?: never
-            path?: never
-            cookie?: never
-        }
-        requestBody: {
-            content: {
-                'application/json': components['schemas']['TwoFactorCodeRequestDto']
-            }
-        }
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown
-                }
-                content: {
-                    'application/json': {
-                        meta: components['schemas']['ApiResponseMetaDto']
-                        data: components['schemas']['RecoveryCodesResponseDto']
-                    }
-                }
-            }
-        }
-    }
-    TwoFactorController_replaceRecoveryCodes_v1: {
-        parameters: {
-            query?: never
-            header?: never
-            path?: never
-            cookie?: never
-        }
-        requestBody: {
-            content: {
-                'application/json': components['schemas']['TwoFactorCodeRequestDto']
-            }
-        }
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown
-                }
-                content: {
-                    'application/json': {
-                        meta: components['schemas']['ApiResponseMetaDto']
-                        data: components['schemas']['RecoveryCodesResponseDto']
-                    }
-                }
-            }
-        }
-    }
-    TwoFactorController_disable_v1: {
-        parameters: {
-            query?: never
-            header?: never
-            path?: never
-            cookie?: never
-        }
-        requestBody: {
-            content: {
-                'application/json': components['schemas']['TwoFactorCodeRequestDto']
             }
         }
         responses: {

@@ -154,13 +154,7 @@ const SENSITIVE_KEYS = new Set(
         'accessToken',
         'refreshToken',
         'idToken',
-        // Two-step sign-in and Turnstile, as the auth pages send them.
-        'twoFactorCode',
-        'recoveryCodes',
-        'challenge',
-        'secret',
-        'otpauthUri',
-        'turnstileToken'
+        'secret'
     ].map(normaliseKey)
 )
 

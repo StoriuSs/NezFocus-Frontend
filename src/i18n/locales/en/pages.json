@@ -24,16 +24,5 @@
     "title": "404 - Page Not Found",
     "description": "The page you are looking for does not exist.",
     "goHome": "Go Home"
-  },
-  "formExample": {
-    "title": "Form Example",
-    "subtitle": "Using React Hook Form + Zod",
-    "email": "Email",
-    "password": "Password",
-    "submit": "Submit Form",
-    "submitting": "Submitting...",
-    "successToast": "Form submitted successfully!",
-    "successDescription": "Check the console for values.",
-    "failedToast": "Failed to submit form"
   }
 }

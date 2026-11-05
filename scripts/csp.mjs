@@ -53,13 +53,6 @@ export function cspTemplate(pages) {
     })
 }
 
-/**
- * Cloudflare Turnstile's widget: its script, and the frame it draws the
- * challenge in. Always allowed, because whether Turnstile is on is only known
- * at runtime (the API's GET /auth/options); this one origin, never a wildcard.
- */
-export const TURNSTILE_ORIGIN = 'https://challenges.cloudflare.com'
-
 /** The policy from origins that are already resolved (or placeholders). */
 function policy({ api, errorTracking, extraImages, pages }) {
     const hashes = pages
@@ -69,7 +62,7 @@ function policy({ api, errorTracking, extraImages, pages }) {
 
     return [
         "default-src 'self'",
-        `script-src ${unique("'self'", TURNSTILE_ORIGIN, ...hashes)}`,
+        `script-src ${unique("'self'", ...hashes)}`,
         // Radix and sonner position elements with inline style attributes.
         "style-src 'self' 'unsafe-inline'",
         // Avatars come from the API (local storage) or from a bucket whose host
@@ -79,9 +72,9 @@ function policy({ api, errorTracking, extraImages, pages }) {
         `img-src ${unique("'self'", 'data:', 'blob:', 'https:', api, ...extraImages)}`,
         "font-src 'self' data:",
         `connect-src ${unique("'self'", api, ...errorTracking)}`,
-        // One frame only: Turnstile's challenge. Something else that needs
-        // one (a payment form) adds its origin here, not a wildcard.
-        `frame-src ${TURNSTILE_ORIGIN}`,
+        // No frames. Something that needs one (a payment form) adds its
+        // origin here, not a wildcard.
+        "frame-src 'none'",
         "frame-ancestors 'self'",
         "form-action 'self'",
         "base-uri 'self'",
