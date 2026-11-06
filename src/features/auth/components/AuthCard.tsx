@@ -22,7 +22,7 @@ export function AuthCard({ title, subtitle, notice, children, footer }: AuthCard
         <div className='space-y-6'>
             <div className='space-y-2'>
                 <h1 className='text-title-1 text-text-primary'>{title}</h1>
-                {subtitle ? <p className='text-body-sm text-text-secondary'>{subtitle}</p> : null}
+                {subtitle ? <p className='text-body text-text-secondary'>{subtitle}</p> : null}
             </div>
             {notice}
             {children}

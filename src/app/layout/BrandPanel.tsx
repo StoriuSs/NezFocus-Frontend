@@ -42,7 +42,15 @@ export function BrandPanel({ className }: { className?: string }) {
     const { t } = useTranslation()
 
     return (
-        <aside className={cn('relative flex-1 overflow-hidden border-l bg-surface-1 px-16 pt-24', className)}>
+        // Half the width, padding and border included (C-34: two halves). With
+        // `flex-1` alone the basis is 0, so the free space is shared only after
+        // this panel's padding and border: it came out 129px wider than the form.
+        <aside
+            className={cn(
+                'relative min-w-0 flex-1 basis-1/2 overflow-hidden border-l bg-surface-1 px-16 pt-24',
+                className
+            )}
+        >
             <div className='max-w-[400px]'>
                 <h2 className='text-display text-text-primary'>{t('authShell.brand.title')}</h2>
                 <p className='mt-2 text-body text-text-secondary'>{t('authShell.brand.description')}</p>

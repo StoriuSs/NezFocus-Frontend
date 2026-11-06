@@ -14,7 +14,8 @@ import { FormMessage } from '@/components/form/FormMessage'
 import { TimeZoneCombobox } from '@/components/form/TimeZoneCombobox'
 import { PageLoader } from '@/components/PageLoader'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
-import { initialTimeZone } from '@/lib/time-zones'
+import { useMinuteClock } from '@/hooks/useMinuteClock'
+import { initialTimeZone, timeIn } from '@/lib/time-zones'
 import { USERNAME_PATTERN, useProfile, userKeys, useUsernameAvailability } from '@/features/users'
 import { authApi } from '@/features/auth/api/auth.api'
 import { useAuthStore } from '@/features/auth/auth.store'
@@ -127,7 +128,9 @@ function WelcomeForm({ email, googleName }: { email: string | undefined; googleN
             termsAccepted: false
         }
     })
-    const [username, password] = useWatch({ control, name: ['username', 'password'] })
+    const [username, password, timezone] = useWatch({ control, name: ['username', 'password', 'timezone'] })
+    // "Time there now", to check the pick against the clock where one is.
+    const now = useMinuteClock()
     // Registered here, in the order on screen: a failed submit focuses the
     // first field in this order (a field registered inside FormField's render
     // came after the checkbox).
@@ -305,7 +308,10 @@ function WelcomeForm({ email, googleName }: { email: string | undefined; googleN
                     />
                 </div>
 
-                <FormField label={t('welcome.timeZone')}>
+                <FormField
+                    label={t('welcome.timeZone')}
+                    hint={t('welcome.timeZoneNow', { time: timeIn(timezone, now) })}
+                >
                     {(field) => (
                         <Controller
                             control={control}

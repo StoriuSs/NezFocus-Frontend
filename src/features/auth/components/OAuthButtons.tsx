@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { buttonVariants } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import { oauthStartUrl } from '../lib/oauth'
 import { useOAuthProviders } from '../hooks/useOAuthProviders'
 
@@ -40,7 +41,7 @@ export function OAuthButtons({ next }: { next?: string | null }) {
 
     return (
         <div className='space-y-4'>
-            <div className='flex items-center gap-3 text-xs uppercase tracking-wide text-muted-foreground'>
+            <div className='flex items-center gap-3 text-label text-text-tertiary'>
                 <span className='h-px flex-1 bg-border' />
                 {t('oauth.or')}
                 <span className='h-px flex-1 bg-border' />
@@ -48,7 +49,8 @@ export function OAuthButtons({ next }: { next?: string | null }) {
             {providers.includes('google') ? (
                 <a
                     href={oauthStartUrl('google', next)}
-                    className={buttonVariants({ variant: 'outline', className: 'w-full gap-2' })}
+                    // Black text, not the blue of `outline`: blue is for the page's main action and links (S-AUTH-05 › Canvas).
+                    className={cn(buttonVariants({ variant: 'outline' }), 'w-full gap-2 text-text-primary')}
                 >
                     <GoogleMark />
                     {t('oauth.google')}

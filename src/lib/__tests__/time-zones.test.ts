@@ -3,6 +3,7 @@ import {
     initialTimeZone,
     isSelectableTimeZone,
     matchesTimeZone,
+    timeIn,
     timeZoneOption,
     timeZoneOptions
 } from '@/lib/time-zones'
@@ -22,6 +23,13 @@ describe('time zones to pick from (C-25)', () => {
         expect(timeZoneOption('Asia/Kolkata', 'en', WINTER).label).toBe('GMT+5:30 · Kolkata')
         expect(timeZoneOption('America/Argentina/Buenos_Aires', 'en', WINTER).label).toBe('GMT−3 · Buenos Aires')
         expect(timeZoneOption('Europe/London', 'en', WINTER).label).toBe('GMT+0 · London')
+    })
+
+    it('tells the time in a zone, 24-hour, with the minutes padded', () => {
+        const evening = new Date('2026-10-18T14:47:00Z')
+        expect(timeIn('Asia/Tokyo', evening)).toBe('23:47')
+        expect(timeIn('Asia/Kolkata', evening)).toBe('20:17')
+        expect(timeIn('America/New_York', new Date('2026-01-15T05:05:00Z'))).toBe('00:05')
     })
 
     it('counts summer time in the offset of the day', () => {

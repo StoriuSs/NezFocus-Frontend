@@ -242,6 +242,12 @@ names without a region). `initialTimeZone()` is the browser's zone, or
 Hồ Chí Minh when the browser gives none that can be saved. Used on
 "complete your account".
 
+Under the field the page puts "Time there now: 21:47" as the field's hint
+(`timeIn()` from the same file, with `useMinuteClock`, which updates as each
+minute starts): a person checks the pick against the clock where they are.
+The combobox itself does not show it; a page that uses it adds the line, as
+"complete your account" does and Settings › Appearance will (S-ME-04).
+
 ### `Checkbox`
 
 `src/components/ui/checkbox.tsx` (C-24b): a real `<input type="checkbox">`,

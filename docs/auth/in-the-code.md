@@ -99,6 +99,7 @@ src/features/auth/
 | [code-sent.ts](../../src/features/auth/lib/code-sent.ts) | `recordCodeSent(kind, email)`, `resendAllowedAt(kind, email)`, `secondsUntilResend(kind, email)`, `RESEND_AFTER_SECONDS` (60). `kind` is `'sign-in'` or `'password-reset'` |
 | [useResendCooldown.ts](../../src/features/auth/hooks/useResendCooldown.ts) | A seconds countdown: `remaining`, `start(seconds)` (forgot-password, reset-password) |
 | [useCountdown.ts](../../src/hooks/useCountdown.ts) | Whole seconds left until a moment (a `Date.now()` time), ticking each second (register, verify) |
+| [useMinuteClock.ts](../../src/hooks/useMinuteClock.ts) | The time now, updated as each minute starts ("time there now" under the time zone on welcome) |
 | [username-prefill.ts](../../src/features/auth/lib/username-prefill.ts) | `usernameFromEmail(email)` |
 
 **Pages** (`pages/`)

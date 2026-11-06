@@ -192,6 +192,27 @@ describe('complete your account (S-ONB-01)', () => {
         )
     })
 
+    it('shows the time now in the zone chosen, so a wrong pick is easy to spot', async () => {
+        // Only the clock is faked: the user events still need real timers.
+        vi.useFakeTimers({ toFake: ['Date'] })
+        vi.setSystemTime(new Date('2026-10-18T14:47:00Z'))
+        try {
+            renderWelcome()
+            const zone = await screen.findByRole('button', { name: 'Time zone' })
+            expect(zone).toHaveAccessibleDescription('Time there now: 21:47')
+
+            await userEvent.click(zone)
+            await userEvent.type(screen.getByRole('combobox', { name: 'Search a city or GMT' }), 'tokyo')
+            await userEvent.keyboard('{Enter}')
+
+            expect(screen.getByRole('button', { name: 'Time zone' })).toHaveAccessibleDescription(
+                'Time there now: 23:47'
+            )
+        } finally {
+            vi.useRealTimers()
+        }
+    })
+
     it('keeps everything typed when the username was taken meanwhile, and says so on the field', async () => {
         authApi.completeAccount.mockRejectedValue(apiError(409, 'USERNAME_CONFLICT'))
         renderWelcome()

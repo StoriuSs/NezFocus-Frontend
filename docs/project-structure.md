@@ -71,7 +71,7 @@ react-starter/
     │       ├── routes.tsx     # This feature's routes
     │       ├── types.ts
     │       └── index.ts       # What other features may import
-    ├── hooks/                 # Shared hooks: useTheme, useMediaQuery, useDebouncedValue, useCountdown…
+    ├── hooks/                 # Shared hooks: useTheme, useMediaQuery, useDebouncedValue, useCountdown, useMinuteClock…
     ├── i18n/                  # i18next setup and the translation catalogues
     ├── lib/                   # Shared, feature-free: the API client, and friends
     ├── pages/                 # Pages that belong to no feature: Study, Legal, NotFound

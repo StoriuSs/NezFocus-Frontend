@@ -217,7 +217,7 @@ Every field is required (D-69):
 | Display name | Google's name after Google (then the focus starts on the password), otherwise empty | not empty, at most 32 characters |
 | Username | made from the email ([username-prefill.ts](../../src/features/auth/lib/username-prefill.ts)): the part before `@`, lower case, without characters a username cannot have, cut at 32; nothing when fewer than 2 are left | 2 to 32 of `a-z 0-9 _ .`; what is typed becomes lower case. Whether it is free is asked 500 ms after typing stops (`useUsernameAvailability` from the users feature): "Checking...", then "Username is available" or "This username is taken." **A taken prefill is emptied without an error**: the person did not choose it |
 | Password | empty | the [rules](./forms-and-errors.md#the-password-rules), with `PasswordRules` under the field; it may not be the email nor the username being chosen (D-66) |
-| Time zone | the browser's zone, or Hồ Chí Minh when the browser gives none that can be saved | picked in [TimeZoneCombobox](../components.md#timezonecombobox) (C-25): search a city or an offset |
+| Time zone | the browser's zone, or Hồ Chí Minh when the browser gives none that can be saved | picked in [TimeZoneCombobox](../components.md#timezonecombobox) (C-25): search a city or an offset; the line under it gives the time there now |
 | "I agree to the Terms of Service and Privacy Policy" | unticked | must be ticked. The two links open `/terms` and `/privacy` in a new tab, so the form stays as it is |
 
 **Enter NezFocus** sends `POST /auth/complete-account` with `display_name`,

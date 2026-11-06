@@ -47,7 +47,8 @@ export default function AuthShell() {
 
     return (
         <div className='flex h-dvh bg-bg'>
-            <div className='flex min-w-0 flex-1 flex-col'>
+            {/* basis-1/2 like the panel's: two equal halves from 1024; alone (narrower), it grows to the full width. */}
+            <div className='flex min-w-0 flex-1 basis-1/2 flex-col'>
                 <header className='shrink-0 p-6 lg:p-8'>
                     <Link
                         to='/'
