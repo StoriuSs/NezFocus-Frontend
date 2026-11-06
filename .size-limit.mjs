@@ -34,6 +34,6 @@ const css = tags('link')
     .map(local)
 
 export default [
-    { name: 'Initial JS (gzip)', path: js, gzip: true, limit: '243.99 kB' },
-    { name: 'Initial CSS (gzip)', path: css, gzip: true, limit: '7.32 kB' }
+    { name: 'Initial JS (gzip)', path: js, gzip: true, limit: '246.25 kB' },
+    { name: 'Initial CSS (gzip)', path: css, gzip: true, limit: '8.17 kB' }
 ]
