@@ -44,22 +44,22 @@ react-starter/
     │   ├── ui/                # shadcn/ui primitives: button, dialog, input, tooltip…
     │   ├── shell/             # ShellPage, RightPanel — what a page in the AppShell draws
     │   ├── brand/             # Logo
-    │   ├── form/              # FormField — the label/control/error pattern
+    │   ├── form/              # FormField — the label/control/error pattern; FormMessage, TimeZoneCombobox
     │   └── ErrorBoundary.tsx, PageLoader.tsx, LanguageToggle.tsx, …
     ├── config/                # env.ts and its zod schema
     ├── features/              # ← most new code goes here
-    │   ├── auth/              # The session, the seven auth pages, Google, route guards
-    │   │   ├── pages/         # SignIn, SignUp, VerifyEmail, ForgotPassword,
+    │   ├── auth/              # The session, the eight auth pages, Google, route guards
+    │   │   ├── pages/         # SignIn, Register, Verify, Welcome, ForgotPassword,
     │   │   │                  #   ResetPassword, OAuthCallback, Settings
-    │   │   ├── components/    # AuthCard, PasswordInput, PasswordRules, OAuthButtons,
-    │   │   │                  #   SetPasswordSettings, DeleteAccountDialog, SentTo,
-    │   │   │                  #   ProtectedRoute, RequireRole
+    │   │   ├── components/    # AuthCard, PasswordInput, PasswordRules, CodeInput, OAuthButtons,
+    │   │   │                  #   DeleteAccountDialog, SentTo, ProtectedRoute, RequireRole
     │   │   ├── api/           # auth.api.ts (every call to /auth), keys.ts, the query hooks
     │   │   ├── hooks/         # useResendCooldown, useOAuthProviders
     │   │   ├── lib/           # The pages' paths, the access token (in memory only), tab sync,
-    │   │   │                  #   form errors, password rules, sign-out reasons
+    │   │   │                  #   form errors and problems, password rules, sign-out reasons
     │   │   ├── auth.store.ts  # Who is signed in; sign-in, refresh, sign-out
-    │   │   ├── routes.tsx     # authRoutes (sign-in pages, GuestOnlyRoute), authAppRoutes (/settings)
+    │   │   ├── routes.tsx     # authRoutes (sign-in pages, GuestOnlyRoute; /welcome, IncompleteOnlyRoute),
+    │   │   │                  #   authAppRoutes (/settings)
     │   │   ├── types.ts
     │   │   └── index.ts       # What other features may import
     │   └── users/             # The profile feature
@@ -71,10 +71,10 @@ react-starter/
     │       ├── routes.tsx     # This feature's routes
     │       ├── types.ts
     │       └── index.ts       # What other features may import
-    ├── hooks/                 # Shared hooks: useTheme, useMediaQuery, useDebouncedValue…
+    ├── hooks/                 # Shared hooks: useTheme, useMediaQuery, useDebouncedValue, useCountdown…
     ├── i18n/                  # i18next setup and the translation catalogues
     ├── lib/                   # Shared, feature-free: the API client, and friends
-    ├── pages/                 # Pages that belong to no feature: Study, NotFound
+    ├── pages/                 # Pages that belong to no feature: Study, Legal, NotFound
     ├── styles/fonts.css       # The self-hosted fonts
     ├── test/                  # Vitest setup
     ├── main.tsx               # Entry point
@@ -88,7 +88,7 @@ react-starter/
 | File | Why it matters |
 | --- | --- |
 | `config.js` | An empty placeholder (`window.__APP_CONFIG__ = {}`) for development. In production the container serves its own `/config.js` instead, written at start from its environment ([environment.md](./environment.md)). `index.html` loads it before the app |
-| `vite.svg` | The favicon. Replace it with yours |
+| `favicon.svg`, `favicon-32.png`, `apple-touch-icon-180.png` | The app tile (DESIGN.md › Logo), from `design/assets/brand/` |
 
 ### `src/app/`
 
@@ -103,16 +103,19 @@ provider: the theme is a small Zustand store
 `router.tsx` assembles the route tree with `createBrowserRouter` from each
 feature's own `routes.tsx`, so adding a feature does not mean editing one
 central list of every route in the application. Its `AppRoot` holds what
-sits outside any layout: the navigation progress bar and the username
-prompt. `/` redirects: to `/study` when signed in, to `/sign-in` otherwise.
+sits outside any layout: the navigation progress bar. `/` redirects: to
+`/study` when signed in, to `/login` otherwise. `/terms` and `/privacy` sit
+outside both layouts, for everyone.
 
 Two layouts, each lazy, each with the page's error boundary and Suspense
 boundary around its outlet:
 
-- `layout/AuthShell.tsx` — the sign-in pages: the logo, the form, the
-  language toggle, and `BrandPanel` from 1024 up.
+- `layout/AuthShell.tsx` — the sign-in pages and "complete your account":
+  the logo, the form, the language toggle (with **Sign out** beside it on
+  `/welcome`), and `BrandPanel` from 1024 up.
 - `layout/app-shell/AppShell.tsx` — every page after sign-in, behind
-  `ProtectedRoute`: the rail (with your menu, `MeMenu`), the list column and
+  `ProtectedRoute` (which also sends an account that has not done "complete
+  your account" to `/welcome`): the rail (with your menu, `MeMenu`), the list column and
   the page. Each route in it says which list column it wants in
   `handle: { column }`.
 
@@ -121,7 +124,8 @@ boundary around its outlet:
 Shared UI only. `ui/` is [shadcn/ui](https://ui.shadcn.com) — components
 copied into the repository rather than installed, so they can be edited.
 `form/FormField.tsx` is the one place that decides how a label, a control and
-a validation error are laid out. `shell/` is what a page inside the AppShell
+a validation error are laid out; `form/FormMessage.tsx` does the same for a
+message about the whole form. `shell/` is what a page inside the AppShell
 draws: `ShellPage` (its header, body and optional right panel) and
 `RightPanel` with `usePanel`.
 
@@ -144,8 +148,9 @@ hooks and its types.
 
 `auth/` is a capability as much as a set of pages: the auth store,
 `ProtectedRoute`, `GuestOnlyRoute` and `RequireRole` are used by everything
-else, beside the seven pages — sign-in, sign-up, confirm the address,
-forgotten and reset password, the Google return page, and settings
+else, beside the eight pages — sign-in, create an account, enter the code,
+complete your account, forgotten and reset password, the Google return page,
+and settings
 ([auth/in-the-code.md](./auth/in-the-code.md)). Deleting an account is the one
 auth piece that lives on another feature's page: `DeleteAccountDialog`, opened
 from the profile page.
@@ -156,7 +161,7 @@ Shared and feature-free.
 
 | File | What it does |
 | --- | --- |
-| `api.ts` | The axios instance: the token, `snake_case` ⇄ `camelCase`, and the response interceptor: a 401 for an expired or unreadable token (`AUTH_TOKEN_EXPIRED`, `AUTH_TOKEN_INVALID`) is refreshed and retried once; a 401 that a refresh cannot fix, or a 403 `AUTH_ACCOUNT_DISABLED`, signs out |
+| `api.ts` | The axios instance: the token, `snake_case` ⇄ `camelCase`, and the response interceptor: a 401 for an expired or unreadable token (`AUTH_TOKEN_EXPIRED`, `AUTH_TOKEN_INVALID`) is refreshed and retried once; a 401 that a refresh cannot fix, or a 403 `AUTH_ACCOUNT_DISABLED`, signs out; a 403 `ACCOUNT_INCOMPLETE` opens "complete your account" |
 | `api-error.ts` | Turns an error into the message the user sees, keyed on `meta.type` |
 | `api-types.ts`, `api-schema.d.ts` | Types generated from the backend's OpenAPI document — see [api-types.md](./api-types.md) |
 | `case-transform.ts` | The key conversion, which survives `FormData`, `Blob` and arrays |
@@ -166,11 +171,14 @@ Shared and feature-free.
 | `safe-storage.ts` | `localStorage` and `sessionStorage` that do not throw when site data is blocked |
 | `navigation.ts` | A full page load (`hardNavigate`), e.g. after signing out |
 | `utils.ts` | `cn()`, which merges Tailwind classes |
+| `time-zones.ts` | The time zones to pick from (C-25), named and ordered, and the search over them |
+| `simple-markdown.ts` | The small Markdown subset the legal pages are written in, read into blocks React draws (never `innerHTML`) |
 
 ### `src/pages/`
 
 Only pages that belong to no feature: `Study` (the app's home after
-sign-in), `NotFound`.
+sign-in), `Legal` (`/terms` and `/privacy`, from the Markdown in
+`pages/legal/content/<vi|en>/`), `NotFound`.
 Anything with its own data or components belongs in `features/`.
 
 ## Adding a page

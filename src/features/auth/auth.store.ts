@@ -48,6 +48,12 @@ const REFRESH_MARGIN_MS = 60_000
 
 interface AuthState {
     isAuthenticated: boolean
+    /**
+     * The account has done "complete your account" (D-61). While false, the
+     * app's pages send to /welcome: the API refuses them anyway
+     * (ACCOUNT_INCOMPLETE). True when signed out, so nothing waits on it.
+     */
+    isComplete: boolean
     /** A sign-out is under way; nothing should send anyone to sign in. */
     isSigningOut: boolean
     user: AuthUser | null
@@ -56,10 +62,11 @@ interface AuthState {
     /** Sign in with an address and password. Rejects with the API's error. */
     signIn: (email: string, password: string) => Promise<void>
     /**
-     * Take up a session the API started another way: confirming the address
-     * or resetting the password answer with tokens, as sign-in does.
+     * Take up a session the API started another way: the emailed code or a
+     * password reset answer with tokens, as sign-in does. `account` is what
+     * the code's answer says about it, until the profile arrives.
      */
-    startSession: (tokens: TokenResponse) => Promise<void>
+    startSession: (tokens: TokenResponse, account?: { completed: boolean }) => Promise<void>
     /**
      * Take up a session the API started during a redirect (signing in with
      * Google): only the refresh cookie came back, so trade it for a token.
@@ -82,6 +89,10 @@ interface AuthState {
      * nothing about the session.
      */
     refreshToken: () => Promise<string | undefined>
+    /** The API answered ACCOUNT_INCOMPLETE: open "complete your account" (api-session.ts). */
+    markIncomplete: () => void
+    /** "Complete your account" is done, here or in another tab (ACCOUNT_ALREADY_COMPLETE). */
+    markComplete: () => void
     /** The reason recorded by the last logout, removed as it is read. */
     takeSignOutReason: () => SignOutReason | null
 }
@@ -146,18 +157,23 @@ const toAuthUser = (profile: UserProfile): AuthUser => ({
 })
 
 export const useAuthStore = create<AuthState>((set, get) => {
-    /** A token is in hand: mark the session, then find out who it belongs to. */
-    async function establish(tokens?: TokenResponse): Promise<void> {
+    /**
+     * A token is in hand: mark the session, then find out who it belongs to.
+     * `completed` is what the sign-in already said about the account; without
+     * it, and should the profile not arrive, the account counts as complete
+     * and the API's ACCOUNT_INCOMPLETE corrects it on the first refusal.
+     */
+    async function establish(tokens?: TokenResponse, completed = true): Promise<void> {
         if (tokens) setAccessToken(tokens.accessToken, tokens.expiresIn)
         safeLocalStorage.set(HINT_KEY, '1')
-        set({ isAuthenticated: true, isSigningOut: false })
+        set({ isAuthenticated: true, isSigningOut: false, isComplete: completed })
         logoutStarted = false
         try {
             const profile = await fetchProfile()
-            // The header, the profile page and the username prompt read this
-            // query; seeding it saves them a second request.
+            // The header and the profile page read this query; seeding it
+            // saves them a second request.
             queryClient.setQueryData(userKeys.profile(), profile)
-            set({ user: toAuthUser(profile) })
+            set({ user: toAuthUser(profile), isComplete: profile.completed })
             setErrorTrackingUser(profile.id)
         } catch {
             // Signed in all the same; the profile query retries on its own.
@@ -168,7 +184,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
     function forget(): void {
         clearAccessToken()
         safeLocalStorage.remove(HINT_KEY)
-        set({ isSigningOut: true, isAuthenticated: false, user: null })
+        set({ isSigningOut: true, isAuthenticated: false, isComplete: true, user: null })
         setErrorTrackingUser(undefined)
         // User A's cached data must not stay visible, or be reused, for
         // whoever signs in next in this tab.
@@ -186,6 +202,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
 
     return {
         isAuthenticated: false,
+        isComplete: true,
         isSigningOut: false,
         user: null,
 
@@ -217,8 +234,8 @@ export const useAuthStore = create<AuthState>((set, get) => {
             await get().startSession(await authApi.login(email, password))
         },
 
-        startSession: async (tokens) => {
-            await establish(tokens)
+        startSession: async (tokens, account) => {
+            await establish(tokens, account?.completed)
             tellOtherTabs('signed-in')
         },
 
@@ -268,6 +285,15 @@ export const useAuthStore = create<AuthState>((set, get) => {
             const token = await refreshOnce()
             if (!token) get().logout(lastRefusal)
             return token
+        },
+
+        markIncomplete: () => {
+            if (get().isAuthenticated) set({ isComplete: false })
+        },
+
+        markComplete: () => {
+            set({ isComplete: true })
+            void queryClient.invalidateQueries({ queryKey: userKeys.profile() })
         },
 
         takeSignOutReason: () => {

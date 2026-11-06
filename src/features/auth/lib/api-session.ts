@@ -11,5 +11,7 @@ export const apiSession: ApiSession = {
     getToken: () => useAuthStore.getState().getToken(),
     refreshToken: () => useAuthStore.getState().refreshToken(),
     ended: (error, why) =>
-        useAuthStore.getState().logout(why === 'account-disabled' ? 'account-disabled' : signOutReasonOf(error))
+        useAuthStore.getState().logout(why === 'account-disabled' ? 'account-disabled' : signOutReasonOf(error)),
+    // The routes see the store change and open /welcome (ProtectedRoute).
+    accountIncomplete: () => useAuthStore.getState().markIncomplete()
 }

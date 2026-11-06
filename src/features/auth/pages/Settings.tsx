@@ -17,8 +17,6 @@ import type { PasswordContext, PasswordRule } from '@/features/auth/lib/password
 import { Notice } from '@/features/auth/components/AuthCard'
 import { PasswordInput } from '@/features/auth/components/PasswordInput'
 import { PasswordRules } from '@/features/auth/components/PasswordRules'
-import { SetPasswordSettings } from '@/features/auth/components/SetPasswordSettings'
-import { useSignInMethods } from '@/features/auth/api/useSignInMethods'
 
 const createSchema = (t: TFunction<'auth'>, identity: PasswordContext) =>
     z
@@ -54,8 +52,6 @@ function SettingsContent() {
     const [signOutError, setSignOutError] = useState<string | null>(null)
     // Every device, this one included: asked once more before it happens.
     const [confirmingSignOut, setConfirmingSignOut] = useState(false)
-    // How the account signs in: one made with Google has no password to change.
-    const methods = useSignInMethods()
     const schema = useMemo(
         () => createSchema(t, { email: user?.email, username: user?.username }),
         [t, user?.email, user?.username]
@@ -115,77 +111,56 @@ function SettingsContent() {
         <div className='max-w-[720px] space-y-8 p-6 lg:p-8'>
             <p className='text-text-secondary'>{t('settings.subtitle')}</p>
 
-            {/* Until the answer is in, neither form: "Change password" is wrong for an account made with Google. */}
-            {methods.isPending ? (
-                <section className='rounded-xl border bg-background p-6' aria-busy='true'>
-                    <p className='text-sm text-muted-foreground'>{t('settings.methodsLoading')}</p>
-                </section>
-            ) : methods.isError ? (
-                <section className='space-y-3 rounded-xl border bg-background p-6'>
-                    <Notice tone='error'>{t('settings.methodsFailed')}</Notice>
-                    <Button variant='outline' onClick={() => void methods.refetch()}>
-                        {t('settings.retry')}
-                    </Button>
-                </section>
-            ) : methods.data.password === false ? (
-                <SetPasswordSettings email={user?.email} providers={methods.data.providers} />
-            ) : (
-                <section className='space-y-4 rounded-xl border bg-background p-6' aria-labelledby='change-password'>
-                    <div className='space-y-1'>
-                        <h2 id='change-password' className='text-lg font-semibold'>
-                            {t('settings.changePassword.title')}
-                        </h2>
-                        <p className='text-sm text-muted-foreground'>{t('settings.changePassword.description')}</p>
-                    </div>
-                    {formError ? <Notice tone='error'>{formError}</Notice> : null}
-                    <form onSubmit={handleSubmit(onSubmit)} className='space-y-4' noValidate>
-                        {/* What a password manager files the new password under. */}
-                        <input type='email' autoComplete='username' value={user?.email ?? ''} readOnly hidden />
-                        <FormField label={t('fields.currentPassword')} error={errors.currentPassword?.message}>
-                            {(control) => (
-                                <PasswordInput
-                                    autoComplete='current-password'
-                                    {...control}
-                                    {...register('currentPassword')}
-                                />
-                            )}
-                        </FormField>
-                        <div className='space-y-2'>
-                            <FormField
-                                label={t('fields.newPassword')}
-                                error={errors.password?.message ?? passwordFieldMessage(t, serverRules)}
-                            >
-                                {(control) => (
-                                    <PasswordInput
-                                        autoComplete='new-password'
-                                        {...control}
-                                        {...register('password', { onChange: () => setServerRules([]) })}
-                                    />
-                                )}
-                            </FormField>
-                            <PasswordRules
-                                password={password}
-                                serverRules={serverRules}
-                                showErrors={Boolean(errors.password)}
+            {/* Every account has a password (D-130). */}
+            <section className='space-y-4 rounded-xl border bg-background p-6' aria-labelledby='change-password'>
+                <div className='space-y-1'>
+                    <h2 id='change-password' className='text-lg font-semibold'>
+                        {t('settings.changePassword.title')}
+                    </h2>
+                    <p className='text-sm text-muted-foreground'>{t('settings.changePassword.description')}</p>
+                </div>
+                {formError ? <Notice tone='error'>{formError}</Notice> : null}
+                <form onSubmit={handleSubmit(onSubmit)} className='space-y-4' noValidate>
+                    {/* What a password manager files the new password under. */}
+                    <input type='email' autoComplete='username' value={user?.email ?? ''} readOnly hidden />
+                    <FormField label={t('fields.currentPassword')} error={errors.currentPassword?.message}>
+                        {(control) => (
+                            <PasswordInput
+                                autoComplete='current-password'
+                                {...control}
+                                {...register('currentPassword')}
                             />
-                        </div>
-                        <FormField label={t('fields.confirmPassword')} error={errors.confirmPassword?.message}>
+                        )}
+                    </FormField>
+                    <div className='space-y-2'>
+                        <FormField
+                            label={t('fields.newPassword')}
+                            error={errors.password?.message ?? passwordFieldMessage(t, serverRules)}
+                        >
                             {(control) => (
                                 <PasswordInput
                                     autoComplete='new-password'
                                     {...control}
-                                    {...register('confirmPassword')}
+                                    {...register('password', { onChange: () => setServerRules([]) })}
                                 />
                             )}
                         </FormField>
-                        <Button type='submit' disabled={isSubmitting}>
-                            {isSubmitting
-                                ? t('settings.changePassword.submitting')
-                                : t('settings.changePassword.submit')}
-                        </Button>
-                    </form>
-                </section>
-            )}
+                        <PasswordRules
+                            password={password}
+                            serverRules={serverRules}
+                            showErrors={Boolean(errors.password)}
+                        />
+                    </div>
+                    <FormField label={t('fields.confirmPassword')} error={errors.confirmPassword?.message}>
+                        {(control) => (
+                            <PasswordInput autoComplete='new-password' {...control} {...register('confirmPassword')} />
+                        )}
+                    </FormField>
+                    <Button type='submit' disabled={isSubmitting}>
+                        {isSubmitting ? t('settings.changePassword.submitting') : t('settings.changePassword.submit')}
+                    </Button>
+                </form>
+            </section>
 
             <section className='space-y-4 rounded-xl border bg-background p-6' aria-labelledby='sign-out-everywhere'>
                 <div className='space-y-1'>

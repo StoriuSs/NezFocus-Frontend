@@ -21,7 +21,9 @@ src/components/
 │                          # and icon-button, presence-dot, count-badge
 ├── shell/                 # ShellPage, RightPanel + usePanel, shell-context
 ├── brand/Logo.tsx         # The NezFocus mark and the logo lockup
-├── form/FormField.tsx     # Label, control and error, wired for screen readers
+├── form/FormField.tsx     # Label, control and the line under it, wired for screen readers
+├── form/FormMessage.tsx   # The message for a whole form, above its main button (C-22)
+├── form/TimeZoneCombobox.tsx  # The time zone picker (C-25)
 ├── ErrorBoundary.tsx      # Catches a page that crashes
 ├── RouteErrorPage.tsx     # The full-page screen for a crash outside any page
 ├── PageLoader.tsx         # The spinner while a page's chunk loads
@@ -32,8 +34,8 @@ src/app/layout/AuthShell.tsx                       # The sign-in pages' layout
 src/app/layout/BrandPanel.tsx                      # Its brand half, from 1024 up
 src/app/layout/app-shell/                          # The app's layout: AppShell, Rail, ListColumn, MeMenu
 src/features/users/components/ProfileSkeleton.tsx  # The profile page's placeholder
-src/features/users/components/UsernamePromptModal.tsx
-src/features/auth/components/                      # The auth pages' pieces
+src/features/auth/components/                      # The auth pages' pieces (CodeInput among them)
+src/pages/Legal.tsx                                # /terms and /privacy, with their own bar
 ```
 
 ## Error handling
@@ -101,7 +103,6 @@ function AppRoot() {
     return (
         <>
             <NavigationProgress />
-            <UsernamePromptWrapper />
             <Suspense fallback={<PageLoader />}>
                 <Outlet />
             </Suspense>
@@ -141,12 +142,19 @@ if (isPending) return <ProfileSkeleton />
 lazily, and both wrap the page outlet in the error boundary and the Suspense
 boundary above.
 
-**`AuthShell`** (`src/app/layout/AuthShell.tsx`) holds the sign-in pages:
+**`AuthShell`** (`src/app/layout/AuthShell.tsx`) holds the sign-in pages and
+"complete your account":
 
 - **The logo** (`LogoLockup`), linking to `/`.
 - **The form block**, 400 wide, centred.
-- **The language toggle** at the foot.
+- **The language toggle** at the foot, and on `/welcome` only a **Sign out**
+  button beside it: that page may be open for the wrong account, and offers no
+  other way out.
 - **The brand panel** (`BrandPanel.tsx`) as the right half, from 1024 up.
+
+The legal pages, `/terms` and `/privacy` (`src/pages/Legal.tsx`), are in
+neither layout: one column of text under their own bar, for visitors and
+signed-in people alike.
 
 **`AppShell`** (`src/app/layout/app-shell/AppShell.tsx`) holds every page
 after sign-in, behind `ProtectedRoute`:
@@ -178,30 +186,89 @@ plain text; the other is a button ([i18n.md](./i18n.md)).
 
 ### `FormField`
 
-`src/components/form/FormField.tsx` lays out a label, a control and its error
-or hint, and wires them for screen readers (`htmlFor`, `aria-invalid`,
-`aria-describedby`):
+`src/components/form/FormField.tsx` lays out a label, a control and one line
+under it (C-22), and wires them for screen readers (`htmlFor`,
+`aria-invalid`, `aria-describedby`). The line is the first that applies: the
+`error` (an `octagon-x` icon and `danger` text, read out at once), then the
+`status` (a line about the field's state, such as "Checking...", read out
+politely when it changes), then the `hint`:
 
 ```tsx
 <FormField label={t('email')} error={errors.email?.message}>
     {(control) => <Input type='email' {...control} {...register('email')} />}
 </FormField>
+
+<FormField label={t('welcome.username')} error={usernameError} status={usernameStatus} hint={t('welcome.usernameHint')}>
+    {(control) => <Input {...control} {...register('username')} />}
+</FormField>
 ```
+
+`Input` (`src/components/ui/input.tsx`) is drawn to C-22: 40 high, a 1 px
+edge that becomes 2 px `primary` on focus and 2 px `danger` when
+`aria-invalid`; read-only (while a form is sending) loses its edge.
 
 More: [shadcn-forms.md](./shadcn-forms.md).
 
+### `FormMessage`
+
+`src/components/form/FormMessage.tsx` (C-22): the message for a whole form,
+right above its main button. An icon and small text, no background. Two
+tones: `danger` for a failure no field owns, `neutral` for a limit to wait out
+or information. Each tone has an icon, so colour is never the only sign:
+`octagon-x` and `info` by default, or `clock`, `mail`, `wifi-off`. A form's
+errors never go to a toast.
+
+```tsx
+<FormMessage tone='neutral' icon='clock'>{text({ key: 'auth:limits.other', values: { wait } })}</FormMessage>
+<FormMessage tone='danger' icon={problem.offline ? 'wifi-off' : undefined}>{text(problem.message)}</FormMessage>
+```
+
+Used by `/register`, `/verify` and `/welcome`; the older auth pages still use
+`Notice` from `AuthCard.tsx`.
+
+### `TimeZoneCombobox`
+
+`src/components/form/TimeZoneCombobox.tsx` (C-25): a button that reads like a
+text field, opening a panel (`Popover`) with a search box over the list of
+time zones. The first row is always "From your browser: ...". Typing filters
+by city ("tokyo", "ho chi minh", without accents) or by offset ("+9",
+"gmt+9"); ↑ ↓ move, Enter picks, Esc closes and keeps the value. The value is
+the zone's IANA name (`Asia/Ho_Chi_Minh`).
+
+The list comes from `src/lib/time-zones.ts`: every IANA zone the browser
+knows, as "GMT+7 · Hồ Chí Minh" in the language on screen, ordered by offset
+then city, leaving out what the API refuses (bare offsets like `Etc/GMT+7`,
+names without a region). `initialTimeZone()` is the browser's zone, or
+Hồ Chí Minh when the browser gives none that can be saved. Used on
+"complete your account".
+
+### `Checkbox`
+
+`src/components/ui/checkbox.tsx` (C-24b): a real `<input type="checkbox">`,
+drawn as an 18 px box; checked is a `primary` box with a tick. Put its
+sentence in a `<label>` for it, so clicking the words ticks it too.
+Unticked by default. Used for the terms on "complete your account".
+
+### `CodeInput`
+
+`src/features/auth/components/CodeInput.tsx` (C-23), in the auth feature
+since only `/verify` uses it: six boxes for an emailed code. One real input
+sits over them and takes the whole string (`autocomplete="one-time-code"`, so
+the browser can offer the code from the email); the boxes only show it.
+Pasting "482 913" or "482-913" fills all six. `onComplete` fires at the sixth
+digit. States: `default`, `verifying`, `error` (after a wrong code, the first
+digit typed starts again from an empty row) and `disabled`.
+
 ## Modals
-
-### `UsernamePromptModal`
-
-Asks a signed-in user without a username to choose one, after their first
-sign-in. It cannot be closed without choosing, but offers "Not you? Sign out".
-See [username-prompt.md](./username-prompt.md).
 
 ### `DeleteAccountDialog`
 
-On the profile page: deleting the account, with proof it is you
-([auth/account-settings.md](./auth/account-settings.md)).
+On the profile page: deleting the account, confirmed with its password
+([auth/account-settings.md](./auth/account-settings.md#delete-the-account)).
+
+The username dialog that used to open after a first sign-in
+(`UsernamePromptModal`) is gone: the username is chosen on "complete your
+account" ([auth/pages-and-flows.md](./auth/pages-and-flows.md#complete-your-account)).
 
 ## shadcn/ui components
 
@@ -212,10 +279,12 @@ into the repository by the shadcn CLI, so you can edit them:
 |-----------|-------------|
 | `Avatar` | A profile picture with a fallback |
 | `Button` | Default, secondary, outline, ghost, text, destructive and link variants |
+| `Checkbox` | A checkbox (C-24b), a plain input rather than a Radix primitive ([above](#checkbox)) |
 | `Dialog` | Modal dialogs |
 | `DropdownMenu` | Menus, like your menu (`MeMenu`) |
-| `Input` | Text inputs |
+| `Input` | Text inputs, drawn to C-22 ([above](#formfield)) |
 | `Label` | Form labels |
+| `Popover` | A floating panel anchored to the control that opened it (C-15; `@radix-ui/react-popover`). The time zone picker's panel |
 | `Skeleton` | Loading placeholders |
 | `Slider` | A range input (the avatar crop's zoom) |
 | `Sonner` | The toaster, following the theme |

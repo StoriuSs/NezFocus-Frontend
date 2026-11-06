@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
@@ -7,14 +7,21 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { expectNoA11yViolations } from '@/test/a11y'
 import { queryWrapper } from '@/test/helpers'
 import AuthShell from '@/app/layout/AuthShell'
+import { useAuthStore } from '@/features/auth'
 
-function renderShell() {
+function renderShell(at = '/login') {
     const router = createMemoryRouter(
         [
             { path: '/', element: <p>Home</p> },
-            { element: <AuthShell />, children: [{ path: '/sign-in', element: <h1>Sign in</h1> }] }
+            {
+                element: <AuthShell />,
+                children: [
+                    { path: '/login', element: <h1>Sign in</h1> },
+                    { path: '/welcome', element: <h1>Complete your account</h1> }
+                ]
+            }
         ],
-        { initialEntries: ['/sign-in'] }
+        { initialEntries: [at] }
     )
     render(
         <TooltipProvider>
@@ -54,6 +61,20 @@ describe('AuthShell (C-34)', () => {
         expect(await screen.findByRole('heading', { name: 'Never study alone' })).toBeInTheDocument()
         expect(screen.getByText('English')).toHaveAttribute('aria-current', 'true')
         expect(screen.getByRole('button', { name: 'Tiếng Việt' })).toBeInTheDocument()
+    })
+
+    it('offers signing out only on "complete your account", where the account may be the wrong one', () => {
+        renderShell()
+        expect(screen.queryByRole('button', { name: 'Đăng xuất' })).toBeNull()
+    })
+
+    it('signs out from "complete your account"', async () => {
+        const logout = vi.fn()
+        useAuthStore.setState({ logout })
+        renderShell('/welcome')
+
+        await userEvent.click(screen.getByRole('button', { name: 'Đăng xuất' }))
+        expect(logout).toHaveBeenCalledOnce()
     })
 
     it('has no critical or serious accessibility problem', async () => {

@@ -2,11 +2,11 @@
 
 The short version, for someone who already has the API running. The full
 walkthrough from a fresh machine — tools, the API first, this app, a first
-sign-up — is [setup/prepare-for-development.md](./setup/prepare-for-development.md).
+account — is [setup/prepare-for-development.md](./setup/prepare-for-development.md).
 
 - [What you need](#what-you-need)
 - [Run it](#run-it)
-- [Sign up and sign in](#sign-up-and-sign-in)
+- [Create an account and sign in](#create-an-account-and-sign-in)
 - [If something does not work](#if-something-does-not-work)
 - [Next](#next)
 
@@ -20,8 +20,8 @@ sign-up — is [setup/prepare-for-development.md](./setup/prepare-for-developmen
   [NestJS starter](https://github.com/StoriuSs/Nest-Hexagonal-No-Keycloak),
   started with its development stack (`pnpm docker:dev` there). That gives
   the API on http://localhost:8888, and **Mailpit** on http://localhost:8025,
-  which catches every email the API sends. Signing up needs it: the
-  confirmation code arrives by email.
+  which catches every email the API sends. Creating an account needs it: the
+  sign-in code arrives by email.
 
 ## Run it
 
@@ -42,14 +42,18 @@ names it, if it is missing or not a URL. Every setting:
 In Docker instead (hot reload through a bind mount): `pnpm docker:dev`, and
 `pnpm docker:down` to stop it. Same address, same `.env.development`.
 
-## Sign up and sign in
+## Create an account and sign in
 
-1. Open http://localhost:3001 (it opens the sign-in page) → **Create one**. Enter an email and
-   a password; the form ticks off the password rules as you type.
-2. Open Mailpit (http://localhost:8025), find the "Verify" email, and enter
-   its 6-digit code on the page. Confirming the address signs you in.
-3. The first time, a prompt asks you to choose a username
-   ([username-prompt.md](./username-prompt.md)).
+1. Open http://localhost:3001 (it opens the sign-in page, `/login`) →
+   **Create one** (`/register`). Enter only an email.
+2. Open Mailpit (http://localhost:8025), find the email with the 6-digit
+   code, and type it on `/verify`. The sixth digit sends it, and the right
+   code signs you in.
+3. The first time, "complete your account" (`/welcome`) asks for a display
+   name, a username, a password (the form ticks off the rules as you type), a
+   time zone, and your agreement to the terms
+   ([auth/pages-and-flows.md](./auth/pages-and-flows.md#complete-your-account)).
+   **Enter NezFocus** opens the app.
 4. Your avatar at the foot of the rail opens your menu: your profile, your
    status, **Settings** (password, sign out everywhere) and **Sign out**.
 

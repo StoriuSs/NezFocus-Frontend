@@ -78,7 +78,7 @@ What runs:
 - nginx listens on **8080** inside the container (the unprivileged image
   cannot use 80). Compose publishes it as `127.0.0.1:8081` (`FRONTEND_PORT`),
   for the host's nginx to proxy to.
-- **Deep links**: a path that is not a file (`/profile`, `/sign-in`) gets
+- **Deep links**: a path that is not a file (`/profile`, `/login`) gets
   `index.html` through nginx's `try_files`, an internal fallback rather than
   a redirect, and the router takes it from there. A missing file under
   `/assets/` is a real 404 instead: serving HTML as a script after a deploy

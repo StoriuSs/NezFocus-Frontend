@@ -9,9 +9,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { FormField } from '@/components/form/FormField'
 import { useAuthStore } from '@/features/auth/auth.store'
-import { AUTH_PATHS, safeRedirect, withRedirect } from '@/features/auth/lib/paths'
+import { afterSignIn, AUTH_PATHS, withFlow } from '@/features/auth/lib/paths'
 import { authPageState, useAuthPageState } from '@/features/auth/lib/page-state'
-import { holdSignUpPassword } from '@/features/auth/lib/sign-up-password'
 import { authFormError } from '@/features/auth/lib/form-errors'
 import { useAuthOptions } from '@/features/auth/api/useAuthOptions'
 import { AuthCard, Notice } from '@/features/auth/components/AuthCard'
@@ -27,7 +26,7 @@ const createSchema = (t: TFunction<'auth'>) =>
 type Values = z.infer<ReturnType<typeof createSchema>>
 
 /**
- * Sign in with an address and a password. `?redirect=` is where to go
+ * Sign in with an address and a password. `?next=` is where to go
  * afterwards (a page on this site only). A page that sends someone here may
  * hand over the address to fill in (page-state.ts).
  */
@@ -56,18 +55,9 @@ export default function SignIn() {
         setGoogleHint(false)
         try {
             await signIn(email, password)
-            void navigate(safeRedirect(params.get('redirect')), { replace: true })
+            void navigate(afterSignIn({ completed: useAuthStore.getState().isComplete }, params), { replace: true })
         } catch (error) {
             const failure = authFormError(error)
-            // The password was right: the address only needs confirming.
-            if (failure.type === 'AUTH_EMAIL_NOT_VERIFIED') {
-                // Right, so the confirm page can send it with the code.
-                holdSignUpPassword(email, password)
-                void navigate(withRedirect(AUTH_PATHS.verifyEmail, params.get('redirect')), {
-                    state: authPageState(email, 'unverified')
-                })
-                return
-            }
             setGoogleHint(failure.type === 'AUTH_INVALID_CREDENTIALS')
             setFormError(failure.type === 'AUTH_INVALID_CREDENTIALS' ? t('signIn.wrongCredentials') : failure.message)
         }
@@ -91,7 +81,7 @@ export default function SignIn() {
                 <p>
                     {t('signIn.noAccount')}{' '}
                     <Link
-                        to={withRedirect(AUTH_PATHS.signUp, params.get('redirect'))}
+                        to={withFlow(AUTH_PATHS.register, params)}
                         className='font-medium text-primary hover:underline'
                     >
                         {t('signIn.createAccount')}
@@ -110,11 +100,11 @@ export default function SignIn() {
                 </FormField>
                 <div className='flex justify-end'>
                     <Link
-                        to={withRedirect(AUTH_PATHS.forgotPassword, params.get('redirect'))}
+                        to={withFlow(AUTH_PATHS.forgotPassword, params)}
                         onClick={(event) => {
                             // Carry the address typed so far to the next page.
                             event.preventDefault()
-                            void navigate(withRedirect(AUTH_PATHS.forgotPassword, params.get('redirect')), {
+                            void navigate(withFlow(AUTH_PATHS.forgotPassword, params), {
                                 state: authPageState(getValues('email') || undefined)
                             })
                         }}
@@ -127,7 +117,7 @@ export default function SignIn() {
                     {isSubmitting ? t('signIn.submitting') : t('signIn.submit')}
                 </Button>
             </form>
-            <OAuthButtons redirect={params.get('redirect')} />
+            <OAuthButtons next={params.get('next')} />
         </AuthCard>
     )
 }

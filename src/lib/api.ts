@@ -41,6 +41,12 @@ export interface ApiSession {
      * was deleted.
      */
     ended(error: AxiosError, why: 'refused' | 'account-disabled'): void
+    /**
+     * The API refused a request because the account has not done the
+     * "complete your account" step (403 ACCOUNT_INCOMPLETE, D-61): the session
+     * is fine, the app must open that step instead.
+     */
+    accountIncomplete(): void
 }
 
 let session: ApiSession | undefined
@@ -117,9 +123,12 @@ api.interceptors.response.use(
         //   403 AUTH_ACCOUNT_DISABLED  — the account was deleted
         // Any other 403 means "you may not do this", which the caller
         // should surface; logging out for it throws away the session and
-        // whatever the user was doing.
+        // whatever the user was doing. One of them is not the caller's to
+        // handle: ACCOUNT_INCOMPLETE says the whole app is closed until the
+        // "complete your account" step is done, wherever it was asked.
         if (status === 401) current.ended(error, 'refused')
         else if (status === 403 && meta?.type === 'AUTH_ACCOUNT_DISABLED') current.ended(error, 'account-disabled')
+        else if (status === 403 && meta?.type === 'ACCOUNT_INCOMPLETE') current.accountIncomplete()
 
         return Promise.reject(error)
     }

@@ -96,7 +96,7 @@ the server.
   cache, the rate limiter and the image processing are, and where load
   actually costs something.
 - **Real browser behaviour** — the [end-to-end tests](./e2e-testing.md) drive a
-  real browser through sign-up, sign-in, an avatar upload
+  real browser through creating an account, sign-in, an avatar upload
   and deleting the account. That answers "does it work", which a load test
   never does.
 - **Bundle size**, which affects every first visit more than server speed does.

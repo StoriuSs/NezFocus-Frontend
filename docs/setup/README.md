@@ -68,7 +68,7 @@ are cloned separately):
 | Service | API starter page | What changes in the web app |
 |---|---|---|
 | Sign in with Google | `docs/setup/google-sign-in.md` | The "Continue with Google" button appears by itself |
-| Email (the codes people type to sign up and reset a password) | `docs/setup/email.md` | Nothing. Without email, nobody can finish signing up |
+| Email (the codes people type to create an account, sign in and reset a password) | `docs/setup/email.md` | Nothing. Without email, nobody can create an account |
 | Storage for avatars (S3, R2) | `docs/setup/storage-s3-r2.md` | Nothing, as long as the bucket is served over `https`. See `CSP_IMG_SRC` in [prepare-for-production.md](./prepare-for-production.md#step-5-fill-in-envproduction) |
 | Off-site backups | `docs/setup/offsite-backups.md` | Nothing: the web app stores no data |
 | Sentry (the API's own project) | `docs/setup/sentry.md` | Nothing. Use the same Sentry organisation; the web app gets a project of its own ([sentry.md](./sentry.md)) |

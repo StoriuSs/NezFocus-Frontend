@@ -46,7 +46,8 @@
         "detail": "Giao cho nhiều người, xem mọi việc ở một trang"
       },
       "illustration": "Minh họa: sáu người cùng học trong một vòng nhịp"
-    }
+    },
+    "signOut": "Đăng xuất"
   },
   "shell": {
     "comingSoon": "{{name}} · sắp có",
@@ -111,5 +112,11 @@
         }
       }
     }
+  },
+  "timeZone": {
+    "search": "Tìm thành phố hoặc GMT",
+    "list": "Múi giờ",
+    "browser": "Theo trình duyệt: {{zone}}",
+    "none": "Không tìm thấy múi giờ phù hợp"
   }
 }

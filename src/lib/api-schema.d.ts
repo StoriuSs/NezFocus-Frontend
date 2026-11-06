@@ -59,6 +59,7 @@ export interface paths {
             path?: never
             cookie?: never
         }
+        /** Also before the account is completed: the client reads `completed` to know where to go. */
         get: operations['UsersController_getProfile_v1']
         put?: never
         post?: never
@@ -68,22 +69,6 @@ export interface paths {
         patch: operations['UsersController_updateProfile_v1']
         trace?: never
     }
-    '/api/v1/users/me/username': {
-        parameters: {
-            query?: never
-            header?: never
-            path?: never
-            cookie?: never
-        }
-        get?: never
-        put?: never
-        post: operations['UsersController_setUsername_v1']
-        delete?: never
-        options?: never
-        head?: never
-        patch?: never
-        trace?: never
-    }
     '/api/v1/users/username-available/{username}': {
         parameters: {
             query?: never
@@ -91,6 +76,7 @@ export interface paths {
             path?: never
             cookie?: never
         }
+        /** For the "complete your account" page, where a username is chosen (D-61). */
         get: operations['UsersController_checkUsernameAvailability_v1']
         put?: never
         post?: never
@@ -116,41 +102,7 @@ export interface paths {
         patch?: never
         trace?: never
     }
-    '/api/v1/auth/register': {
-        parameters: {
-            query?: never
-            header?: never
-            path?: never
-            cookie?: never
-        }
-        get?: never
-        put?: never
-        /** Create an account and email a code to confirm the address. The answer is the same for any address. */
-        post: operations['AuthController_register_v1']
-        delete?: never
-        options?: never
-        head?: never
-        patch?: never
-        trace?: never
-    }
-    '/api/v1/auth/verify-email': {
-        parameters: {
-            query?: never
-            header?: never
-            path?: never
-            cookie?: never
-        }
-        get?: never
-        put?: never
-        /** Confirm the address with the emailed code and the sign-up password, and sign in. Sets the refresh cookie. */
-        post: operations['AuthController_verifyEmail_v1']
-        delete?: never
-        options?: never
-        head?: never
-        patch?: never
-        trace?: never
-    }
-    '/api/v1/auth/resend-verification': {
+    '/api/v1/auth/email-code': {
         parameters: {
             query?: never
             header?: never
@@ -160,10 +112,32 @@ export interface paths {
         get?: never
         put?: never
         /**
-         * Send the sign-up email again: a new code, or "you already have an
-         *     account" for a confirmed address. The answer is the same for any address.
+         * Email a sign-in code: the first step of creating an account and of
+         *     signing in with a code (D-59, D-60). Sending again is the same call.
+         *     The answer is the same for any address, with an account or not.
          */
-        post: operations['AuthController_resendVerification_v1']
+        post: operations['AuthController_sendEmailCode_v1']
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/auth/email-code/verify': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        /**
+         * Sign in with the emailed code, making the account if the address has
+         *     none. Sets the refresh cookie. `account.completed` false: the account
+         *     must be completed before anything else (D-61).
+         */
+        post: operations['AuthController_verifyEmailCode_v1']
         delete?: never
         options?: never
         head?: never
@@ -215,6 +189,27 @@ export interface paths {
         put?: never
         /** End this session. Always succeeds, and clears the cookie. */
         post: operations['AuthController_logout_v1']
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/auth/complete-account': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        /**
+         * The "complete your account" step (D-61): the only way an account made
+         *     by a code or by Google gets past ACCOUNT_INCOMPLETE. The access token in
+         *     use keeps working; read `GET /users/me` again for the profile.
+         */
+        post: operations['AuthController_completeAccount_v1']
         delete?: never
         options?: never
         head?: never
@@ -329,63 +324,6 @@ export interface paths {
         patch?: never
         trace?: never
     }
-    '/api/v1/auth/password/code': {
-        parameters: {
-            query?: never
-            header?: never
-            path?: never
-            cookie?: never
-        }
-        get?: never
-        put?: never
-        /**
-         * For an account without a password (one made with Google): email a code
-         *     to set one. 409 AUTH_PASSWORD_ALREADY_SET when it has one.
-         */
-        post: operations['PasswordController_sendPasswordSetCode_v1']
-        delete?: never
-        options?: never
-        head?: never
-        patch?: never
-        trace?: never
-    }
-    '/api/v1/auth/password': {
-        parameters: {
-            query?: never
-            header?: never
-            path?: never
-            cookie?: never
-        }
-        get?: never
-        put?: never
-        /** Set a first password with that code. The account keeps its other sign-in methods, and its sessions. */
-        post: operations['PasswordController_setPassword_v1']
-        delete?: never
-        options?: never
-        head?: never
-        patch?: never
-        trace?: never
-    }
-    '/api/v1/auth/account/delete-code': {
-        parameters: {
-            query?: never
-            header?: never
-            path?: never
-            cookie?: never
-        }
-        get?: never
-        put?: never
-        /**
-         * For deleting an account made with Google, which has no password to
-         *     confirm with: email a code. 409 AUTH_USE_PASSWORD for one with a password.
-         */
-        post: operations['AccountDeletionController_sendCode_v1']
-        delete?: never
-        options?: never
-        head?: never
-        patch?: never
-        trace?: never
-    }
     '/api/v1/auth/account/delete': {
         parameters: {
             query?: never
@@ -396,8 +334,8 @@ export interface paths {
         get?: never
         put?: never
         /**
-         * Delete your own account, with proof it is you: the password (or the
-         *     emailed code, for an account without one). Every session ends, this one included; the owner is emailed.
+         * Delete your own account, with the password as proof it is you. Every
+         *     session ends, this one included; the owner is emailed.
          */
         post: operations['AccountDeletionController_delete_v1']
         delete?: never
@@ -471,21 +409,14 @@ export interface components {
             username?: string
             display_name?: string
             avatar_url: string | null
-            email_verified: boolean
             roles: string[]
             bio?: string
-            has_set_username: boolean
-        }
-        SetUsernameResponseDto: {
-            username: string
-            has_set_username: boolean
-        }
-        SetUsernameRequestDto: {
             /**
-             * @description 2-32 lowercase letters, digits, underscores or dots. Normalised to lower
-             *     case first, so `Alice` and `alice` are the same name. Permanent once set.
+             * @description Whether the "complete your account" step is done (D-61). While it is
+             *     not, every other signed-in route answers ACCOUNT_INCOMPLETE: the client
+             *     opens /welcome.
              */
-            username: string
+            completed: boolean
         }
         UsernameAvailabilityResponseDto: {
             available: boolean
@@ -495,7 +426,6 @@ export interface components {
             display_name: string | null
             avatar_url: string | null
             bio: string | null
-            has_set_username: boolean
         }
         UpdateProfileRequestDto: {
             display_name?: string
@@ -508,9 +438,41 @@ export interface components {
             height?: number
             uploaded_at: string
         }
-        RegisterRequestDto: {
-            /** @description At least 8 characters with an upper-case letter, a lower-case letter, a digit and a symbol. */
-            password: string
+        EmailCodeRequestDto: {
+            /**
+             * @description The language of the page, for the email this sends.
+             * @default en
+             * @enum {string}
+             */
+            language: 'vi' | 'en'
+            /**
+             * Format: email
+             * @description The sign-in address. Compared case-insensitively.
+             */
+            email: string
+        }
+        SignedInAccountDto: {
+            /** @description Made by this sign-in: the address had no account (D-59). */
+            created: boolean
+            /**
+             * @description Done the "complete your account" step. False: open it before anything
+             *     else (D-61). The gate that refuses it everywhere else comes with that
+             *     step (D-128).
+             */
+            completed: boolean
+        }
+        EmailCodeSignInResponseDto: {
+            account: components['schemas']['SignedInAccountDto']
+            /** @description Send as `Authorization: Bearer <access_token>`. Keep it in memory only. */
+            access_token: string
+            /** @enum {string} */
+            token_type: 'Bearer'
+            /** @description Seconds until it expires. Refresh shortly before. */
+            expires_in: number
+        }
+        VerifyEmailCodeRequestDto: {
+            /** @description The six digits from the email. */
+            code: string
             /**
              * Format: email
              * @description The sign-in address. Compared case-insensitively.
@@ -525,28 +487,6 @@ export interface components {
             /** @description Seconds until it expires. Refresh shortly before. */
             expires_in: number
         }
-        VerifyEmailRequestDto: {
-            /**
-             * @description The password the address was signed up with. Signing up again before
-             *     confirming replaces it, so only the person who chose the current one can
-             *     confirm the address.
-             */
-            password: string
-            /** @description The six digits from the email. */
-            code: string
-            /**
-             * Format: email
-             * @description The sign-in address. Compared case-insensitively.
-             */
-            email: string
-        }
-        EmailRequestDto: {
-            /**
-             * Format: email
-             * @description The sign-in address. Compared case-insensitively.
-             */
-            email: string
-        }
         LoginRequestDto: {
             password: string
             /**
@@ -554,6 +494,34 @@ export interface components {
              * @description The sign-in address. Compared case-insensitively.
              */
             email: string
+        }
+        CompleteAccountRequestDto: {
+            /**
+             * @description The account's language: the switch at the foot of the page (D-64).
+             * @enum {string}
+             */
+            language: 'vi' | 'en'
+            /** @description Shown in chat and study rooms: 1-32 characters (REQ-AUTH-06, D-69). */
+            display_name: string
+            /**
+             * @description 2-32 characters of `a-z 0-9 _ .`; upper case is lowered. Permanent.
+             *     Whether it is free is decided now: taken → USERNAME_CONFLICT.
+             */
+            username: string
+            /**
+             * @description The password, under the rules of REQ-AUTH-01; it may not be the email,
+             *     the part before @, or this username (D-66). Refused →
+             *     AUTH_PASSWORD_REJECTED naming the rules broken.
+             */
+            password: string
+            /** @description An IANA time zone name, e.g. `Asia/Ho_Chi_Minh`. Does not count as the day's change (D-61). */
+            timezone: string
+            /**
+             * @description "I agree to the Terms of Service and the Privacy Policy": must be true.
+             *     The value as sent: the global pipe's implicit conversion would make
+             *     the string "false" true, recording consent nobody gave.
+             */
+            terms_accepted: boolean
         }
         AuthOptionsResponseDto: {
             /**
@@ -564,12 +532,24 @@ export interface components {
         }
         ForgotPasswordRequestDto: {
             /**
+             * @description The language of the page, for the email this sends.
+             * @default en
+             * @enum {string}
+             */
+            language: 'vi' | 'en'
+            /**
              * Format: email
              * @description The sign-in address. Compared case-insensitively.
              */
             email: string
         }
         ResetPasswordRequestDto: {
+            /**
+             * @description The language of the page, for the email this sends.
+             * @default en
+             * @enum {string}
+             */
+            language: 'vi' | 'en'
             /** @description The new password. */
             password: string
             /** @description The six digits from the email. */
@@ -581,6 +561,12 @@ export interface components {
             email: string
         }
         ChangePasswordRequestDto: {
+            /**
+             * @description The language of the page, for the email this sends.
+             * @default en
+             * @enum {string}
+             */
+            language: 'vi' | 'en'
             current_password: string
             new_password: string
         }
@@ -590,16 +576,15 @@ export interface components {
             /** @description Other providers linked to the account, by id (`google`). */
             providers: string[]
         }
-        SetPasswordRequestDto: {
-            /** @description The six digits from the email. */
-            code: string
-            new_password: string
-        }
         DeleteAccountRequestDto: {
-            /** @description The account's password; for an account that has one. */
+            /**
+             * @description The language of the page, for the email this sends.
+             * @default en
+             * @enum {string}
+             */
+            language: 'vi' | 'en'
+            /** @description The account's password. */
             password?: string
-            /** @description The six digits emailed by POST /auth/account/delete-code; for an account without a password. */
-            code?: string
         }
     }
     responses: never
@@ -914,35 +899,6 @@ export interface operations {
             }
         }
     }
-    UsersController_setUsername_v1: {
-        parameters: {
-            query?: never
-            header: {
-                /** @description UUID identifying one user intent */
-                'Idempotency-Key': string
-            }
-            path?: never
-            cookie?: never
-        }
-        requestBody: {
-            content: {
-                'application/json': components['schemas']['SetUsernameRequestDto']
-            }
-        }
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown
-                }
-                content: {
-                    'application/json': {
-                        meta: components['schemas']['ApiResponseMetaDto']
-                        data: components['schemas']['SetUsernameResponseDto']
-                    }
-                }
-            }
-        }
-    }
     UsersController_checkUsernameAvailability_v1: {
         parameters: {
             query?: never
@@ -999,7 +955,7 @@ export interface operations {
             }
         }
     }
-    AuthController_register_v1: {
+    AuthController_sendEmailCode_v1: {
         parameters: {
             query?: never
             header?: never
@@ -1008,7 +964,7 @@ export interface operations {
         }
         requestBody: {
             content: {
-                'application/json': components['schemas']['RegisterRequestDto']
+                'application/json': components['schemas']['EmailCodeRequestDto']
             }
         }
         responses: {
@@ -1025,7 +981,7 @@ export interface operations {
             }
         }
     }
-    AuthController_verifyEmail_v1: {
+    AuthController_verifyEmailCode_v1: {
         parameters: {
             query?: never
             header?: never
@@ -1034,7 +990,7 @@ export interface operations {
         }
         requestBody: {
             content: {
-                'application/json': components['schemas']['VerifyEmailRequestDto']
+                'application/json': components['schemas']['VerifyEmailCodeRequestDto']
             }
         }
         responses: {
@@ -1045,33 +1001,7 @@ export interface operations {
                 content: {
                     'application/json': {
                         meta: components['schemas']['ApiResponseMetaDto']
-                        data: components['schemas']['TokenResponseDto']
-                    }
-                }
-            }
-        }
-    }
-    AuthController_resendVerification_v1: {
-        parameters: {
-            query?: never
-            header?: never
-            path?: never
-            cookie?: never
-        }
-        requestBody: {
-            content: {
-                'application/json': components['schemas']['EmailRequestDto']
-            }
-        }
-        responses: {
-            202: {
-                headers: {
-                    [name: string]: unknown
-                }
-                content: {
-                    'application/json': {
-                        meta: components['schemas']['ApiResponseMetaDto']
-                        data: null
+                        data: components['schemas']['EmailCodeSignInResponseDto']
                     }
                 }
             }
@@ -1133,6 +1063,32 @@ export interface operations {
             cookie?: never
         }
         requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: null
+                    }
+                }
+            }
+        }
+    }
+    AuthController_completeAccount_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['CompleteAccountRequestDto']
+            }
+        }
         responses: {
             200: {
                 headers: {
@@ -1286,76 +1242,6 @@ export interface operations {
                     'application/json': {
                         meta: components['schemas']['ApiResponseMetaDto']
                         data: components['schemas']['SignInMethodsResponseDto']
-                    }
-                }
-            }
-        }
-    }
-    PasswordController_sendPasswordSetCode_v1: {
-        parameters: {
-            query?: never
-            header?: never
-            path?: never
-            cookie?: never
-        }
-        requestBody?: never
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown
-                }
-                content: {
-                    'application/json': {
-                        meta: components['schemas']['ApiResponseMetaDto']
-                        data: null
-                    }
-                }
-            }
-        }
-    }
-    PasswordController_setPassword_v1: {
-        parameters: {
-            query?: never
-            header?: never
-            path?: never
-            cookie?: never
-        }
-        requestBody: {
-            content: {
-                'application/json': components['schemas']['SetPasswordRequestDto']
-            }
-        }
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown
-                }
-                content: {
-                    'application/json': {
-                        meta: components['schemas']['ApiResponseMetaDto']
-                        data: null
-                    }
-                }
-            }
-        }
-    }
-    AccountDeletionController_sendCode_v1: {
-        parameters: {
-            query?: never
-            header?: never
-            path?: never
-            cookie?: never
-        }
-        requestBody?: never
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown
-                }
-                content: {
-                    'application/json': {
-                        meta: components['schemas']['ApiResponseMetaDto']
-                        data: null
                     }
                 }
             }

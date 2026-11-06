@@ -399,8 +399,9 @@ could have checked them. Tick each one.
 
 **Sign-in, which needs the API (step 9)**
 
-- [ ] Sign up with a real address you can read. The code email arrives, and
-      the code signs you in.
+- [ ] Create an account on `/register` with a real address you can read. The
+      code email arrives, the code signs you in, and "complete your account"
+      (`/welcome`) opens the app.
 - [ ] Reload: you are still signed in. (If not: step 9.)
 - [ ] Leave the tab open longer than the access-token lifetime (15 minutes by
       default), then click to another page: still signed in. This is the

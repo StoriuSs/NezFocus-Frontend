@@ -11,9 +11,13 @@ import { env } from '@/config/env'
 export const OAUTH_PROVIDERS = ['google'] as const
 export type OAuthProvider = (typeof OAUTH_PROVIDERS)[number]
 
-/** Where a "Continue with …" button goes: `redirect` is where to come back to afterwards. */
-export function oauthStartUrl(provider: OAuthProvider, redirect?: string | null): string {
-    const query = redirect ? `?${new URLSearchParams({ redirect })}` : ''
+/**
+ * Where a "Continue with …" button goes: `next` is where to come back to
+ * afterwards. The API calls it `redirect`, and hands it back as `?redirect=`
+ * on /auth/callback.
+ */
+export function oauthStartUrl(provider: OAuthProvider, next?: string | null): string {
+    const query = next ? `?${new URLSearchParams({ redirect: next })}` : ''
     return `${env.VITE_API_URL}/auth/${provider}${query}`
 }
 

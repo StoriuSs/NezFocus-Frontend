@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input'
 import { FormField } from '@/components/form/FormField'
 import { authApi } from '@/features/auth/api/auth.api'
 import { useAuthStore } from '@/features/auth/auth.store'
-import { AUTH_PATHS, safeRedirect, withRedirect } from '@/features/auth/lib/paths'
+import { afterSignIn, AUTH_PATHS, withFlow } from '@/features/auth/lib/paths'
 import { authPageState, useAuthPageState } from '@/features/auth/lib/page-state'
 import { authFormError } from '@/features/auth/lib/form-errors'
 import { authFields, newPasswordCheck, passwordFieldMessage } from '@/features/auth/lib/schemas'
@@ -47,7 +47,6 @@ export default function ResetPassword() {
     const handedOver = useAuthPageState()
     const navigate = useNavigate()
     const [params] = useSearchParams()
-    const redirect = params.get('redirect')
     const startSession = useAuthStore((state) => state.startSession)
     const [formError, setFormError] = useState<string | null>(null)
     const [serverRules, setServerRules] = useState<PasswordRule[]>([])
@@ -81,7 +80,7 @@ export default function ResetPassword() {
         try {
             await startSession(await authApi.resetPassword(address, code, newPassword))
             toast.success(t('resetPassword.done'))
-            void navigate(safeRedirect(redirect), { replace: true })
+            void navigate(afterSignIn({ completed: useAuthStore.getState().isComplete }, params), { replace: true })
         } catch (error) {
             const failure = authFormError(error)
             if (failure.passwordRules.length > 0) setServerRules(failure.passwordRules)
@@ -110,7 +109,7 @@ export default function ResetPassword() {
                             </span>
                         ) : (
                             <Link
-                                to={withRedirect(AUTH_PATHS.forgotPassword, redirect)}
+                                to={withFlow(AUTH_PATHS.forgotPassword, params)}
                                 state={authPageState(email || undefined)}
                                 className='font-medium text-primary hover:underline'
                             >
@@ -120,7 +119,7 @@ export default function ResetPassword() {
                     </p>
                     <p>
                         <Link
-                            to={withRedirect(AUTH_PATHS.signIn, redirect)}
+                            to={withFlow(AUTH_PATHS.signIn, params)}
                             className='font-medium text-primary hover:underline'
                         >
                             {t('resetPassword.backToSignIn')}
@@ -131,7 +130,7 @@ export default function ResetPassword() {
         >
             <form onSubmit={handleSubmit(onSubmit)} className='space-y-4' noValidate>
                 {lockedEmail ? (
-                    <SentTo email={lockedEmail} changeAt={withRedirect(AUTH_PATHS.forgotPassword, redirect)} />
+                    <SentTo email={lockedEmail} changeAt={withFlow(AUTH_PATHS.forgotPassword, params)} />
                 ) : (
                     <FormField label={t('fields.email')} error={errors.email?.message}>
                         {(control) => <Input type='email' autoComplete='email' {...control} {...register('email')} />}

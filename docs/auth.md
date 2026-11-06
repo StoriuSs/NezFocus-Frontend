@@ -6,12 +6,12 @@ The sign-in documentation now lives in its own folder:
 | Looking for | Now in |
 |---|---|
 | What the app does for sign-in, and what it leaves to the API | [auth/README.md](./auth/README.md) |
-| Every auth page, `?redirect=`, Google | [auth/pages-and-flows.md](./auth/pages-and-flows.md) |
+| Every auth page, `?next=`, "complete your account", Google | [auth/pages-and-flows.md](./auth/pages-and-flows.md) |
 | The access token, refreshing, tabs, signing out and why | [auth/session.md](./auth/session.md) |
 | Form checks, error messages, "too many attempts", password rules | [auth/forms-and-errors.md](./auth/forms-and-errors.md) |
 | Settings: password, sign out everywhere, deleting the account | [auth/account-settings.md](./auth/account-settings.md) |
 | The files, guards, store and tests | [auth/in-the-code.md](./auth/in-the-code.md) |
-| The username step after a first sign-in | [username-prompt.md](./username-prompt.md) |
+| Choosing the username (on "complete your account"; the old dialog is gone) | [auth/pages-and-flows.md](./auth/pages-and-flows.md#complete-your-account) |
 
 The sections other pages link to:
 

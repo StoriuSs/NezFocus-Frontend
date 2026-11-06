@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { FormField } from '@/components/form/FormField'
 import { authApi } from '@/features/auth/api/auth.api'
-import { AUTH_PATHS, withRedirect } from '@/features/auth/lib/paths'
+import { AUTH_PATHS, withFlow } from '@/features/auth/lib/paths'
 import { authPageState, useAuthPageState } from '@/features/auth/lib/page-state'
 import { authFormError } from '@/features/auth/lib/form-errors'
 import { authFields } from '@/features/auth/lib/schemas'
@@ -30,7 +30,6 @@ export default function ForgotPassword() {
     const handedOver = useAuthPageState()
     const navigate = useNavigate()
     const [params] = useSearchParams()
-    const redirect = params.get('redirect')
     const [formError, setFormError] = useState<string | null>(null)
     // After a refusal by a limit: how long until the API takes another request.
     // Counted from when the last code went to the address handed over, if one did in this tab.
@@ -47,8 +46,8 @@ export default function ForgotPassword() {
         try {
             await authApi.forgotPassword(email)
             recordCodeSent('password-reset', email)
-            void navigate(withRedirect(AUTH_PATHS.resetPassword, redirect), {
-                state: authPageState(email, 'code-sent')
+            void navigate(withFlow(AUTH_PATHS.resetPassword, params), {
+                state: authPageState(email, { notice: 'code-sent' })
             })
         } catch (error) {
             const failure = authFormError(error)
@@ -63,10 +62,7 @@ export default function ForgotPassword() {
             subtitle={t('forgotPassword.subtitle')}
             notice={formError ? <Notice tone='error'>{formError}</Notice> : null}
             footer={
-                <Link
-                    to={withRedirect(AUTH_PATHS.signIn, redirect)}
-                    className='font-medium text-primary hover:underline'
-                >
+                <Link to={withFlow(AUTH_PATHS.signIn, params)} className='font-medium text-primary hover:underline'>
                     {t('forgotPassword.backToSignIn')}
                 </Link>
             }

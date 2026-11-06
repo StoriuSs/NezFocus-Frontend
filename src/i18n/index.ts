@@ -63,3 +63,11 @@ syncDocumentLanguage(i18n.resolvedLanguage ?? 'en')
 i18n.on('languageChanged', syncDocumentLanguage)
 
 export default i18n
+
+/** The languages the API knows: emails and the account's setting (D-64, D-132). */
+export type AppLanguage = 'vi' | 'en'
+
+/** The language on screen now, as the API names it: for the emails a request sends, and the account. */
+export function currentLanguage(): AppLanguage {
+    return i18n.resolvedLanguage === 'vi' ? 'vi' : 'en'
+}

@@ -22,20 +22,6 @@
     },
     "changeAvatar": "Đổi ảnh đại diện"
   },
-  "usernamePrompt": {
-    "title": "Chọn tên người dùng",
-    "description": "Đây sẽ là định danh duy nhất của bạn. Bạn chỉ có thể đặt một lần!",
-    "label": "Tên người dùng",
-    "placeholder": "ten_nguoi_dung",
-    "hint": "2–32 ký tự: chữ thường, chữ số, dấu gạch dưới và dấu chấm.",
-    "taken": "Tên người dùng này đã được sử dụng.",
-    "confirm": "Xác nhận tên người dùng",
-    "setting": "Đang đặt tên người dùng...",
-    "checkFailed": "Không thể kiểm tra tên người dùng.",
-    "retryCheck": "Kiểm tra lại",
-    "notYou": "Không phải bạn?",
-    "signOut": "Đăng xuất"
-  },
   "validation": {
     "displayNameRequired": "Vui lòng nhập tên hiển thị",
     "displayNameTooLong": "Tên hiển thị tối đa 100 ký tự",
@@ -44,7 +30,6 @@
   "toasts": {
     "profileUpdated": "Cập nhật hồ sơ thành công",
     "avatarUpdated": "Tải file thành công",
-    "usernameSet": "Đặt tên người dùng thành công",
     "cropFailed": "Cắt ảnh thất bại"
   }
 }

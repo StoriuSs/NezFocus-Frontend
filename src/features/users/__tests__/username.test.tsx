@@ -1,16 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { ReactNode } from 'react'
-import { act, renderHook, waitFor } from '@testing-library/react'
+import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { apiError } from '@/test/helpers'
 
-const api = { get: vi.fn(), post: vi.fn() }
+const api = { get: vi.fn() }
 vi.mock('@/lib/api', () => ({ default: api }))
 
 const { USERNAME_MAX_LENGTH, USERNAME_PATTERN, useUsernameAvailability } =
     await import('@/features/users/api/useUsernameAvailability')
-const { useSetUsername } = await import('@/features/users/api/useSetUsername')
-const { userKeys } = await import('@/features/users/api/keys')
 
 /** A client the test can look into, unlike queryWrapper's. */
 function withClient() {
@@ -18,7 +15,7 @@ function withClient() {
     const wrapper = ({ children }: { children: ReactNode }) => (
         <QueryClientProvider client={client}>{children}</QueryClientProvider>
     )
-    return { client, wrapper }
+    return { wrapper }
 }
 
 // SRS REQ-AUTH-01, the same cases as the API's username.rules.spec.ts.
@@ -70,35 +67,5 @@ describe('checking a username as it is typed', () => {
 
         expect(result.current).toMatchObject({ isValid: false, isChecking: false, isAvailable: null })
         expect(api.get).not.toHaveBeenCalled()
-    })
-})
-
-describe('setting the username', () => {
-    // Braces: a function returned from beforeEach is run as its teardown,
-    // and mockReset() returns the mock.
-    beforeEach(() => {
-        api.post.mockReset()
-    })
-
-    it('shows the name as taken when someone got it after it was checked', async () => {
-        api.post.mockRejectedValue(apiError(409, 'USERNAME_CONFLICT'))
-        const { client, wrapper } = withClient()
-        client.setQueryData(userKeys.usernameAvailability('ada'), true)
-        const { result } = renderHook(() => useSetUsername(), { wrapper })
-
-        await act(() => result.current.mutateAsync('ada').catch(() => {}))
-
-        expect(client.getQueryData(userKeys.usernameAvailability('ada'))).toBe(false)
-    })
-
-    it('reloads the profile when the username was already set, in another tab say', async () => {
-        api.post.mockRejectedValue(apiError(400, 'USERNAME_ALREADY_SET'))
-        const { client, wrapper } = withClient()
-        const invalidate = vi.spyOn(client, 'invalidateQueries')
-        const { result } = renderHook(() => useSetUsername(), { wrapper })
-
-        await act(() => result.current.mutateAsync('ada').catch(() => {}))
-
-        expect(invalidate).toHaveBeenCalledWith({ queryKey: userKeys.profile() })
     })
 })

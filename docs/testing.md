@@ -60,11 +60,11 @@ Next to the code, in a `__tests__` folder:
 
 | Folder | What is tested |
 | --- | --- |
-| `src/features/auth/__tests__/` | The auth pages (`pages.test.tsx`: the confirm page and the password held for it, the redirect kept through sign-up, the wait after too many sign-ins, the Google return address), deleting an account (`delete-account.test.tsx`), the verify-email request (`auth-api.test.ts`), the store (`auth.store.test.ts`: the token in memory only, a refused refresh, sign-out, other tabs), `ProtectedRoute` and `GuestOnlyRoute`, `RequireRole`, `safeRedirect` |
-| `src/lib/__tests__/` | The API client (token, refresh and retry, sign-out only when the session ended, the auth routes), idempotency keys without `crypto.randomUUID`, error tracking's scrubbing (one file runs the real Sentry SDK), and the app still starting when an ad blocker stops the Sentry SDK (`error-tracking.start.test.ts`) |
-| `src/features/auth/__tests__/settings-mutations.test.tsx` | Deleting the account reads again what the account needs when the API asks for more proof than the page knew of |
-| `src/features/users/__tests__/` | The username check never shows the answer for a name that is no longer in the field, and asks nothing about a name the API would refuse; setting a name someone took meanwhile marks it taken, one already set reloads the profile (`username.test.tsx`); the profile dialog closes after a save, and keeps what was typed when it fails (`profile.test.tsx`) |
-| `src/hooks/__tests__/` | `useIdempotentMutation`: one key per intent |
+| `src/features/auth/__tests__/` | The auth pages (`pages.test.tsx`: sign-in, then `next` or `/welcome`; `/register` sending a code, keeping `next` / `invite` and the address out of the URL, no second email within the minute, the limits; `/verify`: the code sent at the sixth digit, a wrong or dead code, the countdown, Back, the password instead; the Google return address and an account made by Google sent to `/welcome`), "complete your account" (`welcome.test.tsx`: the prefilled username, a taken one, every field checked, the time zone searched, `USERNAME_CONFLICT`, another tab first), messages that follow the language switch and `formatWait` (`form-problem.test.ts`), the username made from the email (`username-prefill.test.ts`), deleting an account (`delete-account.test.tsx`), the requests that carry the language (`auth-api.test.ts`), the store (`auth.store.test.ts`: the token in memory only, a refused refresh, sign-out, other tabs, `isComplete`), the guards with an incomplete account (`ProtectedRoute.test.tsx`), `RequireRole`, `safeNext`, `withFlow` and `afterSignIn` (`paths.test.ts`) |
+| `src/lib/__tests__/` | The API client (token, refresh and retry, sign-out only when the session ended, `ACCOUNT_INCOMPLETE` keeping the session, the auth routes), idempotency keys without `crypto.randomUUID`, error tracking's scrubbing (one file runs the real Sentry SDK), the app still starting when an ad blocker stops the Sentry SDK (`error-tracking.start.test.ts`), the time zones to pick from (`time-zones.test.ts`), the legal pages' Markdown, links that could run script kept as text (`simple-markdown.test.ts`) |
+| `src/features/users/__tests__/` | The username rule; the username check never shows the answer for a name that is no longer in the field, and asks nothing about a name the API would refuse (`username.test.tsx`); the profile dialog closes after a save, and keeps what was typed when it fails (`profile.test.tsx`) |
+| `src/hooks/__tests__/` | `useIdempotentMutation`: one key per intent; `useCountdown`: whole seconds to a moment; `useMediaQuery` |
+| `src/pages/__tests__/` | The legal pages (`Legal.test.tsx`): each text in the language on screen, the bar for a visitor and for someone signed in, accessibility |
 | `src/config/`, `src/i18n/`, `scripts/` | The repository itself ([below](#tests-that-guard-the-repository)) |
 
 ## Writing one
@@ -93,8 +93,8 @@ axe-core over what it renders ([CONSTRAINTS.md](../CONSTRAINTS.md)):
 ```tsx
 import { expectNoA11yViolations } from '@/test/a11y'
 
-it('/sign-in has no critical or serious problems', async () => {
-    renderAt('/sign-in')
+it('/login has no critical or serious problems', async () => {
+    renderAt('/login')
     await screen.findByLabelText('Email') // wait for the page, not the spinner
     await expectNoA11yViolations()
 })

@@ -3,5 +3,20 @@
     "title": "404 - Không tìm thấy trang",
     "description": "Trang bạn tìm kiếm không tồn tại.",
     "goHome": "Về trang chủ"
+  },
+  "legal": {
+    "terms": "Điều khoản sử dụng",
+    "privacy": "Chính sách quyền riêng tư",
+    "signIn": "Đăng nhập",
+    "register": "Tạo tài khoản",
+    "open": "Mở NezFocus",
+    "switchLanguage": "Chuyển sang English",
+    "lightTheme": "Giao diện sáng",
+    "darkTheme": "Giao diện tối",
+    "byline": "Dự án học tập của Phạm Trung Hiếu.",
+    "footerTerms": "Điều khoản",
+    "footerPrivacy": "Quyền riêng tư",
+    "contact": "Liên hệ",
+    "footer": "Chân trang"
   }
 }

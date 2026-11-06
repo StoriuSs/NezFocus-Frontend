@@ -25,7 +25,7 @@ describe('the new-password check of the forms', () => {
     })
 
     it('points at the conditions under the field when one is unmet', () => {
-        expect(passwordError('ontap2026')).toEqual(['password: Mật khẩu này chưa đáp ứng các yêu cầu bên dưới'])
+        expect(passwordError('ontap2026')).toEqual(['password: Mật khẩu chưa đủ điều kiện'])
     })
 
     it('names the rule in the field when the password is the email or the username (D-66)', () => {

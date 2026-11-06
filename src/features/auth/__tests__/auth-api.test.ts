@@ -1,37 +1,72 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import i18n from '@/i18n'
 
 const post = vi.hoisted(() => vi.fn())
 vi.mock('@/lib/api', () => ({ default: { post } }))
 
 import { authApi } from '../api/auth.api'
 
+const PUBLIC = expect.objectContaining({ skipAuth: true, withCredentials: true })
+
 describe('authApi', () => {
-    it('confirms an address with the code and the password chosen at sign-up', async () => {
-        post.mockResolvedValue({ data: { data: { accessToken: 'a' } } })
+    beforeEach(async () => {
+        post.mockReset().mockResolvedValue({ data: { data: { accessToken: 'a' } } })
+        await i18n.changeLanguage('vi')
+    })
 
-        await authApi.verifyEmail('ada@example.test', '123456', 'Harbour-Lantern-42')
+    it('asks for a code in the language on screen, without a bearer token (D-132)', async () => {
+        await authApi.sendEmailCode('an.nguyen@gmail.com')
+        expect(post).toHaveBeenLastCalledWith(
+            '/auth/email-code',
+            { email: 'an.nguyen@gmail.com', language: 'vi' },
+            PUBLIC
+        )
 
-        expect(post).toHaveBeenCalledWith(
-            '/auth/verify-email',
-            { email: 'ada@example.test', code: '123456', password: 'Harbour-Lantern-42' },
-            expect.objectContaining({ skipAuth: true, withCredentials: true })
+        await i18n.changeLanguage('en')
+        await authApi.forgotPassword('an.nguyen@gmail.com')
+        expect(post).toHaveBeenLastCalledWith(
+            '/auth/forgot-password',
+            { email: 'an.nguyen@gmail.com', language: 'en' },
+            PUBLIC
         )
     })
 
-    it.each([
-        ['/auth/login', () => authApi.login('ada@example.test', 'Harbour-Lantern-42')],
-        ['/auth/register', () => authApi.register('ada@example.test', 'Harbour-Lantern-42')],
-        ['/auth/forgot-password', () => authApi.forgotPassword('ada@example.test')]
-    ])('sends %s the address (and password) without a bearer token, with the cookie', async (path, call) => {
-        post.mockResolvedValue({ data: { data: { accessToken: 'a' } } })
+    it('signs in with the code alone, and keeps what it says about the account', async () => {
+        const answer = {
+            accessToken: 'a',
+            tokenType: 'Bearer',
+            expiresIn: 900,
+            account: { created: true, completed: false }
+        }
+        post.mockResolvedValue({ data: { data: answer } })
 
-        await call()
-
-        const body = path === '/auth/forgot-password' ? {} : { password: 'Harbour-Lantern-42' }
+        await expect(authApi.verifyEmailCode('an.nguyen@gmail.com', '482913')).resolves.toEqual(answer)
         expect(post).toHaveBeenLastCalledWith(
-            path,
-            { email: 'ada@example.test', ...body },
-            expect.objectContaining({ skipAuth: true, withCredentials: true })
+            '/auth/email-code/verify',
+            { email: 'an.nguyen@gmail.com', code: '482913' },
+            PUBLIC
+        )
+    })
+
+    it('completes the account with the bearer token, saving the language on screen (D-64)', async () => {
+        const form = {
+            displayName: 'An',
+            username: 'an.nguyen',
+            password: 'Ontap2026!',
+            timezone: 'Asia/Ho_Chi_Minh',
+            termsAccepted: true
+        }
+        await authApi.completeAccount(form)
+
+        expect(post).toHaveBeenLastCalledWith('/auth/complete-account', { ...form, language: 'vi' })
+    })
+
+    it('deletes the account with its password, asking for the email in the language on screen', async () => {
+        await authApi.deleteAccount('Ontap2026!')
+        expect(post).toHaveBeenLastCalledWith(
+            '/auth/account/delete',
+            { password: 'Ontap2026!', language: 'vi' },
+            { withCredentials: true }
         )
     })
 })

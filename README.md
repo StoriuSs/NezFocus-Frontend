@@ -31,8 +31,9 @@ languages, dark mode, tests, and a production image with CI and deploys.
 
 ## Features
 
-- **Sign-in, done by the API itself** (no identity server): sign up with an
-  email and password and confirm the address with an emailed code, sign in,
+- **Sign-in, done by the API itself** (no identity server): create an account
+  with only an email and an emailed code, then "complete your account"
+  (display name, username, password, time zone, the terms), sign in,
   "Continue with Google", forgotten-password reset, a session that survives a
   reload and stays in step across tabs, sign out everywhere, and deleting the
   account
@@ -79,13 +80,15 @@ trades the cookie for a new one. The pages:
 
 | Page | What it is for |
 |---|---|
-| `/sign-up` | Create an account; the API emails a 6-digit code |
-| `/verify-email` | Enter the code; confirming the address also signs you in |
-| `/sign-in` | Email and password, or "Continue with Google" |
+| `/register` | Create an account with only an email; the API emails a 6-digit code |
+| `/verify` | Enter the code; the right code signs you in, to a new account or to the address's own |
+| `/welcome` | "Complete your account", once, before any other page: display name, username, password, time zone, the terms |
+| `/login` | Email and password, or "Continue with Google" |
 | `/forgot-password`, `/reset-password` | An emailed code, then a new password; that also signs you in |
 | `/auth/callback` | Where the API sends the browser back after Google |
-| `/settings` | Change the password, set a first one (accounts made with Google), sign out everywhere |
+| `/settings` | Change the password, sign out everywhere |
 | `/profile` | The profile, the avatar, and deleting the account |
+| `/terms`, `/privacy` | The Terms of Service and the Privacy Policy, for everyone |
 
 The details: [docs/auth/README.md](./docs/auth/README.md).
 
@@ -97,7 +100,7 @@ The details: [docs/auth/README.md](./docs/auth/README.md).
 | `CORS_CREDENTIALS` | `true` | The refresh cookie is never sent, and a reload signs you out |
 | `FRONTEND_URL` | This app's address, as above | Links in emails, and the return from Google, point at the wrong site |
 
-Sign-up needs the API's **email**: the confirmation code arrives by mail. In
+Creating an account needs the API's **email**: the sign-in code arrives by mail. In
 development the API's stack catches every email in **Mailpit**, at
 http://localhost:8025. Google sign-in needs **no setting in this app**: it is
 configured on the API, and this app asks it whether it is on

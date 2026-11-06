@@ -46,7 +46,8 @@
         "detail": "Assign to several people, see every task on one page"
       },
       "illustration": "Illustration: six people studying together in one rhythm ring"
-    }
+    },
+    "signOut": "Sign out"
   },
   "shell": {
     "comingSoon": "{{name}} · coming soon",
@@ -111,5 +112,11 @@
         }
       }
     }
+  },
+  "timeZone": {
+    "search": "Search a city or GMT",
+    "list": "Time zones",
+    "browser": "From your browser: {{zone}}",
+    "none": "No time zone matches"
   }
 }

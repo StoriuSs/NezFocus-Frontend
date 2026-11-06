@@ -166,7 +166,7 @@ reportError(error, { feature: 'avatar-crop' })
   Query parameters named like credentials are replaced by `[REDACTED]`: the
   fields below, plus `code`, `state` and `session_state`. Google's own `code`
   and `state` go to the API, not to this app — the app's `/auth/callback`
-  only ever receives `redirect`, `error` and `notice` — so this
+  only ever receives `redirect` and `error` — so this
   is a safety net.
 - **Breadcrumbs**: what happened before the error, such as navigations,
   clicks (the element's tag, id, classes and a few attributes such as

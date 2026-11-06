@@ -3,5 +3,20 @@
     "title": "404 - Page Not Found",
     "description": "The page you are looking for does not exist.",
     "goHome": "Go Home"
+  },
+  "legal": {
+    "terms": "Terms of Service",
+    "privacy": "Privacy Policy",
+    "signIn": "Sign in",
+    "register": "Create account",
+    "open": "Open NezFocus",
+    "switchLanguage": "Switch to Tiếng Việt",
+    "lightTheme": "Light theme",
+    "darkTheme": "Dark theme",
+    "byline": "A study project by Phạm Trung Hiếu.",
+    "footerTerms": "Terms",
+    "footerPrivacy": "Privacy",
+    "contact": "Contact",
+    "footer": "Footer"
   }
 }

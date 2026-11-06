@@ -7,7 +7,8 @@ const authState = {
     isAuthenticated: true,
     getToken: vi.fn<() => Promise<string | undefined>>(),
     refreshToken: vi.fn<() => Promise<string | undefined>>(),
-    logout: vi.fn()
+    logout: vi.fn(),
+    accountIncomplete: vi.fn()
 }
 
 const { default: api, connectApiSession } = await import('@/lib/api')
@@ -17,7 +18,8 @@ connectApiSession({
     isSignedIn: () => authState.isAuthenticated,
     getToken: () => authState.getToken(),
     refreshToken: () => authState.refreshToken(),
-    ended: (error, why) => authState.logout(why === 'account-disabled' ? 'account-disabled' : signOutReasonOf(error))
+    ended: (error, why) => authState.logout(why === 'account-disabled' ? 'account-disabled' : signOutReasonOf(error)),
+    accountIncomplete: () => authState.accountIncomplete()
 })
 
 /** Replaces the network: a different answer for each request in turn (the last one repeats). */
@@ -44,6 +46,7 @@ describe('api client', () => {
         authState.getToken.mockReset().mockResolvedValue('token-123')
         authState.refreshToken.mockReset()
         authState.logout.mockReset()
+        authState.accountIncomplete.mockReset()
     })
 
     it('attaches the bearer token when there is one, and nothing for anonymous visitors', async () => {
@@ -96,6 +99,18 @@ describe('api client', () => {
         await expect(api.get('/users/me')).rejects.toThrow()
         expect(authState.refreshToken).not.toHaveBeenCalled()
         expect(authState.logout).toHaveBeenLastCalledWith('password-changed')
+    })
+
+    it('opens "complete your account" when the API says the account is incomplete, keeping the session', async () => {
+        respondInTurn(refusal(403, 'ACCOUNT_INCOMPLETE'))
+        await expect(api.patch('/users/me', {})).rejects.toThrow()
+        expect(authState.accountIncomplete).toHaveBeenCalledOnce()
+        expect(authState.logout).not.toHaveBeenCalled()
+
+        // Any other 403 is the caller's to show.
+        respondInTurn(refusal(403, 'AUTH_FORBIDDEN'))
+        await expect(api.get('/admin')).rejects.toThrow()
+        expect(authState.accountIncomplete).toHaveBeenCalledOnce()
     })
 
     it('sends no bearer token to the auth routes, and treats their 401 as an answer, not a lost session', async () => {

@@ -5,8 +5,8 @@ five tests, one per main flow. The suites have different needs:
 
 | Suite | Needs | What it checks |
 |---|---|---|
-| `e2e/oauth.spec.ts` | This app and **the API with Google configured** (skipped otherwise) | "Continue with Google" on sign-in, pointing at the API with the page to return to; the API's redirect to Google with PKCE, the registered return address and the `oauth_state` cookie. Not the sign-in at Google itself, which needs a real Google account: that is a manual test |
-| `e2e/account.spec.ts` | This app, **the API**, and the **Mailpit** it sends email to | An account's whole life: sign up (a password missing two conditions refused), confirm with the code read from Mailpit (the address shown, not editable; the code signs in), choose a username; a deep link coming back after sign-in; a reload keeping the session (the refresh cookie crossing origins); a forgotten password reset, which signs in (the old password refused after); the account deleted |
+| `e2e/oauth.spec.ts` | This app and **the API with Google configured** (skipped otherwise) | "Continue with Google" on `/login`, pointing at the API with the page to return to; the API's redirect to Google with PKCE, the registered return address and the `oauth_state` cookie. Not the sign-in at Google itself, which needs a real Google account: that is a manual test |
+| `e2e/account.spec.ts` | This app, **the API**, and the **Mailpit** it sends email to | An account's whole life: create it on `/register` with only the email, type the code read from Mailpit on `/verify` (the address shown; the sixth digit sends it and signs in), then complete it on `/welcome` (any other page sends back there; a password missing two conditions refused; the time zone found by searching "tokyo"); a deep link coming back after sign-in; a reload keeping the session (the refresh cookie crossing origins); a forgotten password reset, which signs in (the old password refused after); the account deleted |
 
 Any CSP violation or uncaught page error fails a run.
 
@@ -85,7 +85,7 @@ refused. So each browser gets an address of its own: `asOwnClient()` in
 which the API trusts from one proxy hop.
 
 The limit per email address (one code email a minute) is met head-on instead:
-the reset asks for an email within a minute of sign-up's, the page says "Too
+the reset asks for an email within a minute of the sign-in code's, the page says "Too
 many attempts. Try again in N seconds", and `submitPatiently()` waits that long
 and submits again. That checks the message along the way. It is why that test
 takes up to a minute.
@@ -101,7 +101,7 @@ left behind by a failed run is harmless in a development database, and the
 | --- | --- |
 | `net::ERR_CONNECTION_REFUSED` | Nothing is serving the app at `E2E_BASE_URL` |
 | `The API is not answering at …` | Start the API (`pnpm docker:dev` there) or set `E2E_API_URL` |
-| `a "Verify" email to …` timed out | The API could not send mail: look at Mailpit, and at the `auth` queue on the API's `/admin/queues` |
+| `a "code to create" email to …` (or `a "Reset" email`) timed out | The API could not send mail: look at Mailpit, and at the `auth` queue on the API's `/admin/queues` |
 | The reload test finds the user signed out | The refresh cookie is not coming back: the API's `CORS_ORIGINS` or `CORS_CREDENTIALS`, or cookies blocked ([auth/session.md](./auth/session.md)) |
 | `port is already allocated` | Something else uses 3001; pick another and set `E2E_BASE_URL` |
 | `CSP violation: …` | The policy blocks something the page needs. The directive and the blocked address are in the message; the policy is built by `scripts/csp.mjs` |

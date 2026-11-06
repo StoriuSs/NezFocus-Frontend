@@ -11,10 +11,10 @@ import {
 } from './helpers'
 
 /**
- * An account's whole life, in a real browser against the real API: sign up,
- * confirm the address with the emailed code (which signs in), choose a
- * username, stay signed in across a reload, reset a forgotten password (which
- * signs in), delete the account. Plus the parts only a browser shows: the
+ * An account's whole life, in a real browser against the real API: create it
+ * with the emailed code (which signs in), complete it (display name, username,
+ * password, time zone, terms), stay signed in across a reload, reset a
+ * forgotten password (which signs in), delete the account. Plus the parts only a browser shows: the
  * refresh cookie crossing origins, and a deep link coming back after sign-in.
  *
  * Needs the API (E2E_API_URL, default http://localhost:8888/api/v1) and the
@@ -37,7 +37,7 @@ test.beforeAll(async ({ browserName }) => {
     }
     const id = `${browserName}${Date.now().toString(36)}`
     email = `e2e-${id}@example.test`
-    username = `e2e_${id}`.slice(0, 25)
+    username = `e2e_${id}`.slice(0, 32)
 })
 
 test.beforeEach(async ({ context }) => {
@@ -50,57 +50,58 @@ async function signIn(page: Page, password: string) {
     await page.getByRole('button', { name: 'Sign in', exact: true }).click()
 }
 
-test('sign up, confirm the address (which signs in), choose a username', async ({ page }) => {
+test('create an account: the emailed code signs in, then "complete your account" opens the app', async ({ page }) => {
     const problems = await watchForProblems(page)
-    // A visitor at / is sent to sign in (D-127), which links to sign up.
+    // A visitor at / is sent to sign in (D-127), which links to "Create account".
     await page.goto('/')
-    await page.waitForURL(/\/sign-in$/)
+    await page.waitForURL(/\/login$/)
     await page.getByRole('link', { name: 'Create one' }).click()
+    await page.waitForURL(/\/register$/)
+
+    // Only the email (D-59): the code goes to it.
+    const sentAt = new Date()
+    await page.getByLabel('Email').fill(email)
+    await page.getByRole('button', { name: 'Continue', exact: true }).click()
+    await page.waitForURL(/\/verify$/)
+    await expect(page.getByTestId('sent-to')).toHaveText(email)
+
+    // The sixth digit sends the code by itself; a new address gets a new account.
+    await page.getByLabel('6-digit one-time code').fill(await codeFromEmail(email, 'code to create', sentAt))
+    await page.waitForURL(/\/welcome$/)
+
+    // Nothing else opens until the account is complete (D-61): the page asked for comes after.
+    await page.goto('/settings')
+    await page.waitForURL(/\/welcome\?next=%2Fsettings$/)
+
+    await page.getByLabel('Display name').fill('E2E')
+    await page.getByLabel('Username').fill(username)
+    await expect(page.getByText('Username is available')).toBeVisible()
+    await page.getByRole('checkbox').check()
 
     // The SRS example ontap2026 lacks an upper-case letter and a special
     // character: sending marks those two conditions under the field (C-22).
-    await page.getByLabel('Email').fill(email)
     await page.getByLabel('Password', { exact: true }).fill('ontap2026')
-    await page.getByLabel('Confirm password').fill('ontap2026')
-    await page.getByRole('button', { name: 'Create account' }).click()
-    await expect(page.getByText("This password doesn't meet the rules below")).toBeVisible()
+    await page.getByRole('button', { name: 'Enter NezFocus' }).click()
+    await expect(page.getByText("The password doesn't meet the conditions yet")).toBeVisible()
     await expect(page.locator('li[data-state="error"]')).toHaveText([/uppercase/, /special character/])
-
-    const sentAt = new Date()
     await page.getByLabel('Password', { exact: true }).fill(PASSWORD)
-    await page.getByLabel('Confirm password').fill(PASSWORD)
-    await page.getByRole('button', { name: 'Create account' }).click()
-    await page.waitForURL(/\/verify-email$/)
-    // The address is shown, not editable: the code belongs to that account.
-    await expect(page.getByTestId('sent-to')).toHaveText(email)
-    await expect(page.getByLabel('Email')).toHaveCount(0)
 
-    // Signing in before confirming leads back here, not to a dead end.
-    await page.goto('/sign-in')
-    await signIn(page, PASSWORD)
-    await page.waitForURL(/\/verify-email$/)
-    await expect(page.getByText("Your email isn't confirmed yet")).toBeVisible()
+    // The time zone, searched by city (C-25).
+    await page.getByRole('button', { name: 'Time zone' }).click()
+    await page.getByRole('combobox', { name: 'Search a city or GMT' }).fill('tokyo')
+    await page.keyboard.press('Enter')
+    await expect(page.getByRole('button', { name: 'Time zone' })).toHaveText(/GMT\+9 · Tokyo/)
 
-    // The right code signs in: no password to type again.
-    await page.getByLabel('Code').fill(await codeFromEmail(email, 'Verify', sentAt))
-    await page.getByRole('button', { name: 'Confirm', exact: true }).click()
-    await page.waitForURL((url) => url.pathname === '/study')
-    await expect(page.getByText('Your email is confirmed. Welcome!')).toBeVisible()
-
-    const prompt = page.getByRole('dialog', { name: 'Choose your username' })
-    await expect(prompt).toBeVisible()
-    await prompt.getByLabel('Username').fill(username)
-    const confirm = prompt.getByRole('button', { name: 'Confirm Username' })
-    await expect(confirm).toBeEnabled() // the availability check answered
-    await confirm.click()
-    await expect(prompt).toBeHidden()
+    await page.getByRole('button', { name: 'Enter NezFocus' }).click()
+    await page.waitForURL(/\/settings$/)
+    await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible()
     expect(problems).toEqual([])
 })
 
 test('a reload keeps the session; a deep link comes back after sign-in', async ({ page }) => {
     const problems = await watchForProblems(page)
     await page.goto('/settings')
-    await page.waitForURL(/\/sign-in\?redirect=%2Fsettings/)
+    await page.waitForURL(/\/login\?next=%2Fsettings/)
     await signIn(page, PASSWORD)
     await page.waitForURL(/\/settings$/)
     await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible()
@@ -122,7 +123,7 @@ test('reset a forgotten password with an emailed code; the old one no longer wor
     // Room to wait out the one-code-email-a-minute limit (submitPatiently).
     test.setTimeout(120_000)
     const problems = await watchForProblems(page)
-    await page.goto('/sign-in')
+    await page.goto('/login')
     await page.getByLabel('Email').fill(email)
     await page.getByRole('link', { name: 'Forgot your password?' }).click()
     await expect(page.getByLabel('Email')).toHaveValue(email)
@@ -149,7 +150,7 @@ test('reset a forgotten password with an emailed code; the old one no longer wor
     const elsewhere = await browser.newContext({ baseURL })
     await asOwnClient(elsewhere)
     const other = await elsewhere.newPage()
-    await other.goto('/sign-in')
+    await other.goto('/login')
     await signIn(other, PASSWORD)
     await expect(other.getByText('Incorrect email or password.')).toBeVisible()
     await signIn(other, RESET_PASSWORD)
@@ -160,7 +161,7 @@ test('reset a forgotten password with an emailed code; the old one no longer wor
 
 test('delete the account: signed out, and the account is gone', async ({ page }) => {
     const problems = await watchForProblems(page)
-    await page.goto('/sign-in')
+    await page.goto('/login')
     await signIn(page, RESET_PASSWORD)
     await openAccountMenuItem(page, /view and edit your profile$/)
 
@@ -175,11 +176,11 @@ test('delete the account: signed out, and the account is gone', async ({ page })
     const deletedAt = new Date()
     await dialog.getByLabel('Password', { exact: true }).fill(RESET_PASSWORD)
     await confirmDelete.click()
-    await page.waitForURL(/\/sign-in$/, { timeout: 15_000 })
+    await page.waitForURL(/\/login$/, { timeout: 15_000 })
     await expect(page.getByText('Your account was deleted.')).toBeVisible()
     await emailTo(email, 'account was deleted', deletedAt)
 
-    await page.goto('/sign-in')
+    await page.goto('/login')
     await signIn(page, RESET_PASSWORD)
     await expect(page.getByText('Incorrect email or password.')).toBeVisible()
     expect(problems).toEqual([])

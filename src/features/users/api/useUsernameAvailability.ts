@@ -9,7 +9,8 @@ import { userKeys } from './keys'
 export const USERNAME_MAX_LENGTH = 32
 export const USERNAME_PATTERN = /^[a-z0-9_.]{2,32}$/
 
-const DEBOUNCE_MS = 400
+/** Half a second after typing stops (C-22 › username). */
+const DEBOUNCE_MS = 500
 
 /**
  * Debounced availability check for a username being typed.
@@ -41,6 +42,8 @@ export function useUsernameAvailability(username: string) {
 
     return {
         isValid,
+        /** Still being typed: the half-second pause has not come yet. */
+        isTyping: !isSettled,
         isChecking: isValid && (!isSettled || query.isFetching),
         /** `true`/`false` once checked for exactly the current input; otherwise `null`. */
         isAvailable: isValid && isSettled && query.isSuccess && !query.isFetching ? query.data : null,

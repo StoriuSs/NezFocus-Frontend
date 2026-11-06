@@ -19,7 +19,7 @@ test.beforeEach(async ({ context }) => {
 test('"Continue with Google" goes through the API to Google, remembering where it was heading', async ({ page }) => {
     const problems = await watchForProblems(page)
     await page.goto('/settings')
-    await page.waitForURL(/\/sign-in\?redirect=%2Fsettings/)
+    await page.waitForURL(/\/login\?next=%2Fsettings/)
 
     const google = page.getByRole('link', { name: 'Continue with Google' })
     // It waits on the API (/auth/options): slower than the form in a cold browser.

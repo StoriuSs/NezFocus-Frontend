@@ -31,9 +31,9 @@ function GoogleMark() {
  * "Continue with Google", under the sign-in and sign-up forms — only when the
  * API has Google configured. A link, not a button: it leaves the app.
  *
- * @param redirect where to land afterwards (the sign-in page's `?redirect=`)
+ * @param next where to land afterwards (the page's `?next=`)
  */
-export function OAuthButtons({ redirect }: { redirect?: string | null }) {
+export function OAuthButtons({ next }: { next?: string | null }) {
     const { t } = useTranslation('auth')
     const providers = useOAuthProviders()
     if (providers.length === 0) return null
@@ -47,7 +47,7 @@ export function OAuthButtons({ redirect }: { redirect?: string | null }) {
             </div>
             {providers.includes('google') ? (
                 <a
-                    href={oauthStartUrl('google', redirect)}
+                    href={oauthStartUrl('google', next)}
                     className={buttonVariants({ variant: 'outline', className: 'w-full gap-2' })}
                 >
                     <GoogleMark />

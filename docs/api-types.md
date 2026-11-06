@@ -44,10 +44,10 @@ type UserProfile = ApiModel<'UserProfileResponseDto'>
 
 // A response: every success response is { meta, data }
 const response = await api.get<ApiEnvelope<UserProfile>>('/users/me')
-response.data.data.hasSetUsername // boolean — typed from the backend
+response.data.data.completed // boolean — typed from the backend
 
 // A request body
-const body = { username } satisfies ApiModel<'SetUsernameRequestDto'>
+const body = { displayName, username, password, timezone, language, termsAccepted } satisfies ApiModel<'CompleteAccountRequestDto'>
 ```
 
 Feature code names the models it uses once, in the feature's `types.ts`

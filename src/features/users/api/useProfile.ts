@@ -4,7 +4,7 @@ import { fetchProfile } from './users.api'
 
 /**
  * Fetch the current user's profile.
- * The single source for profile data: header, Profile page, username prompt.
+ * The single source for profile data: the header, the Profile page, "complete your account".
  */
 export function useProfile(enabled = true) {
     return useQuery({

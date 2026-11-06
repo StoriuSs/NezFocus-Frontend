@@ -4,9 +4,9 @@ import { getApiErrorInfo, getApiErrorMessage } from '@/lib/api-error'
 import { rejectedRules, type PasswordRule } from './password-rules'
 
 /** Which kind of limit the API says refused a request (its rate-limits.ts). */
-export type RateLimitReason = 'network' | 'emails' | 'sign_ins' | 'wrong_password'
+export type RateLimitReason = 'network' | 'emails' | 'sign_ins' | 'wrong_password' | 'codes'
 
-const RATE_LIMIT_REASONS = new Set<string>(['network', 'emails', 'sign_ins', 'wrong_password'])
+const RATE_LIMIT_REASONS = new Set<string>(['network', 'emails', 'sign_ins', 'wrong_password', 'codes'])
 
 /**
  * What a failed auth request means for the form that sent it.
@@ -34,10 +34,15 @@ function detailsOf(error: unknown): Record<string, unknown> {
     return typeof data === 'object' && data !== null ? (data as Record<string, unknown>) : {}
 }
 
-/** "30 seconds", "15 minutes": how long `Retry-After` asks to wait. */
+/**
+ * "42 seconds", "15 minutes", "2 hours": how long a limit asks to wait (C-22 ›
+ * FormMessage, the one definition). Under 90 seconds, to the second; then
+ * minutes, rounded up; from an hour, hours, rounded up.
+ */
 export function formatWait(seconds: number): string {
     if (seconds < 90) return i18n.t('auth:wait.seconds', { count: Math.max(1, Math.ceil(seconds)) })
-    return i18n.t('auth:wait.minutes', { count: Math.ceil(seconds / 60) })
+    if (seconds < 3600) return i18n.t('auth:wait.minutes', { count: Math.ceil(seconds / 60) })
+    return i18n.t('auth:wait.hours', { count: Math.ceil(seconds / 3600) })
 }
 
 export function authFormError(error: unknown): AuthFormError {

@@ -172,22 +172,20 @@ browser's developer console (F12, "Console" tab) shows no red error.
 
 This checks the whole chain: the web app, the API, its database and its email.
 
-1. On `http://localhost:3001` (it opens the sign-in page), click **Create
-   one**.
+1. On `http://localhost:3001` (it opens the sign-in page, `/login`), click
+   **Create one**.
 2. Type an email address (any address: in development the email never leaves
-   your machine, it lands in Mailpit) and a password, twice. The checklist
-   under the password ticks off the API's rules as you type. A very common
-   password such as `Password1!` passes the checklist but is refused by the
-   API: that is on purpose.
-3. Click **Create account**. The page changes to "check your email" and shows
-   the address.
-4. Open Mailpit at `http://localhost:8025`. Open the newest email (its subject
-   contains "Verify") and copy the 6-digit code.
-5. Back in the app, type the code in **Code** and click **Confirm**. You are
-   signed in, and a toast says "Your email is confirmed. Welcome!".
-6. A window asks you to **Choose your username**. Type one and click
-   **Confirm Username**.
-7. Reload the page (F5).
+   your machine, it lands in Mailpit) and click **Continue**. The page
+   changes to "Enter the one-time code" (`/verify`) and shows the address.
+3. Open Mailpit at `http://localhost:8025`. Open the newest email and copy
+   the 6-digit code.
+4. Back in the app, type or paste the code. The sixth digit sends it: you are
+   signed in, and taken to "complete your account" (`/welcome`).
+5. Fill in a display name, a username (one is suggested from the email, and
+   checked as you type), a password (the checklist under it ticks off the
+   API's rules as you type) and a time zone, tick the terms, and click
+   **Enter NezFocus**.
+6. Reload the page (F5).
 
 **You are done when**, after the reload, you are still signed in: you stay
 on the app, with your avatar at the foot of the rail, not sent to the
@@ -206,7 +204,7 @@ opens, so after you restart the API they simply appear.
 
 | Feature | Set up on the API with | What you then see here |
 |---|---|---|
-| Sign in with Google | The API starter's `docs/setup/google-sign-in.md` (a development OAuth client whose redirect URI is `http://localhost:8888/api/v1/auth/google/callback`) | "Continue with Google" on the sign-in and sign-up pages |
+| Sign in with Google | The API starter's `docs/setup/google-sign-in.md` (a development OAuth client whose redirect URI is `http://localhost:8888/api/v1/auth/google/callback`) | "Continue with Google" on `/login` and `/register` |
 | Avatars in S3-style storage | The API starter's `docs/setup/storage-s3-r2.md` (locally: its RustFS container) | Nothing different: the avatar shows as before. In development there is no Content-Security-Policy, so an `http://localhost:9100` bucket works without `CSP_IMG_SRC` |
 
 **You are done when** the feature you turned on shows up after a reload of the

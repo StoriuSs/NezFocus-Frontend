@@ -24,7 +24,8 @@ The API (the NestJS starter, `Nest-Hexagonal-No-Keycloak`) checks passwords,
 sends the emails, decides when a session ends and counts failed attempts. This
 app never decides any of that. It:
 
-1. shows the pages (sign in, sign up, the code pages, settings);
+1. shows the pages (sign in, create an account, enter the code, complete
+   your account, settings);
 2. sends what the person typed to the API;
 3. keeps the **access token** (the short-lived pass that proves who you are)
    in memory, and gets a new one before it runs out;
@@ -43,15 +44,15 @@ app finds out at run time what the API has turned on
 
 | Feature | Where | More |
 |---|---|---|
-| Create an account with an email and a password, then confirm the address with a 6-digit emailed code. The right code also signs in | `/sign-up`, `/verify-email` | [pages-and-flows.md](./pages-and-flows.md#sign-up) |
-| Sign in with an email and a password | `/sign-in` | [pages-and-flows.md](./pages-and-flows.md#sign-in) |
-| "Continue with Google", when the API has Google set up | `/sign-in`, `/sign-up`, then `/auth/callback` | [pages-and-flows.md](./pages-and-flows.md#continue-with-google) |
+| Create an account with only an email: a 6-digit emailed code signs in, to a new account or to the address's own | `/register`, `/verify` | [pages-and-flows.md](./pages-and-flows.md#create-an-account) |
+| Complete the account, once, before anything else: display name, username, password, time zone, the terms | `/welcome` | [pages-and-flows.md](./pages-and-flows.md#complete-your-account) |
+| Sign in with an email and a password | `/login` | [pages-and-flows.md](./pages-and-flows.md#sign-in) |
+| "Continue with Google", when the API has Google set up | `/login`, `/register`, then `/auth/callback` | [pages-and-flows.md](./pages-and-flows.md#continue-with-google) |
 | Forgot the password: get an emailed code, choose a new password. This signs in, and signs out every other device | `/forgot-password`, `/reset-password` | [pages-and-flows.md](./pages-and-flows.md#forgot-and-reset-the-password) |
-| Choose a username after the first sign-in | a dialog over any page | [../username-prompt.md](../username-prompt.md) |
+| Read the terms and the privacy policy | `/terms`, `/privacy` | [pages-and-flows.md](./pages-and-flows.md#the-terms-and-the-privacy-policy) |
 | Change the password (other devices are signed out, this one stays) | `/settings` | [account-settings.md](./account-settings.md#change-the-password) |
-| Set a first password on an account made with Google | `/settings` | [account-settings.md](./account-settings.md#set-a-first-password) |
 | Sign out, or sign out on every device | your menu (avatar at the foot of the rail), `/settings` | [account-settings.md](./account-settings.md#sign-out-everywhere) |
-| Delete the account, with proof it is you | `/profile` | [account-settings.md](./account-settings.md#delete-the-account) |
+| Delete the account, with its password | `/profile` | [account-settings.md](./account-settings.md#delete-the-account) |
 | Stay signed in across reloads and new tabs; sign in or out in every open tab at once | everywhere | [session.md](./session.md) |
 | Be told why, when a session ends (password changed elsewhere, signed out everywhere, account deleted, expired) | a message after the page reloads | [session.md](./session.md#why-a-session-ended-every-reason) |
 
@@ -59,7 +60,7 @@ app finds out at run time what the API has turned on
 
 | You want to... | Use | More |
 |---|---|---|
-| Show a page only to signed-in users | `ProtectedRoute` | [in-the-code.md](./in-the-code.md#protecting-a-page-or-part-of-one) |
+| Show a page only to signed-in users whose account is complete | `ProtectedRoute` | [in-the-code.md](./in-the-code.md#protecting-a-page-or-part-of-one) |
 | Show a page only to visitors (the sign-in pages) | `GuestOnlyRoute` | same |
 | Show a button only to admins | `RequireRole`, `useHasRole` | same |
 | Know who is signed in | `useAuthStore((state) => state.user)` | same |
@@ -73,8 +74,9 @@ app finds out at run time what the API has turned on
 | **Access token** | A short-lived pass (15 minutes by default) the API hands out at sign-in. The app sends it with every request as `Authorization: Bearer <token>`. The app keeps it in memory only |
 | **Refresh token** | A long-lived secret the API keeps in a **cookie** the app cannot read (an *httpOnly* cookie). The browser sends it to the API by itself. The app trades it for a new access token |
 | **Session** | One sign-in on one browser, as the API records it. It ends when the person signs out, after 30 days by default, or when the API ends it (a password change, "sign out everywhere", a deleted account) |
-| **Emailed code** | Six digits the API emails to confirm an address, reset a password, set a first password or delete an account. It works for 10 minutes, and only the newest one works |
-| **`?redirect=`** | The page to go to after signing in, carried in the address from one auth page to the next |
+| **Emailed code** | Six digits the API emails to sign in (and so create an account) or to reset a password. It works for 10 minutes, and only the newest one works |
+| **Complete account** | An account that has done "complete your account" (`/welcome`). Until then the API refuses the rest of the app (`ACCOUNT_INCOMPLETE`) |
+| **`?next=`**, **`?invite=`** | The page to go to after signing in, and an invite link waiting, carried in the address from one auth page to the next. The API's Google route calls `next` `redirect` |
 
 The API starter's `docs/auth/concepts.md` explains these terms from the
 ground up, with the reasons behind each.
@@ -95,8 +97,8 @@ ground up, with the reasons behind each.
 - **"I just want it running."** Start the API first (its
   `docs/setup/prepare-for-development.md`), then this app:
   [../setup/prepare-for-development.md](../setup/prepare-for-development.md).
-  Sign up at http://localhost:3001/sign-up; the code arrives in Mailpit at
-  http://localhost:8025.
+  Create an account at http://localhost:3001/register; the code arrives in
+  Mailpit at http://localhost:8025.
 - **"I'm building a page."** [in-the-code.md](./in-the-code.md), then
   [session.md](./session.md#how-the-api-client-handles-answers) for what the
   API client does with your requests.
@@ -112,12 +114,11 @@ ground up, with the reasons behind each.
 
 | Page | What it covers |
 |---|---|
-| [pages-and-flows.md](./pages-and-flows.md) | Every auth page: its address, who may open it, what it shows, what it asks the API, where it goes next. `?redirect=`, Google, the "already signed in" card, the username prompt. Diagrams of sign-up, sign-in and Google |
+| [pages-and-flows.md](./pages-and-flows.md) | Every auth page: its address, who may open it, what it shows, what it asks the API, where it goes next. `?next=`, "complete your account" and the gate before the app, Google, the "already signed in" card, the legal pages. Diagrams of creating an account, sign-in and Google |
 | [session.md](./session.md) | Where the session lives, the page load, getting a fresh token, what the API client does with each answer, tabs, every reason a session ends and what the person sees |
 | [forms-and-errors.md](./forms-and-errors.md) | How forms check input, turn API refusals into messages, handle "too many attempts", the password checklist, and the "send another code" timers |
-| [account-settings.md](./account-settings.md) | The settings page (change or set a password, sign out everywhere) and deleting an account |
+| [account-settings.md](./account-settings.md) | The settings page (change the password, sign out everywhere) and deleting an account |
 | [in-the-code.md](./in-the-code.md) | The files, the guards, the store, the tests, and how to add a page |
-| [../username-prompt.md](../username-prompt.md) | The one-time username step after a first sign-in |
 
 ## What the API must have
 

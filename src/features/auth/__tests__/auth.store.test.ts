@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { apiError } from '@/test/helpers'
 
-const queryClientMock = { clear: vi.fn(), setQueryData: vi.fn() }
+const queryClientMock = { clear: vi.fn(), setQueryData: vi.fn(), invalidateQueries: vi.fn() }
 const hardNavigate = vi.fn()
 const setErrorTrackingUser = vi.fn()
 const authApi = { refresh: vi.fn(), login: vi.fn(), logout: vi.fn() }
@@ -21,7 +21,7 @@ vi.mock('@/features/auth/lib/tab-sync', () => ({
     }
 }))
 
-const PROFILE = { id: 'user-1', email: 'ada@example.test', username: 'ada', roles: ['user'] }
+const PROFILE = { id: 'user-1', email: 'ada@example.test', username: 'ada', roles: ['user'], completed: true }
 const tokens = (accessToken: string, expiresIn = 900) => ({ accessToken, tokenType: 'Bearer' as const, expiresIn })
 
 /** Every value this origin's scripts can read back from storage. */
@@ -41,7 +41,7 @@ describe('auth store', () => {
         // A fresh store (and access-token module) for each test.
         vi.resetModules()
         vi.useFakeTimers()
-        for (const fn of [queryClientMock.clear, queryClientMock.setQueryData, hardNavigate, setErrorTrackingUser]) {
+        for (const fn of [...Object.values(queryClientMock), hardNavigate, setErrorTrackingUser]) {
             fn.mockReset()
         }
         for (const fn of Object.values(authApi)) fn.mockReset()
@@ -114,5 +114,45 @@ describe('auth store', () => {
         await expect(store.getState().getToken()).resolves.toBeUndefined()
         expect(authApi.logout).not.toHaveBeenCalled()
         expect(hardNavigate).toHaveBeenCalledWith('/')
+    })
+
+    describe('"complete your account" (D-61)', () => {
+        const signedInWithCode = async (completed: boolean, profile: unknown = { ...PROFILE, completed }) => {
+            if (profile instanceof Error) fetchProfile.mockRejectedValue(profile)
+            else fetchProfile.mockResolvedValue(profile)
+            const store = (await import('@/features/auth/auth.store')).useAuthStore
+            await store.getState().startSession(tokens('access'), { completed })
+            return store
+        }
+
+        it('knows an account made by the code is incomplete, from the profile', async () => {
+            const store = await signedInWithCode(false)
+            expect(store.getState().isComplete).toBe(false)
+        })
+
+        it('goes by what the code said when the profile does not arrive', async () => {
+            const store = await signedInWithCode(false, new Error('offline'))
+            expect(store.getState().isComplete).toBe(false)
+        })
+
+        it('turns incomplete when the API says so, and complete once the step is done', async () => {
+            const store = await signedInWithCode(true)
+
+            store.getState().markIncomplete()
+            expect(store.getState().isComplete).toBe(false)
+
+            store.getState().markComplete()
+            expect(store.getState().isComplete).toBe(true)
+            // The profile says `completed` too: read it again.
+            expect(queryClientMock.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['users', 'profile'] })
+        })
+
+        it('ignores ACCOUNT_INCOMPLETE once signed out, and starts the next session afresh', async () => {
+            const store = await signedInWithCode(false)
+            tabs.listener?.('signed-out')
+
+            store.getState().markIncomplete()
+            expect(store.getState().isComplete).toBe(true)
+        })
     })
 })

@@ -5,6 +5,5 @@
  */
 export const authKeys = {
     all: ['auth'] as const,
-    options: () => [...authKeys.all, 'options'] as const,
-    signInMethods: () => [...authKeys.all, 'sign-in-methods'] as const
+    options: () => [...authKeys.all, 'options'] as const
 }

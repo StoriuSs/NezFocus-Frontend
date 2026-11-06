@@ -65,19 +65,25 @@ Every way in ends in the same private step of the store, `establish()`:
 
 1. Keep the access token in memory (when one came with the answer).
 2. Set the `auth:session` flag.
-3. Mark the store signed in (`isAuthenticated: true`).
+3. Mark the store signed in (`isAuthenticated: true`), and set `isComplete`
+   from what the sign-in said about the account (the emailed code's answer
+   carries `account.completed`; otherwise it counts as complete).
 4. Ask `GET /users/me` who this is. Put the answer in the profile cache, so
-   your menu, the profile page and the username prompt do not ask again, and
-   keep the short form as `user`. Tell error tracking the user's id (only the
-   id: [../error-tracking.md](../error-tracking.md)).
+   your menu, the profile page and "complete your account" do not ask again,
+   keep the short form as `user`, and take `isComplete` from the profile's
+   `completed`. Tell error tracking the user's id (only the id:
+   [../error-tracking.md](../error-tracking.md)).
 
 If `/users/me` fails, the person is signed in all the same; the profile query
-tries again by itself.
+tries again by itself. Should the account be incomplete after all, the API's
+first `403 ACCOUNT_INCOMPLETE` corrects `isComplete`
+([below](#how-the-api-client-handles-answers)), and the routes open `/welcome`
+([pages-and-flows.md](./pages-and-flows.md#the-gate-an-incomplete-account-sees-only-welcome)).
 
 | How | Called by | What arrives |
 |---|---|---|
 | `signIn(email, password)` | the sign-in page | `POST /auth/login` answers with tokens; then `startSession` |
-| `startSession(tokens)` | the confirm and reset pages (their answer is like a sign-in's) | tokens in the answer body. Tells the other tabs `signed-in` |
+| `startSession(tokens, account?)` | `/verify` (the emailed code) and the reset page (their answer is like a sign-in's) | tokens in the answer body; from `/verify`, also `account: { created, completed }`. Tells the other tabs `signed-in` |
 | `resumeFromCookie()` | `/auth/callback`, after Google | only the cookie: it calls `POST /auth/refresh` first. Tells the other tabs `signed-in`. Resolves `false` when there was no session |
 | `initAuth()` | `App.tsx`, once per page load | only the cookie, as above ([next section](#a-page-load)) |
 
@@ -138,7 +144,8 @@ browser).
 
 [src/lib/api.ts](../../src/lib/api.ts) is the one axios client every feature
 uses. It imports nothing from auth: it asks an `ApiSession` for the token, a
-refresh, and to sign out, and [main.tsx](../../src/main.tsx) connects the auth
+refresh, and to sign out, and tells it when the account is incomplete
+(`accountIncomplete()`); [main.tsx](../../src/main.tsx) connects the auth
 store to it (`connectApiSession(apiSession)`, the adapter being
 [api-session.ts](../../src/features/auth/lib/api-session.ts)). On the way out it
 adds the token (above) and turns the body's and the query's keys into
@@ -148,11 +155,12 @@ camelCase, and looks at every refusal:
 | The answer | What it means | What the client does |
 |---|---|---|
 | No answer at all (network, CORS, timeout) | Nothing about the session | Nothing; the request fails |
-| A refusal of an auth route (`skipAuth`: login, register, refresh...) | An answer for the page: a wrong password is a `401` too | Nothing; the page handles it ([forms-and-errors.md](./forms-and-errors.md)) |
+| A refusal of an auth route (`skipAuth`: login, email-code, refresh...) | An answer for the page: a wrong password is a `401` too | Nothing; the page handles it ([forms-and-errors.md](./forms-and-errors.md)) |
 | Any refusal while nobody is signed in | Nothing to end | Nothing |
 | `401 AUTH_TOKEN_EXPIRED` or `AUTH_TOKEN_INVALID` | The token aged, or became unreadable (a laptop woken from sleep, a clock that drifted, the API's `JWT_SECRET` changed). The session may be fine | Refreshes, then **retries the request once** with the new token (marked `authRetried`, so it can never loop). The person sees nothing. If the refresh finds the session over, signs out. If the API could not be asked, fails this request and keeps the session |
 | Any other `401` (`AUTH_TOKEN_REVOKED`, `AUTH_TOKEN_MISSING`, or refused again after the retry) | The session ended | Signs out, with the reason from the answer's `data.reason` |
 | `403 AUTH_ACCOUNT_DISABLED` | The account was deleted | Signs out (`account-disabled`) |
+| `403 ACCOUNT_INCOMPLETE` | The account has not done "complete your account" (D-61); the session is fine | Calls `accountIncomplete()`, which is the store's `markIncomplete()`; the route guards then open `/welcome`. The request still fails for its caller |
 | Any other `403` | Signed in, but not allowed to do *this* | Nothing; the page shows the error. Signing out would throw away the session and whatever the person was doing |
 | `429`, `5xx`, anything else | Not about the session | Nothing |
 
@@ -175,9 +183,9 @@ API's `/auth` routes. Two request options matter:
 
 | Routes | `skipAuth` | Bearer token | `withCredentials` | Why |
 |---|---|---|---|---|
-| `POST /auth/login`, `/register`, `/verify-email`, `/resend-verification`, `/forgot-password`, `/reset-password`, `/refresh`, `/logout`; `GET /auth/options` | yes | no | yes | Public routes; some set or read the cookie. `/auth/logout` gives up after 5 seconds |
+| `POST /auth/login`, `/email-code`, `/email-code/verify`, `/forgot-password`, `/reset-password`, `/refresh`, `/logout`; `GET /auth/options` | yes | no | yes | Public routes; some set or read the cookie. `/auth/logout` gives up after 5 seconds |
 | `POST /auth/logout-all`, `POST /auth/account/delete` | no | yes | yes | Signed in, and the answer clears the cookie |
-| `POST /auth/change-password`, `GET /auth/sign-in-methods`, `POST /auth/password/code`, `POST /auth/password`, `POST /auth/account/delete-code`; `GET /users/me` | no | yes | no | Ordinary signed-in requests |
+| `POST /auth/complete-account`, `POST /auth/change-password`; `GET /users/me` | no | yes | no | Ordinary signed-in requests |
 
 ## Several tabs
 
@@ -227,7 +235,7 @@ Who calls it:
 | Where | Reason | Lands on |
 |---|---|---|
 | Your menu's **Sign out** | none | home |
-| The username prompt's **Sign out** | none | home |
+| **Sign out** in the AuthShell's footer, on `/welcome` | none | home |
 | **Sign out and continue** on the "already signed in" card | none | the same page, now as a visitor |
 | Settings, **Sign out everywhere**, once `POST /auth/logout-all` succeeded | `you-signed-out-everywhere` | home |
 | The delete-account dialog, once `POST /auth/account/delete` succeeded | `account-deleted` | home |
@@ -258,7 +266,7 @@ The API says why a session ended in `data.reason` on a `401`
 | `account-deleted` | the person deleted the account, here | "Your account was deleted. We've emailed you a confirmation." (success) | home |
 | none | the person chose Sign out | no message | home |
 
-"Sign-in, then back" means `/sign-in?redirect=<this page's path, query and #>`:
+"Sign-in, then back" means `/login?next=<this page's path, query and #>`:
 a session that ended by itself, mid-task, brings the person back to what they
 were doing. If they were on a sign-in page already, it is home instead.
 

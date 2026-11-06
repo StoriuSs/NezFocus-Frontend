@@ -22,20 +22,6 @@
     },
     "changeAvatar": "Change profile picture"
   },
-  "usernamePrompt": {
-    "title": "Choose your username",
-    "description": "This will be your unique identifier. You can only set it once!",
-    "label": "Username",
-    "placeholder": "cool_username",
-    "hint": "2–32 characters: lowercase letters, numbers, underscores and dots.",
-    "taken": "This username is already taken.",
-    "confirm": "Confirm Username",
-    "setting": "Setting username...",
-    "checkFailed": "Couldn't check availability.",
-    "retryCheck": "Check again",
-    "notYou": "Not you?",
-    "signOut": "Sign out"
-  },
   "validation": {
     "displayNameRequired": "Display name is required",
     "displayNameTooLong": "Display name must be at most 100 characters",
@@ -44,7 +30,6 @@
   "toasts": {
     "profileUpdated": "Profile updated successfully",
     "avatarUpdated": "File uploaded successfully",
-    "usernameSet": "Username set successfully",
     "cropFailed": "Failed to crop image"
   }
 }

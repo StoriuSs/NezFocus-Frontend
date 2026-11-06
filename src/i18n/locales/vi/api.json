@@ -7,10 +7,8 @@
   "AUTH_TOKEN_REVOKED": "Phiên của bạn đã kết thúc. Vui lòng đăng nhập lại.",
   "AUTH_FORBIDDEN": "Bạn không có quyền thực hiện thao tác này",
   "AUTH_ACCOUNT_DISABLED": "Tài khoản này đã bị xóa",
-  "AUTH_EMAIL_NOT_VERIFIED": "Hãy xác nhận địa chỉ email trước",
   "USER_NOT_FOUND": "Không tìm thấy người dùng",
-  "USERNAME_CONFLICT": "Tên người dùng đã được sử dụng",
-  "USERNAME_ALREADY_SET": "Không thể thay đổi tên người dùng",
+  "USERNAME_CONFLICT": "Username này đã có người dùng. Hãy chọn username khác.",
   "UPLOAD_FAILED": "Tải file thất bại",
   "UPLOAD_FILE_TOO_LARGE": "File quá lớn",
   "UPLOAD_INVALID_TYPE": "Loại file không hợp lệ",
@@ -32,11 +30,10 @@
   "UPLOAD_DELETE_FAILED": "Không thể xóa tệp",
   "UPLOAD_FILE_NOT_FOUND": "Không tìm thấy tệp",
   "RATE_LIMIT_EXCEEDED": "Quá nhiều lần thử. Vui lòng đợi rồi thử lại.",
-  "AUTH_CODE_INVALID": "Mã không đúng. Nếu bạn đã yêu cầu nhiều mã, chỉ mã mới nhất dùng được.",
-  "AUTH_CODE_EXPIRED": "Mã này không còn dùng được: đã hết hạn, hoặc đã nhập sai quá nhiều lần. Hãy yêu cầu mã mới.",
+  "AUTH_CODE_INVALID": "Mã OTP không đúng. Kiểm tra mã trong email mới nhất.",
+  "AUTH_CODE_EXPIRED": "Mã OTP đã hết hiệu lực (quá 10 phút hoặc nhập sai 5 lần). Gửi mã OTP mới để tiếp tục.",
   "AUTH_CURRENT_PASSWORD_INVALID": "Mật khẩu hiện tại không đúng",
   "AUTH_PASSWORD_REJECTED": "Mật khẩu này chưa đáp ứng các yêu cầu",
-  "AUTH_PASSWORD_ALREADY_SET": "Tài khoản này đã có mật khẩu. Hãy đổi mật khẩu thay vì đặt mới.",
-  "AUTH_CONFIRMATION_REQUIRED": "Hãy xác nhận đó là bạn trước.",
-  "AUTH_USE_PASSWORD": "Tài khoản này có mật khẩu: hãy xác nhận bằng mật khẩu."
+  "ACCOUNT_INCOMPLETE": "Hãy hoàn tất tài khoản trước.",
+  "ACCOUNT_ALREADY_COMPLETE": "Tài khoản này đã hoàn tất."
 }

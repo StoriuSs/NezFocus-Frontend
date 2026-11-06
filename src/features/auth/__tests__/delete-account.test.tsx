@@ -4,11 +4,7 @@ import userEvent from '@testing-library/user-event'
 import i18n from '@/i18n'
 import { mockAuthStore, queryWrapper } from '@/test/helpers'
 
-const authApi = {
-    signInMethods: vi.fn(),
-    sendAccountDeletionCode: vi.fn(),
-    deleteAccount: vi.fn()
-}
+const authApi = { deleteAccount: vi.fn() }
 const authState = { user: { email: 'ada@example.test' }, logout: vi.fn() }
 
 vi.mock('@/features/auth/api/auth.api', () => ({ authApi }))
@@ -20,7 +16,6 @@ describe('deleting your account', () => {
     beforeEach(async () => {
         await i18n.changeLanguage('en')
         for (const fn of [...Object.values(authApi), authState.logout]) fn.mockReset()
-        authApi.signInMethods.mockResolvedValue({ password: true, providers: [] })
         sessionStorage.clear()
     })
 
@@ -37,7 +32,7 @@ describe('deleting your account', () => {
         await userEvent.type(password, 'Harbour-Lantern-42')
         await userEvent.click(submit())
 
-        expect(authApi.deleteAccount).toHaveBeenCalledWith({ password: 'Harbour-Lantern-42' })
+        expect(authApi.deleteAccount).toHaveBeenCalledWith('Harbour-Lantern-42')
         expect(authState.logout).toHaveBeenCalledWith('account-deleted')
     })
 })

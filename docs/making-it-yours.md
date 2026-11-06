@@ -51,7 +51,7 @@ These are the ones people notice, and the ones most often forgotten:
   (`<title>`, written into `index.html` at build time), the logo, and
   `{{appName}}` in any translation.
 - **`index.html`** — the `lang` attribute, if your default is not English.
-- **`public/`** — the favicon (`vite.svg`, named in `index.html`).
+- **`public/`** — the favicons (`favicon.svg`, `favicon-32.png`, `apple-touch-icon-180.png`, copied from `design/assets/brand/` and named in `index.html`).
 - **`src/i18n/locales/en/*.json` and `vi/*.json`** — the page copy. If you do
   not need Vietnamese, delete `vi/`, and remove it
   from `resources` and `supportedLngs` in `src/i18n/index.ts`, from
@@ -117,7 +117,7 @@ pnpm test && pnpm lint && pnpm build
 docker compose -f docker-compose.dev.yaml config --services
 ```
 
-To sign in, create an account on `/sign-up`; with the API's development
+To sign in, create an account on `/register`; with the API's development
 stack, the code arrives in Mailpit at http://localhost:8025
 ([auth/README.md](./auth/README.md)). If a page's requests to the API fail,
 it is `VITE_API_URL`, or the API's `CORS_ORIGINS` not naming

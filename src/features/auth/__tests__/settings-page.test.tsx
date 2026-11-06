@@ -6,7 +6,6 @@ import i18n from '@/i18n'
 import { mockAuthStore, queryWrapper } from '@/test/helpers'
 
 const authApi = {
-    signInMethods: vi.fn(),
     changePassword: vi.fn(),
     logoutAll: vi.fn()
 }
@@ -41,7 +40,6 @@ describe('changing the password in settings', () => {
 
     beforeEach(() => {
         vi.clearAllMocks()
-        authApi.signInMethods.mockResolvedValue({ password: true, providers: [] })
         authApi.changePassword.mockResolvedValue(undefined)
     })
 

@@ -33,7 +33,9 @@ export function apiError(
  *     vi.mock('@/features/auth/auth.store', () => mockAuthStore(authState))
  */
 export function mockAuthStore<T>(state: T) {
-    return { useAuthStore: (selector: (s: T) => unknown) => selector(state) }
+    // `useAuthStore.getState()` too, for code that reads the store outside render.
+    const useAuthStore = Object.assign((selector: (s: T) => unknown) => selector(state), { getState: () => state })
+    return { useAuthStore }
 }
 
 /** A wrapper giving each render its own QueryClient, with no retries. */

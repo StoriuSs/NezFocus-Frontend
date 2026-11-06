@@ -5,7 +5,6 @@ import { NavigationProgress } from '@/components/NavigationProgress'
 import { PageLoader } from '@/components/PageLoader'
 import { RouteErrorPage } from '@/components/RouteErrorPage'
 import type { ShellHandle } from '@/components/shell/shell-context'
-import { UsernamePromptWrapper } from '@/features/users/components/UsernamePromptWrapper'
 import { useAuthStore } from '@/features/auth/auth.store'
 import { ProtectedRoute } from '@/features/auth/components/ProtectedRoute'
 import { AUTH_PATHS } from '@/features/auth/lib/paths'
@@ -18,6 +17,7 @@ const AuthShell = lazy(() => import('@/app/layout/AuthShell'))
 const AppShell = lazy(() => import('@/app/layout/app-shell/AppShell'))
 const MockChannelPage = lazy(() => import('@/app/layout/app-shell/MockChannelPage'))
 const Study = lazy(() => import('@/pages/Study'))
+const Legal = lazy(() => import('@/pages/Legal'))
 const NotFound = lazy(() => import('@/pages/NotFound'))
 
 // Global root: app-wide widgets that sit outside any layout
@@ -25,7 +25,6 @@ function AppRoot() {
     return (
         <>
             <NavigationProgress />
-            <UsernamePromptWrapper />
             <Suspense fallback={<PageLoader />}>
                 <Outlet />
             </Suspense>
@@ -58,6 +57,9 @@ export const router = createBrowserRouter([
         errorElement: <RouteErrorPage />,
         children: [
             { path: '/', element: <Home /> },
+            // The public text pages (S-PUB-02, D-127): for everyone, signed in or not.
+            { path: '/terms', element: <Legal document='terms' /> },
+            { path: '/privacy', element: <Legal document='privacy' /> },
             { element: <AuthShell />, children: authRoutes },
             {
                 element: (

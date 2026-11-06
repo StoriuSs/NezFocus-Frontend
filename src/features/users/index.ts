@@ -4,5 +4,7 @@
  */
 export { userKeys } from './api/keys'
 export { fetchProfile } from './api/users.api'
+export { useProfile } from './api/useProfile'
+export { USERNAME_MAX_LENGTH, USERNAME_PATTERN, useUsernameAvailability } from './api/useUsernameAvailability'
 export { USERS_PATHS } from './lib/paths'
 export type { UserProfile } from './types'

@@ -7,10 +7,8 @@
   "AUTH_TOKEN_REVOKED": "Your session was ended. Please sign in again.",
   "AUTH_FORBIDDEN": "You don't have permission to do that",
   "AUTH_ACCOUNT_DISABLED": "This account has been deleted",
-  "AUTH_EMAIL_NOT_VERIFIED": "Confirm your email address first",
   "USER_NOT_FOUND": "User not found",
-  "USERNAME_CONFLICT": "Username is already taken",
-  "USERNAME_ALREADY_SET": "Username cannot be changed",
+  "USERNAME_CONFLICT": "This username is taken. Choose another one.",
   "UPLOAD_FAILED": "Upload failed",
   "UPLOAD_FILE_TOO_LARGE": "File is too large",
   "UPLOAD_INVALID_TYPE": "Invalid file type",
@@ -32,11 +30,10 @@
   "UPLOAD_DELETE_FAILED": "The file couldn't be deleted",
   "UPLOAD_FILE_NOT_FOUND": "File not found",
   "RATE_LIMIT_EXCEEDED": "Too many attempts. Please wait and try again.",
-  "AUTH_CODE_INVALID": "That code isn't right. If you asked for more than one, only the newest works.",
-  "AUTH_CODE_EXPIRED": "This code no longer works: it expired, or had too many wrong tries. Ask for a new one.",
+  "AUTH_CODE_INVALID": "That code is wrong. Use the code in the newest email.",
+  "AUTH_CODE_EXPIRED": "This code no longer works (over 10 minutes old, or 5 wrong tries). Send a new code to continue.",
   "AUTH_CURRENT_PASSWORD_INVALID": "Your current password is not right",
   "AUTH_PASSWORD_REJECTED": "This password doesn't meet the rules",
-  "AUTH_PASSWORD_ALREADY_SET": "This account already has a password. Change it instead.",
-  "AUTH_CONFIRMATION_REQUIRED": "Confirm it's you first.",
-  "AUTH_USE_PASSWORD": "This account has a password: confirm with it instead."
+  "ACCOUNT_INCOMPLETE": "Complete your account first.",
+  "ACCOUNT_ALREADY_COMPLETE": "This account is already complete."
 }

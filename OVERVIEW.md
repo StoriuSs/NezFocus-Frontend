@@ -35,7 +35,7 @@ already done.
 
 | | |
 | --- | --- |
-| **Sign-in** | Sign-up with an emailed code, sign-in, Google, password reset, deleting the account — the rules in the API, the pages here |
+| **Sign-in** | Creating an account with an emailed code, "complete your account", sign-in, Google, password reset, deleting the account — the rules in the API, the pages here |
 | **Server data** | TanStack Query, with the retry and invalidation rules already thought through |
 | **A real API client** | Case conversion both ways, idempotency keys, an error catalogue |
 | **Types from the backend** | Generated from its OpenAPI document, so a changed response is a compile error |
@@ -53,7 +53,7 @@ Three things this app needs from the API, set **on the API**, not here:
 | --- | --- |
 | `CORS_ORIGINS` names this app (`http://localhost:3001` in development, the API's default; `https://app.example.com` in production), with `CORS_CREDENTIALS=true` | Otherwise the browser refuses the API's answers, or never sends the refresh cookie |
 | `FRONTEND_URL` is this app's address | The links in the API's emails and the return from Google point there |
-| Email works | Sign-up and password reset send a 6-digit code. In development the API's stack catches every email in **Mailpit**, at http://localhost:8025 |
+| Email works | Creating an account (and signing in with a code) and password reset send a 6-digit code. In development the API's stack catches every email in **Mailpit**, at http://localhost:8025 |
 
 Google sign-in has **no setting in this app**: it is turned on in the API, and
 this app asks it whether it is on (`GET /auth/options`).
@@ -89,10 +89,12 @@ flowchart TB
     App --> RP["RouterProvider"]
     App --> Toast["Toaster<br/>notifications"]
 
-    RP --> Root["AppRoot<br/>progress bar · username prompt"]
-    Root --> Home["/<br/>→ /study or /sign-in"]
+    RP --> Root["AppRoot<br/>progress bar"]
+    Root --> Home["/<br/>→ /study or /login"]
+    Root --> Legal["/terms, /privacy<br/>for everyone"]
     Root --> Auth["AuthShell<br/>logo · ErrorBoundary · language toggle"]
-    Auth --> Guest["visitor-only routes<br/>GuestOnlyRoute → Sign in, Sign up, …"]
+    Auth --> Guest["visitor-only routes<br/>GuestOnlyRoute → Sign in, Create account, Enter the code, …"]
+    Auth --> Welcome["/welcome<br/>IncompleteOnlyRoute → Complete your account"]
     Root --> Shell["ProtectedRoute → AppShell<br/>rail · list column · ErrorBoundary"]
     Shell --> Guarded["signed-in routes<br/>Study, Settings, Profile, …"]
     Root --> NF["NotFound"]
@@ -117,9 +119,12 @@ rule is the API's** — password rules, codes, limits, how long a session lasts.
 This app shows the pages, keeps the access token, and does what the API's
 answers say.
 
-On this app's own pages: `/sign-up`, then the 6-digit code from the email on
-`/verify-email`, which confirms the address **and** signs in. Later visits use
-`/sign-in`. The API answers a sign-in with a short-lived **access token** (15
+On this app's own pages: `/register` asks only for an email, and the 6-digit
+code from the email, typed on `/verify`, signs in, to a new account or to the
+address's own. A new account then goes through `/welcome`, "complete your
+account" (display name, username, password, time zone, the terms), before any
+other page opens. Later visits use `/login`, or the code again. The API
+answers a sign-in with a short-lived **access token** (15
 minutes by default; the API's `JWT_ACCESS_TTL_SECONDS`), which this app keeps
 **in memory only**, and a **refresh token** in an httpOnly cookie — a cookie
 no script can read, so an injected script cannot steal it. Before the access
@@ -130,9 +135,11 @@ a new one (`POST /auth/refresh`).
 sequenceDiagram
     participant B as Browser (this app)
     participant A as API
-    B->>A: POST /auth/login (email, password)
-    A-->>B: access token (kept in memory) + refresh cookie (httpOnly)
+    B->>A: POST /auth/email-code (email) on /register
+    B->>A: POST /auth/email-code/verify (email, code) on /verify
+    A-->>B: access token (kept in memory) + refresh cookie (httpOnly), account {created, completed}
     B->>A: GET /users/me with the token
+    B->>A: POST /auth/complete-account on /welcome, if not completed
     Note over B,A: later, or after a reload
     B->>A: POST /auth/refresh (the browser sends the cookie)
     A-->>B: a new access token, a new cookie
@@ -147,18 +154,21 @@ sequenceDiagram
   `auth:session` flag in `localStorage` (no secret in it) says this browser
   signed in before; without it, a visitor's page load sends no refresh at all.
 - **`ProtectedRoute`** sends a visitor to sign in with the page they asked for,
-  so they come back to it afterwards; `?redirect=` can only point at this site.
+  so they come back to it afterwards; `?next=` can only point at this site.
+  It sends a signed-in account that has not done "complete your account" to
+  `/welcome?next=<the page>`.
 - **An expired token is refreshed, not a sign-out.** A request refused with
   `AUTH_TOKEN_EXPIRED` or `AUTH_TOKEN_INVALID` is refreshed and retried once,
   without the user noticing.
 - **Not every 403 ends a session.** A `403` does *only* when the API says
-  `AUTH_ACCOUNT_DISABLED`. Every other 403 means "you may not do this", which
-  is for the page to handle — signing people out for an ordinary permission
-  error was a real bug.
+  `AUTH_ACCOUNT_DISABLED`. A `403 ACCOUNT_INCOMPLETE` keeps the session and
+  opens "complete your account". Every other 403 means "you may not do this",
+  which is for the page to handle — signing people out for an ordinary
+  permission error was a real bug.
 - **A sign-out says why, and lands where it makes sense.** The API's 401 names
   the reason (`data.reason`: the password changed, signed out everywhere, a
   security problem…). The app reloads and shows a toast for it. A session that
-  ended by itself or elsewhere goes to `/sign-in?redirect=<the page you were
+  ended by itself or elsewhere goes to `/login?next=<the page you were
   on>`; signing out yourself, or deleting the account, goes home.
 - **Tabs stay in step.** Signing out in one tab signs the others out at once;
   signing in in one picks the session up in the others.
@@ -377,7 +387,7 @@ Deliberately absent, with a page explaining what each would take:
 
 **If you just want it running:**
 [docs/setup/prepare-for-development.md](./docs/setup/prepare-for-development.md)
-(the API first, then this app, then a first sign-up through Mailpit).
+(the API first, then this app, then a first account through Mailpit).
 
 **Once it runs and you are starting a real project:**
 [making-it-yours.md](./docs/making-it-yours.md) — the renaming pass.

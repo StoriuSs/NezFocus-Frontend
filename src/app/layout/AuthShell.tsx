@@ -7,6 +7,8 @@ import { LogoLockup } from '@/components/brand/Logo'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { LanguageToggle } from '@/components/LanguageToggle'
 import { PageLoader } from '@/components/PageLoader'
+import { Button } from '@/components/ui/button'
+import { AUTH_PATHS, useAuthStore } from '@/features/auth'
 import { BrandPanel } from './BrandPanel'
 
 /**
@@ -23,6 +25,9 @@ export default function AuthShell() {
     const { t } = useTranslation()
     const { pathname } = useLocation()
     const { reset: resetQueryErrors } = useQueryErrorResetBoundary()
+    const logout = useAuthStore((state) => state.logout)
+    // "Complete your account" may be for the wrong account: a way out (S-ONB-01).
+    const signOutHere = pathname === AUTH_PATHS.welcome
 
     // Most visitors here are about to sign in: fetch the app's frame and its
     // home page once the browser is idle, so signing in does not wait for
@@ -61,8 +66,13 @@ export default function AuthShell() {
                         </ErrorBoundary>
                     </div>
                 </main>
-                <footer className='shrink-0 px-3 pb-4 lg:px-5 lg:pb-6'>
+                <footer className='flex shrink-0 items-center justify-between gap-2 px-3 pb-4 lg:px-5 lg:pb-6'>
                     <LanguageToggle />
+                    {signOutHere ? (
+                        <Button variant='text' size='sm' onClick={() => logout()}>
+                            {t('authShell.signOut')}
+                        </Button>
+                    ) : null}
                 </footer>
             </div>
             <BrandPanel className='hidden lg:block' />
