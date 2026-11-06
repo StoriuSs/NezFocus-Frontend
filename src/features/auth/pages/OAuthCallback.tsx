@@ -40,7 +40,7 @@ export default function OAuthCallback() {
         })
     }, [failure, navigate, params, resumeFromCookie, t])
 
-    if (!failure) return <PageLoader />
+    if (!failure) return <PageLoader className='min-h-40' />
 
     return (
         <AuthCard

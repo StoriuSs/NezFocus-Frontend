@@ -157,7 +157,7 @@ a teammate):
 
 ```bash
 pnpm docker:dev                              # build and start, in the background
-docker logs -f react-starter-auth-dev        # watch its output; Ctrl-C stops watching
+docker logs -f nezfocus-web-frontend-dev        # watch its output; Ctrl-C stops watching
 pnpm docker:down                             # stop it
 ```
 
@@ -165,14 +165,15 @@ Vite checks your settings when it starts. If `VITE_API_URL` is missing or is
 not a URL, it stops with `Missing or invalid environment variables for mode
 "development"` and names the setting. Fix `.env.development` and start again.
 
-**You are done when** `http://localhost:3001` shows the home page, and the
+**You are done when** `http://localhost:3001` shows the sign-in page, and the
 browser's developer console (F12, "Console" tab) shows no red error.
 
 ## Step 6: Make your first account
 
 This checks the whole chain: the web app, the API, its database and its email.
 
-1. On `http://localhost:3001`, click **Get Started**.
+1. On `http://localhost:3001` (it opens the sign-in page), click **Create
+   one**.
 2. Type an email address (any address: in development the email never leaves
    your machine, it lands in Mailpit) and a password, twice. The checklist
    under the password ticks off the API's rules as you type. A very common
@@ -188,8 +189,9 @@ This checks the whole chain: the web app, the API, its database and its email.
    **Confirm Username**.
 7. Reload the page (F5).
 
-**You are done when**, after the reload, you are still signed in: the header
-shows the account menu, not "Sign In". This proves the refresh cookie travels
+**You are done when**, after the reload, you are still signed in: you stay
+on the app, with your avatar at the foot of the rail, not sent to the
+sign-in page. This proves the refresh cookie travels
 between `localhost:3001` and `localhost:8888`.
 
 If no email arrives, the problem is on the API: see its

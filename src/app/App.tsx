@@ -7,6 +7,7 @@ import { useAuthStore } from '@/features/auth/auth.store'
 import { announceSignOut } from '@/features/auth/lib/sign-out-notice'
 import { router } from '@/app/router'
 import { Toaster } from '@/components/ui/sonner'
+import { TooltipProvider } from '@/components/ui/tooltip'
 
 function App() {
     const initAuth = useAuthStore((state) => state.initAuth)
@@ -42,7 +43,9 @@ function App() {
 
     return (
         <QueryClientProvider client={queryClient}>
-            <RouterProvider router={router} />
+            <TooltipProvider>
+                <RouterProvider router={router} />
+            </TooltipProvider>
             <Toaster />
         </QueryClientProvider>
     )

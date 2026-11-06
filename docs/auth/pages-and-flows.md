@@ -16,7 +16,7 @@ messages a form shows, [forms-and-errors.md](./forms-and-errors.md).
 - [Continue with Google](#continue-with-google)
 - [Already signed in: what visitor pages do](#already-signed-in-what-visitor-pages-do)
 - [Pages for signed-in people](#pages-for-signed-in-people)
-- [The header](#the-header)
+- [Your menu](#your-menu)
 - [After the first sign-in: the username](#after-the-first-sign-in-the-username)
 
 ## All the pages at a glance
@@ -48,18 +48,18 @@ signed in, even if they first sign up and confirm their address. The page
 they were heading for travels in the address as
 `?redirect=`:
 
-1. `ProtectedRoute` sends them to `/sign-in?redirect=%2Fprofile`. The header's
-   "Sign In" link does the same with the current page.
+1. `ProtectedRoute` sends them to `/sign-in?redirect=%2Fprofile`.
 2. Every link between auth pages keeps it (`withRedirect()` in `paths.ts`):
    sign-in → sign-up → confirm, sign-in → forgot → reset.
 3. "Continue with Google" hands it to the API, which hands it back on
    `/auth/callback`.
 4. Once signed in, the page goes to `safeRedirect(redirect)`, with `replace`,
-   so the browser's Back button does not return to a sign-in page.
+   so the browser's Back button does not return to a sign-in page. Without a
+   `?redirect=`, that is "home": the Study page, `/study`.
 
 **`safeRedirect()` only allows a page on this site.** It returns the path
 (with its query and `#` part) when the address resolves to this app's own
-origin, and `/` otherwise. It also returns `/` for the sign-in pages
+origin, and `/study` otherwise. It also returns `/study` for the sign-in pages
 themselves: after signing in, `/sign-in` is a dead end. Why: without the check,
 a link to `/sign-in?redirect=https://evil.example` would send someone to a
 look-alike site straight after they signed in, where a "please sign in again"
@@ -361,23 +361,20 @@ in.
 
 ## Pages for signed-in people
 
-`ProtectedRoute` wraps `/settings` and `/profile`. A visitor is sent to
+`ProtectedRoute` wraps the AppShell, so every page in it: `/study`,
+`/settings`, `/profile` and the rest. A visitor is sent to
 `/sign-in?redirect=<the whole address>` (path, query and `#` part), and comes
 back there after signing in. While a sign-out is reloading the app, it shows a
 spinner instead, so the person does not flash through the sign-in page on the
 way out ([session.md](./session.md#signing-out-step-by-step)).
 
-## The header
+## Your menu
 
-[MainLayout.tsx](../../src/app/layout/MainLayout.tsx):
-
-- **Signed out:** a "Sign In" button. It goes to `/sign-in?redirect=<this page>`,
-  except on the home page and the sign-in pages themselves, where it goes to
-  plain `/sign-in`.
-- **Signed in:** the avatar opens a menu with the display name and
-  `@username`, then **Profile**, **Settings** and **Log out**. Log out shows
-  "Logging out..." and [signs out](./session.md#signing-out-step-by-step) to
-  the home page.
+[MeMenu.tsx](../../src/app/layout/app-shell/MeMenu.tsx), from your avatar at
+the foot of the AppShell's rail: your name and username (opens your
+profile), your status, **Settings** and **Sign out**. Sign out
+[signs out](./session.md#signing-out-step-by-step) to `/`, which sends a
+visitor on to `/sign-in`.
 
 ## After the first sign-in: the username
 

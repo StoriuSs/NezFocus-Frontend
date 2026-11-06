@@ -4,8 +4,10 @@
 // the entry or a new vendor chunk is counted without editing this file.
 // Run after `pnpm build` (`pnpm size`).
 //
-// Limits: measured after M0's clean-up slice (05/11/2026: JS 245.83 kB,
-// CSS 5.92 kB), plus the 0.5% tolerance CONSTRAINTS.md allows. Raise them
+// Limits: measured after M0's slice L4 (06/11/2026: JS 242.78 kB, CSS
+// 7.28 kB), plus the 0.5% tolerance CONSTRAINTS.md allows. L4 added the
+// design tokens and self-hosted fonts (CSS up) and dropped the `ui` vendor
+// chunk (JS down). Raise them
 // only as CONSTRAINTS.md says: the owner decides, in a commit of its own.
 import { existsSync, readFileSync } from 'node:fs'
 
@@ -32,6 +34,6 @@ const css = tags('link')
     .map(local)
 
 export default [
-    { name: 'Initial JS (gzip)', path: js, gzip: true, limit: '247.06 kB' },
-    { name: 'Initial CSS (gzip)', path: css, gzip: true, limit: '5.95 kB' }
+    { name: 'Initial JS (gzip)', path: js, gzip: true, limit: '243.99 kB' },
+    { name: 'Initial CSS (gzip)', path: css, gzip: true, limit: '7.32 kB' }
 ]

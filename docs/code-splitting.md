@@ -19,7 +19,7 @@ spinner is usually not seen.
 Without it, every page is in one bundle:
 
 ```tsx
-import Home from '@/pages/Home'
+import Study from '@/pages/Study'
 import Profile from '@/features/users/pages/Profile'
 // Both are downloaded on the first visit, whichever page it is.
 ```
@@ -27,7 +27,7 @@ import Profile from '@/features/users/pages/Profile'
 With it, a page is its own chunk, fetched the first time someone opens it:
 
 ```tsx
-const Home = lazy(() => import('@/pages/Home'))
+const Study = lazy(() => import('@/pages/Study'))
 const Profile = lazy(() => import('@/features/users/pages/Profile'))
 // Profile's chunk is downloaded when someone goes to /profile.
 ```
@@ -37,29 +37,27 @@ fallback.
 
 ## Lazy routes
 
-Every page in the starter is lazy. The routes are `RouteObject` lists — one
-per feature, plus `src/app/public-routes.tsx` — that `src/app/router.tsx`
-assembles with `createBrowserRouter`:
+Every page is lazy. The routes are `RouteObject` lists — one per feature —
+that `src/app/router.tsx` assembles with `createBrowserRouter`, next to the
+few pages it declares itself:
 
 ```tsx
-// src/app/public-routes.tsx
-import { lazy } from 'react'
-import { RouteObject } from 'react-router-dom'
-
-const Home = lazy(() => import('@/pages/Home'))
-
-export const publicRoutes: RouteObject[] = [
-    { path: '/', element: <Home /> }
-]
+// src/app/router.tsx
+const AuthShell = lazy(() => import('@/app/layout/AuthShell'))
+const AppShell = lazy(() => import('@/app/layout/app-shell/AppShell'))
+const Study = lazy(() => import('@/pages/Study'))
+const NotFound = lazy(() => import('@/pages/NotFound'))
 ```
 
-The auth pages (`src/features/auth/routes.tsx`), the profile
-(`src/features/users/routes.tsx`) and the 404 page (`router.tsx`) are lazy
-the same way.
+The auth pages (`src/features/auth/routes.tsx`) and the profile
+(`src/features/users/routes.tsx`) are lazy the same way. So are the two
+layouts: a visitor on the sign-in page does not download the AppShell, and a
+signed-in user does not download the AuthShell.
 
-The `<Suspense>` boundary is in `src/app/layout/MainLayout.tsx`, around the
-page outlet and inside the error boundary, so the header stays on screen
-while a page loads:
+Each layout (`src/app/layout/AuthShell.tsx`,
+`src/app/layout/app-shell/AppShell.tsx`) has a `<Suspense>` boundary around
+its page outlet, inside the error boundary, so the logo or the rail stays on
+screen while a page loads:
 
 ```tsx
 <ErrorBoundary key={pathname} onReset={resetQueryErrors}>
@@ -69,13 +67,25 @@ while a page loads:
 </ErrorBoundary>
 ```
 
+`AppRoot` in `router.tsx` has one more `<Suspense>`, around the layouts, for
+while a layout itself loads.
+
 ## The chunks a build makes
 
 `pnpm build` prints every chunk with its size. Besides one chunk per page,
 `vite.config.ts` puts the libraries that change rarely in chunks of their
-own — `react` (React and React Router), `i18n`, `query` (TanStack Query,
-axios, Zustand) and `ui` (Radix, sonner, lucide). A deploy that changes only
-app code leaves those file names, and the browser's cached copies, untouched.
+own — `react` (React and React Router), `i18n` and `query` (TanStack Query,
+axios, Zustand). A deploy that changes only app code leaves those file
+names, and the browser's cached copies, untouched.
+
+UI libraries (Radix, lucide, sonner) have no chunk of their own on purpose:
+Rollup puts them with the pages that use them. As one shared chunk, every UI
+library any lazy page used was downloaded before the first screen, and that
+chunk grew with each new page.
+
+Fonts (`src/styles/fonts.css`, self-hosted `.woff2` files) are never inlined
+into the stylesheet (`assetsInlineLimit` in `vite.config.ts`): each stays a
+file, so the browser downloads only the subsets a page uses.
 
 One more is loaded only when needed: **`error-sdk`**, the Sentry SDK (about
 30 kB gzipped). The browser downloads it only when error tracking is on, that
@@ -122,7 +132,7 @@ To change the bar's look, edit `src/components/nprogress-custom.css`:
 
 ```css
 #nprogress .bar {
-    background: hsl(var(--primary)); /* follows the theme */
+    background: rgb(var(--primary)); /* follows the theme */
     height: 2px;
 }
 ```
@@ -132,7 +142,7 @@ To change the bar's look, edit `src/components/nprogress-custom.css`:
 **Split:** pages (already done), heavy components that only some pages use
 (charts, editors), dialogs that are rarely opened.
 
-**Don't split:** small helpers, anything every page uses (the header), very
+**Don't split:** small helpers, anything every page uses (the rail), very
 small components — each chunk is one more request.
 
 ## Prefetching

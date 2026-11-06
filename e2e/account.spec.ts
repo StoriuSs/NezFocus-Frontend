@@ -4,6 +4,7 @@ import {
     asOwnClient,
     codeFromEmail,
     emailTo,
+    accountMenu,
     openAccountMenuItem,
     submitPatiently,
     watchForProblems
@@ -51,8 +52,10 @@ async function signIn(page: Page, password: string) {
 
 test('sign up, confirm the address (which signs in), choose a username', async ({ page }) => {
     const problems = await watchForProblems(page)
+    // A visitor at / is sent to sign in (D-127), which links to sign up.
     await page.goto('/')
-    await page.getByRole('link', { name: 'Get Started' }).click()
+    await page.waitForURL(/\/sign-in$/)
+    await page.getByRole('link', { name: 'Create one' }).click()
 
     // A common password passes every rule the browser checks; the API refuses it.
     await page.getByLabel('Email').fill(email)
@@ -79,7 +82,7 @@ test('sign up, confirm the address (which signs in), choose a username', async (
     // The right code signs in: no password to type again.
     await page.getByLabel('Code').fill(await codeFromEmail(email, 'Verify', sentAt))
     await page.getByRole('button', { name: 'Confirm', exact: true }).click()
-    await page.waitForURL((url) => url.pathname === '/')
+    await page.waitForURL((url) => url.pathname === '/study')
     await expect(page.getByText('Your email is confirmed. Welcome!')).toBeVisible()
 
     const prompt = page.getByRole('dialog', { name: 'Choose your username' })
@@ -98,13 +101,13 @@ test('a reload keeps the session; a deep link comes back after sign-in', async (
     await page.waitForURL(/\/sign-in\?redirect=%2Fsettings/)
     await signIn(page, PASSWORD)
     await page.waitForURL(/\/settings$/)
-    await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible()
 
     // A reload has no access token in memory: only the refresh cookie, sent
     // across origins to the API, can bring the session back.
     await page.reload()
-    await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Account menu' })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible()
+    await expect(accountMenu(page)).toBeVisible()
 
     expect(problems).toEqual([])
 })
@@ -133,11 +136,11 @@ test('reset a forgotten password with an emailed code; the old one no longer wor
     await page.getByRole('button', { name: 'Change password', exact: true }).click()
 
     // Signed in by the reset itself.
-    await page.waitForURL((url) => url.pathname === '/')
+    await page.waitForURL((url) => url.pathname === '/study')
     await expect(page.getByText("Password changed. You're signed in")).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Account menu' })).toBeVisible()
+    await expect(accountMenu(page)).toBeVisible()
     await page.reload()
-    await expect(page.getByRole('button', { name: 'Account menu' })).toBeVisible()
+    await expect(accountMenu(page)).toBeVisible()
 
     // In a browser with no session, the old password is refused and the new one signs in.
     // (Not by signing out here: that reloads the page, racing the next goto.)
@@ -148,7 +151,7 @@ test('reset a forgotten password with an emailed code; the old one no longer wor
     await signIn(other, PASSWORD)
     await expect(other.getByText('Incorrect email or password.')).toBeVisible()
     await signIn(other, RESET_PASSWORD)
-    await expect(other.getByRole('button', { name: 'Account menu' })).toBeVisible()
+    await expect(accountMenu(other)).toBeVisible()
     await elsewhere.close()
     expect(problems).toEqual([])
 })
@@ -157,7 +160,7 @@ test('delete the account: signed out, and the account is gone', async ({ page })
     const problems = await watchForProblems(page)
     await page.goto('/sign-in')
     await signIn(page, RESET_PASSWORD)
-    await openAccountMenuItem(page, 'Profile')
+    await openAccountMenuItem(page, /view and edit your profile$/)
 
     await page.getByRole('button', { name: 'Delete Account' }).click()
     const dialog = page.getByRole('dialog', { name: 'Delete your account' })
@@ -170,7 +173,7 @@ test('delete the account: signed out, and the account is gone', async ({ page })
     const deletedAt = new Date()
     await dialog.getByLabel('Password', { exact: true }).fill(RESET_PASSWORD)
     await confirmDelete.click()
-    await expect(page.getByRole('link', { name: 'Sign In' })).toBeVisible({ timeout: 15_000 })
+    await page.waitForURL(/\/sign-in$/, { timeout: 15_000 })
     await expect(page.getByText('Your account was deleted.')).toBeVisible()
     await emailTo(email, 'account was deleted', deletedAt)
 

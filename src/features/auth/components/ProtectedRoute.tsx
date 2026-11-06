@@ -46,7 +46,14 @@ export function GuestOnlyRoute({
 
     if (!isAuthenticated) return <>{children}</>
     if (explainIfSignedIn && signedInOnArrival) return <SignedInNotice />
-    return <Navigate to={safeRedirect(new URLSearchParams(search).get('redirect'))} replace />
+    // Signed in on this page: the app's code may still be loading, so show
+    // that something is happening rather than an empty form column.
+    return (
+        <>
+            <PageLoader className='min-h-40' />
+            <Navigate to={safeRedirect(new URLSearchParams(search).get('redirect'))} replace />
+        </>
+    )
 }
 
 function SignedInNotice() {

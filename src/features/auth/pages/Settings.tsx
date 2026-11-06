@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { ShellPage } from '@/components/shell/ShellPage'
 import { FormField } from '@/components/form/FormField'
 import { useAuthStore } from '@/features/auth/auth.store'
 import { useChangePassword } from '@/features/auth/api/useChangePassword'
@@ -31,7 +32,17 @@ const createSchema = (t: TFunction<'auth'>, email: string | undefined) =>
 type Values = z.infer<ReturnType<typeof createSchema>>
 
 /** The signed-in user's password and sessions. */
+/** The account settings page (S-ME-03 in L10–L11), in the AppShell. */
 export default function Settings() {
+    const { t } = useTranslation('auth')
+    return (
+        <ShellPage title={t('settings.title')}>
+            <SettingsContent />
+        </ShellPage>
+    )
+}
+
+function SettingsContent() {
     const { t } = useTranslation('auth')
     const user = useAuthStore((state) => state.user)
     const logout = useAuthStore((state) => state.logout)
@@ -98,11 +109,8 @@ export default function Settings() {
     }
 
     return (
-        <div className='container max-w-2xl space-y-8 py-10'>
-            <div className='space-y-1'>
-                <h1 className='text-3xl font-bold tracking-tight'>{t('settings.title')}</h1>
-                <p className='text-muted-foreground'>{t('settings.subtitle')}</p>
-            </div>
+        <div className='max-w-[720px] space-y-8 p-6 lg:p-8'>
+            <p className='text-text-secondary'>{t('settings.subtitle')}</p>
 
             {/* Until the answer is in, neither form: "Change password" is wrong for an account made with Google. */}
             {methods.isPending ? (

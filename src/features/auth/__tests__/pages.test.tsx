@@ -48,7 +48,12 @@ function renderAt(path: string, state?: Record<string, unknown>) {
     const pathname = query < 0 ? path : path.slice(0, query)
     const search = query < 0 ? '' : path.slice(query)
     const router = createMemoryRouter(
-        [{ path: '/', element: <p>Home</p> }, { path: '/profile', element: <p>Profile</p> }, ...authRoutes],
+        [
+            { path: '/', element: <p>Home</p> },
+            { path: '/study', element: <p>Study</p> },
+            { path: '/profile', element: <p>Profile</p> },
+            ...authRoutes
+        ],
         { initialEntries: [state ? { pathname, search, state } : path] }
     )
     render(<RouterProvider router={router} />, { wrapper: queryWrapper() })
@@ -195,7 +200,7 @@ describe('the auth pages', () => {
         it('does not follow a return address to another site', async () => {
             authState.resumeFromCookie.mockResolvedValue(true)
             const router = renderAt('/auth/callback?redirect=https%3A%2F%2Fevil.example%2F')
-            await waitFor(() => expect(where(router)).toBe('/'))
+            await waitFor(() => expect(where(router)).toBe('/study'))
             expect(authState.resumeFromCookie).toHaveBeenCalledTimes(1)
         })
     })

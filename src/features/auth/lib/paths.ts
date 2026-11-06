@@ -15,8 +15,11 @@ export function isSignInFlowPage(pathname: string): boolean {
     return Object.values(AUTH_PATHS).some((path) => path !== AUTH_PATHS.settings && pathname === path)
 }
 
-/** Where the auth pages send someone who is already signed in, unless told otherwise. */
-const DEFAULT_AFTER_SIGN_IN = '/'
+/**
+ * Where the auth pages send someone who is already signed in, unless told
+ * otherwise: the Study page, the app's home (D-124).
+ */
+const DEFAULT_AFTER_SIGN_IN = '/study'
 
 /**
  * A `?redirect=` value, made safe to navigate to: a path on this site, never

@@ -65,8 +65,8 @@ Two things to copy from it:
 - **Return `response.data.data`**, not the envelope. Every API answer is
   `{ meta, data }` ([api-types.md](./api-types.md)); components want the
   `data`.
-- **`enabled`** turns the query off until it can work: the header calls
-  `useProfile(isAuthenticated)`, so a visitor who is not signed in sends no
+- **`enabled`** turns the query off until it can work: the username prompt
+  calls `useProfile(isAuthenticated)`, so a visitor who is not signed in sends no
   request.
 
 In a component:
@@ -101,7 +101,7 @@ fetching a resource through one hook, like `useProfile`) keeps that from
 happening by accident, and makes invalidation hit the right entries.
 
 The auth store writes the profile into this same entry at sign-in
-(`queryClient.setQueryData(userKeys.profile(), profile)`), so the header, the
+(`queryClient.setQueryData(userKeys.profile(), profile)`), so your menu, the
 profile page and the username prompt need no second request. Signing out
 clears the whole cache, so one user's data never shows for the next.
 

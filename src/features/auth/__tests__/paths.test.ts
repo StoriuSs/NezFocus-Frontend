@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { safeRedirect } from '@/features/auth/lib/paths'
 
 describe('safeRedirect', () => {
-    it('keeps a page on this site, and sends anything that leaves it home', () => {
+    it('keeps a page on this site, and sends anything that leaves it to the Study page', () => {
         expect(safeRedirect('/profile?tab=avatar#top')).toBe('/profile?tab=avatar#top')
         for (const offSite of [
             'https://evil.example/profile',
@@ -10,7 +10,8 @@ describe('safeRedirect', () => {
             '/\\evil.example',
             'javascript:alert(1)'
         ]) {
-            expect(safeRedirect(offSite), offSite).toBe('/')
+            expect(safeRedirect(offSite), offSite).toBe('/study')
         }
+        expect(safeRedirect(null)).toBe('/study')
     })
 })

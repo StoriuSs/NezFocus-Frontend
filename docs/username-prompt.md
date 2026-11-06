@@ -42,7 +42,7 @@ and opens the dialog while `profile.hasSetUsername` is `false`.
 
 Usually this costs no request: when a session starts, the auth store already
 asks `GET /users/me` and puts the answer in the profile cache
-([auth/session.md](./auth/session.md#starting-a-session)), which the header,
+([auth/session.md](./auth/session.md#starting-a-session)), which your menu,
 the profile page and this wrapper all read.
 
 Whether the dialog is open is worked out from the profile, not kept as a

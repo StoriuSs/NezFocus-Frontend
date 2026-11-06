@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 
 import getCroppedImg from '@/features/users/lib/crop-image'
 import { ProfileSkeleton } from '@/features/users/components/ProfileSkeleton'
+import { ShellPage } from '@/components/shell/ShellPage'
 import { useProfile } from '@/features/users/api/useProfile'
 import { useUpdateProfile } from '@/features/users/api/useUpdateProfile'
 import { useUpdateAvatar } from '@/features/users/api/useUpdateAvatar'
@@ -48,7 +49,17 @@ const createProfileSchema = (t: TFunction<'users'>) =>
 
 type ProfileFormValues = z.infer<ReturnType<typeof createProfileSchema>>
 
+/** Your profile (S-ME-02 in L12), in the AppShell. */
 export default function Profile() {
+    const { t } = useTranslation()
+    return (
+        <ShellPage title={t('shell.settings.profile')}>
+            <ProfileContent />
+        </ShellPage>
+    )
+}
+
+function ProfileContent() {
     const { t } = useTranslation(['users', 'common', 'api'])
 
     // Dialog States
@@ -169,7 +180,7 @@ export default function Profile() {
     // this message.
     if (error && !profile) {
         return (
-            <div className='flex h-screen flex-col items-center justify-center gap-4'>
+            <div className='flex flex-col items-center justify-center gap-4 py-16'>
                 <p className='text-destructive'>{t('profile.failedToLoad')}</p>
                 <Button onClick={() => window.location.reload()}>{t('common:buttons.retry')}</Button>
             </div>
@@ -177,7 +188,7 @@ export default function Profile() {
     }
 
     return (
-        <div className='container mx-auto py-10'>
+        <div className='max-w-[720px] p-6 lg:p-8'>
             <div className='grid gap-6'>
                 {/* Backend Profile Card */}
                 <div className='rounded-lg border bg-card text-card-foreground shadow-sm'>

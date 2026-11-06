@@ -38,12 +38,14 @@ react-starter/
     ├── app/                   # The shell: routing and layout
     │   ├── App.tsx            # Restores the session, then the query client, router and toaster
     │   ├── router.tsx         # The route tree
-    │   ├── public-routes.tsx  # Routes that need no sign-in
-    │   └── layout/            # MainLayout — header, nav, outlet
+    │   └── layout/            # AuthShell + BrandPanel (sign-in pages);
+    │                          #   app-shell/ — AppShell, Rail, ListColumn, MeMenu
     ├── components/            # Shared UI, used by more than one feature
-    │   ├── ui/                # shadcn/ui primitives: button, dialog, input…
+    │   ├── ui/                # shadcn/ui primitives: button, dialog, input, tooltip…
+    │   ├── shell/             # ShellPage, RightPanel — what a page in the AppShell draws
+    │   ├── brand/             # Logo
     │   ├── form/              # FormField — the label/control/error pattern
-    │   └── ErrorBoundary.tsx, PageLoader.tsx, ThemeSwitcher.tsx, …
+    │   └── ErrorBoundary.tsx, PageLoader.tsx, LanguageToggle.tsx, …
     ├── config/                # env.ts and its zod schema
     ├── features/              # ← most new code goes here
     │   ├── auth/              # The session, the seven auth pages, Google, route guards
@@ -57,7 +59,7 @@ react-starter/
     │   │   ├── lib/           # The pages' paths, the access token (in memory only), tab sync,
     │   │   │                  #   form errors, password rules, sign-out reasons
     │   │   ├── auth.store.ts  # Who is signed in; sign-in, refresh, sign-out
-    │   │   ├── routes.tsx     # The auth routes, behind GuestOnlyRoute or ProtectedRoute
+    │   │   ├── routes.tsx     # authRoutes (sign-in pages, GuestOnlyRoute), authAppRoutes (/settings)
     │   │   ├── types.ts
     │   │   └── index.ts       # What other features may import
     │   └── users/             # The profile feature
@@ -69,13 +71,14 @@ react-starter/
     │       ├── routes.tsx     # This feature's routes
     │       ├── types.ts
     │       └── index.ts       # What other features may import
-    ├── hooks/                 # Shared hooks: useTheme, useDebouncedValue…
+    ├── hooks/                 # Shared hooks: useTheme, useMediaQuery, useDebouncedValue…
     ├── i18n/                  # i18next setup and the translation catalogues
     ├── lib/                   # Shared, feature-free: the API client, and friends
-    ├── pages/                 # Pages that belong to no feature: Home, NotFound
+    ├── pages/                 # Pages that belong to no feature: Study, NotFound
+    ├── styles/fonts.css       # The self-hosted fonts
     ├── test/                  # Vitest setup
     ├── main.tsx               # Entry point
-    └── index.css              # Tailwind and the theme variables
+    └── index.css              # Tailwind and the design tokens (DESIGN.md)
 ```
 
 ## What is in each folder
@@ -92,23 +95,35 @@ react-starter/
 The shell. `src/main.tsx` sets up i18n and error tracking, then renders
 `App.tsx`, which restores the session (`initAuth`, showing a spinner until it
 knows) and then renders the `QueryClientProvider`, the `RouterProvider` and
-the `Toaster`. There is no theme provider: the theme is a small Zustand store
+the `Toaster`, with a `TooltipProvider` around the router. There is no theme
+provider: the theme is a small Zustand store
 (`src/hooks/useTheme.ts`), applied before React loads by a script in
 `index.html`.
 
-`router.tsx` assembles the route tree with `createBrowserRouter` from
-`public-routes.tsx` and each feature's own `routes.tsx`, so adding a feature
-does not mean editing one central list of every route in the application.
-Its `AppRoot` holds what sits outside any layout: the navigation progress bar
-and the username prompt. `layout/MainLayout.tsx` is the header (language,
-theme, the account menu or **Sign In**) and the page's error boundary.
+`router.tsx` assembles the route tree with `createBrowserRouter` from each
+feature's own `routes.tsx`, so adding a feature does not mean editing one
+central list of every route in the application. Its `AppRoot` holds what
+sits outside any layout: the navigation progress bar and the username
+prompt. `/` redirects: to `/study` when signed in, to `/sign-in` otherwise.
+
+Two layouts, each lazy, each with the page's error boundary and Suspense
+boundary around its outlet:
+
+- `layout/AuthShell.tsx` — the sign-in pages: the logo, the form, the
+  language toggle, and `BrandPanel` from 1024 up.
+- `layout/app-shell/AppShell.tsx` — every page after sign-in, behind
+  `ProtectedRoute`: the rail (with your menu, `MeMenu`), the list column and
+  the page. Each route in it says which list column it wants in
+  `handle: { column }`.
 
 ### `src/components/`
 
 Shared UI only. `ui/` is [shadcn/ui](https://ui.shadcn.com) — components
 copied into the repository rather than installed, so they can be edited.
 `form/FormField.tsx` is the one place that decides how a label, a control and
-a validation error are laid out.
+a validation error are laid out. `shell/` is what a page inside the AppShell
+draws: `ShellPage` (its header, body and optional right panel) and
+`RightPanel` with `usePanel`.
 
 **A component used by exactly one feature does not belong here.** It belongs
 in that feature's `components/`.
@@ -154,47 +169,31 @@ Shared and feature-free.
 
 ### `src/pages/`
 
-Only pages that belong to no feature: `Home`, `NotFound`.
+Only pages that belong to no feature: `Study` (the app's home after
+sign-in), `NotFound`.
 Anything with its own data or components belongs in `features/`.
 
 ## Adding a page
 
 For a page that is just a page — no data of its own:
 
-1. `src/pages/MyPage.tsx`
-2. Add it to `src/app/public-routes.tsx`:
+1. `src/pages/MyPage.tsx`, drawing its header with `ShellPage`
+   (`src/components/shell/ShellPage.tsx`).
+2. Add it to the AppShell's `children` in `src/app/router.tsx`, with the list
+   column it wants:
 
 ```tsx
 // Lazy, like the others: the page is fetched when someone goes there, not
 // bundled into the first load. See code-splitting.md.
 const MyPage = lazy(() => import('@/pages/MyPage'))
 
-export const publicRoutes: RouteObject[] = [
-    { path: '/', element: <Home /> },
-    { path: '/my-page', element: <MyPage /> }
-]
+// in the AppShell entry's children:
+...column('study')([{ path: '/my-page', element: <MyPage /> }]),
 ```
 
-**Behind sign-in** instead: put the route inside the `children` of a
-`ProtectedRoute` entry, as `src/features/users/routes.tsx` does for
-`/profile`. A route listed next to that entry, rather than inside it, is
-public:
-
-```tsx
-export const usersRoutes: RouteObject[] = [
-    {
-        element: (
-            <ProtectedRoute>
-                <Outlet />
-            </ProtectedRoute>
-        ),
-        children: [
-            { path: '/profile', element: <Profile /> },
-            { path: '/my-page', element: <MyPage /> } // behind sign-in
-        ]
-    }
-]
-```
+Everything in the AppShell's `children` is behind sign-in: the AppShell is
+wrapped in `ProtectedRoute`. A route listed next to that entry, rather than
+inside it, is public.
 
 Behind a role as well: wrap the page's content (or a button) in
 `<RequireRole role='admin'>`. That only hides it; the API must check the role
@@ -221,8 +220,9 @@ src/features/orders/
 └── types.ts
 ```
 
-Then add the feature's routes in `src/app/router.tsx`, next to the others
-(`children: [...publicRoutes, ...authRoutes, ...usersRoutes, ...]`).
+Then add the feature's routes in `src/app/router.tsx`, next to the others in
+the AppShell's `children`
+(`...column('settings')([...authAppRoutes, ...usersRoutes])`).
 
 Two habits worth keeping:
 

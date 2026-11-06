@@ -136,8 +136,8 @@ src/features/auth/
 | [src/lib/query-client.ts](../../src/lib/query-client.ts) | The React Query cache a sign-out clears |
 | [src/lib/error-tracking.ts](../../src/lib/error-tracking.ts) | `setErrorTrackingUser(id)`; removes passwords, tokens and codes from error reports |
 | [src/app/App.tsx](../../src/app/App.tsx) | Runs `initAuth()` once, with a spinner until it is done, then shows the sign-out message |
-| [src/app/router.tsx](../../src/app/router.tsx) | Puts `authRoutes` in the app; renders the username prompt on every page |
-| [src/app/layout/MainLayout.tsx](../../src/app/layout/MainLayout.tsx) | The header: "Sign In", or the account menu (Profile, Settings, Log out) |
+| [src/app/router.tsx](../../src/app/router.tsx) | Puts `authRoutes` in the AuthShell and the signed-in pages behind `ProtectedRoute`; sends `/` to `/study` or `/sign-in`; renders the username prompt on every page |
+| [src/app/layout/app-shell/MeMenu.tsx](../../src/app/layout/app-shell/MeMenu.tsx) | Your menu, from your avatar at the foot of the rail (Profile, status, Settings, Sign out) |
 | [src/features/users/](../../src/features/users/) | The profile page (with Delete account), the username prompt ([../username-prompt.md](../username-prompt.md)), `useProfile` |
 | [src/config/env.ts](../../src/config/env.ts) | `VITE_API_URL`, the only setting sign-in uses |
 | `src/i18n/locales/<language>/auth.json`, `api.json` | The pages' texts, and a sentence per API error type |
@@ -150,12 +150,19 @@ src/features/auth/
 
 ```
 AppRoot           NavigationProgress, UsernamePromptWrapper, then the page
-└── MainLayout    the header, an error boundary, the page
-    ├── publicRoutes   /                           (src/app/public-routes.tsx)
-    ├── authRoutes     the auth pages and /settings (src/features/auth/routes.tsx)
-    ├── usersRoutes    /profile                     (src/features/users/routes.tsx)
-    └── *              NotFound
+├── /             redirect: /study when signed in, /sign-in otherwise
+├── AuthShell     logo, an error boundary, the page, the language toggle
+│   └── authRoutes     the sign-in pages             (src/features/auth/routes.tsx)
+├── ProtectedRoute + AppShell   rail, list column, an error boundary, the page
+│   ├── /study                                      (src/pages/Study.tsx)
+│   ├── /channels/:serverId/:channelId?             (mock, until channels exist)
+│   ├── authAppRoutes  /settings                    (src/features/auth/routes.tsx)
+│   └── usersRoutes    /profile                     (src/features/users/routes.tsx)
+└── *             NotFound
 ```
+
+Each route in the AppShell has `handle: { column }`, which picks the list
+column next to the rail.
 
 [App.tsx](../../src/app/App.tsx) shows a spinner until `initAuth()` has
 answered, then renders the router. So every guard below already knows whether
@@ -163,8 +170,11 @@ the person is signed in on the first render.
 
 ## Protecting a page, or part of one
 
-**A group of signed-in pages** (the pattern `src/features/users/routes.tsx`
-uses):
+**A page in the app.** Every route in the AppShell's `children` is already
+behind its `ProtectedRoute`: export a plain `RouteObject[]` (as
+`src/features/users/routes.tsx` does) and add it there in `router.tsx`.
+
+**A group of signed-in pages outside the AppShell:**
 
 ```tsx
 import { Outlet, type RouteObject } from 'react-router-dom'
@@ -185,7 +195,7 @@ export const billingRoutes: RouteObject[] = [
 ]
 ```
 
-Then add `...billingRoutes` to MainLayout's children in `router.tsx`. A route
+Then add `...billingRoutes` to `AppRoot`'s children in `router.tsx`. A route
 listed *next to* the protected entry instead of in its `children` would be
 public.
 

@@ -1,68 +1,105 @@
+@import './styles/fonts.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Design tokens, from DESIGN.md (front matter `colors`). One CSS variable per
+ * token, named as DESIGN.md names it; tailwind.config.js turns each into a
+ * class (`bg-surface-1`, `text-text-secondary`, `border-border-input`).
+ *
+ * Opaque colours are stored as "r g b" so Tailwind's opacity modifier works
+ * (`bg-primary/10`); the three with their own alpha are whole colours.
+ * Regenerate from DESIGN.md when it changes; do not edit a value here alone.
+ */
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --bg: 246 248 254;
+    --surface-1: 255 255 255;
+    --surface-2: 238 242 251;
+    --surface-3: 220 228 246;
+    --text-primary: 27 33 64;
+    --text-secondary: 75 85 120;
+    --text-tertiary: 95 104 137;
+    --primary: 58 100 204;
+    --on-primary: 255 255 255;
+    --primary-inverse: 110 166 251;
+    --border: 194 205 232;
+    --border-input: 124 136 174;
+    --phase-focus: 58 100 204;
+    --phase-focus-room: 230 237 253;
+    --phase-short: 143 90 0;
+    --phase-short-room: 251 240 218;
+    --phase-long: 164 67 42;
+    --phase-long-room: 251 230 222;
+    --success: 30 122 79;
+    --warning: 138 90 0;
+    --danger: 194 40 58;
+    --brand-primary: 84 127 228;
+    --brand-navy: 43 50 87;
+    --overlay-pressed: rgb(0 0 0 / 0.078);
+    --scrim: rgb(246 248 254 / 0.6);
+    --shadow: rgb(43 50 87 / 0.141);
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-
-    --radius: 0.5rem;
+    color-scheme: light;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --bg: 17 22 42;
+    --surface-1: 23 29 53;
+    --surface-2: 30 37 66;
+    --surface-3: 38 47 82;
+    --text-primary: 230 234 246;
+    --text-secondary: 164 174 203;
+    --text-tertiary: 133 144 178;
+    --primary: 110 166 251;
+    --on-primary: 14 20 48;
+    --primary-inverse: 58 100 204;
+    --border: 47 57 97;
+    --border-input: 100 111 152;
+    --phase-focus: 110 166 251;
+    --phase-focus-room: 15 26 54;
+    --phase-short: 242 180 92;
+    --phase-short-room: 33 27 16;
+    --phase-long: 240 138 108;
+    --phase-long-room: 38 21 15;
+    --success: 76 195 138;
+    --warning: 245 154 60;
+    --danger: 255 122 122;
+    --brand-primary: 84 127 228;
+    --brand-navy: 43 50 87;
+    --overlay-pressed: rgb(0 0 0 / 0.161);
+    --scrim: rgb(17 22 42 / 0.6);
+    --shadow: rgb(43 50 87 / 0.4);
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    color-scheme: dark;
+  }
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+  /*
+   * The names the shadcn/ui components of the base use, pointed at the
+   * tokens above, so those components take the design system without being
+   * rewritten. New code uses the token names. (`.dark` is on <html>, which is
+   * also :root, so these follow the theme.)
+   */
+  :root {
+    --background: var(--bg);
+    --foreground: var(--text-primary);
+    --card: var(--surface-1);
+    --card-foreground: var(--text-primary);
+    --popover: var(--surface-1);
+    --popover-foreground: var(--text-primary);
+    --primary-foreground: var(--on-primary);
+    --secondary: var(--surface-2);
+    --secondary-foreground: var(--text-primary);
+    --muted: var(--surface-2);
+    --muted-foreground: var(--text-secondary);
+    --accent: var(--surface-2);
+    --accent-foreground: var(--text-primary);
+    --destructive: var(--danger);
+    --destructive-foreground: var(--bg);
+    --input: var(--border-input);
+    --ring: var(--primary);
   }
 }
 
@@ -70,7 +107,29 @@
   * {
     @apply border-border;
   }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-bg font-sans text-body text-text-primary antialiased;
+  }
+
+  /*
+   * focus-ring (DESIGN.md › Components): 2 px `primary`, 2 px away, for the
+   * keyboard only. Components that draw their own ring still may.
+   */
+  :focus-visible {
+    outline: 2px solid rgb(var(--primary));
+    outline-offset: 2px;
+  }
+
+  /* Reduced motion (DESIGN.md › Motion): no movement; changes happen at once. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }

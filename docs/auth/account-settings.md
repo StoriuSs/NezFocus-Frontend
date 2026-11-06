@@ -5,7 +5,7 @@ the password, signing out on every device, and deleting the account. It says wha
 it before changing the settings page, or to answer "how do I...?" for someone
 using the app.
 
-The settings page is `/settings` (the account menu → **Settings**;
+The settings page is `/settings` (your menu → **Settings**;
 [Settings.tsx](../../src/features/auth/pages/Settings.tsx)). Deleting the
 account is on the profile page, `/profile`. Both are for signed-in people
 only.

@@ -50,7 +50,7 @@ app finds out at run time what the API has turned on
 | Choose a username after the first sign-in | a dialog over any page | [../username-prompt.md](../username-prompt.md) |
 | Change the password (other devices are signed out, this one stays) | `/settings` | [account-settings.md](./account-settings.md#change-the-password) |
 | Set a first password on an account made with Google | `/settings` | [account-settings.md](./account-settings.md#set-a-first-password) |
-| Sign out, or sign out on every device | the account menu, `/settings` | [account-settings.md](./account-settings.md#sign-out-everywhere) |
+| Sign out, or sign out on every device | your menu (avatar at the foot of the rail), `/settings` | [account-settings.md](./account-settings.md#sign-out-everywhere) |
 | Delete the account, with proof it is you | `/profile` | [account-settings.md](./account-settings.md#delete-the-account) |
 | Stay signed in across reloads and new tabs; sign in or out in every open tab at once | everywhere | [session.md](./session.md) |
 | Be told why, when a session ends (password changed elsewhere, signed out everywhere, account deleted, expired) | a message after the page reloads | [session.md](./session.md#why-a-session-ended-every-reason) |

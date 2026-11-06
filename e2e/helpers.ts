@@ -78,8 +78,13 @@ export async function codeFromEmail(address: string, subject: string, since: Dat
     return code!
 }
 
-export async function openAccountMenuItem(page: Page, item: string): Promise<void> {
-    await page.getByRole('button', { name: 'Account menu' }).click()
+/** Your avatar at the foot of the rail, which opens your menu (S-ME-01). */
+export function accountMenu(page: Page) {
+    return page.getByRole('button', { name: /open your menu$/ })
+}
+
+export async function openAccountMenuItem(page: Page, item: string | RegExp): Promise<void> {
+    await accountMenu(page).click()
     await page.getByRole('menuitem', { name: item }).click()
 }
 

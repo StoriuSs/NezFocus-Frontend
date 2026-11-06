@@ -1,8 +1,8 @@
 # Theme
 
-Light, dark, or whatever the operating system is set to — chosen in the
-header, remembered in the browser, and applied before the page first paints,
-so a dark-mode user never sees a white flash.
+Light, dark, or whatever the operating system is set to — remembered in the
+browser, and applied before the page first paints, so a dark-mode user never
+sees a white flash.
 
 - [Using it](#using-it)
 - [How it works](#how-it-works)
@@ -11,7 +11,9 @@ so a dark-mode user never sees a white flash.
 
 ## Using it
 
-The theme switcher is in the header. The choices:
+There is no theme switcher on screen yet: the theme follows the system until
+the Appearance settings page (a later milestone) calls `setTheme()`. The
+choices it will offer:
 
 - **Light** — always light
 - **Dark** — always dark
@@ -24,9 +26,8 @@ The theme switcher is in the header. The choices:
 |------|---------|
 | `index.html` | A small inline script that reads the saved theme and adds the `dark` class to `<html>` **before React loads** |
 | `src/hooks/useTheme.ts` | The theme store (Zustand) and the `useTheme()` hook |
-| `src/components/ThemeSwitcher.tsx` | The dropdown in the header |
-| `src/index.css` | The colour variables, for `:root` (light) and `.dark` |
-| `tailwind.config.js` | `darkMode: 'class'`: Tailwind's `dark:` styles apply under `.dark` |
+| `src/index.css` | The design tokens from `DESIGN.md` as CSS variables (`--bg`, `--surface-1..3`, `--text-primary`…), for `:root` (light) and `.dark`; the old shadcn names (`--background`, `--muted`…) point at them |
+| `tailwind.config.js` | Turns each token into a class (`bg-surface-2`, `text-text-secondary`, `rounded-button`, `text-body-sm`, `shadow-float`); `darkMode: 'class'`: Tailwind's `dark:` styles apply under `.dark` |
 
 1. The choice is saved in `localStorage` under the key `theme`.
 2. On load, the script in `index.html` applies it at once. React renders only
@@ -58,9 +59,11 @@ function MyComponent() {
 screen, read the store's `resolvedTheme` (`light` or `dark`):
 `useThemeStore((state) => state.resolvedTheme)`.
 
-For most styling you need neither: write `dark:` classes in Tailwind
-(`bg-white dark:bg-slate-900`), or use the colour variables, which change by
-themselves.
+For most styling you need neither: use the token classes (`bg-surface-1`,
+`text-text-secondary`), which change with the theme by themselves. New code
+uses the token names, not the shadcn aliases. The values come from
+`DESIGN.md`: change it first, then `src/index.css` to match; never a value in
+`src/index.css` alone.
 
 ## Remembering it per account
 

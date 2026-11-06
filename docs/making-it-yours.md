@@ -47,24 +47,21 @@ docker compose -f docker-compose.dev.yaml config --services
 
 These are the ones people notice, and the ones most often forgotten:
 
-- **`src/config/site.ts`** — the product name and the docs link. `name` is
-  the full name: the browser tab (`<title>`, written into `index.html` at
-  build time), and `{{appName}}` in any translation. `shortName` is the
-  header's, where there is little room; it is the same as `name` until the
-  name is too long. The docs link is the home page's Documentation button.
-  The home page's big title is copy, not the name: it is
-  `home.hero.title` in `pages.json`.
+- **`src/config/site.ts`** — the product name, `name`: the browser tab
+  (`<title>`, written into `index.html` at build time), the logo, and
+  `{{appName}}` in any translation.
 - **`index.html`** — the `lang` attribute, if your default is not English.
 - **`public/`** — the favicon (`vite.svg`, named in `index.html`).
-- **`src/i18n/locales/en/*.json` and `vi/*.json`** — the page copy (the home
-  page describes the starter, not your app). If you do not need Vietnamese, delete `vi/`, and remove it
+- **`src/i18n/locales/en/*.json` and `vi/*.json`** — the page copy. If you do
+  not need Vietnamese, delete `vi/`, and remove it
   from `resources` and `supportedLngs` in `src/i18n/index.ts`, from
-  `LanguageSwitcher.tsx`, and from `src/i18n/__tests__/catalogues.test.ts`.
+  `LanguageToggle.tsx`, and from `src/i18n/__tests__/catalogues.test.ts`.
   For another language, see [i18n.md](./i18n.md#adding-a-language).
 - **The emails** — the API sends them, so their wording and product name are
   in the API starter.
-- **`src/index.css` and `tailwind.config.js`** — the colour tokens. The
-  starter's palette is a starting point, not a design.
+- **`src/index.css` and `tailwind.config.js`** — the design tokens, generated
+  from `DESIGN.md`. Change them there, not here alone
+  ([theme-system.md](./theme-system.md)).
 
 ## 3. The environment file
 

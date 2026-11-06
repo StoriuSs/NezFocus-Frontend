@@ -1,0 +1,71 @@
+import { Suspense, useEffect } from 'react'
+import { Link, Outlet, useLocation } from 'react-router-dom'
+import { useQueryErrorResetBoundary } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
+
+import { LogoLockup } from '@/components/brand/Logo'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { LanguageToggle } from '@/components/LanguageToggle'
+import { PageLoader } from '@/components/PageLoader'
+import { BrandPanel } from './BrandPanel'
+
+/**
+ * The layout of every page outside the app (C-34): signing up, the code,
+ * signing in, a new password, finishing the account. Only the 400-wide form
+ * block changes from step to step, so a flow of several pages stands still.
+ *
+ * From 1024: two halves, the form column and the brand panel. Below: the
+ * form column alone. The form block is centred vertically while it fits and
+ * anchored at the top when longer; then only the middle scrolls, the logo and
+ * the language switch stay put.
+ */
+export default function AuthShell() {
+    const { t } = useTranslation()
+    const { pathname } = useLocation()
+    const { reset: resetQueryErrors } = useQueryErrorResetBoundary()
+
+    // Most visitors here are about to sign in: fetch the app's frame and its
+    // home page once the browser is idle, so signing in does not wait for
+    // them. The same modules as the router's lazy routes, so the same files.
+    useEffect(() => {
+        const load = () => {
+            void import('@/app/layout/app-shell/AppShell')
+            void import('@/pages/Study')
+        }
+        if ('requestIdleCallback' in window) {
+            const id = window.requestIdleCallback(load)
+            return () => window.cancelIdleCallback(id)
+        }
+        const timer = setTimeout(load, 1000)
+        return () => clearTimeout(timer)
+    }, [])
+
+    return (
+        <div className='flex h-dvh bg-bg'>
+            <div className='flex min-w-0 flex-1 flex-col'>
+                <header className='shrink-0 p-6 lg:p-8'>
+                    <Link
+                        to='/'
+                        aria-label={t('authShell.home')}
+                        className='inline-flex rounded-input transition-opacity duration-micro hover:opacity-80'
+                    >
+                        <LogoLockup />
+                    </Link>
+                </header>
+                <main className='flex min-h-0 flex-1 flex-col overflow-y-auto px-4'>
+                    <div className='mx-auto my-auto w-full max-w-[400px] py-6'>
+                        <ErrorBoundary key={pathname} onReset={resetQueryErrors}>
+                            <Suspense fallback={<PageLoader className='min-h-40' />}>
+                                <Outlet />
+                            </Suspense>
+                        </ErrorBoundary>
+                    </div>
+                </main>
+                <footer className='shrink-0 px-3 pb-4 lg:px-5 lg:pb-6'>
+                    <LanguageToggle />
+                </footer>
+            </div>
+            <BrandPanel className='hidden lg:block' />
+        </div>
+    )
+}

@@ -5,7 +5,7 @@
 }
 
 #nprogress .bar {
-  background: hsl(var(--primary));
+  background: rgb(var(--primary));
   position: fixed;
   z-index: 9999;
   top: 0;
@@ -20,7 +20,7 @@
   right: 0;
   width: 100px;
   height: 100%;
-  box-shadow: 0 0 10px hsl(var(--primary)), 0 0 5px hsl(var(--primary));
+  box-shadow: 0 0 10px rgb(var(--primary)), 0 0 5px rgb(var(--primary));
   opacity: 1;
   transform: rotate(3deg) translate(0px, -4px);
 }

@@ -67,7 +67,7 @@ Every way in ends in the same private step of the store, `establish()`:
 2. Set the `auth:session` flag.
 3. Mark the store signed in (`isAuthenticated: true`).
 4. Ask `GET /users/me` who this is. Put the answer in the profile cache, so
-   the header, the profile page and the username prompt do not ask again, and
+   your menu, the profile page and the username prompt do not ask again, and
    keep the short form as `user`. Tell error tracking the user's id (only the
    id: [../error-tracking.md](../error-tracking.md)).
 
@@ -226,7 +226,7 @@ Who calls it:
 
 | Where | Reason | Lands on |
 |---|---|---|
-| The account menu's **Log out** | none | home |
+| Your menu's **Sign out** | none | home |
 | The username prompt's **Sign out** | none | home |
 | **Sign out and continue** on the "already signed in" card | none | the same page, now as a visitor |
 | Settings, **Sign out everywhere**, once `POST /auth/logout-all` succeeded | `you-signed-out-everywhere` | home |
@@ -256,7 +256,7 @@ The API says why a session ended in `data.reason` on a `401`
 | `account-disabled` | `account_deleted` from a refresh, or `403 AUTH_ACCOUNT_DISABLED` from any route | "This account has been deleted" (error) | home |
 | `you-signed-out-everywhere` | the person chose Sign out everywhere, here | "You're signed out on every device." (success) | home |
 | `account-deleted` | the person deleted the account, here | "Your account was deleted. We've emailed you a confirmation." (success) | home |
-| none | the person chose Log out | no message | home |
+| none | the person chose Sign out | no message | home |
 
 "Sign-in, then back" means `/sign-in?redirect=<this page's path, query and #>`:
 a session that ended by itself, mid-task, brings the person back to what they

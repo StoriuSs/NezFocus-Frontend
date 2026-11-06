@@ -134,7 +134,8 @@ The short version, with the API already running on `http://localhost:8888`:
    pnpm dev
    ```
 
-   Open http://localhost:3001, choose **Sign In** → **Sign up**, and read the
+   Open http://localhost:3001 (it opens the sign-in page), choose **Create
+   one**, and read the
    code in Mailpit (http://localhost:8025).
 
 ## Scripts
@@ -163,10 +164,10 @@ src/
 ├── app/              # The shell
 │   ├── App.tsx       # Restores the session, then the query client, router and toaster
 │   ├── router.tsx    # The route tree, from each feature's routes
-│   ├── public-routes.tsx
-│   └── layout/       # MainLayout: header, account menu, error boundary
+│   └── layout/       # AuthShell (sign-in pages), app-shell/ (rail, list column, your menu)
 ├── components/       # Shared UI
 │   ├── ui/           # shadcn/ui primitives
+│   ├── shell/        # ShellPage, RightPanel: a page inside the AppShell
 │   └── form/         # FormField: label, control and error
 ├── config/           # Settings and their schema
 ├── features/         # One folder per feature
@@ -175,7 +176,7 @@ src/
 ├── hooks/            # Shared React hooks
 ├── i18n/             # Translations (en, vi)
 ├── lib/              # The API client, query client, error tracking, helpers
-├── pages/            # Pages outside any feature (home, not found)
+├── pages/            # Pages outside any feature (study, not found)
 └── test/             # Test setup
 ```
 
@@ -239,31 +240,23 @@ import { useUpdateProfile } from '@/features/users/api/useUpdateProfile'
 
 1. Create the page: `src/features/<feature>/pages/MyPage.tsx` for a feature's
    page, or `src/pages/MyPage.tsx` for one that belongs to no feature.
-2. Add its route. **Behind sign-in:** inside the `children` of the
-   `ProtectedRoute` entry in that feature's `routes.tsx` — a route next to that
-   entry, rather than inside it, is public:
+2. Add its route. **Behind sign-in:** in that feature's `routes.tsx`, a list
+   that `src/app/router.tsx` puts in the AppShell's `children`. The AppShell is
+   wrapped in `ProtectedRoute`, so everything in it is behind sign-in:
 
    ```tsx
    const MyPage = lazy(() => import('@/features/users/pages/MyPage'))
 
    export const usersRoutes: RouteObject[] = [
-       {
-           element: (
-               <ProtectedRoute>
-                   <Outlet />
-               </ProtectedRoute>
-           ),
-           children: [
-               { path: '/profile', element: <Profile /> },
-               { path: '/my-page', element: <MyPage /> } // behind sign-in
-           ]
-       }
+       { path: '/profile', element: <Profile /> },
+       { path: '/my-page', element: <MyPage /> } // behind sign-in
    ]
    ```
 
-   **Public:** in `src/app/public-routes.tsx`. A new feature's routes are
-   added to `src/app/router.tsx`, next to the others.
-3. Add a link in `src/app/layout/MainLayout.tsx` (optional).
+   A new feature's routes are added to `src/app/router.tsx`, next to the
+   others, with the list column they want (`handle: { column }`). A route
+   next to the AppShell entry, rather than inside it, is public.
+3. Add a row in `src/app/layout/app-shell/ListColumn.tsx` (optional).
 
 ### Adding translations
 

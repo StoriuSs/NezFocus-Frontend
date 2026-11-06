@@ -1,7 +1,7 @@
 import { lazy } from 'react'
 import { RouteObject } from 'react-router-dom'
 import { AUTH_PATHS } from '@/features/auth/lib/paths'
-import { GuestOnlyRoute, ProtectedRoute } from '@/features/auth/components/ProtectedRoute'
+import { GuestOnlyRoute } from '@/features/auth/components/ProtectedRoute'
 
 const SignIn = lazy(() => import('@/features/auth/pages/SignIn'))
 const SignUp = lazy(() => import('@/features/auth/pages/SignUp'))
@@ -15,7 +15,7 @@ const guestOnly = (element: React.ReactNode) => <GuestOnlyRoute>{element}</Guest
 /** Pages emails link to: a signed-in reader is told, not bounced home. */
 const guestOnlyExplained = (element: React.ReactNode) => <GuestOnlyRoute explainIfSignedIn>{element}</GuestOnlyRoute>
 
-/** The auth feature's routes: the sign-in pages for visitors, and settings for a signed-in user. */
+/** The sign-in pages, for visitors (the router puts them in the AuthShell). */
 export const authRoutes: RouteObject[] = [
     { path: AUTH_PATHS.signIn, element: guestOnly(<SignIn />) },
     { path: AUTH_PATHS.signUp, element: guestOnly(<SignUp />) },
@@ -23,13 +23,8 @@ export const authRoutes: RouteObject[] = [
     { path: AUTH_PATHS.forgotPassword, element: guestOnlyExplained(<ForgotPassword />) },
     { path: AUTH_PATHS.resetPassword, element: guestOnlyExplained(<ResetPassword />) },
     // Not guest-only: it is the page that makes the visitor signed in.
-    { path: AUTH_PATHS.oauthCallback, element: <OAuthCallback /> },
-    {
-        path: AUTH_PATHS.settings,
-        element: (
-            <ProtectedRoute>
-                <Settings />
-            </ProtectedRoute>
-        )
-    }
+    { path: AUTH_PATHS.oauthCallback, element: <OAuthCallback /> }
 ]
+
+/** The auth feature's pages inside the app, for a signed-in user (the router puts them in the AppShell). */
+export const authAppRoutes: RouteObject[] = [{ path: AUTH_PATHS.settings, element: <Settings /> }]

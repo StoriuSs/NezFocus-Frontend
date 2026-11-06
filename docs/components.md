@@ -7,8 +7,8 @@ every page shows. Components used by one feature only live in that feature's
 - [Where they are](#where-they-are)
 - [Error handling](#error-handling)
 - [Loading states](#loading-states)
-- [The layout and the header](#the-layout-and-the-header)
-- [Switchers](#switchers)
+- [The layouts](#the-layouts)
+- [Language toggle](#language-toggle)
 - [Forms](#forms)
 - [Modals](#modals)
 - [shadcn/ui components](#shadcnui-components)
@@ -17,16 +17,20 @@ every page shows. Components used by one feature only live in that feature's
 
 ```
 src/components/
-├── ui/                    # shadcn/ui primitives (button, dialog, input…)
+├── ui/                    # shadcn/ui primitives (button, dialog, input, tooltip…)
+│                          # and icon-button, presence-dot, count-badge
+├── shell/                 # ShellPage, RightPanel + usePanel, shell-context
+├── brand/Logo.tsx         # The NezFocus mark and the logo lockup
 ├── form/FormField.tsx     # Label, control and error, wired for screen readers
 ├── ErrorBoundary.tsx      # Catches a page that crashes
 ├── RouteErrorPage.tsx     # The full-page screen for a crash outside any page
 ├── PageLoader.tsx         # The spinner while a page's chunk loads
 ├── NavigationProgress.tsx # The bar at the top during navigation
-├── LanguageSwitcher.tsx   # English / Tiếng Việt
-└── ThemeSwitcher.tsx      # Light / dark / system
+└── LanguageToggle.tsx     # "Tiếng Việt · English" at the AuthShell's foot
 
-src/app/layout/MainLayout.tsx                      # The header and the page area
+src/app/layout/AuthShell.tsx                       # The sign-in pages' layout
+src/app/layout/BrandPanel.tsx                      # Its brand half, from 1024 up
+src/app/layout/app-shell/                          # The app's layout: AppShell, Rail, ListColumn, MeMenu
 src/features/users/components/ProfileSkeleton.tsx  # The profile page's placeholder
 src/features/users/components/UsernamePromptModal.tsx
 src/features/auth/components/                      # The auth pages' pieces
@@ -42,7 +46,7 @@ instead of a blank page.
 ```tsx
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 
-// In MainLayout — around the page outlet, INSIDE the layout
+// In AuthShell and AppShell — around the page outlet, INSIDE the layout
 <ErrorBoundary key={pathname} onReset={resetQueryErrors}>
     <Suspense fallback={<PageLoader />}>
         <Outlet />
@@ -56,11 +60,11 @@ import { ErrorBoundary } from '@/components/ErrorBoundary'
 ```
 
 **Where to put it:** inside layouts, around the part that can fail. A boundary
-*outside* the layout replaces the header and navigation with the fallback,
+*outside* the layout replaces the logo or the rail with the fallback,
 leaving the user no way out but a reload.
 
 - `key={pathname}` clears the error when the user navigates elsewhere.
-- `onReset` runs before "Try again" re-renders — MainLayout passes React
+- `onReset` runs before "Try again" re-renders — both layouts pass React
   Query's `reset`, so queries that threw are fetched again rather than
   re-throwing their cached error.
 
@@ -82,7 +86,8 @@ tracking when it is on ([error-tracking.md](./error-tracking.md)).
 ### `PageLoader`
 
 A centred spinner: the `<Suspense>` fallback while a lazy page's chunk loads.
-It is in `MainLayout`, around the page outlet. See
+It is in each layout, around the page outlet, and in `AppRoot`, around the
+layouts. See
 [code-splitting.md](./code-splitting.md) for why it is often not seen.
 
 ### `NavigationProgress`
@@ -97,7 +102,9 @@ function AppRoot() {
         <>
             <NavigationProgress />
             <UsernamePromptWrapper />
-            <Outlet />
+            <Suspense fallback={<PageLoader />}>
+                <Outlet />
+            </Suspense>
         </>
     )
 }
@@ -128,35 +135,44 @@ import { ProfileSkeleton } from '@/features/users/components/ProfileSkeleton'
 if (isPending) return <ProfileSkeleton />
 ```
 
-## The layout and the header
+## The layouts
 
-`src/app/layout/MainLayout.tsx` is the shell every page is rendered in:
+`src/app/router.tsx` puts every page in one of two layouts. Both load
+lazily, and both wrap the page outlet in the error boundary and the Suspense
+boundary above.
 
-- **The logo**, linking home.
-- **The language and theme switchers**.
-- **Signed out: a "Sign In" button.** On any page but home and the auth pages
-  themselves, it remembers the page (`/sign-in?redirect=/that/page`), so
-  signing in comes back to it.
-- **Signed in: the account menu** — the avatar (initials when there is no
-  picture; a broken picture URL is refreshed once), the display name and
-  `@username`, then **Profile**, **Settings** and **Log out**. Log out shows
-  a "Logging out" toast and ends the session ([auth/session.md](./auth/session.md)).
-- **The page area**, inside the error boundary and the Suspense boundary
-  above.
+**`AuthShell`** (`src/app/layout/AuthShell.tsx`) holds the sign-in pages:
 
-The menu's data is the `useProfile` query, the same one the profile page
-uses, so a change there shows here at once.
+- **The logo** (`LogoLockup`), linking to `/`.
+- **The form block**, 400 wide, centred.
+- **The language toggle** at the foot.
+- **The brand panel** (`BrandPanel.tsx`) as the right half, from 1024 up.
 
-## Switchers
+**`AppShell`** (`src/app/layout/app-shell/AppShell.tsx`) holds every page
+after sign-in, behind `ProtectedRoute`:
 
-### `ThemeSwitcher`
+- **The rail** (`Rail.tsx`), 72 wide: direct messages, servers, Study, and
+  at the bottom your avatar, which opens **your menu** (`MeMenu.tsx`): your
+  profile, your status, **Settings** and **Sign out**. The menu's data is
+  the `useProfile` query, the same one the profile page uses, so a change
+  there shows here at once.
+- **The list column** (`ListColumn.tsx`), 240 wide. Which list it shows is
+  the route's choice, in its `handle: { column }` (`study`, `server` or
+  `settings`).
+- **The page area.** A page draws its own header with `ShellPage`
+  (`src/components/shell/ShellPage.tsx`): the 48-high header with the
+  title and the page's actions, a scrolling body, and an optional right
+  panel (`RightPanel` + `usePanel`).
 
-A dropdown: light, dark, or the system's setting. It uses `useTheme()`
-([theme-system.md](./theme-system.md)).
+Below 1024 the list column becomes a sheet opened by ☰ in the page header;
+below 768 the rail joins it.
 
-### `LanguageSwitcher`
+## Language toggle
 
-A dropdown of the languages, each with its flag ([i18n.md](./i18n.md)).
+### `LanguageToggle`
+
+"Tiếng Việt · English" at the foot of the AuthShell. The language in use is
+plain text; the other is a button ([i18n.md](./i18n.md)).
 
 ## Forms
 
@@ -195,15 +211,20 @@ into the repository by the shadcn CLI, so you can edit them:
 | Component | What it is |
 |-----------|-------------|
 | `Avatar` | A profile picture with a fallback |
-| `Button` | Default, secondary, outline, ghost, destructive and link variants |
+| `Button` | Default, secondary, outline, ghost, text, destructive and link variants |
 | `Dialog` | Modal dialogs |
-| `DropdownMenu` | Menus, like the account menu |
+| `DropdownMenu` | Menus, like your menu (`MeMenu`) |
 | `Input` | Text inputs |
 | `Label` | Form labels |
 | `Skeleton` | Loading placeholders |
 | `Slider` | A range input (the avatar crop's zoom) |
 | `Sonner` | The toaster, following the theme |
 | `Textarea` | Multi-line text |
+| `Tooltip` | Tooltips; `WithTooltip` is the common case. `TooltipProvider` wraps the app in `App.tsx` |
+
+Next to them, written for this project rather than copied: `IconButton` (a
+32 × 32 icon button with a screen-reader label), `PresenceDot` and
+`CountBadge`.
 
 ### Adding one
 

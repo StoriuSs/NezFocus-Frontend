@@ -26,7 +26,7 @@ mutation updates the query cache, and the store keeps showing the old value.
 The auth store holds who is signed in (id, email, username, display name,
 roles) because route guards and role checks need it before any query runs;
 the full profile is still the `useProfile` query, which the store seeds at
-sign-in so the header does not ask twice.
+sign-in so your menu (`MeMenu`) does not ask twice.
 
 ## The two stores
 

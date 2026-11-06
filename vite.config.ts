@@ -48,12 +48,15 @@ function siteTitle(): Plugin {
  * copies) unchanged, instead of invalidating one 700 kB bundle every time.
  * Anything not listed stays where Rollup puts it, so a library used only by a
  * lazy page is still loaded only with that page.
+ *
+ * UI libraries (Radix, lucide-react, sonner) are deliberately not listed: as a
+ * chunk of their own, every one any lazy page used was downloaded before the
+ * first screen, and that chunk grew with each new page (M0, L4).
  */
 const VENDOR_CHUNKS: Record<string, RegExp> = {
     react: /^(react|react-dom|scheduler|react-router|react-router-dom|@remix-run\/router)$/,
     i18n: /^(i18next|react-i18next|i18next-.*)$/,
-    query: /^(@tanstack\/.*|axios|zustand)$/,
-    ui: /^(@radix-ui\/.*|@floating-ui\/.*|sonner|lucide-react)$/
+    query: /^(@tanstack\/.*|axios|zustand)$/
 }
 
 function vendorChunk(id: string): string | undefined {
@@ -109,6 +112,10 @@ export default defineConfig({
     },
     build: {
         sourcemap: uploadsSourcemaps ? 'hidden' : false,
+        // Fonts stay files: inlined into the stylesheet as base64 (Vite does
+        // that below 4 KB), a subset most pages never use would weigh on every
+        // first screen, and unicode-range could no longer skip it.
+        assetsInlineLimit: (file) => (file.endsWith('.woff2') ? false : undefined),
         rollupOptions: {
             output: { manualChunks: vendorChunk }
         }

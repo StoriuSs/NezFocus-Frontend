@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { CircleAlert, CircleCheck, Info } from 'lucide-react'
 
 interface AuthCardProps {
     title: string
@@ -10,33 +11,46 @@ interface AuthCardProps {
     footer?: ReactNode
 }
 
-/** The frame every sign-in page shares, so they read as one flow. */
+/**
+ * The form block every sign-in page shares, inside AuthShell's 400-wide
+ * column (C-34): a `title-1` heading, the form, links under it. No card
+ * around it: the column is the frame (DESIGN.md: blocks are not wrapped in
+ * shadowed cards).
+ */
 export function AuthCard({ title, subtitle, notice, children, footer }: AuthCardProps) {
     return (
-        <div className='flex min-h-[calc(100vh-3.5rem)] items-center justify-center bg-muted/30 px-4 py-12'>
-            <div className='w-full max-w-md space-y-6 rounded-xl border bg-background p-8 shadow-sm sm:p-10'>
-                <div className='space-y-2 text-center'>
-                    <h1 className='text-2xl font-bold tracking-tight'>{title}</h1>
-                    {subtitle ? <p className='text-sm text-muted-foreground'>{subtitle}</p> : null}
-                </div>
-                {notice}
-                {children}
-                {footer ? <div className='space-y-2 text-center text-sm text-muted-foreground'>{footer}</div> : null}
+        <div className='space-y-6'>
+            <div className='space-y-2'>
+                <h1 className='text-title-1 text-text-primary'>{title}</h1>
+                {subtitle ? <p className='text-body-sm text-text-secondary'>{subtitle}</p> : null}
             </div>
+            {notice}
+            {children}
+            {footer ? <div className='space-y-2 text-body-sm text-text-secondary'>{footer}</div> : null}
         </div>
     )
 }
 
-/** A message in a card: `success` after a finished step, `error` for a failure of the whole form. */
+const NOTICE = {
+    info: { icon: Info, className: 'text-text-primary' },
+    success: { icon: CircleCheck, className: 'text-success' },
+    error: { icon: CircleAlert, className: 'text-danger' }
+} as const
+
+/**
+ * A message in the form block: `success` after a finished step, `error` for a
+ * failure of the whole form. Never colour alone: each tone has its icon
+ * (DESIGN.md › Colors).
+ */
 export function Notice({ tone, children }: { tone: 'info' | 'success' | 'error'; children: ReactNode }) {
-    const styles = {
-        info: 'border-border bg-muted text-foreground',
-        success: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300',
-        error: 'border-destructive/30 bg-destructive/10 text-destructive'
-    }[tone]
+    const { icon: Icon, className } = NOTICE[tone]
     return (
-        <p role={tone === 'error' ? 'alert' : 'status'} className={`rounded-md border px-3 py-2 text-sm ${styles}`}>
-            {children}
+        <p
+            role={tone === 'error' ? 'alert' : 'status'}
+            className='flex gap-2 rounded-input border bg-surface-1 px-3 py-2 text-body-sm text-text-primary'
+        >
+            <Icon className={`mt-0.5 size-4 shrink-0 ${className}`} aria-hidden='true' />
+            <span>{children}</span>
         </p>
     )
 }

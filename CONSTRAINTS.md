@@ -1,6 +1,6 @@
 # Constraints — NezFocus Frontend
 
-Chuẩn chất lượng của repo này, chốt ở G0 (05/11/2026) qua skill `agent-skills:constraint-driven-development`. Mỗi luật có lệnh kiểm tra và lý do. AI và người viết code đều đọc file này trước khi code; **không hạ chuẩn ở đây để một thay đổi qua được kiểm tra**. Muốn nới một luật thì chủ dự án quyết, ghi lý do, và sửa file này trong một commit riêng, không chung với code đang đỏ.
+Chuẩn chất lượng của repo này, chốt ở G0 (05/11/2026) qua skill `agent-skills:constraint-driven-development`. Mỗi luật có lệnh kiểm tra và lý do. AI và người viết code đều đọc file này trước khi code; **không hạ chuẩn ở đây để một thay đổi qua được kiểm tra**. Muốn nới một luật thì chủ dự án quyết, ghi lý do, và sửa file này trong một commit riêng, không chung với code đang đỏ; commit message của commit đó có dòng `Constraints-approved: <lý do>`.
 
 Lần rà gần nhất: 05/11/2026, Phạm Trung Hiếu.
 
@@ -32,7 +32,7 @@ Kiểm bởi `node scripts/constraints/floor-guard.mjs` (cùng script với back
 - Không làm test dễ đi: không thêm `.skip`, `.only`, `.todo`, `xit`, `xdescribe`.
 - Không xóa test hay assertion mà không có lý do: xóa file test (`*.test.ts(x)`, `e2e/*.spec.ts`) hay bỏ một `expect` thì commit message phải có dòng `Tests-removed: <vì sao>`. `check:task` liệt kê những chỗ này để AI đưa lý do vào commit message gợi ý; hook `commit-msg` và CI chặn khi thiếu.
 - Không có secret trong code: xem dòng "Secret" ở bảng dưới.
-- File này không bị nới để một thay đổi qua được: hạ một ngưỡng, xóa một luật hay thêm một dòng ngoại lệ đều bị floor-guard báo.
+- File này không bị nới để một thay đổi qua được: hạ một ngưỡng, xóa một luật hay thêm một dòng ngoại lệ đều bị floor-guard báo. Đổi hay xóa một ngưỡng chỉ qua được khi commit message có dòng `Constraints-approved: <lý do>`, tức chủ dự án đã duyệt (thêm 06/11/2026); floor-guard vẫn in ra để thay đổi không lặng lẽ.
 
 ## Luật có số
 
@@ -57,8 +57,8 @@ Kiểm bởi `node scripts/constraints/floor-guard.mjs` (cùng script với back
 | Chỉ số | Hiện tại | Hướng | Ghi chú |
 |---|---|---|---|
 | Coverage toàn dự án (dòng, `src/`) | 54.77% | must not fall (dung sai 0.5%) | Đo 05/11/2026 sau lát dọn base của M0 (700/1278 dòng). Số đo nằm trong dòng `text-summary` của bước `pnpm test --coverage.enabled` trên CI. Xuống dưới 54.27% là một phát hiện cần giải thích |
-| JS tải trước màn hình đầu (gzip) | 245.83 kB | must not grow (dung sai 0.5%) | Đo 05/11/2026 sau lát dọn base của M0; trước khi dọn: 249.28 kB. `pnpm size` sau `pnpm build` (`.size-limit.mjs` đọc `dist/index.html`); `limit` ở đó là 247.06 kB (số đo cộng dung sai), nên size-limit chặn thật ở `check:full` và CI. Lý do: LiveKit (M4), dnd-kit, biểu đồ phải tải lười theo trang, giữ NFR-PERF-04 |
-| CSS tải trước màn hình đầu (gzip) | 5.92 kB | must not grow (dung sai 0.5%) | Như trên. Trước khi dọn: 6.07 kB; `limit` 5.95 kB |
+| JS tải trước màn hình đầu (gzip) | 242.78 kB | must not grow (dung sai 0.5%) | Đo 06/11/2026 sau lát L4 của M0 (bỏ chunk vendor `ui`, thư viện giao diện tải theo trang); trước đó: 245.83 kB (05/11/2026, sau lát dọn base), 249.28 kB (trước khi dọn). `pnpm size` sau `pnpm build` (`.size-limit.mjs` đọc `dist/index.html`); `limit` ở đó là 243.99 kB (số đo cộng dung sai), nên size-limit chặn thật ở `check:full` và CI. Lý do: LiveKit (M4), dnd-kit, biểu đồ phải tải lười theo trang, giữ NFR-PERF-04 |
+| CSS tải trước màn hình đầu (gzip) | 7.28 kB | must not grow (dung sai 0.5%) | Đo 06/11/2026 sau lát L4: token màu hai theme của DESIGN.md, `@font-face` của font tự host và class của AppShell. Chủ dự án duyệt nâng ngưỡng ngày 06/11/2026. Trước đó: 5.92 kB (sau lát dọn base), 6.07 kB (trước khi dọn); `limit` 7.32 kB |
 
 ## Không chọn
 

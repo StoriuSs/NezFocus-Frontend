@@ -44,14 +44,14 @@ In Docker instead (hot reload through a bind mount): `pnpm docker:dev`, and
 
 ## Sign up and sign in
 
-1. Open http://localhost:3001 → **Sign In** → **Sign up**. Enter an email and
+1. Open http://localhost:3001 (it opens the sign-in page) → **Create one**. Enter an email and
    a password; the form ticks off the password rules as you type.
 2. Open Mailpit (http://localhost:8025), find the "Verify" email, and enter
    its 6-digit code on the page. Confirming the address signs you in.
 3. The first time, a prompt asks you to choose a username
    ([username-prompt.md](./username-prompt.md)).
-4. The avatar menu (top right) has **Profile**, **Settings** (password,
-   sign out everywhere) and **Log out**.
+4. Your avatar at the foot of the rail opens your menu: your profile, your
+   status, **Settings** (password, sign out everywhere) and **Sign out**.
 
 "Continue with Google" appears only when the API has it configured. Nothing
 in this app turns it on: see the API starter's

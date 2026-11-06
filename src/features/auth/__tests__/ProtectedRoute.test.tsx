@@ -14,6 +14,7 @@ function renderAt(path: string) {
     const router = createMemoryRouter(
         [
             { path: '/', element: <p>Home</p> },
+            { path: '/study', element: <p>Study</p> },
             {
                 path: '/sign-in',
                 element: (
@@ -54,7 +55,9 @@ describe('route guards', () => {
 
     it('sends a signed-in user on from sign-in, but never to another site', async () => {
         authState.isAuthenticated = true
-        renderAt('/sign-in?redirect=https%3A%2F%2Fevil.example%2F')
-        expect(await screen.findByText('Home')).toBeInTheDocument()
+        const router = renderAt('/sign-in?redirect=https%3A%2F%2Fevil.example%2F')
+        // To the app's home, the Study page (D-124).
+        expect(await screen.findByText('Study')).toBeInTheDocument()
+        expect(router.state.location.pathname).toBe('/study')
     })
 })

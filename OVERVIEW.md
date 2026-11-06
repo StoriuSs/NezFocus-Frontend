@@ -90,11 +90,12 @@ flowchart TB
     App --> Toast["Toaster<br/>notifications"]
 
     RP --> Root["AppRoot<br/>progress bar · username prompt"]
-    Root --> Layout["MainLayout<br/>header · nav · ErrorBoundary"]
-    Layout --> Public["public routes<br/>Home"]
-    Layout --> Guest["visitor-only routes<br/>GuestOnlyRoute → Sign in, Sign up, …"]
-    Layout --> Guarded["guarded routes<br/>ProtectedRoute → Profile, Settings"]
-    Layout --> NF["NotFound"]
+    Root --> Home["/<br/>→ /study or /sign-in"]
+    Root --> Auth["AuthShell<br/>logo · ErrorBoundary · language toggle"]
+    Auth --> Guest["visitor-only routes<br/>GuestOnlyRoute → Sign in, Sign up, …"]
+    Root --> Shell["ProtectedRoute → AppShell<br/>rail · list column · ErrorBoundary"]
+    Shell --> Guarded["signed-in routes<br/>Study, Settings, Profile, …"]
+    Root --> NF["NotFound"]
 ```
 
 Two details in that picture are deliberate and easy to get wrong:
@@ -103,9 +104,9 @@ Two details in that picture are deliberate and easy to get wrong:
   spinner until it knows whether you are signed in, so no page ever flashes
   the signed-out version at somebody who is signed in. It asks the API only
   when this browser has signed in before.
-- **Errors are caught at two levels.** `MainLayout` wraps the page in an error
-  boundary, so a crashing page shows a message *while the navigation still
-  works*. A crash in the layout itself is caught by the router's own error
+- **Errors are caught at two levels.** Each layout (`AuthShell`, `AppShell`)
+  wraps the page in an error boundary, so a crashing page shows a message
+  *while the navigation still works*. A crash in the layout itself is caught by the router's own error
   element. An earlier version wrapped the whole layout, so any render error
   removed every way of getting out.
 

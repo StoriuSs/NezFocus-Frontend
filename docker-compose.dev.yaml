@@ -9,12 +9,12 @@
 # Explicit project name. Without it both compose files resolve to the same
 # project (named after the directory), so `down` on one also removes the
 # other's containers.
-name: react-starter-auth-dev
+name: nezfocus-web-frontend-dev
 
 services:
   # ── React App (Vite Dev Server) ──
   app:
-    container_name: react-starter-auth-dev
+    container_name: nezfocus-web-frontend-dev
     build:
       context: .
       dockerfile: Dockerfile

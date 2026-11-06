@@ -3,10 +3,6 @@
     "cancel": "Hủy",
     "edit": "Chỉnh sửa",
     "retry": "Thử lại",
-    "getStarted": "Bắt đầu",
-    "documentation": "Tài liệu",
-    "logout": "Đăng xuất",
-    "signIn": "Đăng nhập",
     "savePicture": "Lưu ảnh",
     "saveChanges": "Lưu thay đổi",
     "close": "Đóng",
@@ -18,20 +14,6 @@
     "roles": "Vai trò",
     "zoom": "Phóng to"
   },
-  "nav": {
-    "profile": "Hồ sơ",
-    "settings": "Cài đặt",
-    "accountMenu": "Menu tài khoản"
-  },
-  "toasts": {
-    "loggingOut": "Đang đăng xuất..."
-  },
-  "theme": {
-    "toggle": "Đổi giao diện",
-    "light": "Sáng",
-    "dark": "Tối",
-    "system": "Hệ thống"
-  },
   "errorBoundary": {
     "title": "Đã xảy ra lỗi",
     "description": "Đã có lỗi không mong muốn. Vui lòng thử lại hoặc tải lại trang.",
@@ -41,5 +23,92 @@
   "validation": {
     "emailInvalid": "Vui lòng nhập email hợp lệ",
     "passwordTooShort": "Mật khẩu phải có ít nhất 6 ký tự"
+  },
+  "language": {
+    "label": "Ngôn ngữ"
+  },
+  "authShell": {
+    "home": "Trang chủ NezFocus",
+    "brand": {
+      "title": "Không học một mình",
+      "description": "Phòng học nhóm cho sinh viên: học cùng bạn bè, theo một nhịp chung.",
+      "timer": {
+        "title": "Một đồng hồ cho cả phòng",
+        "detail": "Cả phòng cùng Tập trung, cùng Nghỉ"
+      },
+      "counted": {
+        "title": "Giờ học được tính thật",
+        "detail": "Đủ 15 phút một ngày là giữ được chuỗi ngày học"
+      },
+      "tasks": {
+        "title": "Việc nhóm có nhắc hạn",
+        "detail": "Giao cho nhiều người, xem mọi việc ở một trang"
+      },
+      "illustration": "Minh họa: sáu người cùng học trong một vòng nhịp"
+    }
+  },
+  "shell": {
+    "comingSoon": "{{name}} · sắp có",
+    "openNav": "Mở danh sách",
+    "closePanel": "Đóng",
+    "rail": {
+      "servers": "Server",
+      "pages": "Trang",
+      "dm": "Tin nhắn trực tiếp",
+      "addServer": "Tạo hoặc tham gia server",
+      "study": "Học",
+      "tasks": "Việc cần làm",
+      "notifications": "Thông báo",
+      "mentions": "{{name}}, {{count}} lượt nhắc tới bạn chưa đọc",
+      "unread": "{{name}}, có tin chưa đọc"
+    },
+    "channels": {
+      "label": "Kênh của {{name}}",
+      "mentions": "{{name}}, {{count}} lượt nhắc tới bạn chưa đọc",
+      "unread": "{{name}}, có tin chưa đọc"
+    },
+    "study": {
+      "title": "Học",
+      "overview": "Tổng quan",
+      "solo": "Học một mình"
+    },
+    "settings": {
+      "title": "Cài đặt",
+      "account": "Tài khoản",
+      "profile": "Hồ sơ",
+      "appearance": "Giao diện & ngôn ngữ",
+      "notifications": "Thông báo",
+      "privacy": "Quyền riêng tư"
+    },
+    "members": {
+      "title": "Thành viên",
+      "online": "Trực tuyến — {{count}}",
+      "offline": "Ngoại tuyến — {{count}}",
+      "owner": "Chủ server"
+    },
+    "me": {
+      "trigger": "{{name}}, {{status}} — mở menu của bạn",
+      "profile": "{{name}} — xem và sửa hồ sơ của bạn",
+      "settings": "Cài đặt",
+      "signOut": "Đăng xuất",
+      "status": {
+        "online": {
+          "name": "Trực tuyến",
+          "detail": ""
+        },
+        "idle": {
+          "name": "Vắng mặt",
+          "detail": "Tự bật sau 10 phút không dùng"
+        },
+        "dnd": {
+          "name": "Không làm phiền",
+          "detail": "Chỉ để người khác biết — thông báo vẫn như cũ"
+        },
+        "invisible": {
+          "name": "Ẩn",
+          "detail": "Mọi người thấy bạn ngoại tuyến"
+        }
+      }
+    }
   }
 }

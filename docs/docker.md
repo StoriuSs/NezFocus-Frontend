@@ -115,7 +115,7 @@ The whole story, and every setting: [environment.md](./environment.md).
 | Serves with | The Vite dev server | nginx |
 | Port inside → on the host | 3001 → `127.0.0.1:3001` | 8080 → `127.0.0.1:8081` |
 | Settings | `.env.development`, read by Vite | `.env.production`, read by the container at start |
-| Compose project | `react-starter-auth-dev` | `react-starter-auth-prod` |
+| Compose project | `nezfocus-web-frontend-dev` | `react-starter-auth-prod` |
 
 The two compose files name different projects, so stopping one never removes
 the other's container.

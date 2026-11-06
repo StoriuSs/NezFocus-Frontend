@@ -3,10 +3,6 @@
     "cancel": "Cancel",
     "edit": "Edit",
     "retry": "Retry",
-    "getStarted": "Get Started",
-    "documentation": "Documentation",
-    "logout": "Log out",
-    "signIn": "Sign In",
     "savePicture": "Save Picture",
     "saveChanges": "Save changes",
     "close": "Close",
@@ -18,20 +14,6 @@
     "roles": "Roles",
     "zoom": "Zoom"
   },
-  "nav": {
-    "profile": "Profile",
-    "settings": "Settings",
-    "accountMenu": "Account menu"
-  },
-  "toasts": {
-    "loggingOut": "Logging out..."
-  },
-  "theme": {
-    "toggle": "Toggle theme",
-    "light": "Light",
-    "dark": "Dark",
-    "system": "System"
-  },
   "errorBoundary": {
     "title": "Something went wrong",
     "description": "An unexpected error occurred. Please try again or refresh the page.",
@@ -41,5 +23,92 @@
   "validation": {
     "emailInvalid": "Enter a valid email address",
     "passwordTooShort": "Password must be at least 6 characters"
+  },
+  "language": {
+    "label": "Language"
+  },
+  "authShell": {
+    "home": "NezFocus home page",
+    "brand": {
+      "title": "Never study alone",
+      "description": "Group study rooms for students: study with friends, on one shared rhythm.",
+      "timer": {
+        "title": "One timer for the whole room",
+        "detail": "Everyone focuses together and takes breaks together"
+      },
+      "counted": {
+        "title": "Real study time, counted",
+        "detail": "15 minutes a day keeps your streak going"
+      },
+      "tasks": {
+        "title": "Group tasks with reminders",
+        "detail": "Assign to several people, see every task on one page"
+      },
+      "illustration": "Illustration: six people studying together in one rhythm ring"
+    }
+  },
+  "shell": {
+    "comingSoon": "{{name}} · coming soon",
+    "openNav": "Open navigation",
+    "closePanel": "Close",
+    "rail": {
+      "servers": "Servers",
+      "pages": "Pages",
+      "dm": "Direct messages",
+      "addServer": "Create or join a server",
+      "study": "Study",
+      "tasks": "To-do",
+      "notifications": "Notifications",
+      "mentions": "{{name}}, unread mentions of you: {{count}}",
+      "unread": "{{name}}, has unread messages"
+    },
+    "channels": {
+      "label": "Channels of {{name}}",
+      "mentions": "{{name}}, unread mentions of you: {{count}}",
+      "unread": "{{name}}, has unread messages"
+    },
+    "study": {
+      "title": "Study",
+      "overview": "Overview",
+      "solo": "Study alone"
+    },
+    "settings": {
+      "title": "Settings",
+      "account": "Account",
+      "profile": "Profile",
+      "appearance": "Appearance & language",
+      "notifications": "Notifications",
+      "privacy": "Privacy"
+    },
+    "members": {
+      "title": "Members",
+      "online": "Online — {{count}}",
+      "offline": "Offline — {{count}}",
+      "owner": "Owner"
+    },
+    "me": {
+      "trigger": "{{name}}, {{status}} — open your menu",
+      "profile": "{{name}} — view and edit your profile",
+      "settings": "Settings",
+      "signOut": "Sign out",
+      "status": {
+        "online": {
+          "name": "Online",
+          "detail": ""
+        },
+        "idle": {
+          "name": "Away",
+          "detail": "Turns on by itself after 10 minutes of not using NezFocus"
+        },
+        "dnd": {
+          "name": "Do not disturb",
+          "detail": "Only lets others know — notifications stay the same"
+        },
+        "invisible": {
+          "name": "Invisible",
+          "detail": "Everyone sees you as offline"
+        }
+      }
+    }
   }
 }
