@@ -12,22 +12,22 @@ import { useAuthStore } from '@/features/auth/auth.store'
 import { useChangePassword } from '@/features/auth/api/useChangePassword'
 import { useLogoutEverywhere } from '@/features/auth/api/useLogoutEverywhere'
 import { authFormError } from '@/features/auth/lib/form-errors'
-import { newPasswordCheck } from '@/features/auth/lib/schemas'
-import type { PasswordRule } from '@/features/auth/lib/password-rules'
+import { newPasswordCheck, passwordFieldMessage } from '@/features/auth/lib/schemas'
+import type { PasswordContext, PasswordRule } from '@/features/auth/lib/password-rules'
 import { Notice } from '@/features/auth/components/AuthCard'
 import { PasswordInput } from '@/features/auth/components/PasswordInput'
-import { PasswordChecklist } from '@/features/auth/components/PasswordChecklist'
+import { PasswordRules } from '@/features/auth/components/PasswordRules'
 import { SetPasswordSettings } from '@/features/auth/components/SetPasswordSettings'
 import { useSignInMethods } from '@/features/auth/api/useSignInMethods'
 
-const createSchema = (t: TFunction<'auth'>, email: string | undefined) =>
+const createSchema = (t: TFunction<'auth'>, identity: PasswordContext) =>
     z
         .object({
             currentPassword: z.string().min(1, t('validation.passwordRequired')),
             password: z.string(),
             confirmPassword: z.string()
         })
-        .superRefine((values, ctx) => newPasswordCheck(t, values, email, ctx))
+        .superRefine((values, ctx) => newPasswordCheck(t, values, identity, ctx))
 
 type Values = z.infer<ReturnType<typeof createSchema>>
 
@@ -56,7 +56,10 @@ function SettingsContent() {
     const [confirmingSignOut, setConfirmingSignOut] = useState(false)
     // How the account signs in: one made with Google has no password to change.
     const methods = useSignInMethods()
-    const schema = useMemo(() => createSchema(t, user?.email), [t, user?.email])
+    const schema = useMemo(
+        () => createSchema(t, { email: user?.email, username: user?.username }),
+        [t, user?.email, user?.username]
+    )
     const {
         register,
         handleSubmit,
@@ -148,7 +151,10 @@ function SettingsContent() {
                             )}
                         </FormField>
                         <div className='space-y-2'>
-                            <FormField label={t('fields.newPassword')} error={errors.password?.message}>
+                            <FormField
+                                label={t('fields.newPassword')}
+                                error={errors.password?.message ?? passwordFieldMessage(t, serverRules)}
+                            >
                                 {(control) => (
                                     <PasswordInput
                                         autoComplete='new-password'
@@ -157,7 +163,11 @@ function SettingsContent() {
                                     />
                                 )}
                             </FormField>
-                            <PasswordChecklist password={password} email={user?.email} serverRules={serverRules} />
+                            <PasswordRules
+                                password={password}
+                                serverRules={serverRules}
+                                showErrors={Boolean(errors.password)}
+                            />
                         </div>
                         <FormField label={t('fields.confirmPassword')} error={errors.confirmPassword?.message}>
                             {(control) => (

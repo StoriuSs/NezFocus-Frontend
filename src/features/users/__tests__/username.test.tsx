@@ -7,7 +7,8 @@ import { apiError } from '@/test/helpers'
 const api = { get: vi.fn(), post: vi.fn() }
 vi.mock('@/lib/api', () => ({ default: api }))
 
-const { useUsernameAvailability } = await import('@/features/users/api/useUsernameAvailability')
+const { USERNAME_MAX_LENGTH, USERNAME_PATTERN, useUsernameAvailability } =
+    await import('@/features/users/api/useUsernameAvailability')
 const { useSetUsername } = await import('@/features/users/api/useSetUsername')
 const { userKeys } = await import('@/features/users/api/keys')
 
@@ -19,6 +20,21 @@ function withClient() {
     )
     return { client, wrapper }
 }
+
+// SRS REQ-AUTH-01, the same cases as the API's username.rules.spec.ts.
+describe('the username rule', () => {
+    it('allows 2 to 32 characters', () => {
+        expect(USERNAME_MAX_LENGTH).toBe(32)
+    })
+
+    it.each(['ab', 'a'.repeat(32), 'nez.focus_2', 'an.h', '_x', '42'])('accepts %s', (username) => {
+        expect(USERNAME_PATTERN.test(username)).toBe(true)
+    })
+
+    it.each(['a', 'a'.repeat(33), 'Anh', 'an h', 'an-h', 'đức', 'a/b', 'anh@nez'])('refuses %s', (username) => {
+        expect(USERNAME_PATTERN.test(username)).toBe(false)
+    })
+})
 
 describe('checking a username as it is typed', () => {
     beforeEach(() => {

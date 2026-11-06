@@ -6,7 +6,7 @@ five tests, one per main flow. The suites have different needs:
 | Suite | Needs | What it checks |
 |---|---|---|
 | `e2e/oauth.spec.ts` | This app and **the API with Google configured** (skipped otherwise) | "Continue with Google" on sign-in, pointing at the API with the page to return to; the API's redirect to Google with PKCE, the registered return address and the `oauth_state` cookie. Not the sign-in at Google itself, which needs a real Google account: that is a manual test |
-| `e2e/account.spec.ts` | This app, **the API**, and the **Mailpit** it sends email to | An account's whole life: sign up (a common password refused), confirm with the code read from Mailpit (the address shown, not editable; the code signs in), choose a username; a deep link coming back after sign-in; a reload keeping the session (the refresh cookie crossing origins); a forgotten password reset, which signs in (the old password refused after); the account deleted |
+| `e2e/account.spec.ts` | This app, **the API**, and the **Mailpit** it sends email to | An account's whole life: sign up (a password missing two conditions refused), confirm with the code read from Mailpit (the address shown, not editable; the code signs in), choose a username; a deep link coming back after sign-in; a reload keeping the session (the refresh cookie crossing origins); a forgotten password reset, which signs in (the old password refused after); the account deleted |
 
 Any CSP violation or uncaught page error fails a run.
 

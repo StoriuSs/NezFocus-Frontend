@@ -51,7 +51,7 @@ react-starter/
     │   ├── auth/              # The session, the seven auth pages, Google, route guards
     │   │   ├── pages/         # SignIn, SignUp, VerifyEmail, ForgotPassword,
     │   │   │                  #   ResetPassword, OAuthCallback, Settings
-    │   │   ├── components/    # AuthCard, PasswordInput, PasswordChecklist, OAuthButtons,
+    │   │   ├── components/    # AuthCard, PasswordInput, PasswordRules, OAuthButtons,
     │   │   │                  #   SetPasswordSettings, DeleteAccountDialog, SentTo,
     │   │   │                  #   ProtectedRoute, RequireRole
     │   │   ├── api/           # auth.api.ts (every call to /auth), keys.ts, the query hooks

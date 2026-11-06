@@ -482,8 +482,8 @@ export interface components {
         }
         SetUsernameRequestDto: {
             /**
-             * @description 3-25 lowercase letters, digits or underscores. Normalised to lower case
-             *     first, so `Alice` and `alice` are the same name. Permanent once set.
+             * @description 2-32 lowercase letters, digits, underscores or dots. Normalised to lower
+             *     case first, so `Alice` and `alice` are the same name. Permanent once set.
              */
             username: string
         }

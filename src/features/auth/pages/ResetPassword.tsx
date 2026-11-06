@@ -14,11 +14,11 @@ import { useAuthStore } from '@/features/auth/auth.store'
 import { AUTH_PATHS, safeRedirect, withRedirect } from '@/features/auth/lib/paths'
 import { authPageState, useAuthPageState } from '@/features/auth/lib/page-state'
 import { authFormError } from '@/features/auth/lib/form-errors'
-import { authFields, newPasswordCheck } from '@/features/auth/lib/schemas'
+import { authFields, newPasswordCheck, passwordFieldMessage } from '@/features/auth/lib/schemas'
 import type { PasswordRule } from '@/features/auth/lib/password-rules'
 import { AuthCard, Notice } from '@/features/auth/components/AuthCard'
 import { PasswordInput } from '@/features/auth/components/PasswordInput'
-import { PasswordChecklist } from '@/features/auth/components/PasswordChecklist'
+import { PasswordRules } from '@/features/auth/components/PasswordRules'
 import { SentTo } from '@/features/auth/components/SentTo'
 import { useResendCooldown } from '@/features/auth/hooks/useResendCooldown'
 import { secondsUntilResend } from '@/features/auth/lib/code-sent'
@@ -31,7 +31,7 @@ const createSchema = (t: TFunction<'auth'>) =>
             password: z.string(),
             confirmPassword: z.string()
         })
-        .superRefine((values, ctx) => newPasswordCheck(t, values, values.email, ctx))
+        .superRefine((values, ctx) => newPasswordCheck(t, values, { email: values.email }, ctx))
 
 type Values = z.input<ReturnType<typeof createSchema>>
 
@@ -150,7 +150,10 @@ export default function ResetPassword() {
                     )}
                 </FormField>
                 <div className='space-y-2'>
-                    <FormField label={t('fields.newPassword')} error={errors.password?.message}>
+                    <FormField
+                        label={t('fields.newPassword')}
+                        error={errors.password?.message ?? passwordFieldMessage(t, serverRules)}
+                    >
                         {(control) => (
                             <PasswordInput
                                 autoComplete='new-password'
@@ -159,7 +162,11 @@ export default function ResetPassword() {
                             />
                         )}
                     </FormField>
-                    <PasswordChecklist password={password} email={email} serverRules={serverRules} />
+                    <PasswordRules
+                        password={password}
+                        serverRules={serverRules}
+                        showErrors={Boolean(errors.password)}
+                    />
                 </div>
                 <FormField label={t('fields.confirmPassword')} error={errors.confirmPassword?.message}>
                     {(control) => (

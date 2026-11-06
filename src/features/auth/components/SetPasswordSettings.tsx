@@ -12,12 +12,12 @@ import { safeSessionStorage } from '@/lib/safe-storage'
 import { useSendPasswordSetCode } from '@/features/auth/api/useSendPasswordSetCode'
 import { useSetPassword } from '@/features/auth/api/useSetPassword'
 import { authFormError } from '@/features/auth/lib/form-errors'
-import { authFields, newPasswordCheck } from '@/features/auth/lib/schemas'
+import { authFields, newPasswordCheck, passwordFieldMessage } from '@/features/auth/lib/schemas'
 import type { PasswordRule } from '@/features/auth/lib/password-rules'
 import { useResendCooldown } from '@/features/auth/hooks/useResendCooldown'
 import { Notice } from '@/features/auth/components/AuthCard'
 import { PasswordInput } from '@/features/auth/components/PasswordInput'
-import { PasswordChecklist } from '@/features/auth/components/PasswordChecklist'
+import { PasswordRules } from '@/features/auth/components/PasswordRules'
 
 /** When a code was last sent, so a reload still offers the form it is for. */
 const SENT_KEY = 'auth:password-set-code-sent'
@@ -39,7 +39,7 @@ function sentEarlier(email: string | undefined): number | null {
 const createSchema = (t: TFunction<'auth'>, email: string | undefined) =>
     z
         .object({ code: authFields(t).code, password: z.string(), confirmPassword: z.string() })
-        .superRefine((values, ctx) => newPasswordCheck(t, values, email, ctx))
+        .superRefine((values, ctx) => newPasswordCheck(t, values, { email }, ctx))
 
 type Values = z.input<ReturnType<typeof createSchema>>
 
@@ -178,7 +178,10 @@ export function SetPasswordSettings({ email, providers }: { email: string | unde
                         )}
                     </FormField>
                     <div className='space-y-2'>
-                        <FormField label={t('fields.newPassword')} error={errors.password?.message}>
+                        <FormField
+                            label={t('fields.newPassword')}
+                            error={errors.password?.message ?? passwordFieldMessage(t, serverRules)}
+                        >
                             {(field) => (
                                 <PasswordInput
                                     autoComplete='new-password'
@@ -187,7 +190,11 @@ export function SetPasswordSettings({ email, providers }: { email: string | unde
                                 />
                             )}
                         </FormField>
-                        <PasswordChecklist password={password} email={email} serverRules={serverRules} />
+                        <PasswordRules
+                            password={password}
+                            serverRules={serverRules}
+                            showErrors={Boolean(errors.password)}
+                        />
                     </div>
                     <FormField label={t('fields.confirmPassword')} error={errors.confirmPassword?.message}>
                         {(field) => (

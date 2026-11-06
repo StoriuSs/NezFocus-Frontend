@@ -24,6 +24,7 @@
     "emailInvalid": "Enter a valid email address",
     "passwordTooShort": "Password must be at least 6 characters"
   },
+  "closeToast": "Close notification",
   "language": {
     "label": "Language"
   },

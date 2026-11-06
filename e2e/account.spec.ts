@@ -57,12 +57,14 @@ test('sign up, confirm the address (which signs in), choose a username', async (
     await page.waitForURL(/\/sign-in$/)
     await page.getByRole('link', { name: 'Create one' }).click()
 
-    // A common password passes every rule the browser checks; the API refuses it.
+    // The SRS example ontap2026 lacks an upper-case letter and a special
+    // character: sending marks those two conditions under the field (C-22).
     await page.getByLabel('Email').fill(email)
-    await page.getByLabel('Password', { exact: true }).fill('Password1!')
-    await page.getByLabel('Confirm password').fill('Password1!')
+    await page.getByLabel('Password', { exact: true }).fill('ontap2026')
+    await page.getByLabel('Confirm password').fill('ontap2026')
     await page.getByRole('button', { name: 'Create account' }).click()
-    await expect(page.getByText('Not a common password', { exact: false })).toBeVisible()
+    await expect(page.getByText("This password doesn't meet the rules below")).toBeVisible()
+    await expect(page.locator('li[data-state="error"]')).toHaveText([/uppercase/, /special character/])
 
     const sentAt = new Date()
     await page.getByLabel('Password', { exact: true }).fill(PASSWORD)

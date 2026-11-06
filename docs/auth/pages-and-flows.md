@@ -133,7 +133,7 @@ their inbox instead: the API emails them how to sign in, and no code.
 
 | Refusal | What the page does |
 |---|---|
-| `422 AUTH_PASSWORD_REJECTED` | Marks the broken rules on the checklist, including the ones only the API checks (a common password) |
+| `422 AUTH_PASSWORD_REJECTED` | Marks the refused conditions under the field; a refused length cap, email or username becomes the field's error |
 | `429` (too many sign-ups from this network, or emails to this address) | Says how long to wait |
 
 Sent back from the confirm page with "Use a different address", the form opens

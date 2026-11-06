@@ -27,7 +27,7 @@
     "description": "Đây sẽ là định danh duy nhất của bạn. Bạn chỉ có thể đặt một lần!",
     "label": "Tên người dùng",
     "placeholder": "ten_nguoi_dung",
-    "hint": "3-25 ký tự. Chỉ chữ cái, số và dấu gạch dưới.",
+    "hint": "2–32 ký tự: chữ thường, chữ số, dấu gạch dưới và dấu chấm.",
     "taken": "Tên người dùng này đã được sử dụng.",
     "confirm": "Xác nhận tên người dùng",
     "setting": "Đang đặt tên người dùng...",

@@ -83,7 +83,7 @@ ground up, with the reasons behind each.
 
 | Thing | The app | The API |
 |---|---|---|
-| Password rules | Ticks them off while you type (`password-rules.ts`) | Decides; also checks two rules the app cannot (a common password, the username) |
+| Password rules | Ticks them off while you type (`password-rules.ts`) | Decides; also checks the username where the form does not know it |
 | Emailed codes | Shows the code field; waits a minute before offering another | Makes, emails and checks them; 10 minutes, 5 tries |
 | Too many attempts | Shows how long to wait, keeps the button disabled | Counts and refuses (`429`, with `Retry-After`) |
 | Google | A link to the API, and a page to land on afterwards | The whole conversation with Google, account linking |

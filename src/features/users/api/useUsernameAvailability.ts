@@ -5,8 +5,9 @@ import type { UsernameAvailability } from '@/features/users/types'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { userKeys } from './keys'
 
-/** Mirrors the backend's USERNAME_PATTERN. */
-export const USERNAME_PATTERN = /^[a-z0-9_]{3,25}$/
+/** Mirrors the backend's username.rules.ts (SRS REQ-AUTH-01): lower case, 2-32 of `a-z 0-9 _ .`. */
+export const USERNAME_MAX_LENGTH = 32
+export const USERNAME_PATTERN = /^[a-z0-9_.]{2,32}$/
 
 const DEBOUNCE_MS = 400
 

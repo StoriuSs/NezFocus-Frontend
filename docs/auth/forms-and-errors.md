@@ -167,19 +167,24 @@ trip.
 | `digit` | contain a digit | yes |
 | `special` | contain a symbol: anything that is not a letter or a digit, a space included | yes |
 | `matches_email` | not *be* the email address or the part before the `@`, dressed up: `Ada2026!` for `ada@example.test` is refused, `Ada-likes-2026!` is fine | yes |
-| `matches_username` | not be the username | no: a new account has no username yet |
-| `common` | not be a common password | no: the API's list is about 8,500 words, too big to send to every visitor |
+| `matches_username` | not be the username | where the form knows it (settings); the API checks it everywhere |
+
+There is no common-password rule (D-29): `Password1!` is accepted.
 
 Characters are counted as the API counts them (one per character, even for
 characters JavaScript stores as two units), and letters of any alphabet count
 as letters.
 
-**The checklist** ([PasswordChecklist.tsx](../../src/features/auth/components/PasswordChecklist.tsx))
-ticks off the first five rules as they are met. Underneath, in red, it lists:
-`matches_email` while it is broken, `max_length` while it is broken, and the
-rules the API refused on the last attempt (`common`, `matches_username`),
-until the password is edited. A refusal is never shown as a vague "invalid
-password".
+**The conditions** ([PasswordRules.tsx](../../src/features/auth/components/PasswordRules.tsx), C-22)
+sit under the field, always shown: a two-column grid of `min_length`,
+`uppercase`, `lowercase`, `digit` and `special` (`GRID_RULES`). Each one
+is unmet (circle), met (circle with a tick) or, once the form was sent or the
+API refused it, an error (circle with a cross, in red); a screen reader hears
+each condition as it is met. The other three (`max_length`, `matches_email`,
+`matches_username`: `FIELD_RULES`) are not conditions but the field's own
+error, named ("Don't use your email as your password"), from the browser's
+check or from the API's refusal (`passwordFieldMessage`). A refusal is never
+shown as a vague "invalid password".
 
 **Checked against which address:** the one typed on sign-up and reset, the
 account's own in settings. The API also checks the username, on reset, change

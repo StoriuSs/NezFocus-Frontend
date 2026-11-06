@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 
 import { useAuthStore } from '@/features/auth'
 import { useSetUsername } from '@/features/users/api/useSetUsername'
-import { useUsernameAvailability } from '@/features/users/api/useUsernameAvailability'
+import { USERNAME_MAX_LENGTH, useUsernameAvailability } from '@/features/users/api/useUsernameAvailability'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -58,10 +58,10 @@ export function UsernamePromptModal({ open }: UsernamePromptModalProps) {
                             <Input
                                 id='username'
                                 value={username}
-                                onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                                onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_.]/g, ''))}
                                 placeholder={t('usernamePrompt.placeholder')}
                                 className='pr-10'
-                                maxLength={25}
+                                maxLength={USERNAME_MAX_LENGTH}
                                 autoComplete='off'
                             />
                             <div className='absolute right-3 top-1/2 -translate-y-1/2'>

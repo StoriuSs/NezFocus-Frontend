@@ -12,7 +12,7 @@ import { authApi } from '@/features/auth/api/auth.api'
 import { AUTH_PATHS, withRedirect } from '@/features/auth/lib/paths'
 import { authPageState, useAuthPageState } from '@/features/auth/lib/page-state'
 import { authFormError, formatWait } from '@/features/auth/lib/form-errors'
-import { authFields, newPasswordCheck } from '@/features/auth/lib/schemas'
+import { authFields, newPasswordCheck, passwordFieldMessage } from '@/features/auth/lib/schemas'
 import type { PasswordRule } from '@/features/auth/lib/password-rules'
 import { recordCodeSent } from '@/features/auth/lib/code-sent'
 import { holdSignUpPassword } from '@/features/auth/lib/sign-up-password'
@@ -20,12 +20,12 @@ import { useResendCooldown } from '@/features/auth/hooks/useResendCooldown'
 import { AuthCard, Notice } from '@/features/auth/components/AuthCard'
 import { PasswordInput } from '@/features/auth/components/PasswordInput'
 import { OAuthButtons } from '@/features/auth/components/OAuthButtons'
-import { PasswordChecklist } from '@/features/auth/components/PasswordChecklist'
+import { PasswordRules } from '@/features/auth/components/PasswordRules'
 
 const createSchema = (t: TFunction<'auth'>) =>
     z
         .object({ email: authFields(t).email, password: z.string(), confirmPassword: z.string() })
-        .superRefine((values, ctx) => newPasswordCheck(t, values, values.email, ctx))
+        .superRefine((values, ctx) => newPasswordCheck(t, values, { email: values.email }, ctx))
 
 type Values = z.infer<ReturnType<typeof createSchema>>
 
@@ -60,7 +60,6 @@ export default function SignUp() {
     })
 
     const password = useWatch({ control: formControl, name: 'password' })
-    const email = useWatch({ control: formControl, name: 'email' })
 
     async function onSubmit(values: Values) {
         setFormError(null)
@@ -106,7 +105,10 @@ export default function SignUp() {
                     {(control) => <Input type='email' autoComplete='email' {...control} {...register('email')} />}
                 </FormField>
                 <div className='space-y-2'>
-                    <FormField label={t('fields.password')} error={errors.password?.message}>
+                    <FormField
+                        label={t('fields.password')}
+                        error={errors.password?.message ?? passwordFieldMessage(t, serverRules)}
+                    >
                         {(control) => (
                             <PasswordInput
                                 autoComplete='new-password'
@@ -115,7 +117,11 @@ export default function SignUp() {
                             />
                         )}
                     </FormField>
-                    <PasswordChecklist password={password} email={email} serverRules={serverRules} />
+                    <PasswordRules
+                        password={password}
+                        serverRules={serverRules}
+                        showErrors={Boolean(errors.password)}
+                    />
                 </div>
                 <FormField label={t('fields.confirmPassword')} error={errors.confirmPassword?.message}>
                     {(control) => (

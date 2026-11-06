@@ -96,7 +96,7 @@ src/features/auth/
 | File | What it holds |
 |---|---|
 | [schemas.ts](../../src/features/auth/lib/schemas.ts) | `authFields(t)`: `email`, `code` (6 digits); `newPasswordCheck` (the rules, and the confirmation) |
-| [password-rules.ts](../../src/features/auth/lib/password-rules.ts) | `brokenPasswordRules(password, email)`, `rejectedRules(data.rules)`, `CHECKLIST_RULES`, the lengths |
+| [password-rules.ts](../../src/features/auth/lib/password-rules.ts) | `brokenPasswordRules(password, { email, username })`, `rejectedRules(data.rules)`, `GRID_RULES`, `FIELD_RULES`, `passwordFieldRule`, the lengths |
 | [code-sent.ts](../../src/features/auth/lib/code-sent.ts) | `recordCodeSent(kind, email)`, `secondsUntilResend(kind, email)`, `RESEND_AFTER_SECONDS` (60) |
 | [useResendCooldown.ts](../../src/features/auth/hooks/useResendCooldown.ts) | A seconds countdown: `remaining`, `start(seconds)` |
 
@@ -118,7 +118,7 @@ src/features/auth/
 |---|---|
 | [AuthCard.tsx](../../src/features/auth/components/AuthCard.tsx) | `AuthCard`, the frame of every sign-in page, and `Notice`, a message in it (`info`, `success`, `error`) |
 | [PasswordInput.tsx](../../src/features/auth/components/PasswordInput.tsx) | A password field with a show/hide button |
-| [PasswordChecklist.tsx](../../src/features/auth/components/PasswordChecklist.tsx) | The rules, ticked off as they are met, and the API's refusals |
+| [PasswordRules.tsx](../../src/features/auth/components/PasswordRules.tsx) | The five conditions under a new-password field (C-22): unmet, met, error |
 | [SentTo.tsx](../../src/features/auth/components/SentTo.tsx) | The address a code went to, as text, with "Use a different address" |
 | [OAuthButtons.tsx](../../src/features/auth/components/OAuthButtons.tsx) | "Continue with Google", when the API offers it |
 | [SetPasswordSettings.tsx](../../src/features/auth/components/SetPasswordSettings.tsx) | "Set a password", for an account made with Google |

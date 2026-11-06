@@ -27,7 +27,7 @@
     "description": "This will be your unique identifier. You can only set it once!",
     "label": "Username",
     "placeholder": "cool_username",
-    "hint": "3-25 characters. Letters, numbers, and underscores only.",
+    "hint": "2–32 characters: lowercase letters, numbers, underscores and dots.",
     "taken": "This username is already taken.",
     "confirm": "Confirm Username",
     "setting": "Setting username...",
