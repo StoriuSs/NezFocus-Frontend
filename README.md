@@ -35,8 +35,8 @@ languages, dark mode, tests, and a production image with CI and deploys.
   with only an email and an emailed code, then "complete your account"
   (display name, username, password, time zone, the terms), sign in,
   "Continue with Google", forgotten-password reset, a session that survives a
-  reload and stays in step across tabs, sign out everywhere, and deleting the
-  account
+  reload and stays in step across tabs, a list of the signed-in devices
+  (sign out one, or all but this one), and deleting the account
 - **Internationalization** — i18next, English and Vietnamese
 - **Dark mode** — light, dark or the system's setting, remembered, with no
   flash of the wrong one on load
@@ -86,7 +86,7 @@ trades the cookie for a new one. The pages:
 | `/login` | Email and password, or "Continue with Google" |
 | `/forgot-password`, `/reset-password` | An emailed code, then a new password; that also signs you in |
 | `/auth/callback` | Where the API sends the browser back after Google |
-| `/settings` | Change the password, sign out everywhere |
+| `/settings/account` | "Account": change the password, see the signed-in devices and sign them out (`/settings` redirects here) |
 | `/profile` | The profile, the avatar, and deleting the account |
 | `/terms`, `/privacy` | The Terms of Service and the Privacy Policy, for everyone |
 

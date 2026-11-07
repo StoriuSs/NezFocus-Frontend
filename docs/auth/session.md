@@ -186,8 +186,8 @@ API's `/auth` routes. Two request options matter:
 | Routes | `skipAuth` | Bearer token | `withCredentials` | Why |
 |---|---|---|---|---|
 | `POST /auth/login`, `/email-code`, `/email-code/verify`, `/forgot-password`, `/reset-password`, `/refresh`, `/logout`; `GET /auth/options` | yes | no | yes | Public routes; some set or read the cookie. `/auth/logout` gives up after 5 seconds |
-| `POST /auth/logout-all`, `POST /auth/account/delete` | no | yes | yes | Signed in, and the answer clears the cookie |
-| `POST /auth/complete-account`, `POST /auth/change-password`; `GET /users/me` | no | yes | no | Ordinary signed-in requests |
+| `POST /auth/account/delete` | no | yes | yes | Signed in, and the answer clears the cookie |
+| `POST /auth/complete-account`, `POST /auth/change-password`; `GET /auth/sessions`, `DELETE /auth/sessions`, `DELETE /auth/sessions/{id}`; `GET /users/me` | no | yes | no | Ordinary signed-in requests. The app never ends this device's own session through the session routes, so its cookie stays |
 
 ## Several tabs
 
@@ -242,7 +242,6 @@ Who calls it:
 | Your menu's **Sign out** | none | home |
 | **Sign out** in the AuthShell's footer, on `/welcome` | none | home |
 | **Sign out and continue** on the "already signed in" card | none | the same page, now as a visitor |
-| Settings, **Sign out everywhere**, once `POST /auth/logout-all` succeeded | `you-signed-out-everywhere` | home |
 | The delete-account dialog, once `POST /auth/account/delete` succeeded | `account-deleted` | home |
 | The API client, on a `401` that ends the session | from the API's `data.reason` | see below |
 | The API client, on `403 AUTH_ACCOUNT_DISABLED` | `account-disabled` | home |
@@ -266,13 +265,12 @@ The API says why a session ended in `data.reason` on a `401`
 
 | Reason in the app | The API's `data.reason`, or what happened | The message after the reload | Lands on |
 |---|---|---|---|
-| `session-expired` | none, `expired`, or one the app does not know | banner: "Your session has ended · sign in again to continue" | sign-in, then back to this page |
+| `session-expired` | none, `expired`, `revoked` (this device was signed out from another device's list of sessions, D-65), or one the app does not know | banner: "Your session has ended · sign in again to continue" | sign-in, then back to this page |
 | `password-changed` | `password_changed`: the password was changed or reset on another device | banner: "Your password was just changed on another device · sign in with the new password" | sign-in by password (`?method=password`), then back |
-| `signed-out-everywhere` | `signed_out_everywhere`: "Sign out everywhere" was chosen on another device | banner: "One of your devices chose "Sign out other devices" · sign in again" | sign-in, then back |
+| `signed-out-everywhere` | `signed_out_everywhere`: "Sign out the other devices" was chosen on another device (D-75) | banner: "One of your devices chose "Sign out the other devices" · sign in again" | sign-in, then back |
 | `signed-out` | `signed_out`: this session was signed out somewhere the broadcast did not reach | banner: the same as `session-expired` | sign-in, then back |
 | `security` | `security`: the refresh cookie was used twice, so the API suspects it was copied, and ended the session | banner: "Your session was closed to protect your account because it was in use in two places at once · sign in again, and change your password if that wasn't you" | sign-in, then back |
 | `account-disabled` | `account_deleted` from a refresh, or `403 AUTH_ACCOUNT_DISABLED` from any route | toast: "This account has been deleted" (error) | home |
-| `you-signed-out-everywhere` | the person chose Sign out everywhere, here | toast: "You're signed out on every device." (success) | home |
 | `account-deleted` | the person deleted the account, here | toast: "Your account was deleted. We've emailed you a confirmation." (success) | home |
 | none | the person chose Sign out | no message | home |
 

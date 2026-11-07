@@ -50,11 +50,12 @@ app finds out at run time what the API has turned on
 | "Continue with Google", when the API has Google set up | `/login`, `/register`, then `/auth/callback` | [pages-and-flows.md](./pages-and-flows.md#continue-with-google) |
 | Forgot the password: get an emailed code, choose a new password. This signs in, and signs out every other device | `/forgot-password`, `/reset-password` | [pages-and-flows.md](./pages-and-flows.md#forgot-and-reset-the-password) |
 | Read the terms and the privacy policy | `/terms`, `/privacy` | [pages-and-flows.md](./pages-and-flows.md#the-terms-and-the-privacy-policy) |
-| Change the password (other devices are signed out, this one stays) | `/settings` | [account-settings.md](./account-settings.md#change-the-password) |
-| Sign out, or sign out on every device | your menu (avatar at the foot of the rail), `/settings` | [account-settings.md](./account-settings.md#sign-out-everywhere) |
+| Change the password (other devices are signed out, this one stays) | `/settings/account` | [account-settings.md](./account-settings.md#change-the-password) |
+| Sign out | your menu (avatar at the foot of the rail) | [session.md](./session.md#signing-out-step-by-step) |
+| See every signed-in device; sign out one of them, or all but this one | `/settings/account`, **Sessions** | [account-settings.md](./account-settings.md#sessions) |
 | Delete the account, with its password | `/profile` | [account-settings.md](./account-settings.md#delete-the-account) |
 | Stay signed in across reloads and new tabs; sign in or out in every open tab at once | everywhere | [session.md](./session.md) |
-| Be told why, when a session ends (password changed elsewhere, signed out everywhere, account deleted, expired) | a banner on the sign-in page, or a toast after the page reloads | [session.md](./session.md#why-a-session-ended-every-reason) |
+| Be told why, when a session ends (password changed elsewhere, signed out from another device, account deleted, expired) | a banner on the sign-in page, or a toast after the page reloads | [session.md](./session.md#why-a-session-ended-every-reason) |
 
 ## What the app gives you as a developer
 
@@ -73,7 +74,7 @@ app finds out at run time what the API has turned on
 |---|---|
 | **Access token** | A short-lived pass (15 minutes by default) the API hands out at sign-in. The app sends it with every request as `Authorization: Bearer <token>`. The app keeps it in memory only |
 | **Refresh token** | A long-lived secret the API keeps in a **cookie** the app cannot read (an *httpOnly* cookie). The browser sends it to the API by itself. The app trades it for a new access token |
-| **Session** | One sign-in on one browser, as the API records it. It ends when the person signs out, after 30 days by default, or when the API ends it (a password change, "sign out everywhere", a deleted account) |
+| **Session** | One sign-in on one browser, as the API records it. It ends when the person signs out, after 30 days by default, or when the API ends it (a password change, "Sign out" or "Sign out the other devices" on another device, a deleted account) |
 | **Emailed code** | Six digits the API emails to sign in (and so create an account) or to reset a password. It works for 10 minutes, and only the newest one works |
 | **Complete account** | An account that has done "complete your account" (`/welcome`). Until then the API refuses the rest of the app (`ACCOUNT_INCOMPLETE`) |
 | **`?next=`**, **`?invite=`** | The page to go to after signing in, and an invite link waiting, carried in the address from one auth page to the next. The API's Google route calls `next` `redirect` |
@@ -117,7 +118,7 @@ ground up, with the reasons behind each.
 | [pages-and-flows.md](./pages-and-flows.md) | Every auth page: its address, who may open it, what it shows, what it asks the API, where it goes next. `?next=`, "complete your account" and the gate before the app, Google, the "already signed in" card, the legal pages. Diagrams of creating an account, sign-in and Google |
 | [session.md](./session.md) | Where the session lives, the page load, getting a fresh token, what the API client does with each answer, tabs, every reason a session ends and what the person sees |
 | [forms-and-errors.md](./forms-and-errors.md) | How forms check input, turn API refusals into messages, handle "too many attempts", the password checklist, and the "send another code" timers |
-| [account-settings.md](./account-settings.md) | The settings page (change the password, sign out everywhere) and deleting an account |
+| [account-settings.md](./account-settings.md) | The account page (the email, change the password, the signed-in devices) and deleting an account |
 | [in-the-code.md](./in-the-code.md) | The files, the guards, the store, the tests, and how to add a page |
 
 ## What the API must have

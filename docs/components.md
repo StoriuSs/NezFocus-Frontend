@@ -10,6 +10,7 @@ every page shows. Components used by one feature only live in that feature's
 - [The layouts](#the-layouts)
 - [Language toggle](#language-toggle)
 - [Banner](#banner)
+- [Settings rows](#settings-rows)
 - [Forms](#forms)
 - [Modals](#modals)
 - [shadcn/ui components](#shadcnui-components)
@@ -30,6 +31,7 @@ src/components/
 ├── PageLoader.tsx         # The spinner while a page's chunk loads
 ├── NavigationProgress.tsx # The bar at the top during navigation
 ├── Banner.tsx             # One line of news about the page (C-16), e.g. why a session ended
+├── settings/SettingsRow.tsx  # SettingsGroup, SettingsRow (C-27) and Tag (C-36) for the settings pages
 └── LanguageToggle.tsx     # "Tiếng Việt · English" at the AuthShell's foot
 
 src/app/layout/AuthShell.tsx                       # The sign-in pages' layout
@@ -177,12 +179,14 @@ after sign-in, behind `ProtectedRoute`:
 
 - **The rail** (`Rail.tsx`), 72 wide: direct messages, servers, Study, and
   at the bottom your avatar, which opens **your menu** (`MeMenu.tsx`): your
-  profile, your status, **Settings** and **Sign out**. The menu's data is
+  profile, your status, **Settings** (the account page, `/settings/account`)
+  and **Sign out**. The menu's data is
   the `useProfile` query, the same one the profile page uses, so a change
   there shows here at once.
 - **The list column** (`ListColumn.tsx`), 240 wide. Which list it shows is
   the route's choice, in its `handle: { column }` (`study`, `server` or
-  `settings`).
+  `settings`). The `settings` column lists the settings pages: **Account**
+  and **Profile** for now, the others marked as coming later.
 - **The page area.** A page draws its own header with `ShellPage`
   (`src/components/shell/ShellPage.tsx`): the 48-high header with the
   title and the page's actions, a scrolling body, and an optional right
@@ -211,6 +215,33 @@ page says there why a session ended (S-AUTH-03 `session-revoked`).
 ```tsx
 <Banner icon={LogOut}>{t('sessionEnded.ended')}</Banner>
 ```
+
+## Settings rows
+
+`src/components/settings/SettingsRow.tsx` holds the pieces every settings
+page is built from (C-27). The account page (`/settings/account`) is the
+first to use them ([auth/account-settings.md](./auth/account-settings.md)).
+
+- **`SettingsGroup`** (`id`, `title`, children): a `<section>` named by its
+  title, an `<h2>` in small upper-case `text-tertiary`, over its rows. No card
+  around it; the page puts groups 32 apart (`space-y-8`). The section is a
+  landmark, so a test or a screen reader finds a group by its title
+  (`getByRole('region', { name: 'Sessions' })`).
+- **`SettingsRow`** (`label`, `value?`, `description?`, `control?`): the label,
+  a read-only value under it (never pushed to the far edge of the 720 block),
+  a description in small `text-tertiary`, and the control on the right,
+  always visible.
+- **`Tag`** (C-36): a short label that cannot be clicked, a rounded outline
+  around small `text-secondary` text: "This device", later a role.
+
+```tsx
+<SettingsGroup id='sign-in' title={t('settings.signIn.title')}>
+    <SettingsRow label={t('settings.signIn.email')} value={user?.email} description={t('settings.signIn.emailHint')} />
+</SettingsGroup>
+```
+
+The group's `id` must be unique on the page: it ties the section to its
+title.
 
 ## Forms
 

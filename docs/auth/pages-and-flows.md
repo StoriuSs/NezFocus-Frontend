@@ -36,7 +36,7 @@ loaded only when first opened (`lazy`).
 | `/forgot-password` | visitors (a signed-in person sees a card) | Asks for a code to choose a new password | `POST /auth/forgot-password` | always the reset page |
 | `/reset-password` | visitors (a signed-in person sees a card) | The code and a new password. Signs in, and signs out every other device | `POST /auth/reset-password`, `POST /auth/forgot-password` (send again) | as `/login` by password |
 | `/auth/callback` | anyone | Where the API sends the browser back after Google | `POST /auth/refresh` | as `/login`; or says why it failed |
-| `/settings` | signed in, complete | Password, sign out everywhere ([account-settings.md](./account-settings.md)) | several | stays |
+| `/settings/account` | signed in, complete | "Account": the email, the password, the signed-in devices ([account-settings.md](./account-settings.md)). `/settings` redirects here | several | stays |
 | `/profile` | signed in, complete | The profile, and "Delete account" ([account-settings.md](./account-settings.md#delete-the-account)) | several | stays |
 | `/terms`, `/privacy` | anyone | The Terms of Service and the Privacy Policy ([below](#the-terms-and-the-privacy-policy)) | nothing | stays |
 
@@ -363,7 +363,7 @@ said once: a reload does not say it again.
 | Reason | The banner |
 |---|---|
 | `password-changed` | "Your password was just changed on another device · sign in with the new password" (and the page opens on the password) |
-| `signed-out-everywhere` | "One of your devices chose "Sign out other devices" · sign in again" |
+| `signed-out-everywhere` | "One of your devices chose "Sign out the other devices" · sign in again" |
 | `security` | "Your session was closed to protect your account because it was in use in two places at once · sign in again, and change your password if that wasn't you" (a shield icon) |
 | `session-expired`, `signed-out` | "Your session has ended · sign in again to continue" |
 
@@ -549,7 +549,7 @@ in. `/welcome` has its own guard ([the gate](#the-gate-an-incomplete-account-see
 ## Pages for signed-in people
 
 `ProtectedRoute` wraps the AppShell, so every page in it: `/study`,
-`/settings`, `/profile` and the rest. A visitor is sent to
+`/settings/account`, `/profile` and the rest. A visitor is sent to
 `/login?next=<the whole address>` (path, query and `#` part), and comes
 back there after signing in. An incomplete account is sent to
 `/welcome?next=<the whole address>`. While a sign-out is reloading the app, it

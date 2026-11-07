@@ -393,9 +393,9 @@ could have checked them. Tick each one.
       cached copy would keep browsers on an old address.
 - [ ] `curl -sI https://app.example.com | grep -i content-security-policy`
       prints the policy, and its `connect-src` names `https://api.example.com`.
-- [ ] Opening `https://app.example.com/settings` directly in a new tab goes to
-      the sign-in page, and after signing in comes back to Settings (deep links
-      work through nginx).
+- [ ] Opening `https://app.example.com/settings/account` directly in a new tab
+      goes to the sign-in page, and after signing in comes back to the Account
+      page (deep links work through nginx).
 
 **Sign-in, which needs the API (step 9)**
 

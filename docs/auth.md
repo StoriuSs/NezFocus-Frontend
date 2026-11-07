@@ -9,7 +9,7 @@ The sign-in documentation now lives in its own folder:
 | Every auth page, `?next=`, "complete your account", Google | [auth/pages-and-flows.md](./auth/pages-and-flows.md) |
 | The access token, refreshing, tabs, signing out and why | [auth/session.md](./auth/session.md) |
 | Form checks, error messages, "too many attempts", password rules | [auth/forms-and-errors.md](./auth/forms-and-errors.md) |
-| Settings: password, sign out everywhere, deleting the account | [auth/account-settings.md](./auth/account-settings.md) |
+| Settings: the account page (password, signed-in devices), deleting the account | [auth/account-settings.md](./auth/account-settings.md) |
 | The files, guards, store and tests | [auth/in-the-code.md](./auth/in-the-code.md) |
 | Choosing the username (on "complete your account"; the old dialog is gone) | [auth/pages-and-flows.md](./auth/pages-and-flows.md#complete-your-account) |
 

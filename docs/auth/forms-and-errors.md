@@ -51,7 +51,7 @@ Every auth form follows the same pattern:
    new password) calls `authApi` or the store directly: what it does next is
    the session itself, which the store owns. The settings page and the
    delete dialog use a mutation hook from `api/` (`useChangePassword`,
-   `useDeleteAccount`, `useLogoutEverywhere`), as the users feature does,
+   `useDeleteAccount`), as the users feature does,
    with `mutateAsync`. The button is disabled while the request is out.
 5. **On a refusal**, the page calls `requestFailure(error)`
    ([form-problem.ts](../../src/features/auth/lib/form-problem.ts)) on the auth

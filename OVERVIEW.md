@@ -168,11 +168,12 @@ sequenceDiagram
   which is for the page to handle — signing people out for an ordinary
   permission error was a real bug.
 - **A sign-out says why, and lands where it makes sense.** The API's 401 names
-  the reason (`data.reason`: the password changed, signed out everywhere, a
-  security problem…). The app reloads. A session that ended by itself or
-  elsewhere goes to `/login?next=<the page you were on>`, where a banner says
-  why (and a password changed elsewhere opens on the password); signing out
-  yourself, or deleting the account, goes home with a toast.
+  the reason (`data.reason`: the password changed, "Sign out the other devices" chosen
+  on another device, a security problem…). The app reloads. A session that
+  ended by itself or elsewhere goes to `/login?next=<the page you were on>`,
+  where a banner says why (and a password changed elsewhere opens on the
+  password); signing out yourself goes home, and deleting the account goes
+  home with a toast.
 - **Tabs stay in step.** Signing out in one tab signs the others out at once;
   signing in in one picks the session up in the others.
 

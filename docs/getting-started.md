@@ -55,7 +55,7 @@ In Docker instead (hot reload through a bind mount): `pnpm docker:dev`, and
    ([auth/pages-and-flows.md](./auth/pages-and-flows.md#complete-your-account)).
    **Enter NezFocus** opens the app.
 4. Your avatar at the foot of the rail opens your menu: your profile, your
-   status, **Settings** (password, sign out everywhere) and **Sign out**.
+   status, **Settings** (the account page: password and signed-in devices) and **Sign out**.
 
 "Continue with Google" appears only when the API has it configured. Nothing
 in this app turns it on: see the API starter's

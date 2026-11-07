@@ -60,7 +60,7 @@ react-starter/
     │   │   │                  #   the sign-in way remembered
     │   │   ├── auth.store.ts  # Who is signed in; sign-in, refresh, sign-out
     │   │   ├── routes.tsx     # authRoutes (sign-in pages, GuestOnlyRoute; /welcome, IncompleteOnlyRoute),
-    │   │   │                  #   authAppRoutes (/settings)
+    │   │   │                  #   authAppRoutes (/settings/account; /settings redirects)
     │   │   ├── types.ts
     │   │   └── index.ts       # What other features may import
     │   └── users/             # The profile feature
