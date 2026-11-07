@@ -14,6 +14,7 @@ test.describe.configure({ mode: 'serial' })
 
 const PASSWORD = 'Harbour-Lantern-42'
 const NEW_PASSWORD = 'Kettle-Moss-Meadow-5'
+const RESET_PASSWORD = 'Reset-Kettle-Moss-5'
 const FIREFOX_UBUNTU = 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:144.0) Gecko/20100101 Firefox/144.0'
 const SAFARI_MAC =
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15'
@@ -191,20 +192,78 @@ test('signs out the other devices after asking; they are told which button did i
     for (const page of [laptop, firefox]) await page.context().close()
 })
 
-test('changing the password leaves only this device in the list', async ({ browser }) => {
+test('changing the password in its dialog leaves only this device in the list', async ({ browser }) => {
     const laptop = await device(browser)
     const firefox = await device(browser, FIREFOX_UBUNTU)
     await openAccount(laptop)
     await expect(sessionsOf(laptop).filter({ hasText: 'Firefox · Ubuntu' }).first()).toBeVisible()
 
-    await laptop.getByLabel('Current password').fill(password)
-    await laptop.getByLabel('New password').fill(NEW_PASSWORD)
-    await laptop.getByLabel('Confirm password').fill(NEW_PASSWORD)
     await laptop.getByRole('button', { name: 'Change password' }).click()
+    const dialog = laptop.getByRole('dialog', { name: 'Change password' })
+    await dialog.getByLabel('Current password').fill(password)
+    await dialog.getByLabel('New password').fill(NEW_PASSWORD)
+    await dialog.getByRole('button', { name: 'Change password' }).click()
     password = NEW_PASSWORD
 
+    await expect(dialog).toHaveCount(0)
+    await expect(laptop.getByText('Password changed. Other devices have been signed out.')).toBeVisible()
     await expect(sessionsOf(laptop)).toHaveCount(1)
     await expect(sessionsOf(laptop).first()).toContainText('This device')
+    await expectSentToSignIn(
+        firefox,
+        'Your password was just changed on another device · sign in with the new password'
+    )
+
+    for (const page of [laptop, firefox]) await page.context().close()
+})
+
+test('a forgotten current password is reset by code in the dialog; both tabs here carry on, other devices do not', async ({
+    browser
+}) => {
+    test.slow() // may wait out the minute between code emails
+    const laptop = await device(browser)
+    // A second tab of the same browser: the same cookie, so the same session.
+    const secondTab = await laptop.context().newPage()
+    await secondTab.goto('/study')
+    await expect(secondTab.getByRole('button', { name: /open your menu$/ })).toBeVisible()
+    const firefox = await device(browser, FIREFOX_UBUNTU)
+    await openAccount(laptop)
+
+    await laptop.getByRole('button', { name: 'Change password' }).click()
+    let sentAt = new Date()
+    await laptop.getByRole('dialog').getByRole('button', { name: 'Forgot password?' }).click()
+    const dialog = laptop.getByRole('dialog', { name: 'Choose a new password' })
+    await expect(dialog.getByText(`We sent a 6-digit one-time code to ${email}.`)).toBeVisible()
+    // The account's first code went out under a minute ago (D-136): the dialog
+    // says so and counts down; then "Send again".
+    const tooSoon = dialog.getByText(/We just sent a code to this email/)
+    if (await tooSoon.isVisible()) {
+        const sendAgain = dialog.getByRole('button', { name: 'Send again' })
+        await expect(sendAgain).toBeEnabled({ timeout: 65_000 })
+        sentAt = new Date()
+        await sendAgain.click()
+        await expect(tooSoon).toHaveCount(0)
+    }
+    await dialog.getByLabel('6-digit one-time code').fill(await codeFromEmail(email, 'Reset', sentAt))
+    await dialog.getByLabel('New password').fill(RESET_PASSWORD)
+    await dialog.getByRole('button', { name: 'Set password' }).click()
+    password = RESET_PASSWORD
+
+    // Every earlier session ended, this one too; the new one carries on here unseen (D-62).
+    await expect(dialog).toHaveCount(0)
+    await expect(laptop.getByText('New password set. Your other devices were signed out.')).toBeVisible()
+    await expect(sessionsOf(laptop)).toHaveCount(1)
+    // The other tab finds its session ended and takes up the new one from the cookie (D-74).
+    await openAccountMenuItem(secondTab, 'Settings')
+    await expect(secondTab.getByRole('heading', { level: 1, name: 'Account' })).toBeVisible()
+    await expect(sessionsOf(secondTab)).toHaveCount(1)
+    // Which left this tab's session alone.
+    await laptop.reload()
+    await expect(sessionsOf(laptop).first()).toContainText('This device')
+    await expectSentToSignIn(
+        firefox,
+        'Your password was just changed on another device · sign in with the new password'
+    )
 
     for (const page of [laptop, firefox]) await page.context().close()
 })

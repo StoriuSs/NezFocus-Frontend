@@ -55,8 +55,11 @@ export function connectApiSession(next: ApiSession): void {
     session = next
 }
 
-/** The API refused the access token itself, not the session: a refresh can fix it. */
-const REFRESHABLE = new Set(['AUTH_TOKEN_EXPIRED', 'AUTH_TOKEN_INVALID'])
+/**
+ * A refusal the shared refresh cookie may fix: the token aged, or its session
+ * ended while this browser started a newer one (D-74).
+ */
+const REFRESHABLE = new Set(['AUTH_TOKEN_EXPIRED', 'AUTH_TOKEN_INVALID', 'AUTH_TOKEN_REVOKED'])
 
 // Request: auth token + camelCase -> snake_case
 api.interceptors.request.use(async (config) => {
@@ -98,7 +101,10 @@ api.interceptors.response.use(
 
         // An expired or unreadable access token: get a new one and try once
         // more. The session is fine; only the token aged (a laptop woken from
-        // sleep, a clock that drifted, JWT_SECRET rotated on the API).
+        // sleep, a clock that drifted, JWT_SECRET rotated on the API). A
+        // revoked one too: another tab may have reset the password with a code
+        // (D-74), which ended this session and left a newer one in the shared
+        // cookie. Elsewhere the refresh is refused and says why it ended.
         if (status === 401 && meta && REFRESHABLE.has(meta.type) && config && !config.authRetried) {
             let token: string | undefined
             try {
@@ -110,7 +116,7 @@ api.interceptors.response.use(
             }
             if (!token) {
                 // The session is over, and refreshToken has signed out with the
-                // reason the refresh gave. This 401 only said the token aged.
+                // reason the refresh gave.
                 return Promise.reject(error)
             }
             config.authRetried = true

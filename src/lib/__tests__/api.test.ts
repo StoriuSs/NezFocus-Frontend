@@ -94,11 +94,25 @@ describe('api client', () => {
         await expect(api.get('/users/me')).rejects.toThrow()
         expect(authState.logout).toHaveBeenLastCalledWith('account-disabled')
 
-        // A revoked session is not refreshed; it says why it ended.
+        // A revoked session whose cookie has nothing newer either: over, and the
+        // refresh has signed out with the reason it gave (auth.store).
+        authState.refreshToken.mockResolvedValue(undefined)
         respondInTurn(refusal(401, 'AUTH_TOKEN_REVOKED', { reason: 'password_changed' }))
         await expect(api.get('/users/me')).rejects.toThrow()
-        expect(authState.refreshToken).not.toHaveBeenCalled()
-        expect(authState.logout).toHaveBeenLastCalledWith('password-changed')
+        expect(authState.refreshToken).toHaveBeenCalledOnce()
+    })
+
+    it('takes up a newer session of this browser when its own was ended: a reset in another tab (D-74)', async () => {
+        // The other tab reset the password with a code: every earlier session
+        // ended, and the shared cookie now holds the one it started.
+        const seen = respondInTurn(refusal(401, 'AUTH_TOKEN_REVOKED', { reason: 'password_reset' }), [200, {}])
+        authState.refreshToken.mockResolvedValue('token-of-the-new-session')
+
+        await api.get('/auth/sessions')
+
+        expect(seen[1]!.headers.Authorization).toBe('Bearer token-of-the-new-session')
+        // Signing out here would also end the new session, through the cookie.
+        expect(authState.logout).not.toHaveBeenCalled()
     })
 
     it('opens "complete your account" when the API says the account is incomplete, keeping the session', async () => {

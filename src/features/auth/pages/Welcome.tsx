@@ -21,7 +21,8 @@ import { authApi } from '@/features/auth/api/auth.api'
 import { useAuthStore } from '@/features/auth/auth.store'
 import { safeNext } from '@/features/auth/lib/paths'
 import { useAuthPageState } from '@/features/auth/lib/page-state'
-import { brokenPasswordRules, passwordFieldRule, type PasswordRule } from '@/features/auth/lib/password-rules'
+import { passwordFieldRule, type PasswordRule } from '@/features/auth/lib/password-rules'
+import { newPasswordIssue } from '@/features/auth/lib/schemas'
 import { requestFailure, useMessageText, type RequestFailure } from '@/features/auth/lib/form-problem'
 import { usernameFromEmail } from '@/features/auth/lib/username-prefill'
 import { AuthCard } from '@/features/auth/components/AuthCard'
@@ -63,10 +64,8 @@ const createSchema = (email: string | undefined) =>
             if (!values.username) issue('username', 'auth:welcome.usernameRequired')
             else if (!USERNAME_PATTERN.test(values.username)) issue('username', 'auth:welcome.usernameInvalid')
 
-            const broken = brokenPasswordRules(values.password, { email, username: values.username })
-            const fieldRule = passwordFieldRule(broken)
-            if (fieldRule) issue('password', `auth:passwordRules.${fieldRule}`)
-            else if (broken.length > 0) issue('password', 'auth:validation.passwordWeak')
+            const passwordIssue = newPasswordIssue(values.password, { email, username: values.username })
+            if (passwordIssue) issue('password', passwordIssue)
 
             if (!values.termsAccepted) issue('termsAccepted', 'auth:welcome.termsRequired')
         })
