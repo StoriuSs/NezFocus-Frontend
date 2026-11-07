@@ -32,9 +32,9 @@ loaded only when first opened (`lazy`).
 | `/register` | visitors | Only the email; "Continue with Google" | `POST /auth/email-code` | always `/verify` |
 | `/verify` | visitors | The 6-digit code from the email. The right code signs in, to the address's account or to one made just now | `POST /auth/email-code/verify`, `POST /auth/email-code` (send again) | `/welcome` for an incomplete account, else `?next=` or home |
 | `/welcome` | signed in, account not yet complete | "Complete your account": display name, username, password, time zone, the terms | `POST /auth/complete-account` | `?next=` or home |
-| `/login` | visitors | Email and password; "Continue with Google" | `POST /auth/login` | `/welcome` for an incomplete account, else `?next=` or home |
+| `/login` | visitors | An emailed one-time code by default, or the password (`?method=password`); "Continue with Google". Says why a session ended | `POST /auth/email-code` (code), `POST /auth/login` (password) | the code: `/verify`. The password: `/welcome` for an incomplete account, else `?next=` or home |
 | `/forgot-password` | visitors (a signed-in person sees a card) | Asks for a code to choose a new password | `POST /auth/forgot-password` | always the reset page |
-| `/reset-password` | visitors (a signed-in person sees a card) | The code and a new password. Signs in, and signs out every other device | `POST /auth/reset-password` | as `/login` |
+| `/reset-password` | visitors (a signed-in person sees a card) | The code and a new password. Signs in, and signs out every other device | `POST /auth/reset-password`, `POST /auth/forgot-password` (send again) | as `/login` by password |
 | `/auth/callback` | anyone | Where the API sends the browser back after Google | `POST /auth/refresh` | as `/login`; or says why it failed |
 | `/settings` | signed in, complete | Password, sign out everywhere ([account-settings.md](./account-settings.md)) | several | stays |
 | `/profile` | signed in, complete | The profile, and "Delete account" ([account-settings.md](./account-settings.md#delete-the-account)) | several | stays |
@@ -61,8 +61,9 @@ waiting for them travels as `?invite=`:
 
 1. `ProtectedRoute` sends them to `/login?next=%2Fprofile` (`signInPath()`).
 2. Every link between auth pages keeps `next` and `invite`, and nothing else
-   (`withFlow(path, search)` in `paths.ts`): login → register → verify →
-   welcome, login → forgot → reset.
+   (`withFlow(path, search)` in `paths.ts`): login → verify → welcome,
+   login → register → verify → welcome, login → forgot → reset. The sign-in
+   page's own `?method=` stays on it.
 3. "Continue with Google" hands `next` to the API, which hands it back on
    `/auth/callback`. The API's own name for it is `redirect`:
    `oauthStartUrl(provider, next)` in [oauth.ts](../../src/features/auth/lib/oauth.ts)
@@ -91,9 +92,8 @@ holds the shapes (`authPageState(email, extra)`, `useAuthPageState()`):
 
 | State | Set by | Read by | Meaning |
 |---|---|---|---|
-| `email` | register, login ("Forgot your password?"), forgot-password, verify's Back and "Sign in with password" | the next page | Fill the address in, or show it as text |
+| `email` | register, login (sending a code, "Forgot password?", "Create an account", switching between the two ways), forgot-password (moving on, and Back), verify's Back and "Sign in with password", reset-password's Back | the next page | Fill the address in, or show it as text |
 | `from: 'register' \| 'login'` | the page that sent the code | verify | Where Back returns; whether to say "you already have an account" |
-| `notice: 'code-sent'` | forgot-password | reset | "Check your inbox" |
 | `via: 'google'` | `/auth/callback` | welcome | The subtitle says the address was confirmed through Google |
 
 Why not the address bar: an email address in the URL ends up in the browser's
@@ -199,8 +199,10 @@ keeps it on its own history entry before moving on.
   there (the browser's own Back when there is history, otherwise `/register`
   or `/login` by `from`).
 - **Sign in with password** goes to `/login?method=password`, keeping `next`
-  and `invite`, with the address handed over. The sign-in page does not read
-  `method` yet.
+  and `invite`, with the address handed over: the sign-in page opens on the
+  password.
+- **A code that signs in** makes this browser remember the code as its way in
+  (`rememberSignInMethod('code')`, D-68): `/login` opens on the code next time.
 
 ## Complete your account
 
@@ -260,40 +262,116 @@ it.
 
 ## Sign in
 
-[SignIn.tsx](../../src/features/auth/pages/SignIn.tsx), at `/login`. Email,
-password (with a show/hide button), "Forgot your password?", "Create one", and
-"Continue with Google" when the API offers it. This page, forgot-password and
-reset-password are rebuilt in the next slice (L9); until then they keep their
-older look and `authFormError` ([forms-and-errors.md](./forms-and-errors.md)).
+[SignIn.tsx](../../src/features/auth/pages/SignIn.tsx), at `/login`
+(S-AUTH-03, D-60). Two ways in, one on screen at a time: **a one-time code
+emailed to the address**, the default, and **the password**. Under the form,
+after an "or" divider: the button for the other way, then "Continue with
+Google" when the API offers it; under the card, "No account yet? Create an
+account".
 
 ```mermaid
 flowchart TD
-    F["/login: email and password"] --> L{"POST /auth/login"}
+    W{"which way?"} -->|"the code (default)"| C["/login: the email"]
+    W -->|"?method=password"| P["/login?method=password: email and password"]
+    C --> EC{"POST /auth/email-code"}
+    EC -->|"the same answer for every address"| V["/verify, from: login"]
+    EC -->|"429"| WC["Try again in ..., or sign in with your password"]
+    P --> L{"POST /auth/login"}
     L -->|"200: token, cookie set"| S["Session started"]
-    L -->|"401 AUTH_INVALID_CREDENTIALS"| E["Incorrect email or password"]
-    L -->|"429"| W["Try again in ..."]
-    S --> C{"account complete?"}
-    C -->|"no"| WE["/welcome, keeping next and invite"]
-    C -->|"yes"| R["?next= or home"]
+    L -->|"401 AUTH_INVALID_CREDENTIALS"| E["Incorrect email or password..."]
+    L -->|"429"| WP["Try again in ..., or sign in with a one-time code"]
+    S --> CO{"account complete?"}
+    CO -->|"no"| WE["/welcome, keeping next and invite"]
+    CO -->|"yes"| R["?next= or home"]
 ```
 
-1. The form checks the address is an address and the password is not empty.
-   It does not check the password rules: an old password may predate them, and
-   the API does not check them at sign-in either.
+**Which way the page opens on**
+([sign-in-method.ts](../../src/features/auth/lib/sign-in-method.ts)):
+
+1. The way the address names, `?method=password` or `?method=code`, so a
+   reload keeps it.
+2. Otherwise the way of the last sign-in that worked in this browser (D-68):
+   `localStorage`, key `auth:sign-in-method`, written by a password sign-in
+   here and by a code that signs in on `/verify`. Nothing remembered, or
+   storage blocked: the code.
+3. One exception: a session ended by a password change elsewhere opens on the
+   password, the way back in, unless the address names a way.
+
+**Switching ways.** "Sign in with password" / "Sign in with a one-time code"
+swaps the way in place (`replace`: no new history entry). The address gets
+`?method=password` for the password; for the code the parameter is removed,
+or set to `?method=code` only when the browser remembers the password (so a
+reload stays on the code). The email typed so far is kept (handed over in
+navigation state), a message or a limit on screen is cleared, and `next` and
+`invite` stay.
+
+**By code** (the default):
+
+1. Only the email, under "Enter your email and we'll send you a one-time code
+   to sign in." The form checks it is not empty ("Enter your email to get a
+   code") and an address.
+2. As on `/register`: `POST /auth/email-code`, `recordCodeSent('sign-in',
+   email)`, then `/verify` with the address and `from: 'login'`. The same
+   address again within the minute goes to `/verify` without another email
+   (D-67). The page never says whether the address has an account: this is
+   "create an account" in other words (D-60).
+3. The address stays on this page's history entry, so Back from `/verify`
+   finds it filled in.
+
+**By password:**
+
+1. Email and password (with a show/hide button). "Forgot password?" sits at
+   the end of the password's label row (`FormField`'s `action`), and comes
+   after the field in the tab order. The form checks the address, and that
+   the password is not empty; not the password rules: an old password may
+   predate them, and the API does not check them at sign-in either.
 2. `signIn()` in the store sends `POST /auth/login` with `email` and
    `password`.
-3. On `200` the store starts the session; the page goes to
+3. On `200` the store starts the session, the browser remembers the password
+   as its way in (D-68), and the page goes to
    `afterSignIn({ completed: isComplete }, search)`.
+
+The form checks only the fields of the way on screen: the way reaches the
+schema through react-hook-form's `context` option (`useForm({ context:
+method, resolver })`, the resolver building the schema for that way), and
+`useForm` takes its options afresh on every render. The focus starts on the
+first empty field of the way: the email, or the password when the email is
+already there. While the form is out, the fields are read-only and the other
+buttons, Google's included, are disabled.
 
 **Every other answer:**
 
 | Answer | What the page does |
 |---|---|
-| `401 AUTH_INVALID_CREDENTIALS` | "Incorrect email or password." The same for a wrong password and an address with no account, so the page says nothing about which addresses exist. When Google is on, it adds a hint about Continue with Google (shown to everyone, so it reveals nothing either) |
-| `429` | Too many failed sign-ins for this address, or from this network: says how long to wait |
+| `401 AUTH_INVALID_CREDENTIALS` | The `api` catalogue's "Incorrect email or password. Try again, or sign in with a one-time code." The same for a wrong password, an address with no account and an account without a password (D-60), so the page says nothing about which addresses exist. The password is emptied and focused; the email stays |
+| `429`, reason `sign_ins` (password) | Too many wrong passwords for this address: "Too many wrong tries. Try again in ..., or sign in with a one-time code." Typing another address lifts it |
+| `429`, reason `emails` (code) | Too many code emails to this address: "We've sent several codes to this email in the past hour. Try again in ..., or sign in with your password." Typing another address lifts it |
+| `429`, reason `network` | Too many failed sign-ins, or code requests, from this network: the wait, the other way, and that on a shared network other people's tries count too. Whatever the address |
+| any other `429` | "Too many tries. Try again in ..." |
+| no answer, or a `5xx` | "You're offline..." or "Something went wrong..." above the button |
 
-"Forgot your password?" carries the address typed so far to the next page.
-A page that sends someone here may hand over an address; it is filled in.
+A limit is a `FormMessage` with a clock above the button, counting down; the
+button waits until it ends.
+
+**Why a session ended.** A session that ended by itself or elsewhere lands
+here ([session.md](./session.md#why-a-session-ended-every-reason)), and a
+**banner** (`Banner`, C-16) above the card says why. The page reads the
+reason while rendering (`peekSignOutReason()`) and takes it from
+`sessionStorage` in an effect (`takeSignOutReason(isSessionEnded)`), so it is
+said once: a reload does not say it again.
+
+| Reason | The banner |
+|---|---|
+| `password-changed` | "Your password was just changed on another device · sign in with the new password" (and the page opens on the password) |
+| `signed-out-everywhere` | "One of your devices chose "Sign out other devices" · sign in again" |
+| `security` | "Your session was closed to protect your account because it was in use in two places at once · sign in again, and change your password if that wasn't you" (a shield icon) |
+| `session-expired`, `signed-out` | "Your session has ended · sign in again to continue" |
+
+The other reasons are toasts ([session.md](./session.md#why-a-session-ended-every-reason)).
+
+"Forgot password?" and "Create an account" carry the email typed so far to
+the next page. A page that sends someone here may hand over an address; it is
+filled in.
 
 ## Forgot and reset the password
 
@@ -308,36 +386,69 @@ sequenceDiagram
     API-->>App: 202, the same answer for every address
     API--)Inbox: a 6-digit code, if the address has an account
     App->>App: /reset-password, address in navigation state
-    P->>App: code, new password twice
+    P->>App: code, new password
     App->>API: POST /auth/reset-password
     API-->>App: 200 access token, cookie set, every other session ended
     App->>App: /welcome if incomplete, else ?next= or home
 ```
 
-**`/forgot-password`** ([ForgotPassword.tsx](../../src/features/auth/pages/ForgotPassword.tsx)):
+**`/forgot-password`** ([ForgotPassword.tsx](../../src/features/auth/pages/ForgotPassword.tsx), S-AUTH-04 `request`):
 
-1. The address (filled in when handed over).
-2. `POST /auth/forgot-password` with `email`. The API answers
-   `202` whether or not the address has an account, so the page always moves
-   on to `/reset-password`.
-3. "Send code" stays disabled, with a countdown, for what is left of the
-   minute since the last code went to that address in this tab, and for as
-   long as a `429` asks.
+1. **Back** returns to sign in by password (`/login?method=password`,
+   keeping `next` and `invite`), with the address still there.
+2. The address (filled in when handed over). The form checks it is not empty
+   and an address.
+3. `POST /auth/forgot-password` with `email`. The API answers `202` whether
+   or not the address has an account, so the page always moves on to
+   `/reset-password` with the address, and records the send
+   (`recordCodeSent('password-reset', email)`). The same address again within
+   the minute goes straight on without another email (D-67). The reset code
+   is its own kind: a sign-in code does not work here, nor this one there
+   (D-60).
 
-**`/reset-password`** ([ResetPassword.tsx](../../src/features/auth/pages/ResetPassword.tsx)):
+| Refusal | What the page does |
+|---|---|
+| `429`, reason `emails` | "We've sent several codes to this email in the past hour. Try again in ..."; the button waits. Typing another address lifts it |
+| `429`, reason `network` | Too many code requests from this network: the same, whatever the address |
+| no answer, or a `5xx` | "You're offline..." or "Something went wrong..." above the button |
 
-1. The address as text (SentTo; "Use a different address" goes back to
-   forgot-password), or a field when opened without one.
-2. The code, the new password with the checklist, the new password again. A
-   line says "Every other device is signed out, and you stay signed in here."
-3. `POST /auth/reset-password` with `email`, `code` and `password`. The API
-   saves the password, ends **every** session of the account, and signs in
-   here: an access token and a new refresh cookie.
-4. The page starts the session, says "Password changed. You're signed in, and
-   every other device was signed out.", and goes on with `afterSignIn`.
+**`/reset-password`** ([ResetPassword.tsx](../../src/features/auth/pages/ResetPassword.tsx), S-AUTH-04 `reset-form`):
 
-"No email? Send another code" links back to forgot-password with the address;
-until the minute is up it reads "Send another code in 42 s" instead.
+1. Opened without an address (a new tab, a bookmark), it goes to
+   `/forgot-password`, keeping `next` and `invite`.
+2. The subtitle is hedged, the same words for every address (NFR-SEC-05):
+   "If you@example.com has a NezFocus account, a 6-digit one-time code will
+   arrive in a few minutes."
+3. The code in `CodeInput` (six boxes, as on `/verify`); the sixth digit
+   moves on to the new password and sends nothing. The new password with the
+   checklist; there is no second "confirm" field (the show/hide button is
+   there to check it). A line says "Every other device is signed out, and you
+   stay signed in here."
+4. **Set password** says so when the code is short ("Enter all 6 digits of
+   the code from the email"), and checks the password rules (against the
+   address) before sending anything. Then `POST /auth/reset-password` with
+   `email`, `code` and `password`. The API saves the password, ends **every**
+   session of the account, and signs in here: an access token and a new
+   refresh cookie.
+5. The page starts the session, says "New password set. Your other devices
+   were signed out.", and goes on with `afterSignIn`.
+
+| Refusal | What the page does |
+|---|---|
+| `AUTH_CODE_INVALID` | Marks the boxes, says so, and puts the focus back on the code. The new password stays: only the code was wrong |
+| `AUTH_CODE_EXPIRED` | Disables the boxes; the button becomes **Send a new code**, which sends one on this page |
+| `AUTH_PASSWORD_REJECTED` | The refused rules on the checklist, and on the field |
+| `429`, reason `codes` (this address) or `network` | Too many wrong codes: nothing can be sent until the wait is over; the message says how long. The password stays |
+| `429` on send again (`emails`, `network`) | "Send again" waits; the code in hand still works |
+| no answer, or a `5xx` | "You're offline..." or "Something went wrong..." above the button |
+
+**"Didn't get the code? Send again"** stays on this page. Until the minute
+since the last code is up (forgot-password's record, across a reload) it
+reads "Send again in 42 s". Sending (`POST /auth/forgot-password`) empties
+the boxes and shows a toast in the same hedged words: "If you@example.com has
+a NezFocus account, a new one-time code will arrive in a few minutes."
+**Back** is the browser's Back when there is history, otherwise
+`/forgot-password` with the address.
 
 Both pages are opened from email links, so a signed-in person who opens them
 gets a card rather than being sent away ([below](#already-signed-in-what-visitor-pages-do)).
@@ -356,7 +467,9 @@ the button shows when its `providers` list has `google`. While that loads, or
 if the API cannot be asked, there is no button: no button beats a button that
 leads nowhere. It is a plain link (`<a href>`) to
 `${VITE_API_URL}/auth/google?redirect=<the page's ?next=>`, on `/login` and
-`/register`.
+`/register`. On `/login`, while the form is being sent, it is a disabled button
+instead, not a link to follow; a limit on the form does not disable it, since
+Google does not use those limits.
 
 ```mermaid
 sequenceDiagram

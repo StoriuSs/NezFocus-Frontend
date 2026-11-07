@@ -4,12 +4,15 @@ import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import i18n from '@/i18n'
 import { recordCodeSent } from '@/features/auth/lib/code-sent'
+import { rememberedSignInMethod, rememberSignInMethod } from '@/features/auth/lib/sign-in-method'
 import { apiError, mockAuthStore, queryWrapper } from '@/test/helpers'
 import { expectNoA11yViolations } from '@/test/a11y'
 
 const authApi = {
     sendEmailCode: vi.fn(),
     verifyEmailCode: vi.fn(),
+    forgotPassword: vi.fn(),
+    resetPassword: vi.fn(),
     options: vi.fn()
 }
 const authState = {
@@ -20,7 +23,9 @@ const authState = {
     signIn: vi.fn(),
     startSession: vi.fn(),
     resumeFromCookie: vi.fn(),
-    logout: vi.fn()
+    logout: vi.fn(),
+    peekSignOutReason: vi.fn(),
+    takeSignOutReason: vi.fn()
 }
 /** No other providers: what most tests run with. */
 const OFF = { providers: [] as string[] }
@@ -36,7 +41,9 @@ const { authRoutes } = await import('@/features/auth/routes')
 // The routes load each page lazily. Load them all now, so the first test to
 // open a page does not spend its findBy timeout (1 s) transforming modules.
 await Promise.all(
-    ['SignIn', 'Register', 'Verify', 'OAuthCallback'].map((page) => import(`@/features/auth/pages/${page}.tsx`))
+    ['SignIn', 'Register', 'Verify', 'ForgotPassword', 'ResetPassword', 'OAuthCallback'].map(
+        (page) => import(`@/features/auth/pages/${page}.tsx`)
+    )
 )
 
 /** `state` is what the previous auth page handed over (page-state.ts). */
@@ -73,6 +80,8 @@ describe('the auth pages', () => {
             authState.startSession,
             authState.resumeFromCookie,
             authState.logout,
+            authState.peekSignOutReason,
+            authState.takeSignOutReason,
             toast,
             toast.success
         ]) {
@@ -82,13 +91,24 @@ describe('the auth pages', () => {
         authState.isComplete = true
         authState.user = null
         authApi.options.mockResolvedValue(OFF)
+        authState.peekSignOutReason.mockReturnValue(null)
         sessionStorage.clear()
+        localStorage.clear()
     })
 
     describe('accessibility', () => {
-        it.each(['/login', '/register'])('%s has no critical or serious problems', async (path) => {
-            renderAt(path)
-            await screen.findByLabelText('Email')
+        it.each(['/login', '/login?method=password', '/register', '/forgot-password'])(
+            '%s has no critical or serious problems',
+            async (path) => {
+                renderAt(path)
+                await screen.findByLabelText('Email')
+                await expectNoA11yViolations()
+            }
+        )
+
+        it('/reset-password has no critical or serious problems', async () => {
+            renderAt('/reset-password', { email: 'an.nguyen@gmail.com' })
+            await codeField()
             await expectNoA11yViolations()
         })
 
@@ -99,48 +119,281 @@ describe('the auth pages', () => {
         })
     })
 
-    describe('sign in', () => {
-        it('signs in with the address and password, then goes where the visitor was heading', async () => {
-            authState.signIn.mockResolvedValue(undefined)
+    describe('sign in (S-AUTH-03)', () => {
+        const signInByPassword = async (email = 'ada@example.test', password = 'Harbour-Lantern-42') => {
+            await userEvent.type(await screen.findByLabelText('Email'), email)
+            await userEvent.type(screen.getByLabelText('Password'), password)
+            await userEvent.click(screen.getByRole('button', { name: 'Sign in' }))
+        }
+
+        it('opens on the code: sends one and moves on to enter it, keeping next and invite (D-60)', async () => {
+            authApi.sendEmailCode.mockResolvedValue(undefined)
+            const router = renderAt('/login?next=%2Fprofile&invite=abc')
+
+            expect(
+                await screen.findByText("Enter your email and we'll send you a one-time code to sign in.")
+            ).toBeVisible()
+            expect(screen.queryByLabelText('Password')).toBeNull()
+            await userEvent.type(screen.getByLabelText('Email'), 'an.nguyen@gmail.com')
+            await userEvent.click(screen.getByRole('button', { name: 'Send code' }))
+
+            await waitFor(() => expect(where(router)).toBe('/verify?next=%2Fprofile&invite=abc'))
+            expect(authApi.sendEmailCode).toHaveBeenCalledWith('an.nguyen@gmail.com')
+            expect(handedOver(router)).toEqual({ email: 'an.nguyen@gmail.com', from: 'login' })
+        })
+
+        it('asks for the email to send the code to, in the words of the code way', async () => {
+            renderAt('/login')
+            await userEvent.click(await screen.findByRole('button', { name: 'Send code' }))
+            expect(await screen.findByText('Enter your email to get a code')).toBeVisible()
+            expect(authApi.sendEmailCode).not.toHaveBeenCalled()
+        })
+
+        it('changes to the password and back, keeping the email typed; the URL keeps the way for a reload', async () => {
             const router = renderAt('/login?next=%2Fprofile')
 
             await userEvent.type(await screen.findByLabelText('Email'), 'ada@example.test')
-            await userEvent.type(screen.getByLabelText('Password'), 'Harbour-Lantern-42')
-            await userEvent.click(screen.getByRole('button', { name: 'Sign in' }))
+            await userEvent.click(screen.getByRole('button', { name: 'Sign in with password' }))
+
+            await waitFor(() => expect(where(router)).toBe('/login?next=%2Fprofile&method=password'))
+            expect(screen.getByLabelText('Email')).toHaveValue('ada@example.test')
+            await waitFor(() => expect(screen.getByLabelText('Password')).toHaveFocus())
+
+            await userEvent.click(screen.getByRole('button', { name: 'Sign in with a one-time code' }))
+            await waitFor(() => expect(where(router)).toBe('/login?next=%2Fprofile'))
+            expect(screen.getByLabelText('Email')).toHaveValue('ada@example.test')
+        })
+
+        it('signs in with the password, goes where the visitor was heading, and opens on the password next time (D-68)', async () => {
+            authState.signIn.mockResolvedValue(undefined)
+            const router = renderAt('/login?next=%2Fprofile&method=password')
+
+            await signInByPassword()
 
             expect(authState.signIn).toHaveBeenCalledWith('ada@example.test', 'Harbour-Lantern-42')
             await waitFor(() => expect(where(router)).toBe('/profile'))
+            expect(rememberedSignInMethod()).toBe('password')
+        })
+
+        it('opens on the way remembered, and names the code in the URL when changing back to it', async () => {
+            rememberSignInMethod('password')
+            const router = renderAt('/login')
+
+            expect(await screen.findByLabelText('Password')).toBeVisible()
+            await userEvent.click(screen.getByRole('button', { name: 'Sign in with a one-time code' }))
+            await waitFor(() => expect(where(router)).toBe('/login?method=code'))
         })
 
         it('sends an incomplete account to "complete your account", keeping where it was heading', async () => {
             authState.signIn.mockImplementation(async () => {
                 authState.isComplete = false
             })
-            const router = renderAt('/login?next=%2Fprofile')
+            const router = renderAt('/login?next=%2Fprofile&method=password')
 
-            await userEvent.type(await screen.findByLabelText('Email'), 'ada@example.test')
-            await userEvent.type(screen.getByLabelText('Password'), 'Harbour-Lantern-42')
-            await userEvent.click(screen.getByRole('button', { name: 'Sign in' }))
+            await signInByPassword()
 
             await waitFor(() => expect(where(router)).toBe('/welcome?next=%2Fprofile'))
         })
 
-        it('says how long to wait once too many sign-ins for the address failed', async () => {
+        it('says one thing for a wrong password or an unknown address, and asks for the password again', async () => {
+            authState.signIn.mockRejectedValue(apiError(401, 'AUTH_INVALID_CREDENTIALS'))
+            renderAt('/login?method=password')
+
+            await signInByPassword()
+
+            expect(await screen.findByRole('alert')).toHaveTextContent(
+                'Incorrect email or password. Try again, or sign in with a one-time code.'
+            )
+            expect(screen.getByLabelText('Email')).toHaveValue('ada@example.test')
+            expect(screen.getByLabelText('Password')).toHaveValue('')
+            await waitFor(() => expect(screen.getByLabelText('Password')).toHaveFocus())
+        })
+
+        it('waits out too many wrong passwords for the address; another address may go on', async () => {
             authState.signIn.mockRejectedValue(
                 apiError(429, 'RATE_LIMIT_EXCEEDED', {
                     headers: { 'retry-after': '900' },
                     data: { reason: 'sign_ins' }
                 })
             )
+            renderAt('/login?method=password')
+
+            await signInByPassword()
+
+            expect(await screen.findByRole('status')).toHaveTextContent(
+                'Too many wrong tries. Try again in 15 minutes, or sign in with a one-time code.'
+            )
+            expect(screen.getByRole('button', { name: 'Sign in' })).toBeDisabled()
+            expect(screen.getByRole('button', { name: 'Sign in with a one-time code' })).toBeEnabled()
+            await userEvent.type(screen.getByLabelText('Email'), 'x')
+            expect(screen.getByRole('button', { name: 'Sign in' })).toBeEnabled()
+        })
+
+        it('keeps the network limit whatever the address, says other people count, and waits minutes (D-135)', async () => {
+            authState.signIn.mockRejectedValue(
+                apiError(429, 'RATE_LIMIT_EXCEEDED', { headers: { 'retry-after': '240' }, data: { reason: 'network' } })
+            )
+            renderAt('/login?method=password')
+
+            await signInByPassword()
+
+            expect(await screen.findByRole('status')).toHaveTextContent(
+                "Too many failed sign-ins from your network. Try again in 4 minutes, or sign in with a one-time code. On a shared network, like a computer lab, other people's tries count too."
+            )
+            await userEvent.type(screen.getByLabelText('Email'), 'x')
+            expect(screen.getByRole('button', { name: 'Sign in' })).toBeDisabled()
+        })
+
+        it('waits out the hourly limit of code emails for the address, pointing to the password', async () => {
+            authApi.sendEmailCode.mockRejectedValue(
+                apiError(429, 'RATE_LIMIT_EXCEEDED', { headers: { 'retry-after': '2280' }, data: { reason: 'emails' } })
+            )
             renderAt('/login')
 
-            await userEvent.type(await screen.findByLabelText('Email'), 'ada@example.test')
-            await userEvent.type(screen.getByLabelText('Password'), 'Harbour-Lantern-42')
-            await userEvent.click(screen.getByRole('button', { name: 'Sign in' }))
+            await userEvent.type(await screen.findByLabelText('Email'), 'an.nguyen@gmail.com')
+            await userEvent.click(screen.getByRole('button', { name: 'Send code' }))
 
-            expect(await screen.findByRole('alert')).toHaveTextContent(
-                'Too many failed sign-ins for this address. Try again in 15 minutes, or choose a new password.'
+            expect(await screen.findByRole('status')).toHaveTextContent(
+                "We've sent several codes to this email in the past hour. Try again in 38 minutes, or sign in with your password."
             )
+            expect(screen.getByRole('button', { name: 'Send code' })).toBeDisabled()
+            expect(screen.getByRole('button', { name: 'Sign in with password' })).toBeEnabled()
+        })
+
+        it('says why the session ended, once, and opens on the password when it was changed elsewhere (D-65)', async () => {
+            authState.peekSignOutReason.mockReturnValue('password-changed')
+            renderAt('/login')
+
+            expect(await screen.findByText(/Your password was just changed on another device/)).toBeVisible()
+            expect(screen.getByLabelText('Password')).toBeVisible()
+            await waitFor(() => expect(authState.takeSignOutReason).toHaveBeenCalledTimes(1))
+        })
+
+        it('says a session closed for safety in its own words', async () => {
+            authState.peekSignOutReason.mockReturnValue('security')
+            renderAt('/login')
+
+            expect(await screen.findByText(/closed to protect your account/)).toBeVisible()
+            expect(screen.queryByLabelText('Password')).toBeNull()
+        })
+
+        it('hands the email typed to "forgot password"', async () => {
+            const router = renderAt('/login?method=password')
+
+            await userEvent.type(await screen.findByLabelText('Email'), 'ada@example.test')
+            await userEvent.click(screen.getByRole('link', { name: 'Forgot password?' }))
+
+            await waitFor(() => expect(where(router)).toBe('/forgot-password'))
+            expect(handedOver(router)).toEqual({ email: 'ada@example.test' })
+        })
+    })
+
+    describe('forgot and reset the password (S-AUTH-04)', () => {
+        const ADDRESS = 'an.nguyen@gmail.com'
+
+        it('sends a reset code and moves on, the address out of the URL', async () => {
+            authApi.forgotPassword.mockResolvedValue(undefined)
+            const router = renderAt('/forgot-password?next=%2Fprofile', { email: ADDRESS })
+
+            expect(await screen.findByLabelText('Email')).toHaveValue(ADDRESS)
+            await userEvent.click(screen.getByRole('button', { name: 'Send code' }))
+
+            await waitFor(() => expect(where(router)).toBe('/reset-password?next=%2Fprofile'))
+            expect(authApi.forgotPassword).toHaveBeenCalledWith(ADDRESS)
+            expect(handedOver(router)).toEqual({ email: ADDRESS })
+        })
+
+        it('goes back to sign in by password, the address still there', async () => {
+            const router = renderAt('/forgot-password', { email: ADDRESS })
+
+            await userEvent.click(await screen.findByRole('button', { name: 'Back' }))
+
+            await waitFor(() => expect(where(router)).toBe('/login?method=password'))
+            expect(handedOver(router)).toEqual({ email: ADDRESS })
+        })
+
+        it('goes to step one when opened without an address (a new tab)', async () => {
+            const router = renderAt('/reset-password')
+            await waitFor(() => expect(where(router)).toBe('/forgot-password'))
+        })
+
+        it('says the code comes only if the address has an account, and waits for the button at six digits', async () => {
+            authApi.resetPassword.mockResolvedValue(TOKENS)
+            authState.startSession.mockResolvedValue(undefined)
+            const router = renderAt('/reset-password?next=%2Fprofile', { email: ADDRESS })
+
+            expect(
+                await screen.findByText(
+                    `If ${ADDRESS} has a NezFocus account, a 6-digit one-time code will arrive in a few minutes.`
+                )
+            ).toBeVisible()
+            await userEvent.type(await codeField(), '482913')
+            expect(authApi.resetPassword).not.toHaveBeenCalled()
+            await waitFor(() => expect(screen.getByLabelText('New password')).toHaveFocus())
+
+            await userEvent.type(screen.getByLabelText('New password'), 'Harbour-Lantern-42')
+            await userEvent.click(screen.getByRole('button', { name: 'Set password' }))
+
+            expect(authApi.resetPassword).toHaveBeenCalledWith(ADDRESS, '482913', 'Harbour-Lantern-42')
+            expect(authState.startSession).toHaveBeenCalledWith(TOKENS)
+            await waitFor(() => expect(where(router)).toBe('/profile'))
+            expect(toast.success).toHaveBeenCalledWith('New password set. Your other devices were signed out.')
+        })
+
+        it('keeps the new password when only the code was wrong', async () => {
+            authApi.resetPassword.mockRejectedValue(apiError(400, 'AUTH_CODE_INVALID'))
+            renderAt('/reset-password', { email: ADDRESS })
+
+            await userEvent.type(await codeField(), '482931')
+            await userEvent.type(screen.getByLabelText('New password'), 'Harbour-Lantern-42')
+            await userEvent.click(screen.getByRole('button', { name: 'Set password' }))
+
+            expect(await screen.findByRole('alert')).toHaveTextContent('That code is wrong')
+            expect(screen.getByLabelText('New password')).toHaveValue('Harbour-Lantern-42')
+            await waitFor(() => expect(screen.getByLabelText('6-digit one-time code')).toHaveFocus())
+        })
+
+        it('checks the new password before sending anything', async () => {
+            renderAt('/reset-password', { email: ADDRESS })
+
+            await userEvent.type(await codeField(), '482913')
+            await userEvent.type(screen.getByLabelText('New password'), 'ontap2026')
+            await userEvent.click(screen.getByRole('button', { name: 'Set password' }))
+
+            await waitFor(() => expect(screen.getByLabelText('New password')).toHaveAttribute('aria-invalid', 'true'))
+            expect(authApi.resetPassword).not.toHaveBeenCalled()
+        })
+
+        it('sends again in the same hedged words, never saying the address has an account (NFR-SEC-05)', async () => {
+            authApi.forgotPassword.mockResolvedValue(undefined)
+            renderAt('/reset-password', { email: ADDRESS })
+
+            await userEvent.click(await screen.findByRole('button', { name: 'Send again' }))
+
+            expect(authApi.forgotPassword).toHaveBeenCalledWith(ADDRESS)
+            expect(toast).toHaveBeenCalledWith(
+                `If ${ADDRESS} has a NezFocus account, a new one-time code will arrive in a few minutes.`,
+                expect.anything()
+            )
+            expect(await screen.findByText(/Send again in/)).toHaveTextContent('Send again in 60 s')
+        })
+
+        it('stops the code while the network has made too many wrong ones, the password kept (D-135)', async () => {
+            authApi.resetPassword.mockRejectedValue(
+                apiError(429, 'RATE_LIMIT_EXCEEDED', { headers: { 'retry-after': '240' }, data: { reason: 'network' } })
+            )
+            renderAt('/reset-password', { email: ADDRESS })
+
+            await userEvent.type(await codeField(), '482931')
+            await userEvent.type(screen.getByLabelText('New password'), 'Harbour-Lantern-42')
+            await userEvent.click(screen.getByRole('button', { name: 'Set password' }))
+
+            expect(await screen.findByRole('status')).toHaveTextContent(
+                'Too many wrong codes from your network. Try again in 4 minutes.'
+            )
+            expect(screen.getByLabelText('6-digit one-time code')).toBeDisabled()
+            expect(screen.getByRole('button', { name: 'Set password' })).toBeDisabled()
+            expect(screen.getByLabelText('New password')).toHaveValue('Harbour-Lantern-42')
         })
     })
 
@@ -241,6 +494,17 @@ describe('the auth pages', () => {
             expect(toast).not.toHaveBeenCalled()
         })
 
+        it('makes the sign-in page open on the code next time, once a code signed in (D-68)', async () => {
+            rememberSignInMethod('password')
+            authApi.verifyEmailCode.mockResolvedValue({ ...TOKENS, account: { created: false, completed: true } })
+            const router = renderAt('/verify', { email: 'an.nguyen@gmail.com', from: 'login' })
+
+            await userEvent.type(await codeField(), '482913')
+
+            await waitFor(() => expect(where(router)).toBe('/study'))
+            expect(rememberedSignInMethod()).toBe('code')
+        })
+
         it('fills all six from a pasted code with a space in it', async () => {
             authApi.verifyEmailCode.mockResolvedValue({ ...TOKENS, account: { created: false, completed: true } })
             renderAt('/verify', FROM_REGISTER)
@@ -299,7 +563,7 @@ describe('the auth pages', () => {
         it('stops all typing while the network has made too many wrong codes, and says why', async () => {
             authApi.verifyEmailCode.mockRejectedValue(
                 apiError(429, 'RATE_LIMIT_EXCEEDED', {
-                    headers: { 'retry-after': '2460' },
+                    headers: { 'retry-after': '240' },
                     data: { reason: 'network' }
                 })
             )
@@ -308,7 +572,7 @@ describe('the auth pages', () => {
             await userEvent.type(await codeField(), '482931')
 
             expect(await screen.findByRole('status')).toHaveTextContent(
-                "Too many wrong codes from your network in the past hour. Try again in 41 minutes. On a shared network, like a computer lab, other people's wrong codes count too."
+                "Too many wrong codes from your network. Try again in 4 minutes. On a shared network, like a computer lab, other people's wrong codes count too."
             )
             expect(await codeField()).toBeDisabled()
             expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled()

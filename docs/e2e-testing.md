@@ -78,15 +78,15 @@ Playwright's interactive runner. After a failure, screenshots and traces are in
 
 ## How the account suite avoids the API's limits
 
-The API limits new accounts and failed sign-ins per client address, and every
-test run comes from `127.0.0.1` — the second or third run in an hour would be
-refused. So each browser gets an address of its own: `asOwnClient()` in
+The API limits code emails, wrong codes and failed sign-ins per client
+address (30 in 5 minutes each), and every test run comes from `127.0.0.1` —
+a few runs in a row would be refused. So each browser gets an address of its own: `asOwnClient()` in
 `e2e/helpers.ts` adds a random `X-Forwarded-For` to every request to the API,
 which the API trusts from one proxy hop.
 
 The limit per email address (one code email a minute) is met head-on instead:
-the reset asks for an email within a minute of the sign-in code's, the page says "Too
-many attempts. Try again in N seconds", and `submitPatiently()` waits that long
+the reset asks for an email within a minute of the sign-in code's, the page says "We've
+sent several codes to this email in the past hour. Try again in N seconds.", and `submitPatiently()` waits that long
 and submits again. That checks the message along the way. It is why that test
 takes up to a minute.
 

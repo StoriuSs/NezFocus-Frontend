@@ -1,5 +1,6 @@
+import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { buttonVariants } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { oauthStartUrl } from '../lib/oauth'
 import { useOAuthProviders } from '../hooks/useOAuthProviders'
@@ -29,15 +30,30 @@ function GoogleMark() {
 }
 
 /**
- * "Continue with Google", under the sign-in and sign-up forms — only when the
- * API has Google configured. A link, not a button: it leaves the app.
+ * Under the main button of sign-in and sign-up (S-AUTH-05 › G1): the "or"
+ * divider, then `children` (S-AUTH-03's other way to sign in), then
+ * "Continue with Google" when the API has Google configured. Nothing at all
+ * when there is neither.
+ *
+ * Google is a link, not a button: it leaves the app. While the form is being
+ * sent it cannot be followed; a limit on the form does not disable it, since
+ * Google does not use those limits.
  *
  * @param next where to land afterwards (the page's `?next=`)
  */
-export function OAuthButtons({ next }: { next?: string | null }) {
+export function OAuthButtons({
+    next,
+    disabled = false,
+    children
+}: {
+    next?: string | null
+    disabled?: boolean
+    children?: ReactNode
+}) {
     const { t } = useTranslation('auth')
     const providers = useOAuthProviders()
-    if (providers.length === 0) return null
+    const google = providers.includes('google')
+    if (!google && !children) return null
 
     return (
         <div className='space-y-4'>
@@ -46,7 +62,14 @@ export function OAuthButtons({ next }: { next?: string | null }) {
                 {t('oauth.or')}
                 <span className='h-px flex-1 bg-border' />
             </div>
-            {providers.includes('google') ? (
+            {children}
+            {google && disabled ? (
+                // While the form is being sent: not a link to follow (an <a> without href is not one).
+                <Button type='button' variant='outline' className='w-full gap-2' disabled>
+                    <GoogleMark />
+                    {t('oauth.google')}
+                </Button>
+            ) : google ? (
                 <a
                     href={oauthStartUrl('google', next)}
                     // Black text, not the blue of `outline`: blue is for the page's main action and links (S-AUTH-05 › Canvas).

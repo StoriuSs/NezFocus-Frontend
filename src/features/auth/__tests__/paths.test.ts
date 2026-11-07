@@ -43,5 +43,7 @@ describe('the flow between auth pages (?next, ?invite)', () => {
     it('builds the sign-in path that comes back to a page', () => {
         expect(signInPath('/profile?tab=a')).toBe('/login?next=%2Fprofile%3Ftab%3Da')
         expect(signInPath()).toBe('/login')
+        expect(signInPath('/profile', 'password')).toBe('/login?next=%2Fprofile&method=password')
+        expect(signInPath(undefined, 'password')).toBe('/login?method=password')
     })
 })

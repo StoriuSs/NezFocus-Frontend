@@ -1,6 +1,6 @@
 {
   "AUTH_UNAUTHORIZED": "Please sign in to continue",
-  "AUTH_INVALID_CREDENTIALS": "Invalid email or password",
+  "AUTH_INVALID_CREDENTIALS": "Incorrect email or password. Try again, or sign in with a one-time code.",
   "AUTH_TOKEN_MISSING": "Please sign in to continue",
   "AUTH_TOKEN_EXPIRED": "Session expired. Please sign in again.",
   "AUTH_TOKEN_INVALID": "Invalid session. Please sign in again.",

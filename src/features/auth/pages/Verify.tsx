@@ -14,6 +14,7 @@ import { authPageState, useAuthPageState } from '@/features/auth/lib/page-state'
 import { recordCodeSent, resendAllowedAt, RESEND_AFTER_SECONDS } from '@/features/auth/lib/code-sent'
 import { formatWait, type RateLimitReason } from '@/features/auth/lib/form-errors'
 import { requestFailure, useMessageText, type RequestFailure } from '@/features/auth/lib/form-problem'
+import { rememberSignInMethod } from '@/features/auth/lib/sign-in-method'
 import { AuthCard } from '@/features/auth/components/AuthCard'
 import { CODE_LENGTH, CodeInput, type CodeInputState } from '@/features/auth/components/CodeInput'
 
@@ -98,6 +99,8 @@ function VerifyCode({ email, from }: { email: string; from: 'register' | 'login'
         try {
             const { account, ...tokens } = await authApi.verifyEmailCode(email, value)
             await startSession(tokens, account)
+            // Signing in by code: the sign-in page opens on the code next time (D-68).
+            rememberSignInMethod('code')
             // Came to create an account, and the address had one: say so (01-auth.md › Điều hướng).
             if (from === 'register' && !account.created) toast(t('verify.existingAccount'))
             void navigate(afterSignIn(account, location.search), { replace: true })

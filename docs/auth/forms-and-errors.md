@@ -5,11 +5,11 @@ sending, how a refusal becomes a message in the person's language, "too many
 attempts", the password checklist, and the timers on "send another code". Read it before changing a form or a message, or when a
 form says something you do not understand.
 
-The auth pages are in two generations for now. `/register`, `/verify` and
-`/welcome` keep every message as a key and put it into words when shown
-([below](#messages-kept-as-keys)); `/login`, `/forgot-password`,
-`/reset-password` and the settings screens still turn a refusal into words
-at once with `authFormError`, until the next slice (L9) rebuilds them.
+Every auth page (`/login`, `/register`, `/verify`, `/welcome`,
+`/forgot-password`, `/reset-password`) keeps each message as a key and puts it
+into words when shown ([below](#messages-kept-as-keys)). The settings screens
+and the delete dialog are the older generation: they still turn a refusal
+into words at once with `authFormError`.
 
 - [How an auth form is built](#how-an-auth-form-is-built)
 - [What a form checks before asking the API](#what-a-form-checks-before-asking-the-api)
@@ -27,23 +27,26 @@ at once with `authFormError`, until the next slice (L9) rebuilds them.
 
 Every auth form follows the same pattern:
 
-1. **A react-hook-form form with a zod schema.** On `/register`, `/verify`
-   and `/welcome` the schema's messages are keys (`'auth:validation.emailRequired'`),
-   put into words when shown. On the older pages, shared field rules are in
-   [schemas.ts](../../src/features/auth/lib/schemas.ts) (`authFields`,
-   `newPasswordCheck`), and each page builds its schema with the translation
+1. **A react-hook-form form with a zod schema.** On the auth pages the
+   schema's messages are keys (`'auth:validation.emailRequired'`), put into
+   words when shown. The sign-in page checks only the fields of the way on
+   screen: it passes the way as `useForm`'s `context`, and its resolver builds
+   the schema for that way. On the settings screens, shared field rules are in
+   [schemas.ts](../../src/features/auth/lib/schemas.ts) (`newPasswordCheck`,
+   `passwordFieldMessage`), and the schema is built with the translation
    function, so the messages are in the language chosen at that moment.
 2. **Fields through `FormField`** ([../shadcn-forms.md](../shadcn-forms.md)),
    which links the label, the input and the line under it for screen readers:
    the error (with an icon), else a `status` line ("Checking..."), else a hint.
-   Passwords use `PasswordInput`, with a button to show what was typed (long
+   A link that belongs to the field ("Forgot password?") goes in its `action`,
+   at the end of the label's row. Passwords use `PasswordInput`, with a button to show what was typed (long
    passwords are what the rules ask for, and typing one blind is where typos
    come from).
 3. **The frame is `AuthCard`** ([AuthCard.tsx](../../src/features/auth/components/AuthCard.tsx)):
    a title, a subtitle, the form, and links underneath. An error for the whole
-   form is a `FormMessage` right above the main button on the new pages
-   ([../components.md](../components.md)), a `Notice` above the form on the
-   older ones.
+   form is a `FormMessage` right above the main button
+   ([../components.md](../components.md)); the settings screens still use a
+   `Notice` above the form.
 4. **On submit**, a page for signing in (login, register, verify, welcome, a
    new password) calls `authApi` or the store directly: what it does next is
    the session itself, which the store owns. The settings page and the
@@ -51,9 +54,9 @@ Every auth form follows the same pattern:
    `useDeleteAccount`, `useLogoutEverywhere`), as the users feature does,
    with `mutateAsync`. The button is disabled while the request is out.
 5. **On a refusal**, the page calls `requestFailure(error)`
-   ([form-problem.ts](../../src/features/auth/lib/form-problem.ts)) on the new
+   ([form-problem.ts](../../src/features/auth/lib/form-problem.ts)) on the auth
    pages, `authFormError(error)` ([form-errors.ts](../../src/features/auth/lib/form-errors.ts))
-   on the older ones, and decides where to show what it returns
+   on the settings screens, and decides where to show what it returns
    ([below](#where-each-error-shows)).
 
 Either way the app-wide "toast on every failed mutation" does not apply:
@@ -66,13 +69,12 @@ These checks give a faster answer. The API checks everything again.
 
 | Field | Rule | Message |
 |---|---|---|
-| Email (register) | not empty, then an address | "Enter your email", "That email doesn't look right" |
-| Email (older pages) | a valid address | "Enter a valid email address" |
-| Password, at sign-in | not empty (no rules: an old password may predate them) | "Enter your password" |
+| Email (register, sign-in by password, forgot-password) | not empty, then an address | "Enter your email", "That email doesn't look right" |
+| Email (sign-in by code) | the same, in the code way's words when empty | "Enter your email to get a code" |
+| Password, at sign-in by password | not empty (no rules: an old password may predate them) | "Enter your password" |
 | A new password | every rule the browser knows ([below](#the-password-rules)) | "The password doesn't meet the conditions yet", or the broken rule named |
-| Confirm password (reset, settings) | the same as the new one | "The passwords don't match" |
-| Emailed code (verify) | all 6 digits; the sixth sends it | "Enter all 6 digits of the code from the email" |
-| Emailed code (reset) | 6 digits; spaces are ignored | "Enter the 6-digit code from the email" |
+| Confirm password (settings) | the same as the new one | "The passwords don't match" |
+| Emailed code (verify, reset) | all 6 digits; on verify the sixth sends it, on reset it moves on to the password | "Enter all 6 digits of the code from the email" |
 | Display name (welcome) | not empty, at most 32 characters | "Enter a display name", "A display name has at most 32 characters" |
 | Username (welcome) | 2 to 32 of `a-z 0-9 _ .`, and free | "Enter a username", "A username has only lowercase letters, numbers, _ and .", "This username is taken. Choose another one." |
 | Terms (welcome) | ticked | "You need to agree to continue" |
@@ -93,12 +95,12 @@ Every API refusal has the same shape (after the API client camelCases it):
   `meta.message` is English, written for developers, and never shown.
 - A type without a translation shows "Something went wrong". No answer at all
   shows "Can't reach the server. Check your connection and try again." on the
-  older pages; the new pages say "You're offline. Check your connection and
+  settings screens; the auth pages say "You're offline. Check your connection and
   try again." (with a `wifi-off` icon), and a `5xx` "Something went wrong. Try
   again in a few minutes."
 - `data` carries details: the broken password rules, why a limit refused.
 
-`authFormError(error)` reads all of it and returns:
+`authFormError(error)` (the settings screens) reads all of it and returns:
 
 | Field | Filled when | Used for |
 |---|---|---|
@@ -107,7 +109,7 @@ Every API refusal has the same shape (after the API client camelCases it):
 | `passwordRules` | `422 AUTH_PASSWORD_REJECTED`, from `data.rules` | the [checklist](#the-password-rules) |
 | `retryAfterSeconds`, `rateLimitReason` | a `429` | [waiting](#too-many-attempts-429) |
 
-`requestFailure(error)` returns the same facts without words:
+`requestFailure(error)` (the auth pages) returns the same facts without words:
 
 | Field | Filled when | Used for |
 |---|---|---|
@@ -121,18 +123,19 @@ Every API refusal has the same shape (after the API client camelCases it):
 
 | Shown as | For |
 |---|---|
-| A message for the whole form (`FormMessage` above the button on the new pages, `Notice` above the form on the older ones; read out by screen readers) | most refusals; on `/verify`, a wrong or dead code and the limits |
+| A message for the whole form (`FormMessage` above the button on the auth pages, `Notice` above the form on the settings screens; read out by screen readers) | most refusals; on `/verify` and `/reset-password`, a wrong or dead code and the limits |
 | A message under one field | a wrong current password (change password); a wrong password (delete the account); a username taken (welcome) |
 | The password checklist | `AUTH_PASSWORD_REJECTED`: the rules the API refused, including the ones only it checks |
-| A toast (a small message in the corner) | successes ("Password changed...", "A new code is on its way"), "you already have an account" on `/verify`, and sign-out reasons after a reload ([session.md](./session.md#why-a-session-ended-every-reason)). Never a form's error |
+| A toast (a small message in the corner) | successes ("New password set...", "A new code is on its way"), "you already have an account" on `/verify`, and the sign-out reasons the person caused (or a deleted account) after a reload ([session.md](./session.md#why-a-session-ended-every-reason)). Never a form's error |
+| A banner above the sign-in card (`Banner`, C-16) | why a session that ended by itself or elsewhere ended ([pages-and-flows.md](./pages-and-flows.md#sign-in)) |
 
-At sign-in, `AUTH_INVALID_CREDENTIALS` shows the page's own "Incorrect email
-or password." When the API offers Google, a second line follows: "Signed up
-with Google? Use Continue with Google below. To sign in with a password too,
-choose one with Forgot your password." The hint is shown to everyone after a
-wrong password, so it reveals nothing about which accounts those are. It
-dates from when an account made with Google could have no password; every
-account has one now (D-130), and the sign-in page is rebuilt in L9.
+At sign-in, `AUTH_INVALID_CREDENTIALS` shows the `api` catalogue's sentence
+like any other type: "Incorrect email or password. Try again, or sign in with
+a one-time code." The page empties the password and puts the focus back in
+it. The old "Signed up with Google?" hint and the page's own wording
+(`auth:signIn.wrongCredentials`, `googleHint`) are gone: every account has a
+password now (D-130), and the one-time code is the way back in for anyone
+who forgot it.
 
 ## The error types the auth pages meet
 
@@ -141,9 +144,9 @@ API starter's `docs/auth/api-reference.md`.
 
 | Type | Status | Means | The app shows |
 |---|---|---|---|
-| `AUTH_INVALID_CREDENTIALS` | 401 | Wrong password, no such account, or an account without a password | "Incorrect email or password." (sign-in's own text) |
+| `AUTH_INVALID_CREDENTIALS` | 401 | Wrong password, no such account, or an account without a password | "Incorrect email or password. Try again, or sign in with a one-time code." |
 | `AUTH_CODE_INVALID` | 400 | Wrong emailed code | "That code is wrong. Use the code in the newest email." |
-| `AUTH_CODE_EXPIRED` | 400 | The code is over 10 minutes old, or had 5 wrong tries | "This code no longer works (over 10 minutes old, or 5 wrong tries). Send a new code to continue." On `/verify` the button becomes Send a new code |
+| `AUTH_CODE_EXPIRED` | 400 | The code is over 10 minutes old, or had 5 wrong tries | "This code no longer works (over 10 minutes old, or 5 wrong tries). Send a new code to continue." On `/verify` and `/reset-password` the button becomes Send a new code |
 | `USERNAME_CONFLICT` | | The username was taken after it was checked | "This username is taken. Choose another one." (welcome: "Someone just took this username...", on the field) |
 | `ACCOUNT_INCOMPLETE` | 403 | The account has not done "complete your account" | no message: the app opens `/welcome` ([pages-and-flows.md](./pages-and-flows.md#the-gate-an-incomplete-account-sees-only-welcome)) |
 | `ACCOUNT_ALREADY_COMPLETE` | | "Complete your account" was done already (another tab) | no message: welcome goes on |
@@ -155,7 +158,11 @@ API starter's `docs/auth/api-reference.md`.
 ## Too many attempts (429)
 
 The API limits failed sign-ins, wrong codes and code emails, per address, per
-account and per network. A refused request answers `429` with:
+account and per network (IP address). Per network, each of the three allows
+30 in 5 minutes (D-135): a computer lab behind one address waits minutes, not
+an hour. The API's general limit on every route counts a signed-in request
+per user, and only a signed-out one per network. A refused request answers
+`429` with:
 
 - a **`Retry-After` header**: the seconds to wait. The API lets the browser
   read this header across origins;
@@ -166,26 +173,31 @@ The app turns them into a sentence. The wait (`formatWait` in
 seconds under 90 seconds, in minutes (rounded up) under an hour, in hours
 (rounded up) from there.
 
-`/register` and `/verify` word each limit their own way, since the same limit
-means something else on each (`limits` in `auth.json`): "We've sent several
-codes to this email in the past hour. Try again in 42 minutes."; on `/verify`,
-"Send again in ..., or sign in with your password."; for wrong codes (reason
-`codes`, per address, or `network`), "Too many wrong codes for this email in
-the past hour...". A limit on one address lifts on `/register` when another
-address is typed; a network's does not. The older pages read:
+The auth pages word each limit their own way, since the same limit means
+something else on each (`limits` in `auth.json`): "We've sent several codes
+to this email in the past hour. Try again in 42 minutes." on `/register` and
+`/forgot-password`; on `/verify`, "Send again in ..., or sign in with your
+password."; on sign-in, each way points to the other ("..., or sign in with
+your password", "..., or sign in with a one-time code"); for wrong codes
+(reason `codes`, per address, or `network`), "Too many wrong codes for this
+email in the past hour...". A network's limit adds that on a shared network
+other people count too. A limit on one address lifts when another address is
+typed (register, sign-in, forgot-password); a network's does not. The
+settings screens, through `authFormError`, read:
 
 | `data.reason` | When | The message |
 |---|---|---|
-| `network` | Too many requests from one network (IP address): failed sign-ins, code emails, wrong codes | "Too many requests from your network. Try again in 42 seconds. On a shared connection, such as an office or a school, other people's requests count too." |
+| `network` | Too many requests from one network (IP address), 30 in 5 minutes each: failed sign-ins, code emails, wrong codes | "Too many requests from your network. Try again in 42 seconds. On a shared connection, such as an office or a school, other people's requests count too." |
 | `emails` | Codes emailed to one address: one a minute, five an hour | "We've already sent several emails to this address. Try again in 42 seconds." |
 | `sign_ins` | Failed sign-ins for one address (5 per 15 minutes) | "Too many failed sign-ins for this address. Try again in 12 minutes, or choose a new password." |
 | `wrong_password` | Wrong current passwords (change password, delete account): 5 per 15 minutes | "Too many wrong passwords. Try again in 12 minutes." |
-| none, header readable | The API's general per-route limit (`THROTTLE_LIMIT` per minute per network) | "Too many attempts. Try again in 42 seconds." |
+| none, header readable | The API's general per-route limit, per minute: per user when signed in, per network otherwise | "Too many attempts. Try again in 42 seconds." |
 | header not readable | | the type's catalogue text, e.g. "Too many attempts. Please wait and try again." |
 
-Some buttons also stay disabled, counting down, for as long as the API asks:
-"Continue" on register, "Send again" and the code boxes on verify, "Send code"
-on forgot-password. Other forms show the message. The exact limits are in the
+On the auth pages the button also stays disabled, counting down, for as
+long as the API asks: the main button on sign-in, register and
+forgot-password; "Send again" and the code boxes on verify and reset. The
+settings screens show the message. The exact limits are in the
 API starter's `docs/auth/rate-limits.md`.
 
 ## The password rules
@@ -241,21 +253,19 @@ to another page and back, does not start a fresh minute (or none) (D-67).
 
 | Button | Remembers the send in | Set by |
 |---|---|---|
-| "Send again" on `/verify` | `sessionStorage`, `auth:code-sent:sign-in:<address>` | register, and this button |
-| "Continue" on `/register`, the same address again | the same key: within the minute it goes to `/verify` without sending | register |
-| "Send code" on `/forgot-password` | `sessionStorage`, `auth:code-sent:password-reset:<address>` | this button |
-| "Send another code" on `/reset-password` | the same key | forgot-password |
+| "Send again" on `/verify` | `sessionStorage`, `auth:code-sent:sign-in:<address>` | register, sign-in by code, and this button |
+| "Continue" on `/register`, "Send code" on `/login`, the same address again | the same key: within the minute it goes to `/verify` without sending | register, sign-in by code |
+| "Send code" on `/forgot-password`, the same address again | `sessionStorage`, `auth:code-sent:password-reset:<address>`: within the minute it goes to `/reset-password` without sending | forgot-password, and "Send again" on reset |
+| "Send again" on `/reset-password` | the same key | forgot-password, and this button |
 
 `sessionStorage` belongs to the tab: another tab starts without the record,
 and the API's own limit still applies there. After a `429`, the button waits
 as long as `Retry-After` says instead.
 
 The pieces: [code-sent.ts](../../src/features/auth/lib/code-sent.ts)
-(`recordCodeSent`, `resendAllowedAt`, `secondsUntilResend`),
+(`recordCodeSent`, `resendAllowedAt`) and
 [useCountdown.ts](../../src/hooks/useCountdown.ts) (counts down to a moment;
-register and verify) and
-[useResendCooldown.ts](../../src/features/auth/hooks/useResendCooldown.ts)
-(counts down a number of seconds; forgot and reset).
+every auth page, for "send again" and for limits).
 
 ## Saying nothing about who has an account
 
@@ -266,9 +276,13 @@ anyone could test a list of addresses and learn who uses the service
 - register always moves on to "enter the code", whether the address has an
   account or not; the right code signs in either way, and only then does
   verify say "You already have an account with this email";
-- forgot-password always moves on to "enter the code";
-- sign-in says "Incorrect email or password." for a wrong password and an
-  unknown address alike.
+- forgot-password always moves on to "enter the code", and the reset page
+  says the code comes only *if* the address has an account, in the same
+  words for every address (also when sending again);
+- sign-in by code is "create an account" in other words: it always moves on
+  to `/verify`;
+- sign-in by password says "Incorrect email or password..." for a wrong
+  password, an unknown address and an account without a password alike.
 
 ## Messages and languages
 
@@ -283,10 +297,10 @@ wrong". More on translations: [../i18n.md](../i18n.md).
 
 ## Messages kept as keys
 
-On `/register`, `/verify` and `/welcome`, the language can be switched at the
-foot of the page while a message is on screen. A message turned into words
-when it arrived would stay in the old language. So these pages keep every
-message as a key until it is shown ([form-problem.ts](../../src/features/auth/lib/form-problem.ts)):
+On every auth page, the language can be switched at the foot of the page
+while a message is on screen. A message turned into words when it arrived
+would stay in the old language. So these pages keep every message as a key
+until it is shown ([form-problem.ts](../../src/features/auth/lib/form-problem.ts)):
 
 - **`Message`** is `{ key, values? }`, the key with its namespace
   (`auth:...`, `api:...`).
@@ -301,6 +315,5 @@ message as a key until it is shown ([form-problem.ts](../../src/features/auth/li
   `text(problem.message)`.
 
 The keys arrive at run time, so the compiler cannot check them;
-`catalogues.test.ts` and each page's tests check the ones used. The older
-pages (`/login`, `/forgot-password`, `/reset-password`) still use
-`authFormError` until L9 rebuilds them.
+`catalogues.test.ts` and each page's tests check the ones used. The settings
+screens and the delete dialog still use `authFormError`.

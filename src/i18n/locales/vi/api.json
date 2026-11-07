@@ -1,6 +1,6 @@
 {
   "AUTH_UNAUTHORIZED": "Vui lòng đăng nhập để tiếp tục",
-  "AUTH_INVALID_CREDENTIALS": "Email hoặc mật khẩu không đúng",
+  "AUTH_INVALID_CREDENTIALS": "Email hoặc mật khẩu không đúng. Thử lại, hoặc đăng nhập bằng OTP.",
   "AUTH_TOKEN_MISSING": "Vui lòng đăng nhập để tiếp tục",
   "AUTH_TOKEN_EXPIRED": "Phiên đã hết hạn. Vui lòng đăng nhập lại.",
   "AUTH_TOKEN_INVALID": "Phiên không hợp lệ. Vui lòng đăng nhập lại.",

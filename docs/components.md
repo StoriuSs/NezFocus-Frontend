@@ -9,6 +9,7 @@ every page shows. Components used by one feature only live in that feature's
 - [Loading states](#loading-states)
 - [The layouts](#the-layouts)
 - [Language toggle](#language-toggle)
+- [Banner](#banner)
 - [Forms](#forms)
 - [Modals](#modals)
 - [shadcn/ui components](#shadcnui-components)
@@ -28,6 +29,7 @@ src/components/
 ├── RouteErrorPage.tsx     # The full-page screen for a crash outside any page
 ├── PageLoader.tsx         # The spinner while a page's chunk loads
 ├── NavigationProgress.tsx # The bar at the top during navigation
+├── Banner.tsx             # One line of news about the page (C-16), e.g. why a session ended
 └── LanguageToggle.tsx     # "Tiếng Việt · English" at the AuthShell's foot
 
 src/app/layout/AuthShell.tsx                       # The sign-in pages' layout
@@ -182,6 +184,20 @@ below 768 the rail joins it.
 "Tiếng Việt · English" at the foot of the AuthShell. The language in use is
 plain text; the other is a button ([i18n.md](./i18n.md)).
 
+## Banner
+
+### `Banner`
+
+`src/components/Banner.tsx` (C-16): one line of news about the page, with an
+icon; neutral (`surface-2` background, `text-secondary`), no action, the
+input's corners. A status (`role="status"`), read out when it appears. In the
+AuthShell it sits at the top of the form block, above the card: the sign-in
+page says there why a session ended (S-AUTH-03 `session-revoked`).
+
+```tsx
+<Banner icon={LogOut}>{t('sessionEnded.ended')}</Banner>
+```
+
 ## Forms
 
 ### `FormField`
@@ -191,7 +207,9 @@ under it (C-22), and wires them for screen readers (`htmlFor`,
 `aria-invalid`, `aria-describedby`). The line is the first that applies: the
 `error` (an `octagon-x` icon and `danger` text, read out at once), then the
 `status` (a line about the field's state, such as "Checking...", read out
-politely when it changes), then the `hint`:
+politely when it changes), then the `hint`. An `action` (a link that belongs
+to the field, such as "Forgot password?" on sign-in) sits at the end of the
+label's row, but comes after the control in the tab order:
 
 ```tsx
 <FormField label={t('email')} error={errors.email?.message}>
@@ -200,6 +218,10 @@ politely when it changes), then the `hint`:
 
 <FormField label={t('welcome.username')} error={usernameError} status={usernameStatus} hint={t('welcome.usernameHint')}>
     {(control) => <Input {...control} {...register('username')} />}
+</FormField>
+
+<FormField label={t('fields.password')} error={passwordError} action={<Link to='/forgot-password'>{t('signIn.forgot')}</Link>}>
+    {(control) => <PasswordInput {...control} {...register('password')} />}
 </FormField>
 ```
 
@@ -223,8 +245,8 @@ errors never go to a toast.
 <FormMessage tone='danger' icon={problem.offline ? 'wifi-off' : undefined}>{text(problem.message)}</FormMessage>
 ```
 
-Used by `/register`, `/verify` and `/welcome`; the older auth pages still use
-`Notice` from `AuthCard.tsx`.
+Used by every auth page; the settings screens and the delete dialog still
+use `Notice` from `AuthCard.tsx`.
 
 ### `TimeZoneCombobox`
 
@@ -258,12 +280,21 @@ Unticked by default. Used for the terms on "complete your account".
 ### `CodeInput`
 
 `src/features/auth/components/CodeInput.tsx` (C-23), in the auth feature
-since only `/verify` uses it: six boxes for an emailed code. One real input
+since only `/verify` and `/reset-password` use it: six boxes for an emailed code. One real input
 sits over them and takes the whole string (`autocomplete="one-time-code"`, so
 the browser can offer the code from the email); the boxes only show it.
 Pasting "482 913" or "482-913" fills all six. `onComplete` fires at the sixth
 digit. States: `default`, `verifying`, `error` (after a wrong code, the first
 digit typed starts again from an empty row) and `disabled`.
+
+### `OAuthButtons`
+
+`src/features/auth/components/OAuthButtons.tsx`, under the main button of
+sign-in and "create an account": the "or" divider, then its `children` (on
+sign-in, the button for the other way in), then "Continue with Google" when
+the API offers it. Nothing at all when there is neither. Google is a link
+(it leaves the app); with `disabled` (sign-in, while its form is being sent)
+it is a disabled button instead.
 
 ## Modals
 

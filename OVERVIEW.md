@@ -123,7 +123,9 @@ On this app's own pages: `/register` asks only for an email, and the 6-digit
 code from the email, typed on `/verify`, signs in, to a new account or to the
 address's own. A new account then goes through `/welcome`, "complete your
 account" (display name, username, password, time zone, the terms), before any
-other page opens. Later visits use `/login`, or the code again. The API
+other page opens. Later visits use `/login`: an emailed one-time code by
+default, or the password; the page opens on the way that last worked in this
+browser. The API
 answers a sign-in with a short-lived **access token** (15
 minutes by default; the API's `JWT_ACCESS_TTL_SECONDS`), which this app keeps
 **in memory only**, and a **refresh token** in an httpOnly cookie — a cookie
@@ -167,9 +169,10 @@ sequenceDiagram
   permission error was a real bug.
 - **A sign-out says why, and lands where it makes sense.** The API's 401 names
   the reason (`data.reason`: the password changed, signed out everywhere, a
-  security problem…). The app reloads and shows a toast for it. A session that
-  ended by itself or elsewhere goes to `/login?next=<the page you were
-  on>`; signing out yourself, or deleting the account, goes home.
+  security problem…). The app reloads. A session that ended by itself or
+  elsewhere goes to `/login?next=<the page you were on>`, where a banner says
+  why (and a password changed elsewhere opens on the password); signing out
+  yourself, or deleting the account, goes home with a toast.
 - **Tabs stay in step.** Signing out in one tab signs the others out at once;
   signing in in one picks the session up in the others.
 

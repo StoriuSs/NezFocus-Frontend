@@ -46,7 +46,7 @@ app finds out at run time what the API has turned on
 |---|---|---|
 | Create an account with only an email: a 6-digit emailed code signs in, to a new account or to the address's own | `/register`, `/verify` | [pages-and-flows.md](./pages-and-flows.md#create-an-account) |
 | Complete the account, once, before anything else: display name, username, password, time zone, the terms | `/welcome` | [pages-and-flows.md](./pages-and-flows.md#complete-your-account) |
-| Sign in with an email and a password | `/login` | [pages-and-flows.md](./pages-and-flows.md#sign-in) |
+| Sign in with a one-time code emailed to the address (the default), or with the password; the page opens on the way that last worked in this browser | `/login` | [pages-and-flows.md](./pages-and-flows.md#sign-in) |
 | "Continue with Google", when the API has Google set up | `/login`, `/register`, then `/auth/callback` | [pages-and-flows.md](./pages-and-flows.md#continue-with-google) |
 | Forgot the password: get an emailed code, choose a new password. This signs in, and signs out every other device | `/forgot-password`, `/reset-password` | [pages-and-flows.md](./pages-and-flows.md#forgot-and-reset-the-password) |
 | Read the terms and the privacy policy | `/terms`, `/privacy` | [pages-and-flows.md](./pages-and-flows.md#the-terms-and-the-privacy-policy) |
@@ -54,7 +54,7 @@ app finds out at run time what the API has turned on
 | Sign out, or sign out on every device | your menu (avatar at the foot of the rail), `/settings` | [account-settings.md](./account-settings.md#sign-out-everywhere) |
 | Delete the account, with its password | `/profile` | [account-settings.md](./account-settings.md#delete-the-account) |
 | Stay signed in across reloads and new tabs; sign in or out in every open tab at once | everywhere | [session.md](./session.md) |
-| Be told why, when a session ends (password changed elsewhere, signed out everywhere, account deleted, expired) | a message after the page reloads | [session.md](./session.md#why-a-session-ended-every-reason) |
+| Be told why, when a session ends (password changed elsewhere, signed out everywhere, account deleted, expired) | a banner on the sign-in page, or a toast after the page reloads | [session.md](./session.md#why-a-session-ended-every-reason) |
 
 ## What the app gives you as a developer
 

@@ -85,6 +85,30 @@ describe('auth store', () => {
         expect(store.getState().takeSignOutReason()).toBe('password-changed')
     })
 
+    it('lands an ended session on sign in, by password when it was changed, and comes back afterwards (D-65)', async () => {
+        window.history.pushState({}, '', '/study?tab=a')
+        const store = await signedIn(30)
+        authApi.refresh.mockRejectedValue(apiError(401, 'AUTH_TOKEN_REVOKED', { data: { reason: 'password_changed' } }))
+
+        await store.getState().getToken()
+        await vi.runAllTimersAsync()
+
+        expect(hardNavigate).toHaveBeenCalledExactlyOnceWith('/login?next=%2Fstudy%3Ftab%3Da&method=password')
+        window.history.pushState({}, '', '/')
+    })
+
+    it('hands each reader only its kind of reason, and leaves the rest for the other', async () => {
+        const store = await signedIn(30)
+        authApi.refresh.mockRejectedValue(apiError(401, 'AUTH_TOKEN_REVOKED', { data: { reason: 'security' } }))
+        await store.getState().getToken()
+
+        // The app's toasts do not take what the sign-in page's banner says.
+        expect(store.getState().takeSignOutReason((reason) => reason === 'account-deleted')).toBeNull()
+        expect(store.getState().peekSignOutReason()).toBe('security')
+        expect(store.getState().takeSignOutReason((reason) => reason === 'security')).toBe('security')
+        expect(store.getState().peekSignOutReason()).toBeNull()
+    })
+
     it('signs out: forgets the token and the cached data, tells the other tabs, never lands off-site', async () => {
         const store = await signedIn()
         tabs.told = []

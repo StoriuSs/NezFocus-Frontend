@@ -23,9 +23,10 @@ export async function watchForProblems(page: Page): Promise<string[]> {
 /**
  * Makes this browser context look like a client of its own to the API: every
  * request to it carries a random X-Forwarded-For, which the API reads as the
- * client address (it trusts one proxy hop). Its per-IP limits — five new
- * accounts an hour, ten failed sign-ins — would otherwise trip on the second
- * or third run in an hour, all from 127.0.0.1.
+ * client address (it trusts one proxy hop). Its per-IP limits (30 code
+ * emails, wrong codes or failed sign-ins in 5 minutes, D-135) and the global
+ * throttler's anonymous count would otherwise add up across runs, all from
+ * 127.0.0.1.
  */
 export async function asOwnClient(context: BrowserContext): Promise<void> {
     const ip = `198.51.100.${Math.floor(Math.random() * 254) + 1}`

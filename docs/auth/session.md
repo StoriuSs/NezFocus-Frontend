@@ -51,7 +51,7 @@ back after a reload.
 | "This browser may be signed in" | `localStorage`, key `auth:session`, value `"1"` | any script; it is not a secret | until a sign-out, or a refresh the API refuses |
 | Who is signed in (`id`, `email`, `username`, `displayName`, `roles`) | the store, [auth.store.ts](../../src/features/auth/auth.store.ts) (`useAuthStore`) | this tab | until sign-out |
 | The full profile | the React Query cache, key `['users', 'profile']` | this tab | cleared at sign-out |
-| Why the last session ended | `sessionStorage`, key `auth:sign-out-reason` | this tab | read once after the reload, then removed |
+| Why the last session ended | `sessionStorage`, key `auth:sign-out-reason` | this tab | until said once: by a toast after the reload, or by the sign-in page's banner; then removed |
 
 **Why the `auth:session` flag is not a security problem.** It is not the
 session; the cookie is. The flag only decides whether a page load asks the API
@@ -108,8 +108,10 @@ flowchart TD
     V --> O
 ```
 
-Once the app has rendered, it shows the message for a sign-out reason left
-in `sessionStorage`, if any ([below](#why-a-session-ended-every-reason)).
+Once the app has rendered, it shows a toast for a sign-out reason left in
+`sessionStorage`, if the reason is one said by a toast; a session that ended
+by itself or elsewhere is left for the sign-in page's banner
+([below](#why-a-session-ended-every-reason)).
 
 A session that ended while the app was closed (the password was changed on
 another device, say) is found here: the refresh is refused with a reason. The
@@ -213,6 +215,8 @@ Everything goes through the store's `logout(reason?, to?)`:
    revoked (every query gets its `401`). The first call signs out; the rest do
    nothing until the next sign-in.
 2. **Remember the reason** in `sessionStorage`, to say it after the reload.
+   A sign-out without a reason removes any reason an earlier one left, so it
+   is never said for this one.
 3. **Forget the session in this tab:** clear the access token, remove the
    `auth:session` flag, mark the store signed out (and `isSigningOut`, so
    `ProtectedRoute` shows a spinner instead of bouncing through the sign-in
@@ -228,7 +232,8 @@ Everything goes through the store's `logout(reason?, to?)`:
    Only a path on this site is accepted; anything else becomes `/`. A full
    load is the simplest way to be sure nothing of the old session stays in
    memory.
-7. After the reload, `App.tsx` reads the reason and shows its message.
+7. After the reload, `App.tsx` takes the reasons said by a toast and shows
+   it; the sign-in page takes the rest and shows its banner.
 
 Who calls it:
 
@@ -245,10 +250,15 @@ Who calls it:
 
 ## Why a session ended: every reason
 
-The reasons are in [sign-out-reason.ts](../../src/features/auth/lib/sign-out-reason.ts),
-the messages in [sign-out-notice.ts](../../src/features/auth/lib/sign-out-notice.ts)
-(texts in `src/i18n/locales/<language>/auth.json`, `signedOut`, and
-`api.json`), where each lands in `afterSignOut()` in the store.
+The reasons are in [sign-out-reason.ts](../../src/features/auth/lib/sign-out-reason.ts);
+which are said by the sign-in page's banner and which by a toast, in
+[sign-out-notice.ts](../../src/features/auth/lib/sign-out-notice.ts)
+(`sessionEndedOf`, `isSessionEnded`, `announceSignOut`; texts in
+`src/i18n/locales/<language>/auth.json`, `sessionEnded` and `signedOut`, and
+`api.json`); where each lands, in `afterSignOut()` in the store. The store
+hands each reader only its kind: `takeSignOutReason(which)` takes the reason
+only when `which(reason)` is true, and leaves it for the other reader
+otherwise; `peekSignOutReason()` reads it without taking it.
 
 The API says why a session ended in `data.reason` on a `401`
 (`AUTH_TOKEN_REVOKED` from any signed-in route, `AUTH_REFRESH_FAILED` from
@@ -256,25 +266,29 @@ The API says why a session ended in `data.reason` on a `401`
 
 | Reason in the app | The API's `data.reason`, or what happened | The message after the reload | Lands on |
 |---|---|---|---|
-| `session-expired` | none, `expired`, or one the app does not know | "Session expired. Please sign in again." (information) | sign-in, then back to this page |
-| `password-changed` | `password_changed`: the password was changed or reset on another device | "Your password was changed, so you were signed out here. Sign in with the new password." (information) | sign-in, then back |
-| `signed-out-everywhere` | `signed_out_everywhere`: "Sign out everywhere" was chosen on another device | "You were signed out: "Sign out everywhere" was chosen on one of your devices." (information) | sign-in, then back |
-| `signed-out` | `signed_out`: this session was signed out somewhere the broadcast did not reach | "You were signed out." (information) | sign-in, then back |
-| `security` | `security`: the refresh cookie was used twice, so the API suspects it was copied, and ended the session | "You were signed out for your security: this session was used from two places at once. Sign in again, and change your password if that wasn't you." (information) | sign-in, then back |
-| `account-disabled` | `account_deleted` from a refresh, or `403 AUTH_ACCOUNT_DISABLED` from any route | "This account has been deleted" (error) | home |
-| `you-signed-out-everywhere` | the person chose Sign out everywhere, here | "You're signed out on every device." (success) | home |
-| `account-deleted` | the person deleted the account, here | "Your account was deleted. We've emailed you a confirmation." (success) | home |
+| `session-expired` | none, `expired`, or one the app does not know | banner: "Your session has ended · sign in again to continue" | sign-in, then back to this page |
+| `password-changed` | `password_changed`: the password was changed or reset on another device | banner: "Your password was just changed on another device · sign in with the new password" | sign-in by password (`?method=password`), then back |
+| `signed-out-everywhere` | `signed_out_everywhere`: "Sign out everywhere" was chosen on another device | banner: "One of your devices chose "Sign out other devices" · sign in again" | sign-in, then back |
+| `signed-out` | `signed_out`: this session was signed out somewhere the broadcast did not reach | banner: the same as `session-expired` | sign-in, then back |
+| `security` | `security`: the refresh cookie was used twice, so the API suspects it was copied, and ended the session | banner: "Your session was closed to protect your account because it was in use in two places at once · sign in again, and change your password if that wasn't you" | sign-in, then back |
+| `account-disabled` | `account_deleted` from a refresh, or `403 AUTH_ACCOUNT_DISABLED` from any route | toast: "This account has been deleted" (error) | home |
+| `you-signed-out-everywhere` | the person chose Sign out everywhere, here | toast: "You're signed out on every device." (success) | home |
+| `account-deleted` | the person deleted the account, here | toast: "Your account was deleted. We've emailed you a confirmation." (success) | home |
 | none | the person chose Sign out | no message | home |
 
-"Sign-in, then back" means `/login?next=<this page's path, query and #>`:
-a session that ended by itself, mid-task, brings the person back to what they
-were doing. If they were on a sign-in page already, it is home instead.
+"Sign-in, then back" means `/login?next=<this page's path, query and #>`
+(`signInPath(next, method)`): a session that ended by itself, mid-task, brings
+the person back to what they were doing, and the sign-in page's banner says
+why ([pages-and-flows.md](./pages-and-flows.md#sign-in)). From a page outside
+the app it is `/login` alone.
 
 **Ended while the app was closed.** The page load's refresh is refused with
-the reason. The message shows for `password-changed`,
-`signed-out-everywhere`, `security` and `account-disabled`; not for
-`session-expired` or `signed-out`. The page they opened renders as for a
-visitor (a signed-in-only page sends them to sign in, and back afterwards).
+the reason. It is kept for `password-changed`, `signed-out-everywhere`,
+`security` and `account-disabled`; not for `session-expired` or
+`signed-out`. The page they opened renders as for a visitor: a signed-in-only
+page sends them to sign in, and back afterwards, where the banner says why
+(and `password-changed` opens on the password); `account-disabled` is a toast
+at once.
 
 One detail: when the API client retries a request after
 `401 AUTH_TOKEN_EXPIRED` and the refresh then finds the session over, the

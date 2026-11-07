@@ -45,9 +45,9 @@ signs in. The "Set a password" section for accounts made with Google
    been signed out."
 
 Other tabs in this browser share this session, so they stay signed in. Another
-device's next request is refused, and it shows "Your password was changed, so
-you were signed out here. Sign in with the new password."
-([session.md](./session.md#why-a-session-ended-every-reason)).
+device's next request is refused, and it lands on sign in by password, under
+the banner "Your password was just changed on another device · sign in with
+the new password" ([session.md](./session.md#why-a-session-ended-every-reason)).
 
 | Refusal | The page |
 |---|---|

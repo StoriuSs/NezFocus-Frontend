@@ -44,7 +44,14 @@ test.beforeEach(async ({ context }) => {
     await asOwnClient(context)
 })
 
+/** By password: the page opens on the emailed code (S-AUTH-03, D-68), so change over first when needed. */
 async function signIn(page: Page, password: string) {
+    // The page has drawn its way by then: the remembered one may be the password already.
+    await page.getByLabel('Email').waitFor()
+    const passwordField = page.getByLabel('Password', { exact: true })
+    if (!(await passwordField.isVisible())) {
+        await page.getByRole('button', { name: 'Sign in with password' }).click()
+    }
     await page.getByLabel('Email').fill(email)
     await page.getByLabel('Password', { exact: true }).fill(password)
     await page.getByRole('button', { name: 'Sign in', exact: true }).click()
@@ -55,7 +62,7 @@ test('create an account: the emailed code signs in, then "complete your account"
     // A visitor at / is sent to sign in (D-127), which links to "Create account".
     await page.goto('/')
     await page.waitForURL(/\/login$/)
-    await page.getByRole('link', { name: 'Create one' }).click()
+    await page.getByRole('link', { name: 'Create an account' }).click()
     await page.waitForURL(/\/register$/)
 
     // Only the email (D-59): the code goes to it.
@@ -123,24 +130,25 @@ test('reset a forgotten password with an emailed code; the old one no longer wor
     // Room to wait out the one-code-email-a-minute limit (submitPatiently).
     test.setTimeout(120_000)
     const problems = await watchForProblems(page)
-    await page.goto('/login')
+    await page.goto('/login?method=password')
     await page.getByLabel('Email').fill(email)
-    await page.getByRole('link', { name: 'Forgot your password?' }).click()
+    await page.getByRole('link', { name: 'Forgot password?' }).click()
     await expect(page.getByLabel('Email')).toHaveValue(email)
     const sentAt = new Date()
     // One code email a minute per address: sign-up's may be that recent.
     await submitPatiently(page, 'Send code')
     await page.waitForURL(/\/reset-password$/)
-    await expect(page.getByTestId('sent-to')).toHaveText(email)
+    // The same words for every address (NFR-SEC-05).
+    await expect(page.getByTestId('sent-to')).toContainText(`If ${email} has a NezFocus account`)
 
-    await page.getByLabel('Code').fill(await codeFromEmail(email, 'Reset', sentAt))
+    // Six digits do not send by themselves here: the new password comes next (S-AUTH-04).
+    await page.getByLabel('6-digit one-time code').fill(await codeFromEmail(email, 'Reset', sentAt))
     await page.getByLabel('New password').fill(RESET_PASSWORD)
-    await page.getByLabel('Confirm password').fill(RESET_PASSWORD)
-    await page.getByRole('button', { name: 'Change password', exact: true }).click()
+    await page.getByRole('button', { name: 'Set password', exact: true }).click()
 
     // Signed in by the reset itself.
     await page.waitForURL((url) => url.pathname === '/study')
-    await expect(page.getByText("Password changed. You're signed in")).toBeVisible()
+    await expect(page.getByText('New password set. Your other devices were signed out.')).toBeVisible()
     await expect(accountMenu(page)).toBeVisible()
     await page.reload()
     await expect(accountMenu(page)).toBeVisible()

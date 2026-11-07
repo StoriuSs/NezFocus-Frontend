@@ -93,8 +93,14 @@ interface AuthState {
     markIncomplete: () => void
     /** "Complete your account" is done, here or in another tab (ACCOUNT_ALREADY_COMPLETE). */
     markComplete: () => void
-    /** The reason recorded by the last logout, removed as it is read. */
-    takeSignOutReason: () => SignOutReason | null
+    /**
+     * The reason recorded by the last logout, removed as it is read. With
+     * `which`, only a reason of that kind is taken; another stays for its
+     * reader (the app's toasts, the sign-in page's banner: sign-out-notice.ts).
+     */
+    takeSignOutReason: (which?: (reason: SignOutReason) => boolean) => SignOutReason | null
+    /** The reason recorded by the last logout, left in place: read while rendering, taken in an effect. */
+    peekSignOutReason: () => SignOutReason | null
 }
 
 // Several in-flight requests can fail together (every query 401s once a
@@ -133,8 +139,10 @@ function refreshOnce(): Promise<string | undefined> {
 
 /**
  * Where a sign-out lands when not told. A session that ended by itself or
- * elsewhere, mid-task, goes to sign in and back to this page afterwards;
- * one the person ended (or a deleted account) goes home.
+ * elsewhere goes to sign in, where a banner says why (S-AUTH-03
+ * `session-revoked`), and back to this page afterwards; from a page outside
+ * the app, to sign in alone. A password changed elsewhere opens the password
+ * way. One the person ended (or a deleted account) goes home.
  */
 function afterSignOut(reason: SignOutReason | undefined): string {
     const ended =
@@ -145,7 +153,8 @@ function afterSignOut(reason: SignOutReason | undefined): string {
         reason === 'security'
     if (!ended) return '/'
     const { pathname, search, hash } = window.location
-    return isSignInFlowPage(pathname) ? '/' : signInPath(`${pathname}${search}${hash}`)
+    const back = isSignInFlowPage(pathname) ? undefined : `${pathname}${search}${hash}`
+    return signInPath(back, reason === 'password-changed' ? 'password' : undefined)
 }
 
 const toAuthUser = (profile: UserProfile): AuthUser => ({
@@ -255,7 +264,9 @@ export const useAuthStore = create<AuthState>((set, get) => {
         logout: (reason, to = afterSignOut(reason)) => {
             if (logoutStarted) return
             logoutStarted = true
+            // A reason from an earlier sign-out must not be said for this one.
             if (reason) safeSessionStorage.set(NOTICE_KEY, reason)
+            else safeSessionStorage.remove(NOTICE_KEY)
             const wasSignedIn = get().isAuthenticated
             forget()
             tellOtherTabs('signed-out')
@@ -296,10 +307,16 @@ export const useAuthStore = create<AuthState>((set, get) => {
             void queryClient.invalidateQueries({ queryKey: userKeys.profile() })
         },
 
-        takeSignOutReason: () => {
-            const reason = safeSessionStorage.get(NOTICE_KEY) as SignOutReason | null
+        peekSignOutReason: () => {
+            const stored = safeSessionStorage.get(NOTICE_KEY)
+            return stored && SIGN_OUT_REASONS.has(stored) ? (stored as SignOutReason) : null
+        },
+
+        takeSignOutReason: (which) => {
+            const reason = get().peekSignOutReason()
+            if (reason && which && !which(reason)) return null
             safeSessionStorage.remove(NOTICE_KEY)
-            return reason && SIGN_OUT_REASONS.has(reason) ? reason : null
+            return reason
         }
     }
 })

@@ -33,9 +33,3 @@ export function resendAllowedAt(kind: CodeKind, email: string | undefined, now =
     const allowedAt = sentAt + RESEND_AFTER_SECONDS * 1000
     return allowedAt > now ? allowedAt : null
 }
-
-/** Seconds until another code of this kind may be sent to the address; 0 when it may now. */
-export function secondsUntilResend(kind: CodeKind, email: string | undefined, now = Date.now()): number {
-    const allowedAt = resendAllowedAt(kind, email, now)
-    return allowedAt ? Math.ceil((allowedAt - now) / 1000) : 0
-}

@@ -44,8 +44,10 @@ don't add another in its `onError`
 
 A form is a **zod schema** (the rules), **React Hook Form** (the state), and
 **`FormField`** (`src/components/form/FormField.tsx`), which lays out a label,
-the control and its error, and wires them for screen readers. A complete
-example is the sign-in page, `src/features/auth/pages/SignIn.tsx`.
+the control and its error, and wires them for screen readers. The auth
+pages are complete examples (`src/features/auth/pages/ForgotPassword.tsx` is
+the shortest), though they keep their messages as keys instead of building
+the schema with `t()` ([auth/forms-and-errors.md](./auth/forms-and-errors.md#messages-kept-as-keys)).
 
 1. **The schema** — built with `t()`, so the messages follow the language:
 
@@ -91,7 +93,7 @@ example is the sign-in page, `src/features/auth/pages/SignIn.tsx`.
    ```
 
    `FormField` also takes a `hint`, shown under the control while there is no
-   error.
+   error, and an `action`, a link at the end of the label's row.
 
 zod runs in "jitless" mode (`src/config/zod.ts`, imported first in
 `main.tsx`): the production Content-Security-Policy forbids the `new Function`

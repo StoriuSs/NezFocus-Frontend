@@ -45,18 +45,19 @@ react-starter/
     │   ├── shell/             # ShellPage, RightPanel — what a page in the AppShell draws
     │   ├── brand/             # Logo
     │   ├── form/              # FormField — the label/control/error pattern; FormMessage, TimeZoneCombobox
-    │   └── ErrorBoundary.tsx, PageLoader.tsx, LanguageToggle.tsx, …
+    │   └── ErrorBoundary.tsx, PageLoader.tsx, LanguageToggle.tsx, Banner.tsx, …
     ├── config/                # env.ts and its zod schema
     ├── features/              # ← most new code goes here
     │   ├── auth/              # The session, the eight auth pages, Google, route guards
     │   │   ├── pages/         # SignIn, Register, Verify, Welcome, ForgotPassword,
     │   │   │                  #   ResetPassword, OAuthCallback, Settings
     │   │   ├── components/    # AuthCard, PasswordInput, PasswordRules, CodeInput, OAuthButtons,
-    │   │   │                  #   DeleteAccountDialog, SentTo, ProtectedRoute, RequireRole
+    │   │   │                  #   DeleteAccountDialog, ProtectedRoute, RequireRole
     │   │   ├── api/           # auth.api.ts (every call to /auth), keys.ts, the query hooks
-    │   │   ├── hooks/         # useResendCooldown, useOAuthProviders
+    │   │   ├── hooks/         # useOAuthProviders
     │   │   ├── lib/           # The pages' paths, the access token (in memory only), tab sync,
-    │   │   │                  #   form errors and problems, password rules, sign-out reasons
+    │   │   │                  #   form errors and problems, password rules, sign-out reasons,
+    │   │   │                  #   the sign-in way remembered
     │   │   ├── auth.store.ts  # Who is signed in; sign-in, refresh, sign-out
     │   │   ├── routes.tsx     # authRoutes (sign-in pages, GuestOnlyRoute; /welcome, IncompleteOnlyRoute),
     │   │   │                  #   authAppRoutes (/settings)

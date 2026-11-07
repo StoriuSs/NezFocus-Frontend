@@ -1,14 +1,11 @@
 import { useLocation } from 'react-router-dom'
 
-/** What the last step did, for the next page to say. */
-export type AuthNotice = 'code-sent'
-
 /** The page that sent the sign-in code: "Back" returns there (S-AUTH-02). */
 export type CodeFrom = 'register' | 'login'
 
 /**
- * What one auth page hands the next: the address to prefill, a notice, and
- * which page sent the code.
+ * What one auth page hands the next: the address to prefill, and which page
+ * sent the code.
  *
  * Carried in the router's navigation state, not the URL: an address in the
  * query string ends up in the browser's history, the web server's access log
@@ -18,7 +15,6 @@ export type CodeFrom = 'register' | 'login'
  */
 export interface AuthPageState {
     email?: string
-    notice?: AuthNotice
     from?: CodeFrom
     /** Signed in with Google just now: "complete your account" says so (S-AUTH-05 `from-google`). */
     via?: 'google'
@@ -34,7 +30,6 @@ export function useAuthPageState(): AuthPageState {
     const state = useLocation().state as Record<string, unknown> | null
     return {
         email: typeof state?.email === 'string' ? state.email : undefined,
-        notice: state?.notice === 'code-sent' ? 'code-sent' : undefined,
         from: state?.from === 'register' || state?.from === 'login' ? state.from : undefined,
         via: state?.via === 'google' ? 'google' : undefined
     }

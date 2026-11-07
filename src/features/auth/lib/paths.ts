@@ -63,9 +63,16 @@ export function withFlow(path: string, search: string | URLSearchParams): string
     return query ? `${path}?${query}` : path
 }
 
-/** The sign-in page, coming back to `next` afterwards. */
-export function signInPath(next?: string): string {
-    return next ? `${AUTH_PATHS.signIn}?${new URLSearchParams({ next })}` : AUTH_PATHS.signIn
+/**
+ * The sign-in page, coming back to `next` afterwards; `password` opens it on
+ * the password (`?method=password`, S-AUTH-03).
+ */
+export function signInPath(next?: string, method?: 'password'): string {
+    const query = new URLSearchParams()
+    if (next) query.set('next', next)
+    if (method) query.set('method', method)
+    const text = query.toString()
+    return text ? `${AUTH_PATHS.signIn}?${text}` : AUTH_PATHS.signIn
 }
 
 /**
