@@ -187,11 +187,13 @@ function ResetForm({ email }: { email: string }) {
               ? 'auth:limits.resetCodesEmail'
               : 'auth:limits.other'
     const resendLimitKey =
-        resendLimit?.reason === 'emails'
-            ? 'auth:limits.resetResendEmails'
-            : resendLimit?.reason === 'network'
-              ? 'auth:limits.resetResendNetwork'
-              : 'auth:limits.other'
+        resendLimit?.reason === 'recent_email'
+            ? 'auth:limits.resetResendRecent'
+            : resendLimit?.reason === 'emails'
+              ? 'auth:limits.resetResendEmails'
+              : resendLimit?.reason === 'network'
+                ? 'auth:limits.resetResendNetwork'
+                : 'auth:limits.other'
 
     const message = codeBlocked ? (
         <FormMessage tone='neutral' icon='clock'>

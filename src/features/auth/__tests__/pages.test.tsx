@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import i18n from '@/i18n'
@@ -260,6 +260,27 @@ describe('the auth pages', () => {
             expect(screen.getByRole('button', { name: 'Sign in with password' })).toBeEnabled()
         })
 
+        it('says a code went out a moment ago from elsewhere, not that many did; another address may go on (D-136)', async () => {
+            authApi.sendEmailCode.mockRejectedValue(
+                apiError(429, 'RATE_LIMIT_EXCEEDED', {
+                    headers: { 'retry-after': '37' },
+                    data: { reason: 'recent_email' }
+                })
+            )
+            renderAt('/login')
+            const email = await screen.findByLabelText('Email')
+
+            await userEvent.type(email, 'an.nguyen@gmail.com')
+            await userEvent.click(screen.getByRole('button', { name: 'Send code' }))
+
+            expect(await screen.findByRole('status')).toHaveTextContent(
+                'We just sent a code to this email. Try again in 37 seconds, or sign in with your password.'
+            )
+            expect(screen.getByRole('button', { name: 'Send code' })).toBeDisabled()
+            await userEvent.type(email, 'x')
+            expect(screen.getByRole('button', { name: 'Send code' })).toBeEnabled()
+        })
+
         it('says why the session ended, once, and opens on the password when it was changed elsewhere (D-65)', async () => {
             authState.peekSignOutReason.mockReturnValue('password-changed')
             renderAt('/login')
@@ -395,6 +416,28 @@ describe('the auth pages', () => {
             expect(screen.getByRole('button', { name: 'Set password' })).toBeDisabled()
             expect(screen.getByLabelText('New password')).toHaveValue('Harbour-Lantern-42')
         })
+
+        it('says a code went out a moment ago, when asking for one or sending again (D-136)', async () => {
+            authApi.forgotPassword.mockRejectedValue(
+                apiError(429, 'RATE_LIMIT_EXCEEDED', {
+                    headers: { 'retry-after': '37' },
+                    data: { reason: 'recent_email' }
+                })
+            )
+            renderAt('/forgot-password', { email: ADDRESS })
+
+            await userEvent.click(await screen.findByRole('button', { name: 'Send code' }))
+            expect(await screen.findByRole('status')).toHaveTextContent(
+                'We just sent a code to this email. Try again in 37 seconds.'
+            )
+
+            cleanup()
+            renderAt('/reset-password', { email: ADDRESS })
+            await userEvent.click(await screen.findByRole('button', { name: 'Send again' }))
+            expect(await screen.findByRole('status')).toHaveTextContent(
+                'We just sent a code to this email. Send again in 37 seconds.'
+            )
+        })
     })
 
     describe('create an account (S-AUTH-01)', () => {
@@ -453,6 +496,27 @@ describe('the auth pages', () => {
             )
             expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled()
 
+            await userEvent.type(email, 'x')
+            expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled()
+        })
+
+        it('says a code went out a moment ago from elsewhere; another address may go on (D-136)', async () => {
+            authApi.sendEmailCode.mockRejectedValue(
+                apiError(429, 'RATE_LIMIT_EXCEEDED', {
+                    headers: { 'retry-after': '37' },
+                    data: { reason: 'recent_email' }
+                })
+            )
+            renderAt('/register')
+            const email = await screen.findByLabelText('Email')
+
+            await userEvent.type(email, 'an.nguyen@gmail.com')
+            await userEvent.click(screen.getByRole('button', { name: 'Continue' }))
+
+            expect(await screen.findByRole('status')).toHaveTextContent(
+                'We just sent a code to this email. Try again in 37 seconds.'
+            )
+            expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled()
             await userEvent.type(email, 'x')
             expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled()
         })
@@ -603,6 +667,22 @@ describe('the auth pages', () => {
             )
             expect(screen.getByRole('button', { name: 'Send again' })).toBeDisabled()
             expect(await codeField()).toBeEnabled()
+        })
+
+        it('says a code went out a moment ago when sending again is refused for that (D-136)', async () => {
+            authApi.sendEmailCode.mockRejectedValue(
+                apiError(429, 'RATE_LIMIT_EXCEEDED', {
+                    headers: { 'retry-after': '37' },
+                    data: { reason: 'recent_email' }
+                })
+            )
+            renderAt('/verify', FROM_REGISTER)
+
+            await userEvent.click(await screen.findByRole('button', { name: 'Send again' }))
+
+            expect(await screen.findByRole('status')).toHaveTextContent(
+                'We just sent a code to this email. Send again in 37 seconds, or sign in with your password.'
+            )
         })
 
         it('goes back to the page that sent the code, with the address still there', async () => {

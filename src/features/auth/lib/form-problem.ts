@@ -35,7 +35,7 @@ export interface RequestFailure {
     message: Message
 }
 
-const RATE_LIMIT_REASONS = new Set<string>(['network', 'emails', 'sign_ins', 'wrong_password', 'codes'])
+const RATE_LIMIT_REASONS = new Set<string>(['network', 'recent_email', 'emails', 'sign_ins', 'wrong_password', 'codes'])
 
 /** The error's `data`: where the API puts details (camelCased by src/lib/api.ts). */
 function detailsOf(error: unknown): Record<string, unknown> {

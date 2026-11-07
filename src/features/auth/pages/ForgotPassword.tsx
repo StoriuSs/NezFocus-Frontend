@@ -91,11 +91,13 @@ export default function ForgotPassword() {
     }
 
     const limitKey =
-        limit?.reason === 'emails'
-            ? 'auth:limits.registerEmails'
-            : limit?.reason === 'network'
-              ? 'auth:limits.registerNetwork'
-              : 'auth:limits.other'
+        limit?.reason === 'recent_email'
+            ? 'auth:limits.registerRecent'
+            : limit?.reason === 'emails'
+              ? 'auth:limits.registerEmails'
+              : limit?.reason === 'network'
+                ? 'auth:limits.registerNetwork'
+                : 'auth:limits.other'
 
     return (
         <div className='space-y-6'>

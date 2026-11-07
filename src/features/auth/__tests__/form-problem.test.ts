@@ -17,6 +17,17 @@ describe('requestFailure', () => {
         expect(failure.limit).toEqual({ reason: 'emails', until: NOW + 2_280_000 })
     })
 
+    it('knows the limit of a code sent a moment ago (D-136)', () => {
+        const failure = requestFailure(
+            apiError(429, 'RATE_LIMIT_EXCEEDED', {
+                headers: { 'retry-after': '37' },
+                data: { reason: 'recent_email' }
+            }),
+            NOW
+        )
+        expect(failure.limit).toEqual({ reason: 'recent_email', until: NOW + 37_000 })
+    })
+
     it('leaves out a limit reason it does not know, and a limit without Retry-After', () => {
         expect(
             requestFailure(

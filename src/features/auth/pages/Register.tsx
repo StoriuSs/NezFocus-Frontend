@@ -67,7 +67,7 @@ export default function Register() {
     }, [setFocus])
 
     // A limit on this address lifts for another address; the network's does not.
-    const limited = limit !== null && wait > 0 && (limit.reason !== 'emails' || sameAddress(limit.email, email))
+    const limited = limit !== null && wait > 0 && (limit.reason === 'network' || sameAddress(limit.email, email))
 
     async function onSubmit(values: Values) {
         setProblem(null)
@@ -93,11 +93,13 @@ export default function Register() {
     }
 
     const limitKey =
-        limit?.reason === 'emails'
-            ? 'auth:limits.registerEmails'
-            : limit?.reason === 'network'
-              ? 'auth:limits.registerNetwork'
-              : 'auth:limits.other'
+        limit?.reason === 'recent_email'
+            ? 'auth:limits.registerRecent'
+            : limit?.reason === 'emails'
+              ? 'auth:limits.registerEmails'
+              : limit?.reason === 'network'
+                ? 'auth:limits.registerNetwork'
+                : 'auth:limits.other'
 
     return (
         <AuthCard

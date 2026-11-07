@@ -4,9 +4,9 @@ import { getApiErrorInfo, getApiErrorMessage } from '@/lib/api-error'
 import { rejectedRules, type PasswordRule } from './password-rules'
 
 /** Which kind of limit the API says refused a request (its rate-limits.ts). */
-export type RateLimitReason = 'network' | 'emails' | 'sign_ins' | 'wrong_password' | 'codes'
+export type RateLimitReason = 'network' | 'recent_email' | 'emails' | 'sign_ins' | 'wrong_password' | 'codes'
 
-const RATE_LIMIT_REASONS = new Set<string>(['network', 'emails', 'sign_ins', 'wrong_password', 'codes'])
+const RATE_LIMIT_REASONS = new Set<string>(['network', 'recent_email', 'emails', 'sign_ins', 'wrong_password', 'codes'])
 
 /**
  * What a failed auth request means for the form that sent it.

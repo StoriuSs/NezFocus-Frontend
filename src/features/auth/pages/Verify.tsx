@@ -183,11 +183,13 @@ function VerifyCode({ email, from }: { email: string; from: 'register' | 'login'
               ? 'auth:limits.codesEmail'
               : 'auth:limits.other'
     const resendLimitKey =
-        resendLimit?.reason === 'emails'
-            ? 'auth:limits.resendEmails'
-            : resendLimit?.reason === 'network'
-              ? 'auth:limits.resendNetwork'
-              : 'auth:limits.other'
+        resendLimit?.reason === 'recent_email'
+            ? 'auth:limits.resendRecent'
+            : resendLimit?.reason === 'emails'
+              ? 'auth:limits.resendEmails'
+              : resendLimit?.reason === 'network'
+                ? 'auth:limits.resendNetwork'
+                : 'auth:limits.other'
 
     const message = codeBlocked ? (
         <FormMessage tone='neutral' icon='clock'>

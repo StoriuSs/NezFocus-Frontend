@@ -181,14 +181,19 @@ password."; on sign-in, each way points to the other ("..., or sign in with
 your password", "..., or sign in with a one-time code"); for wrong codes
 (reason `codes`, per address, or `network`), "Too many wrong codes for this
 email in the past hour...". A network's limit adds that on a shared network
-other people count too. A limit on one address lifts when another address is
+other people count too. A code email refused because one went to the address under a minute ago,
+from another tab, browser or flow (reason `recent_email`, D-136), says so
+instead: "We just sent a code to this email. Try again in 37 seconds." (same
+endings per page). In the same tab the page never asks: it goes straight to
+the code (D-67). A limit on one address lifts when another address is
 typed (register, sign-in, forgot-password); a network's does not. The
 settings screens, through `authFormError`, read:
 
 | `data.reason` | When | The message |
 |---|---|---|
 | `network` | Too many requests from one network (IP address), 30 in 5 minutes each: failed sign-ins, code emails, wrong codes | "Too many requests from your network. Try again in 42 seconds. On a shared connection, such as an office or a school, other people's requests count too." |
-| `emails` | Codes emailed to one address: one a minute, five an hour | "We've already sent several emails to this address. Try again in 42 seconds." |
+| `recent_email` | A code emailed to one address under a minute ago (one a minute) | "We just sent an email with a code to this address. Try again in 42 seconds." |
+| `emails` | Codes emailed to one address: five an hour | "We've already sent several emails to this address. Try again in 12 minutes." |
 | `sign_ins` | Failed sign-ins for one address (5 per 15 minutes) | "Too many failed sign-ins for this address. Try again in 12 minutes, or choose a new password." |
 | `wrong_password` | Wrong current passwords (change password, delete account): 5 per 15 minutes | "Too many wrong passwords. Try again in 12 minutes." |
 | none, header readable | The API's general per-route limit, per minute: per user when signed in, per network otherwise | "Too many attempts. Try again in 42 seconds." |

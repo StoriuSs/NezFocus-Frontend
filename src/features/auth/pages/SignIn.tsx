@@ -60,6 +60,7 @@ interface Limit {
 /** The words for a limit, by the way it refused (01-auth.md › S-AUTH-03 `rate-limited`, `password-rate-limited`). */
 function limitKey(method: SignInMethod, reason: RateLimitReason | undefined): string {
     if (reason === 'network') return method === 'code' ? 'auth:limits.signInNetwork' : 'auth:limits.passwordNetwork'
+    if (method === 'code' && reason === 'recent_email') return 'auth:limits.signInRecent'
     if (method === 'code' && reason === 'emails') return 'auth:limits.signInEmails'
     if (method === 'password' && reason === 'sign_ins') return 'auth:limits.passwordTries'
     return 'auth:limits.other'

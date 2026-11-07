@@ -91,14 +91,15 @@ export async function openAccountMenuItem(page: Page, item: string | RegExp): Pr
 
 /**
  * Submit a form whose request may be refused for going too fast (the API
- * sends at most one code email a minute to an address). Waits as long as the
- * page says, then submits again — which also checks that the page says it.
+ * sends at most one code email a minute to an address, and the page then says
+ * a code was just sent, D-136). Waits as long as the page says, then submits
+ * again — which also checks that the page says it.
  */
 export async function submitPatiently(page: Page, button: string): Promise<void> {
     for (let attempt = 0; attempt < 2; attempt++) {
         const before = page.url()
         await page.getByRole('button', { name: button, exact: true }).click()
-        const tooFast = page.getByText(/Try again in (\d+) seconds?\./)
+        const tooFast = page.getByText(/^We just sent a code to this email\. Try again in \d+ seconds?[.,]/)
         const outcome = await Promise.race([
             page.waitForURL((url) => url.href !== before, { timeout: 15_000 }).then(() => 'moved' as const),
             tooFast.waitFor({ timeout: 15_000 }).then(() => 'wait' as const)

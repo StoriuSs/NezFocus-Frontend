@@ -13,8 +13,9 @@ import {
 /**
  * An account's whole life, in a real browser against the real API: create it
  * with the emailed code (which signs in), complete it (display name, username,
- * password, time zone, terms), stay signed in across a reload, reset a
- * forgotten password (which signs in), delete the account. Plus the parts only a browser shows: the
+ * password, time zone, terms), stay signed in across a reload, sign in by
+ * password and by an emailed code, reset a forgotten password (which signs
+ * in), delete the account. Plus the parts only a browser shows: the
  * refresh cookie crossing origins, and a deep link coming back after sign-in.
  *
  * Needs the API (E2E_API_URL, default http://localhost:8888/api/v1) and the
@@ -119,6 +120,27 @@ test('a reload keeps the session; a deep link comes back after sign-in', async (
     await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible()
     await expect(accountMenu(page)).toBeVisible()
 
+    expect(problems).toEqual([])
+})
+
+test('sign in with an emailed code: a complete account opens on Study', async ({ page }) => {
+    // Room to wait out the one-code-email-a-minute limit (submitPatiently).
+    test.setTimeout(120_000)
+    const problems = await watchForProblems(page)
+    // A browser that has not signed in before opens on the code (D-68).
+    await page.goto('/login')
+    await expect(page.getByLabel('Password', { exact: true })).toBeHidden()
+    await page.getByLabel('Email').fill(email)
+    const sentAt = new Date()
+    // One code email a minute per address: sign-up's may be that recent.
+    await submitPatiently(page, 'Send code')
+    await page.waitForURL(/\/verify$/)
+    await expect(page.getByTestId('sent-to')).toHaveText(email)
+
+    // No ?next: a complete account lands on Study (D-124).
+    await page.getByLabel('6-digit one-time code').fill(await codeFromEmail(email, 'sign-in code', sentAt))
+    await page.waitForURL((url) => url.pathname === '/study')
+    await expect(accountMenu(page)).toBeVisible()
     expect(problems).toEqual([])
 })
 
