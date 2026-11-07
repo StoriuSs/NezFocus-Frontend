@@ -115,7 +115,7 @@ Every check is a command you can run yourself, from the project folder.
 | Unit tests (Vitest) | A component or function that no longer does what its test says, or a page with a critical or serious accessibility problem (axe-core, [testing.md](./testing.md#accessibility)) | `pnpm test` |
 | Changed-line coverage | New or changed lines in the logic files (`src/lib`, `src/hooks`, a feature's `api/`, `hooks/`, `lib/`, the stores) that fewer than 80% of are run by a test ([CONSTRAINTS.md](../CONSTRAINTS.md)); read from the coverage report of the unit run | `pnpm check:task` |
 | Build | Type errors anywhere (`tsc -b`), and anything that stops `vite build` | `pnpm build` |
-| Bundle size | What the first screen downloads, gzipped (`.size-limit.mjs`); reports only until CONSTRAINTS.md records a budget | `pnpm build && pnpm size` |
+| Bundle size | What the first screen downloads, gzipped (`.size-limit.mjs`), over the budget CONSTRAINTS.md records (JS 246.75 kB, CSS 8.17 kB) | `pnpm build && pnpm size` |
 
 The build checks no settings: the image holds none, and the container gets
 them when it starts. The settings are checked by `pnpm dev`, by `deploy.sh`

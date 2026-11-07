@@ -56,6 +56,10 @@ export function useProfile(enabled = true) {
 }
 ```
 
+NezFocus's `useProfile` adds one thing: while a removed avatar waits out its
+"Undo", a `select` hides it (`avatarUrl: null`) for every reader
+([state-management.md](./state-management.md#the-stores)).
+
 The request is a function of its own so that code outside React can make the
 same one: the auth store calls `fetchProfile()` at sign-in and puts the answer
 in this query's cache, so the two can never disagree about what a profile is.
@@ -135,7 +139,8 @@ toast. What only one screen wants, closing its dialog say, goes to
 `mutate()`, as TanStack Query intends:
 
 ```ts
-updateMutation.mutate(values, { onSuccess: () => setEditOpen(false) })
+// AvatarCropDialog: the crop dialog closes once the picture is saved
+upload.mutate(blob, { onSuccess: onClose })
 ```
 
 `mutate()`'s callbacks are skipped if the component has unmounted by then,

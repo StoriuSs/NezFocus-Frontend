@@ -32,12 +32,14 @@ src/components/
 ├── NavigationProgress.tsx # The bar at the top during navigation
 ├── Banner.tsx             # One line of news about the page (C-16), e.g. why a session ended
 ├── settings/SettingsRow.tsx  # SettingsGroup, SettingsRow (C-27) and Tag (C-36) for the settings pages
+├── settings/SaveBar.tsx   # The save bar of a settings form with text fields (C-27)
 └── LanguageToggle.tsx     # "Tiếng Việt · English" at the AuthShell's foot
 
 src/app/layout/AuthShell.tsx                       # The sign-in pages' layout
 src/app/layout/BrandPanel.tsx                      # Its brand half, from 1024 up
 src/app/layout/app-shell/                          # The app's layout: AppShell, Rail, ListColumn, MeMenu
 src/features/users/components/ProfileSkeleton.tsx  # The profile page's placeholder
+src/features/users/components/                     # The profile page's pieces: AvatarSection, AvatarCropDialog, ProfileForm
 src/features/auth/components/                      # The auth pages' pieces (CodeInput among them)
 src/pages/Legal.tsx                                # /terms and /privacy, with their own bar
 ```
@@ -132,7 +134,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 ### `ProfileSkeleton`
 
-The profile page's layout in skeletons, shown while the profile loads.
+The profile page's shape in skeletons (the avatar row, then three fields),
+shown while the profile loads.
 
 ```tsx
 import { ProfileSkeleton } from '@/features/users/components/ProfileSkeleton'
@@ -243,6 +246,19 @@ first to use them ([auth/account-settings.md](./auth/account-settings.md)).
 The group's `id` must be unique on the page: it ties the section to its
 title.
 
+**`SaveBar`** (`src/components/settings/SaveBar.tsx`, C-27; `saving`,
+`onDiscard`): the save bar of a settings form with text fields, first used by
+the profile page (`ProfileForm`). Render it last inside the `<form>`, only
+while the form has changes: it floats 24 above the bottom of the content
+area, as wide as the content, and at the end of the page sits after the last
+field, never over it. "You have unsaved changes", **Discard changes** (calls
+`onDiscard`) and **Save changes** (submits the form; a spinner while
+`saving`). Its words are `common:saveBar.*`.
+
+```tsx
+{isDirty ? <SaveBar saving={isSubmitting} onDiscard={() => reset()} /> : null}
+```
+
 ## Forms
 
 ### `FormField`
@@ -345,8 +361,18 @@ it is a disabled button instead.
 
 ### `DeleteAccountDialog`
 
-On the profile page: deleting the account, confirmed with its password
+On the account page (`/settings/account`), below Sessions, until L14 builds
+its own group: deleting the account, confirmed with its password
 ([auth/account-settings.md](./auth/account-settings.md#delete-the-account)).
+
+### `AvatarCropDialog`
+
+The profile page's "Crop your profile picture"
+(`src/features/users/components/AvatarCropDialog.tsx`, S-ME-02): a round
+mask of 280 over the chosen image (react-easy-crop), dragged to place it,
+zoomed 100-300% with the `Slider` or the zoom buttons. **Save photo** uploads
+at once; while it does, the dialog stays (Esc and Cancel wait), and it closes
+once saved. A refused upload is toasted and the dialog stays to try again.
 
 The username dialog that used to open after a first sign-in
 (`UsernamePromptModal`) is gone: the username is chosen on "complete your
@@ -368,9 +394,9 @@ into the repository by the shadcn CLI, so you can edit them:
 | `Label` | Form labels |
 | `Popover` | A floating panel anchored to the control that opened it (C-15; `@radix-ui/react-popover`). The time zone picker's panel |
 | `Skeleton` | Loading placeholders |
-| `Slider` | A range input (the avatar crop's zoom) |
+| `Slider` | A range input, drawn to C-35: a 4-high track, `primary` up to the value; a 16 knob in `text-primary` (the avatar crop's zoom) |
 | `Sonner` | The toaster, following the theme |
-| `Textarea` | Multi-line text |
+| `Textarea` | Multi-line text, drawn to C-22 `multiline`: the `Input`'s edge, colours and states; three lines high, growing with its text to six where the browser can (`field-sizing`), then scrolling |
 | `Tooltip` | Tooltips; `WithTooltip` is the common case. `TooltipProvider` wraps the app in `App.tsx` |
 
 Next to them, written for this project rather than copied: `IconButton` (a

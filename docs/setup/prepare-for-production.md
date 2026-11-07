@@ -408,7 +408,8 @@ could have checked them. Tick each one.
       refresh cookie crossing from `app.` to `api.`.
 - [ ] If the API has Google on: **Continue with Google** takes you to Google
       and back, signed in.
-- [ ] If avatars use S3 or R2: upload one in Profile; it shows, and the
+- [ ] If avatars use S3 or R2: upload one on the Profile page
+      (`/settings/profile`); it shows, and the
       console has no CSP error.
 - [ ] Sign out works, and signing out on one tab signs out the others.
 
@@ -422,7 +423,7 @@ could have checked them. Tick each one.
       API's (the API starter's `docs/setup/uptime-check.md`).
 - [ ] After your second deploy: rehearse `./deploy.sh --rollback` while it is
       calm, then `./deploy.sh` to come forward again.
-- [ ] Delete the test account (Profile → delete account), or keep it as your
+- [ ] Delete the test account (Settings → Account → Delete Account), or keep it as your
       own.
 
 Do not run the end-to-end tests against production: they create accounts and

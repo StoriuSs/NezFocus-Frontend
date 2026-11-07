@@ -36,8 +36,8 @@ loaded only when first opened (`lazy`).
 | `/forgot-password` | visitors (a signed-in person sees a card) | Asks for a code to choose a new password | `POST /auth/forgot-password` | always the reset page |
 | `/reset-password` | visitors (a signed-in person sees a card) | The code and a new password. Signs in, and signs out every other device | `POST /auth/reset-password`, `POST /auth/forgot-password` (send again) | as `/login` by password |
 | `/auth/callback` | anyone | Where the API sends the browser back after Google | `POST /auth/refresh` | as `/login`; or says why it failed |
-| `/settings/account` | signed in, complete | "Account": the email, the password, the signed-in devices ([account-settings.md](./account-settings.md)). `/settings` redirects here | several | stays |
-| `/profile` | signed in, complete | The profile, and "Delete account" ([account-settings.md](./account-settings.md#delete-the-account)) | several | stays |
+| `/settings/account` | signed in, complete | "Account": the email, the password, the signed-in devices, and "Delete account" ([account-settings.md](./account-settings.md)). `/settings` redirects here | several | stays |
+| `/settings/profile` | signed in, complete | The profile (S-ME-02): the picture, the display name, the username (read only) and the bio (`src/features/users/pages/Profile.tsx`) | `PATCH /users/me`, `POST` and `DELETE /users/me/avatar` | stays |
 | `/terms`, `/privacy` | anyone | The Terms of Service and the Privacy Policy ([below](#the-terms-and-the-privacy-policy)) | nothing | stays |
 
 "Visitors" means the page is wrapped in `GuestOnlyRoute`: a signed-in person
@@ -54,12 +54,12 @@ sign-up, which asked for a password and then confirmed the address, is gone
 
 ## Where the person goes afterwards: `?next=` and `?invite=`
 
-Someone who opens `/profile` while signed out should land on `/profile` once
+Someone who opens `/settings/profile` while signed out should land on it once
 signed in, even if they first create an account and complete it. The page
 they were heading for travels in the address as `?next=`; an invite link
 waiting for them travels as `?invite=`:
 
-1. `ProtectedRoute` sends them to `/login?next=%2Fprofile` (`signInPath()`).
+1. `ProtectedRoute` sends them to `/login?next=%2Fsettings%2Fprofile` (`signInPath()`).
 2. Every link between auth pages keeps `next` and `invite`, and nothing else
    (`withFlow(path, search)` in `paths.ts`): login → verify → welcome,
    login → register → verify → welcome, login → forgot → reset. The sign-in
@@ -216,7 +216,7 @@ Every field is required (D-69):
 
 | Field | Starts as | Checks |
 |---|---|---|
-| Display name | Google's name after Google (then the focus starts on the password), otherwise empty | not empty, at most 32 characters |
+| Display name | Google's name after Google (then the focus starts on the password), otherwise empty | the profile's rule (`displayNameIssue`): at least one visible character, at most 32 counted in code points (an emoji is one), after composing and trimming |
 | Username | made from the email ([username-prefill.ts](../../src/features/auth/lib/username-prefill.ts)): the part before `@`, lower case, without characters a username cannot have, cut at 32; nothing when fewer than 2 are left | 2 to 32 of `a-z 0-9 _ .`; what is typed becomes lower case. Whether it is free is asked 500 ms after typing stops (`useUsernameAvailability` from the users feature): "Checking...", then "Username is available" or "This username is taken." **A taken prefill is emptied without an error**: the person did not choose it |
 | Password | empty | the [rules](./forms-and-errors.md#the-password-rules), with `PasswordRules` under the field; it may not be the email nor the username being chosen (D-66) |
 | Time zone | the browser's zone, or Hồ Chí Minh when the browser gives none that can be saved | picked in [TimeZoneCombobox](../components.md#timezonecombobox) (C-25): search a city or an offset; the line under it gives the time there now |
@@ -484,17 +484,17 @@ sequenceDiagram
     participant App as Web app
     participant API
     participant G as Google
-    P->>App: clicks Continue with Google on /login?next=/profile
-    App->>API: browser goes to GET /auth/google?redirect=/profile
+    P->>App: clicks Continue with Google on /login?next=/settings/profile
+    App->>API: browser goes to GET /auth/google?redirect=/settings/profile
     API->>G: redirect, with state, nonce and PKCE. Sets the oauth_state cookie
     P->>G: picks an account, agrees
     G->>API: browser comes back to GET /auth/google/callback
     API->>API: checks everything, finds or makes the account
-    API->>App: redirect to /auth/callback?redirect=/profile, refresh cookie set
+    API->>App: redirect to /auth/callback?redirect=/settings/profile, refresh cookie set
     App->>API: POST /auth/refresh, with the cookie
     API-->>App: access token
     App->>API: GET /users/me
-    App->>App: /welcome?next=/profile if incomplete, else /profile
+    App->>App: /welcome?next=/settings/profile if incomplete, else /settings/profile
 ```
 
 **The return page, `/auth/callback`.** On success the API has set the refresh
@@ -556,7 +556,7 @@ in. `/welcome` has its own guard ([the gate](#the-gate-an-incomplete-account-see
 ## Pages for signed-in people
 
 `ProtectedRoute` wraps the AppShell, so every page in it: `/study`,
-`/settings/account`, `/profile` and the rest. A visitor is sent to
+`/settings/account`, `/settings/profile` and the rest. A visitor is sent to
 `/login?next=<the whole address>` (path, query and `#` part), and comes
 back there after signing in. An incomplete account is sent to
 `/welcome?next=<the whole address>`. While a sign-out is reloading the app, it

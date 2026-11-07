@@ -136,7 +136,7 @@ src/features/auth/
 | [SessionsSection.tsx](../../src/features/auth/components/SessionsSection.tsx) | The account page's **Sessions** group: every signed-in device, this one first; **Sign out** on a row, **Sign out the other devices** with a confirm dialog; the loading and failed states ([account-settings.md](./account-settings.md#sessions)) |
 | [CodeReset.tsx](../../src/features/auth/components/CodeReset.tsx) | The pieces of `useCodeReset`, each laid out by its user: `ResetCodeField` (the code, with an optional visible label), `ResetPasswordField` (the new password and its conditions), `ResetNotice` (a code limit, a sending limit, or a refusal, first that applies), `ResendLine` ("Send again" and its countdown) |
 | [ChangePasswordDialog.tsx](../../src/features/auth/components/ChangePasswordDialog.tsx) | The account page's **Change password** button and its dialog: with the current password (`useChangePassword`), or, after **Forgot password?**, with an emailed code (`useCodeReset`, then `startSession`, D-74) ([account-settings.md](./account-settings.md#change-the-password)) |
-| [DeleteAccountDialog.tsx](../../src/features/auth/components/DeleteAccountDialog.tsx) | "Delete account", used on the profile page; asks for the password |
+| [DeleteAccountDialog.tsx](../../src/features/auth/components/DeleteAccountDialog.tsx) | "Delete account", used on the account page (`/settings/account`) until L14 builds its own group; asks for the password |
 
 `SetPasswordSettings`, `useSignInMethods`, `sign-up-password.ts` and the
 deletion-code hook are gone: every account has a password (D-130), so there
@@ -158,7 +158,7 @@ is no first password to set and no code to delete an account with.
 | [src/app/router.tsx](../../src/app/router.tsx) | Puts `authRoutes` in the AuthShell and the signed-in pages behind `ProtectedRoute`; sends `/` to `/study` or `/login`; `/terms` and `/privacy` for everyone |
 | [src/app/layout/AuthShell.tsx](../../src/app/layout/AuthShell.tsx) | The frame of the pages outside the app; **Sign out** in its footer on `/welcome` only |
 | [src/app/layout/app-shell/MeMenu.tsx](../../src/app/layout/app-shell/MeMenu.tsx) | Your menu, from your avatar at the foot of the rail (Profile, status, Settings, Sign out) |
-| [src/features/users/](../../src/features/users/) | The profile page (with Delete account), `useProfile`, `useUsernameAvailability` and `USERNAME_PATTERN` (used by `/welcome`) |
+| [src/features/users/](../../src/features/users/) | The profile page (`/settings/profile`), `useProfile`, `useUsernameAvailability`, `USERNAME_PATTERN` and `displayNameIssue` (used by `/welcome`) |
 | [src/i18n/index.ts](../../src/i18n/index.ts) | `currentLanguage()`: the language on screen, as the API names it (`vi`, `en`) |
 | [src/config/env.ts](../../src/config/env.ts) | `VITE_API_URL`, the only setting sign-in uses |
 | `src/i18n/locales/<language>/auth.json`, `api.json` | The pages' texts, and a sentence per API error type |
@@ -179,7 +179,7 @@ AppRoot           NavigationProgress, then the page
 │   ├── /study                                      (src/pages/Study.tsx)
 │   ├── /channels/:serverId/:channelId?             (mock, until channels exist)
 │   ├── authAppRoutes  /settings/account (/settings redirects)   (src/features/auth/routes.tsx)
-│   └── usersRoutes    /profile                     (src/features/users/routes.tsx)
+│   └── usersRoutes    /settings/profile            (src/features/users/routes.tsx)
 └── *             NotFound
 ```
 
@@ -382,15 +382,15 @@ test helpers need the development build.
 
 | Suite | Covers | Needs |
 |---|---|---|
-| `e2e/account.spec.ts` | Create an account with the emailed code, then complete it (the time zone searched as "tokyo"); a reload keeps the session; a deep link after sign-in (to `/settings/account`, the page headed "Account"), with "This device" first in its Sessions group; reset a forgotten password (the old one refused after); delete the account | the API (`E2E_API_URL`, default `http://localhost:8888/api/v1`) and its Mailpit (`E2E_MAILPIT_URL`, default `http://localhost:8025`) |
+| `e2e/account.spec.ts` | Create an account with the emailed code, then complete it (the time zone searched as "tokyo"); a reload keeps the session; a deep link after sign-in (to `/settings/account`, the page headed "Account"), with "This device" first in its Sessions group; reset a forgotten password (the old one refused after); edit the profile (name and bio, a photo cropped and uploaded, then removed once Undo runs out); delete the account from Settings | the API (`E2E_API_URL`, default `http://localhost:8888/api/v1`) and its Mailpit (`E2E_MAILPIT_URL`, default `http://localhost:8025`) |
 | `e2e/oauth.spec.ts` | The Google button and the API's redirect to Google (PKCE, the state cookie) | the API with Google set up; skipped otherwise |
 | `e2e/sessions.spec.ts` | One account on several devices (a browser context each): the list of sessions, signing out one device or the others, changing the password in its dialog, and resetting a forgotten current password by code in the dialog (a second tab of the same browser carries on, another device is sent to sign in) | the API and its Mailpit, as for `account.spec.ts` |
 
 The app is at `E2E_BASE_URL` (default `http://localhost:3001`). Signing in
 *at* Google is a manual test: a test has no Google
 account. To do it by hand, start both apps with Google set up on the API,
-click "Continue with Google" on `/login?next=/profile`, and check you land
-on `/welcome` (a new account; complete it) and then on `/profile`, signed in.
+click "Continue with Google" on `/login?next=/settings/profile`, and check you land
+on `/welcome` (a new account; complete it) and then on `/settings/profile`, signed in.
 
 ## Adding an auth page
 

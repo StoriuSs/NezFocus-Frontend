@@ -29,7 +29,7 @@ With it, a page is its own chunk, fetched the first time someone opens it:
 ```tsx
 const Study = lazy(() => import('@/pages/Study'))
 const Profile = lazy(() => import('@/features/users/pages/Profile'))
-// Profile's chunk is downloaded when someone goes to /profile.
+// Profile's chunk is downloaded when someone goes to /settings/profile.
 ```
 
 While a lazy page's chunk downloads, React shows the nearest `<Suspense>`
@@ -155,7 +155,7 @@ const ProfileLink = () => {
     const prefetch = () => import('@/features/users/pages/Profile')
 
     return (
-        <Link to='/profile' onMouseEnter={prefetch}>
+        <Link to='/settings/profile' onMouseEnter={prefetch}>
             Profile
         </Link>
     )

@@ -86,8 +86,8 @@ trades the cookie for a new one. The pages:
 | `/login` | Email and password, or "Continue with Google" |
 | `/forgot-password`, `/reset-password` | An emailed code, then a new password; that also signs you in |
 | `/auth/callback` | Where the API sends the browser back after Google |
-| `/settings/account` | "Account": change the password, see the signed-in devices and sign them out (`/settings` redirects here) |
-| `/profile` | The profile, the avatar, and deleting the account |
+| `/settings/account` | "Account": change the password, see the signed-in devices and sign them out, delete the account (`/settings` redirects here) |
+| `/settings/profile` | The profile: the avatar (cropped, removed with Undo), the display name and the bio |
 | `/terms`, `/privacy` | The Terms of Service and the Privacy Policy, for everyone |
 
 The details: [docs/auth/README.md](./docs/auth/README.md).
@@ -251,7 +251,7 @@ import { useUpdateProfile } from '@/features/users/api/useUpdateProfile'
    const MyPage = lazy(() => import('@/features/users/pages/MyPage'))
 
    export const usersRoutes: RouteObject[] = [
-       { path: '/profile', element: <Profile /> },
+       { path: USERS_PATHS.profile, element: <Profile /> }, // /settings/profile
        { path: '/my-page', element: <MyPage /> } // behind sign-in
    ]
    ```

@@ -53,7 +53,7 @@ app finds out at run time what the API has turned on
 | Change the password (other devices are signed out, this one stays) | `/settings/account` | [account-settings.md](./account-settings.md#change-the-password) |
 | Sign out | your menu (avatar at the foot of the rail) | [session.md](./session.md#signing-out-step-by-step) |
 | See every signed-in device; sign out one of them, or all but this one | `/settings/account`, **Sessions** | [account-settings.md](./account-settings.md#sessions) |
-| Delete the account, with its password | `/profile` | [account-settings.md](./account-settings.md#delete-the-account) |
+| Delete the account, with its password | `/settings/account` | [account-settings.md](./account-settings.md#delete-the-account) |
 | Stay signed in across reloads and new tabs; sign in or out in every open tab at once | everywhere | [session.md](./session.md) |
 | Be told why, when a session ends (password changed elsewhere, signed out from another device, account deleted, expired) | a banner on the sign-in page, or a toast after the page reloads | [session.md](./session.md#why-a-session-ended-every-reason) |
 

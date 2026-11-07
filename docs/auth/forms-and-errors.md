@@ -80,7 +80,7 @@ These checks give a faster answer. The API checks everything again.
 | A new password | every rule the browser knows ([below](#the-password-rules)) | "The password doesn't meet the conditions yet", or the broken rule named |
 | Current password (change-password dialog) | not empty | "Enter your password" |
 | Emailed code (verify, reset) | all 6 digits; on verify the sixth sends it, on reset it moves on to the password | "Enter all 6 digits of the code from the email" |
-| Display name (welcome) | not empty, at most 32 characters | "Enter a display name", "A display name has at most 32 characters" |
+| Display name (welcome, profile) | the API's rules (`displayNameIssue`, `src/features/users/lib/profile-text.ts`): composed and trimmed, at least one visible character, at most 32 counted in code points | "Enter a display name", "A display name has at most 32 characters" (`users:validation.*`) |
 | Username (welcome) | 2 to 32 of `a-z 0-9 _ .`, and free | "Enter a username", "A username has only lowercase letters, numbers, _ and .", "This username is taken. Choose another one." |
 | Terms (welcome) | ticked | "You need to agree to continue" |
 

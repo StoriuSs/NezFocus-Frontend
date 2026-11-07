@@ -84,7 +84,7 @@ covered by the tests that ran before the deploy:
 | Check | Why |
 | --- | --- |
 | Sign in, reload the profile page, sign out | The whole auth path: the reload restores the session from the refresh cookie (`POST /auth/refresh`), which only works when the cookie crosses from the API to the site |
-| Open `https://app.example.com/profile` directly, in a new tab | Deep links go through nginx's `try_files`, not the router |
+| Open `https://app.example.com/settings/profile` directly, in a new tab | Deep links go through nginx's `try_files`, not the router |
 | `curl -I https://app.example.com/config.js` | Must say `no-store`. Cached, it pins users to the old API |
 | The browser console on first load | A Content-Security-Policy mistake shows up here and nowhere else |
 
@@ -182,7 +182,7 @@ The API starter's `docs/setup/prepare-for-production.md` walks through each.
 Four quick checks, none of which any test before the deploy could have made:
 
 - [ ] Sign in, reload the profile page, sign out
-- [ ] Open `https://app.example.com/profile` directly in a new tab — deep
+- [ ] Open `https://app.example.com/settings/profile` directly in a new tab — deep
       links go through nginx's `try_files`, not the router
 - [ ] `curl -I https://app.example.com/config.js` says
       **`Cache-Control: no-store`**. Cached, it pins users to the old API

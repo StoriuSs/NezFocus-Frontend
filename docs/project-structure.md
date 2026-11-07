@@ -65,11 +65,12 @@ react-starter/
     │   │   ├── types.ts
     │   │   └── index.ts       # What other features may import
     │   └── users/             # The profile feature
-    │       ├── api/           # users.api.ts (fetchProfile), the query and mutation hooks, keys
-    │       ├── components/    # Used only by this feature
+    │       ├── api/           # users.api.ts (fetchProfile, removeAvatar), the query and mutation hooks, keys
+    │       ├── components/    # AvatarSection, AvatarCropDialog, ProfileForm, ProfileSkeleton
     │       ├── hooks/         # useAvatarErrorRefresh
-    │       ├── lib/           # USERS_PATHS, crop-image
-    │       ├── pages/         # Profile.tsx
+    │       ├── lib/           # USERS_PATHS, crop-image, profile-text (the API's name and bio rules),
+    │       │                  #   avatar-removal (Undo, then DELETE) and its pending flag
+    │       ├── pages/         # Profile.tsx (/settings/profile)
     │       ├── routes.tsx     # This feature's routes
     │       ├── types.ts
     │       └── index.ts       # What other features may import
@@ -153,9 +154,9 @@ hooks and its types.
 else, beside the eight pages — sign-in, create an account, enter the code,
 complete your account, forgotten and reset password, the Google return page,
 and settings
-([auth/in-the-code.md](./auth/in-the-code.md)). Deleting an account is the one
-auth piece that lives on another feature's page: `DeleteAccountDialog`, opened
-from the profile page.
+([auth/in-the-code.md](./auth/in-the-code.md)). Deleting an account
+(`DeleteAccountDialog`) is on the account page (`/settings/account`), until
+L14 builds its own group.
 
 ### `src/lib/`
 

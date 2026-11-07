@@ -2,10 +2,10 @@
 
 Where each kind of state lives in this starter, and why. The short rule:
 **data the API owns belongs to TanStack Query; the little that is left is in
-two small Zustand stores, or in a component.**
+a few small Zustand stores, or in a component.**
 
 - [What goes where](#what-goes-where)
-- [The two stores](#the-two-stores)
+- [The stores](#the-stores)
 - [Using a store](#using-a-store)
 - [Coming from Vue and Pinia](#coming-from-vue-and-pinia)
 - [Why Zustand](#why-zustand)
@@ -18,6 +18,7 @@ two small Zustand stores, or in a component.**
 | Who is signed in | The auth store, `src/features/auth/auth.store.ts` | `useAuthStore((s) => s.user)` |
 | The access token | Module memory, `src/features/auth/lib/access-token.ts` — not a store, not storage | read only by the store and the API client |
 | The theme | The theme store, `src/hooks/useTheme.ts` | `useTheme()` |
+| A removed avatar waiting out its "Undo" | `useAvatarRemoval`, `src/features/users/lib/avatar-removal-state.ts` | read by `useProfile` |
 | A form's values and errors | React Hook Form | [shadcn-forms.md](./shadcn-forms.md) |
 | Whether a dialog is open, a tab, a hover | `useState` in the component | — |
 
@@ -28,7 +29,7 @@ roles) because route guards and role checks need it before any query runs;
 the full profile is still the `useProfile` query, which the store seeds at
 sign-in so your menu (`MeMenu`) does not ask twice.
 
-## The two stores
+## The stores
 
 **The auth store** (`useAuthStore`):
 
@@ -52,6 +53,15 @@ an httpOnly cookie the app never sees. How the session works:
 theme (`light`, `dark` or `system`) and what is on screen. It is one store
 rather than state inside the hook so every component — the toaster included —
 sees the same choice ([theme-system.md](./theme-system.md)).
+
+**The avatar removal flag** (`useAvatarRemoval`, `{ pending }`): true while a
+removed profile picture waits out its 8-second "Undo" (S-ME-02). Meanwhile
+`useProfile` hides the avatar everywhere (its `select`), though the API still
+has it; `avatar-removal.ts` sends the `DELETE` when the wait runs out, or as
+the tab closes. It is not server data copied into a store: it is what the
+person did and the API has not heard yet. It sits in a file of its own
+because `useProfile` reads it and is in the first download; the removal logic
+stays in the profile page's chunk.
 
 ## Using a store
 

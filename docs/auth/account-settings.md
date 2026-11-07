@@ -9,9 +9,10 @@ app.
 The account page is `/settings/account` (S-ME-03, "Tài khoản" / "Account"; your
 menu → **Settings**, or **Account** in the settings list column;
 [Settings.tsx](../../src/features/auth/pages/Settings.tsx)). `/settings` alone
-sends there, replacing itself in the history. Deleting the account is on the
-profile page, `/profile`, which moves under `/settings` in a later slice. Both
-are for signed-in people only.
+sends there, replacing itself in the history. Deleting the account is on this
+page too, below Sessions: the base's dialog, until a later slice (L14) builds
+its own group. The profile is a page of its own, `/settings/profile` (S-ME-02).
+Both are for signed-in people only.
 
 - [The account page at a glance](#the-account-page-at-a-glance)
 - [Change the password](#change-the-password)
@@ -189,7 +190,7 @@ the list cannot be read: "Couldn’t load your sessions" and **Try again**.
 
 ## Delete the account
 
-On `/profile`, under **Danger zone**: **Delete account** opens a dialog
+On `/settings/account`, below Sessions: **Delete Account** opens a dialog
 ([DeleteAccountDialog.tsx](../../src/features/auth/components/DeleteAccountDialog.tsx)):
 "This can't be undone. You'll be signed out on every device, and your personal
 details will be erased."

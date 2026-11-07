@@ -20,7 +20,7 @@ expensive to get wrong:
 | `index.html` is **not** cached | A deploy reaches nobody: browsers keep running the old build. |
 | `/config.js` is **not** cached | Worse — the old build keeps pointing at the old API. |
 | `/assets/*` **is** cached, `immutable` | Every visit re-downloads the whole bundle. Slow for users, expensive for you. |
-| `/profile` returns the app, not 404 | Refreshing an inner page, or opening a shared link, shows an error page. |
+| `/settings/profile` returns the app, not 404 | Refreshing an inner page, or opening a shared link, shows an error page. |
 
 Those come from [`nginx.conf`](../nginx.conf) and are easy to break while
 changing something nearby. A unit test could check them once; this checks them
