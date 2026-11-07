@@ -159,8 +159,9 @@ camelCase, and looks at every refusal:
 | No answer at all (network, CORS, timeout) | Nothing about the session | Nothing; the request fails |
 | A refusal of an auth route (`skipAuth`: login, email-code, refresh...) | An answer for the page: a wrong password is a `401` too | Nothing; the page handles it ([forms-and-errors.md](./forms-and-errors.md)) |
 | Any refusal while nobody is signed in | Nothing to end | Nothing |
-| `401 AUTH_TOKEN_EXPIRED` or `AUTH_TOKEN_INVALID` | The token aged, or became unreadable (a laptop woken from sleep, a clock that drifted, the API's `JWT_SECRET` changed). The session may be fine | Refreshes, then **retries the request once** with the new token (marked `authRetried`, so it can never loop). The person sees nothing. If the refresh finds the session over, signs out. If the API could not be asked, fails this request and keeps the session |
-| Any other `401` (`AUTH_TOKEN_REVOKED`, `AUTH_TOKEN_MISSING`, or refused again after the retry) | The session ended | Signs out, with the reason from the answer's `data.reason` |
+| `401 AUTH_TOKEN_EXPIRED` or `AUTH_TOKEN_INVALID` | The token aged, or became unreadable (a laptop woken from sleep, a clock that drifted, the API's `JWT_SECRET` changed). The session may be fine | Refreshes, then **retries the request once** with the new token (marked `authRetried`, so it can never loop). The person sees nothing. If the refresh finds the session over, signs out with the reason the refresh gave. If the API could not be asked, fails this request and keeps the session |
+| `401 AUTH_TOKEN_REVOKED` | This tab's session ended. Usually elsewhere, but another tab of this browser may have reset the password with a code (D-74): that ended this session and left a newer one in the shared cookie | The same as above (the three codes make up `REFRESHABLE`): one refresh with the shared cookie, and the request retried with the new token if it works. If the refresh is refused, signs out with the reason the refresh gave. Signing out at once instead would end the newer session too, since the logout call sends the cookie |
+| Any other `401` (`AUTH_TOKEN_MISSING`, or refused again after the retry) | The session ended | Signs out, with the reason from the answer's `data.reason` |
 | `403 AUTH_ACCOUNT_DISABLED` | The account was deleted | Signs out (`account-disabled`) |
 | `403 ACCOUNT_INCOMPLETE` | The account has not done "complete your account" (D-61); the session is fine | Calls `accountIncomplete()`, which is the store's `markIncomplete()`; the route guards then open `/welcome`. The request still fails for its caller |
 | Any other `403` | Signed in, but not allowed to do *this* | Nothing; the page shows the error. Signing out would throw away the session and whatever the person was doing |
@@ -261,7 +262,9 @@ otherwise; `peekSignOutReason()` reads it without taking it.
 
 The API says why a session ended in `data.reason` on a `401`
 (`AUTH_TOKEN_REVOKED` from any signed-in route, `AUTH_REFRESH_FAILED` from
-`/auth/refresh`). The app maps it to its own name:
+`/auth/refresh`). A revoked token is tried once more with a refresh (above),
+so the reason the app keeps is usually the refresh's. The app maps it to its
+own name:
 
 | Reason in the app | The API's `data.reason`, or what happened | The message after the reload | Lands on |
 |---|---|---|---|
@@ -288,10 +291,11 @@ page sends them to sign in, and back afterwards, where the banner says why
 (and `password-changed` opens on the password); `account-disabled` is a toast
 at once.
 
-One detail: when the API client retries a request after
-`401 AUTH_TOKEN_EXPIRED` and the refresh then finds the session over, the
-reason comes from that first `401`, which has none, so the message is the
-`session-expired` one.
+One detail: when the API client refreshes after a `401` (`REFRESHABLE`:
+`AUTH_TOKEN_EXPIRED`, `AUTH_TOKEN_INVALID`, `AUTH_TOKEN_REVOKED`) and the
+refresh then finds the session over, the reason comes from the refresh's
+answer (`refreshToken()` in the store signs out with it), not from that first
+`401`.
 
 ## The numbers the API decides
 

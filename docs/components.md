@@ -290,8 +290,8 @@ errors never go to a toast.
 <FormMessage tone='danger' icon={problem.offline ? 'wifi-off' : undefined}>{text(problem.message)}</FormMessage>
 ```
 
-Used by every auth page; the settings screens and the delete dialog still
-use `Notice` from `AuthCard.tsx`.
+Used by every auth page and the change-password dialog; the delete dialog
+still uses `Notice` from `AuthCard.tsx`.
 
 ### `TimeZoneCombobox`
 

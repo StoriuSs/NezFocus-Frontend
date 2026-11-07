@@ -161,7 +161,9 @@ sequenceDiagram
   `/welcome?next=<the page>`.
 - **An expired token is refreshed, not a sign-out.** A request refused with
   `AUTH_TOKEN_EXPIRED` or `AUTH_TOKEN_INVALID` is refreshed and retried once,
-  without the user noticing.
+  without the user noticing. So is `AUTH_TOKEN_REVOKED`: another tab may have
+  reset the password with a code, leaving a newer session in the shared
+  cookie (D-74); if the refresh is refused, the sign-out gives its reason.
 - **Not every 403 ends a session.** A `403` does *only* when the API says
   `AUTH_ACCOUNT_DISABLED`. A `403 ACCOUNT_INCOMPLETE` keeps the session and
   opens "complete your account". Every other 403 means "you may not do this",

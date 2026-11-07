@@ -228,8 +228,10 @@ refetched when the window regains focus (`refetchOnWindowFocus: false`).
 2. **Converts the casing**: JSON bodies and query parameters go out in
    `snake_case`, answers come back in `camelCase`. `FormData`, `Blob` and
    other non-JSON bodies pass through untouched (`src/lib/case-transform.ts`).
-3. **Handles the API ending a session**: a `401` with `AUTH_TOKEN_EXPIRED` or
-   `AUTH_TOKEN_INVALID` is refreshed and retried once; a `401` a refresh
+3. **Handles the API ending a session**: a `401` with `AUTH_TOKEN_EXPIRED`,
+   `AUTH_TOKEN_INVALID` or `AUTH_TOKEN_REVOKED` (another tab may have left a
+   newer session in the shared cookie, D-74) is refreshed and retried once; a
+   `401` a refresh
    cannot fix, or a `403` with `AUTH_ACCOUNT_DISABLED`, signs out. Any other
    `403` is the page's to handle ([auth/session.md](./auth/session.md)).
 4. **Leaves the auth routes alone**: calls to `/auth/*` that sign in or

@@ -412,7 +412,14 @@ sequenceDiagram
 | `429`, reason `network` | Too many code requests from this network: the same, whatever the address |
 | no answer, or a `5xx` | "You're offline..." or "Something went wrong..." above the button |
 
-**`/reset-password`** ([ResetPassword.tsx](../../src/features/auth/pages/ResetPassword.tsx), S-AUTH-04 `reset-form`):
+**`/reset-password`** ([ResetPassword.tsx](../../src/features/auth/pages/ResetPassword.tsx), S-AUTH-04 `reset-form`).
+The code, the new password, "send again" and every refusal below live in
+`useCodeReset` ([hooks/useCodeReset.ts](../../src/features/auth/hooks/useCodeReset.ts))
+and the pieces in [CodeReset.tsx](../../src/features/auth/components/CodeReset.tsx)
+(`ResetCodeField`, `ResetPasswordField`, `ResetNotice`, `ResendLine`); the
+page lays them out, and the account page's change-password dialog uses the
+same ones for a forgotten current password
+([account-settings.md](./account-settings.md#change-the-password)).
 
 1. Opened without an address (a new tab, a bookmark), it goes to
    `/forgot-password`, keeping `next` and `invite`.

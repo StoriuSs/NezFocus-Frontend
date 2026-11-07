@@ -36,7 +36,8 @@ src/features/auth/
 │   └── use*.ts            the other settings mutations, one per file: useChangePassword,
 │                          useDeleteAccount
 ├── hooks/
-│   └── useOAuthProviders.ts   the providers both the API and this app know
+│   ├── useOAuthProviders.ts   the providers both the API and this app know
+│   └── useCodeReset.ts    a new password with an emailed code (the reset page and the change-password dialog)
 ├── lib/
 │   ├── paths.ts           the pages' paths; safeNext(), withFlow(), afterSignIn()
 │   ├── access-token.ts    the access token, in memory
@@ -46,15 +47,16 @@ src/features/auth/
 │   ├── session-label.ts   a session's name ("Safari · macOS") and when it was last used
 │   ├── sign-in-method.ts  the sign-in page's two ways, and the one this browser remembers
 │   ├── page-state.ts      what one page hands the next
-│   ├── form-problem.ts    an API refusal → a message kept as a key (every auth page)
-│   ├── form-errors.ts     an API refusal → what a form shows (the settings screens); formatWait()
+│   ├── form-problem.ts    an API refusal → a message kept as a key (every auth page, the change-password dialog)
+│   ├── form-errors.ts     an API refusal → what a form shows (the delete dialog); formatWait()
 │   ├── username-prefill.ts    the username "complete your account" starts with
-│   ├── schemas.ts         shared field rules for the settings forms
+│   ├── schemas.ts         newPasswordIssue(): what is wrong with a new password, as a key
 │   ├── password-rules.ts  the API's password rules, mirrored
 │   ├── oauth.ts           Google: the button's address, the callback's errors
 │   └── code-sent.ts       when a code was last emailed (for the timers)
 ├── pages/                 the eight pages
-├── components/            the pieces the pages share (CodeInput among them), the Sessions group, the delete dialog, and the
+├── components/            the pieces the pages share (CodeInput, CodeReset among them), the Sessions group, the
+│                          change-password and delete dialogs, and the
 │                          route guards (ProtectedRoute, GuestOnlyRoute, IncompleteOnlyRoute, RequireRole)
 └── __tests__/             unit tests
 ```
@@ -79,8 +81,8 @@ src/features/auth/
 | [types.ts](../../src/features/auth/types.ts) | The types of the answers and bodies, taken from the API's OpenAPI document (`TokenResponse`, `EmailCodeSignIn`, `AccountCompletion`, `AuthOptions`, `SessionList`, `SessionInfo`) |
 | [useAuthOptions.ts](../../src/features/auth/api/useAuthOptions.ts) | `useAuthOptions()`: `GET /auth/options` once per page load. `providers` (empty while loading or when the API cannot be asked) |
 | [oauth.ts](../../src/features/auth/lib/oauth.ts) | `oauthStartUrl(provider, next)` (sent to the API as `?redirect=`, its name); [useOAuthProviders()](../../src/features/auth/hooks/useOAuthProviders.ts) (the providers both the API and this app know: `google`); `oauthFailure(value)` (the callback's `?error=`) |
-| [form-problem.ts](../../src/features/auth/lib/form-problem.ts) | `requestFailure(error)` → `RequestFailure` (`type`, `limit`, `passwordRules`, `offline`, `message`); `Message` (a key and its values); `useMessageText()`. Used by every auth page ([forms-and-errors.md](./forms-and-errors.md#messages-kept-as-keys)) |
-| [form-errors.ts](../../src/features/auth/lib/form-errors.ts) | `authFormError(error)`, for the settings screens and the delete dialog; `RateLimitReason`; `formatWait(seconds)` for every page ([forms-and-errors.md](./forms-and-errors.md#turning-a-refusal-into-a-message)) |
+| [form-problem.ts](../../src/features/auth/lib/form-problem.ts) | `requestFailure(error)` → `RequestFailure` (`type`, `limit`, `passwordRules`, `offline`, `message`); `Message` (a key and its values); `useMessageText()`. Used by every auth page and the change-password dialog ([forms-and-errors.md](./forms-and-errors.md#messages-kept-as-keys)) |
+| [form-errors.ts](../../src/features/auth/lib/form-errors.ts) | `authFormError(error)`, for the delete dialog; `RateLimitReason`; `formatWait(seconds)` for every page ([forms-and-errors.md](./forms-and-errors.md#turning-a-refusal-into-a-message)) |
 | [keys.ts](../../src/features/auth/api/keys.ts) | `authKeys`: `all`, `options()`, `sessions()` |
 | [useSessions.ts](../../src/features/auth/api/useSessions.ts) | `useSessions()`: `GET /auth/sessions`, read again on mount and on window focus, no retry; `useRevokeSession()`: one device, its row dropped from the cache on success; `useRevokeOtherSessions()`: every other device, the cache left with this one ([account-settings.md](./account-settings.md#sessions)) |
 | [useChangePassword.ts](../../src/features/auth/api/useChangePassword.ts) | `useChangePassword()`; on success it invalidates `authKeys.sessions()`, since the other devices were signed out |
@@ -101,7 +103,8 @@ src/features/auth/
 
 | File | What it holds |
 |---|---|
-| [schemas.ts](../../src/features/auth/lib/schemas.ts) | For the settings screens, whose messages are words at once: `newPasswordCheck` (the rules, and the confirmation), `passwordFieldMessage`; `authFields(t)` (`email`, `code`) |
+| [schemas.ts](../../src/features/auth/lib/schemas.ts) | `newPasswordIssue(password, context)`: what is wrong with a new password, as a message key (`auth:passwordRules.<rule>` for a rule the field names, `auth:validation.passwordWeak` for an unmet condition), or `undefined`. Used by welcome, `useCodeReset` and the change-password dialog. There is no "confirm password" check (01 Q14) |
+| [useCodeReset.ts](../../src/features/auth/hooks/useCodeReset.ts) | `useCodeReset({ email, onReset, initialFailure })`: the code, the new password, "send again" and every refusal of `POST /auth/reset-password` (`CodePhase`, `Limit`); `onReset` takes up the tokens. Shared by `/reset-password` and the change-password dialog's code mode ([pages-and-flows.md](./pages-and-flows.md#forgot-and-reset-the-password)) |
 | [password-rules.ts](../../src/features/auth/lib/password-rules.ts) | `brokenPasswordRules(password, { email, username })`, `rejectedRules(data.rules)`, `GRID_RULES`, `FIELD_RULES`, `passwordFieldRule`, the lengths |
 | [code-sent.ts](../../src/features/auth/lib/code-sent.ts) | `recordCodeSent(kind, email)`, `resendAllowedAt(kind, email)` (a moment, or null), `RESEND_AFTER_SECONDS` (60). `kind` is `'sign-in'` or `'password-reset'` |
 | [useCountdown.ts](../../src/hooks/useCountdown.ts) | Whole seconds left until a moment (a `Date.now()` time), ticking each second: every "send again" and every limit on the auth pages |
@@ -125,12 +128,14 @@ src/features/auth/
 
 | File | What it is |
 |---|---|
-| [AuthCard.tsx](../../src/features/auth/components/AuthCard.tsx) | `AuthCard`, the frame of every sign-in page, and `Notice`, a message in it (`info`, `success`, `error`), still used by the settings screens, the delete dialog and `/auth/callback` |
+| [AuthCard.tsx](../../src/features/auth/components/AuthCard.tsx) | `AuthCard`, the frame of every sign-in page, and `Notice`, a message in it (`info`, `success`, `error`), still used by the delete dialog and `/auth/callback` |
 | [PasswordInput.tsx](../../src/features/auth/components/PasswordInput.tsx) | A password field with a show/hide button |
 | [PasswordRules.tsx](../../src/features/auth/components/PasswordRules.tsx) | The five conditions under a new-password field (C-22): unmet, met, error |
-| [CodeInput.tsx](../../src/features/auth/components/CodeInput.tsx) | Six boxes for an emailed code (C-23), on verify and reset-password; `onComplete` at the sixth digit; states `default`, `verifying`, `error`, `disabled` |
+| [CodeInput.tsx](../../src/features/auth/components/CodeInput.tsx) | Six boxes for an emailed code (C-23), on verify, reset-password and the change-password dialog's code mode; `onComplete` at the sixth digit; states `default`, `verifying`, `error`, `disabled` |
 | [OAuthButtons.tsx](../../src/features/auth/components/OAuthButtons.tsx) | The "or" divider, then `children` (the sign-in page's other way), then "Continue with Google" when the API offers it; takes the page's `next`, and `disabled` (a disabled button instead of the link while the form is sent). Nothing when there is neither |
 | [SessionsSection.tsx](../../src/features/auth/components/SessionsSection.tsx) | The account page's **Sessions** group: every signed-in device, this one first; **Sign out** on a row, **Sign out the other devices** with a confirm dialog; the loading and failed states ([account-settings.md](./account-settings.md#sessions)) |
+| [CodeReset.tsx](../../src/features/auth/components/CodeReset.tsx) | The pieces of `useCodeReset`, each laid out by its user: `ResetCodeField` (the code, with an optional visible label), `ResetPasswordField` (the new password and its conditions), `ResetNotice` (a code limit, a sending limit, or a refusal, first that applies), `ResendLine` ("Send again" and its countdown) |
+| [ChangePasswordDialog.tsx](../../src/features/auth/components/ChangePasswordDialog.tsx) | The account page's **Change password** button and its dialog: with the current password (`useChangePassword`), or, after **Forgot password?**, with an emailed code (`useCodeReset`, then `startSession`, D-74) ([account-settings.md](./account-settings.md#change-the-password)) |
 | [DeleteAccountDialog.tsx](../../src/features/auth/components/DeleteAccountDialog.tsx) | "Delete account", used on the profile page; asks for the password |
 
 `SetPasswordSettings`, `useSignInMethods`, `sign-up-password.ts` and the
@@ -334,9 +339,9 @@ What every route accepts and answers: the API starter's
 | `localStorage` | `auth:session` | `"1"`: this browser may be signed in | the store |
 | `localStorage` | `auth:sign-in-method` | `code` or `password`: the way of the last sign-in that worked, which `/login` opens on (D-68) | sign-in (password), verify (code) |
 | `sessionStorage` | `auth:sign-out-reason` | the reason of the last sign-out, until shown (a toast, or the sign-in page's banner) | the store; a sign-out without a reason removes it |
-| `sessionStorage` | `auth:code-sent:sign-in:<address>`, `auth:code-sent:password-reset:<address>` | when the last code was sent | register, sign-in (by code), verify (send again), forgot-password, reset-password (send again) |
+| `sessionStorage` | `auth:code-sent:sign-in:<address>`, `auth:code-sent:password-reset:<address>` | when the last code was sent | register, sign-in (by code), verify (send again), forgot-password, reset-password (send again), the change-password dialog ("Forgot password?", send again) |
 | React Query | `['auth', 'options']` | the API's options, for the page load | `useAuthOptions` |
-| React Query | `['auth', 'sessions']` | the signed-in devices, on the account page | `useSessions`; changed by the two sign-out hooks, invalidated by `useChangePassword` |
+| React Query | `['auth', 'sessions']` | the signed-in devices, on the account page | `useSessions`; changed by the two sign-out hooks, invalidated by `useChangePassword` and by the change-password dialog after a reset by code |
 | React Query | `['users', 'profile']` | the profile from `/users/me` | the store at sign-in, `useProfile` |
 
 The refresh cookie is not in this list: the app cannot see it.
@@ -348,7 +353,7 @@ The refresh cookie is not in this list: the app cannot see it.
 | File | Covers |
 |---|---|
 | `src/features/auth/__tests__/auth.store.test.ts` | The access token in memory only, never in `localStorage` or `sessionStorage`; a refused refresh ends the session with its reason; an ended session lands on sign-in, by password when the password was changed, and comes back afterwards; each reader (`App.tsx`'s toasts, the sign-in banner) takes only its kind of reason; signing out clears the token and the cached data, tells the other tabs and never lands off-site; a sign-out in another tab followed here; `isComplete` from the profile, or from the code's answer when the profile does not arrive; `markIncomplete` and `markComplete`, and `ACCOUNT_INCOMPLETE` ignored once signed out |
-| `src/lib/__tests__/api.test.ts` | The client: the bearer token, refresh and retry once (never twice), sign-out only when the session really ended (not on a 503 or an ordinary 403), `403 ACCOUNT_INCOMPLETE` opens "complete your account" and keeps the session, the auth routes left alone |
+| `src/lib/__tests__/api.test.ts` | The client: the bearer token, refresh and retry once (never twice), sign-out only when the session really ended (not on a 503 or an ordinary 403), a revoked session that takes up a newer one of this browser (a reset in another tab, D-74), `403 ACCOUNT_INCOMPLETE` opens "complete your account" and keeps the session, the auth routes left alone |
 | `src/features/auth/__tests__/pages.test.tsx` | Sign in (S-AUTH-03): opens on the code and sends one, keeping `next` and `invite`; the code way's own words for an empty email; switching to the password and back keeps the email, the URL keeps the way; a password sign-in goes to `next` and is remembered (D-68), and the page opens on the way remembered; an incomplete account to `/welcome`; one message for a wrong password or an unknown address, the password asked again; the address's limits (another address may go on), the network's whatever the address, the code emails' pointing to the password; the banner for a session that ended, said once, on the password when it was changed elsewhere, and a session closed for safety; the email handed to "forgot password". Forgot and reset (S-AUTH-04): the code sent with the address out of the URL, Back to sign in by password, no address goes to step one, the hedged words and nothing sent at six digits, the new password kept when only the code was wrong, the password checked before sending, sending again in the same hedged words, the network's wrong-code limit with the password kept; `/register`: the code sent and `next` / `invite` kept with the address out of the URL, no second email within the minute, the address's and the network's limits, a message that follows the language switch; `/verify`: no address goes to `/register`, sent at the sixth digit, a pasted code, "you already have an account", a wrong code, a dead code and "Send a new code", too many wrong codes, the countdown from the real send time, a refused resend, Back, "Sign in with password", a code that signs in remembered as the way (D-68); Google: never off-site, an incomplete account to `/welcome` with `via: 'google'` |
 | `src/features/auth/__tests__/welcome.test.tsx` | "Complete your account": the prefilled username, a taken prefill emptied without an error, a name typed that is taken, every wrong field marked and the first focused, the username refused as the password (D-66), the full request then `next`, picking a time zone by searching, `USERNAME_CONFLICT` on submit, another tab finishing first, Google's name filled in |
 | `src/features/auth/__tests__/form-problem.test.ts` | `requestFailure`: limits as a moment and a reason, offline, a 5xx, the API's type, the refused password rules; a message words itself again after the language changes; `formatWait` in seconds, minutes and hours |
@@ -357,7 +362,8 @@ The refresh cookie is not in this list: the app cannot see it.
 | `src/features/auth/__tests__/auth-api.test.ts` | A code asked for in the language on screen, without a bearer token; signing in with the code alone; completing the account with the bearer token and the language; deleting with the password |
 | `src/features/auth/__tests__/paths.test.ts` | `safeNext` never leaves the site, nor returns to a sign-in page; `withFlow` carries `next` and `invite` only; `afterSignIn`; `signInPath`, with `?method=password` when asked |
 | `src/features/auth/__tests__/sign-out-reason.test.ts` | The API's `data.reason` names what another device did (D-65, D-75); a sign-out from the list of sessions (`revoked`) is worded like an expiry |
-| `src/features/auth/__tests__/settings-page.test.tsx` | Changing the password: the unmet conditions marked once sent and cleared as the password gets fixed, the emptied form calm after a change that worked, the username named when the new password is the username (D-66) |
+| `src/features/auth/__tests__/change-password-dialog.test.tsx` | The change-password dialog (S-ME-03): the current password and one new one, no second copy (01 Q14); the unmet conditions marked once sent and cleared as the password gets fixed; the username named when the new password is the username (D-66); closed after a change that worked, with the toast and the sessions read again; a wrong current password under its field, focused, the new one kept; five wrong ones waited out with the button off (D-73). Forgot the current password (D-74): a reset code emailed and the code form shown; no second code within the minute, back and forth (L11); the password set with the code and the new session taken up; a failed send explained in the dialog |
+| `src/features/auth/__tests__/schemas.test.ts` | `newPasswordIssue`: a good password passes; an unmet condition points at the grid; the email or the username named in the field (D-66); the length cap named in the field |
 | `src/features/auth/__tests__/sessions-section.test.tsx` | The Sessions group (S-ME-03, D-75): each device named, this one first and active, the others with their last use and network; one device signed out at once without asking and its row dropped; the row kept when that fails; the question before signing out the other devices, then only this one left; nobody signed out on Cancel; "Only this device is signed in." with no button; **Try again** when the list cannot be loaded |
 | `src/features/auth/__tests__/session-label.test.ts` | Today and yesterday with the time in 24 hours; an older day with its weekday and date, over a year the date alone; a clock a little ahead read as now; the English words; the device name, or "Unknown browser" |
 | `src/features/auth/__tests__/sign-out-notice.test.ts` | A session that ended by itself or elsewhere left to the sign-in page's banner; an expiry and a session ended from another device worded alike; toasts for what the person did, and a disabled account as an error |
@@ -378,6 +384,7 @@ test helpers need the development build.
 |---|---|---|
 | `e2e/account.spec.ts` | Create an account with the emailed code, then complete it (the time zone searched as "tokyo"); a reload keeps the session; a deep link after sign-in (to `/settings/account`, the page headed "Account"), with "This device" first in its Sessions group; reset a forgotten password (the old one refused after); delete the account | the API (`E2E_API_URL`, default `http://localhost:8888/api/v1`) and its Mailpit (`E2E_MAILPIT_URL`, default `http://localhost:8025`) |
 | `e2e/oauth.spec.ts` | The Google button and the API's redirect to Google (PKCE, the state cookie) | the API with Google set up; skipped otherwise |
+| `e2e/sessions.spec.ts` | One account on several devices (a browser context each): the list of sessions, signing out one device or the others, changing the password in its dialog, and resetting a forgotten current password by code in the dialog (a second tab of the same browser carries on, another device is sent to sign in) | the API and its Mailpit, as for `account.spec.ts` |
 
 The app is at `E2E_BASE_URL` (default `http://localhost:3001`). Signing in
 *at* Google is a manual test: a test has no Google

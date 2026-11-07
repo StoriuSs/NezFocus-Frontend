@@ -29,7 +29,7 @@ cards.
 | Group | Row | What it does |
 |---|---|---|
 | **Sign-in** | **Email** | The account's address, read only: "Codes are sent to this address." |
-| | **Password** | A hint: "Sign in with a code or your password. Your password also confirms important actions." For now the change-password form follows it on the page |
+| | **Password** | A hint: "Sign in with a code or your password. Your password also confirms important actions." On the right, a small outline **Change password** button opens the change-password dialog |
 | **Sessions** | one per device | Every signed-in device, this one first. Sign out any other one, or all of them at once |
 
 Every account has a password (D-130): it is chosen on "complete your account"
@@ -46,32 +46,75 @@ it ended this session as well. "Sign out the other devices" in
 
 ## Change the password
 
-The form sits under the **Password** row, inline, for now; a later slice
-(L11) moves it into a dialog opened by a **Change password** button on that
-row.
+**Change password** on the **Password** row opens a dialog, 520 wide at most
+([ChangePasswordDialog.tsx](../../src/features/auth/components/ChangePasswordDialog.tsx)).
+It has two modes: the current password, which it opens on, and an emailed
+code, for a person who forgot it (D-74). The dialog cannot be closed while a
+request runs. Closed, it forgets what was typed and opens on the current
+password again; done either way, it closes itself.
 
-1. The form: current password, new password (with the
-   [rules checklist](./forms-and-errors.md#the-password-rules)), new password
-   again. A hidden field carries the account's email, so a password manager
-   files the new password under the right account.
-2. `POST /auth/change-password` with `current_password` and `new_password`.
-3. The API checks the current password and the rules (against the email and
-   the username), saves the new password, **ends every other session** of the
-   account, and emails the owner. This session stays.
-4. The page empties the form and says "Password changed. Other devices have
-   been signed out." The sessions list is read again, so it shows this device
-   alone.
+**With the current password.** "Change password", "Other devices will be
+signed out; this one stays signed in."
+
+1. The form: current password, with **Forgot password?** on its label row
+   (reached by Tab after the field), then the new password with the
+   [rules checklist](./forms-and-errors.md#the-password-rules). There is no
+   "new password again" field (01 Q14); the show/hide button is there to
+   check it. A hidden field carries the account's email, so a password
+   manager files the new password under the right account.
+2. **Change password** checks both fields are filled and the rules (against
+   the email and the username) before sending anything. Then
+   `POST /auth/change-password` with `current_password` and `new_password`.
+3. The API checks the current password and the rules, saves the new
+   password, **ends every other session** of the account, and emails the
+   owner. This session stays.
+4. The dialog closes with the toast "Password changed. Other devices have
+   been signed out." `useChangePassword` has the sessions list read again, so
+   it shows this device alone.
 
 Other tabs in this browser share this session, so they stay signed in. Another
 device's next request is refused, and it lands on sign in by password, under
 the banner "Your password was just changed on another device · sign in with
 the new password" ([session.md](./session.md#why-a-session-ended-every-reason)).
 
-| Refusal | The page |
+| Refusal | The dialog |
 |---|---|
-| `400 AUTH_CURRENT_PASSWORD_INVALID` | "Your current password is not right", under that field |
-| `422 AUTH_PASSWORD_REJECTED` | the broken rules on the checklist |
-| `429`, reason `wrong_password` | five wrong current passwords in 15 minutes: "Too many wrong passwords. Try again in ..." |
+| `400 AUTH_CURRENT_PASSWORD_INVALID` | "Your current password is not right", under that field, which takes the focus. The new password stays |
+| `422 AUTH_PASSWORD_REJECTED` | the broken rules on the checklist, and on the new password field |
+| `429`, reason `wrong_password` | five wrong current passwords in 15 minutes (D-73): a neutral message, "You entered the wrong current password too many times. Try again in ...", counting down; **Change password** stays disabled until then |
+| no answer, or a `5xx` | "You're offline..." or "Something went wrong..." above the buttons |
+
+**Forgot password?** emails a reset code to the account's address
+(`POST /auth/forgot-password`, recorded with
+`recordCodeSent('password-reset', email)`) and turns the dialog into the code
+mode. If a reset code went to this address under a minute ago
+(`resendAllowedAt('password-reset', email)` in
+[code-sent.ts](../../src/features/auth/lib/code-sent.ts)), it switches
+without sending another: that code still works (decided in L11). A send that
+fails still switches, and the code mode says why: a `429` makes "Send again"
+wait, anything else shows above the buttons.
+
+**With an emailed code.** "Choose a new password", "We sent a 6-digit one-time
+code to you@example.com." (the account exists, so nothing is hedged). The code
+boxes take the focus; under them the "Didn't get the code? Send again" line,
+then the new password with the checklist. **Back** returns to the current
+password, empty; **Set password** sends. The code, the password, "send again"
+and every refusal work as on `/reset-password`, through the same
+`useCodeReset` hook and [CodeReset.tsx](../../src/features/auth/components/CodeReset.tsx)
+pieces ([pages-and-flows.md](./pages-and-flows.md#forgot-and-reset-the-password)):
+an expired code turns the button into **Send a new code**.
+
+`POST /auth/reset-password` ends **every** session of the account, this one
+too, and signs in here with a new one (D-62). The dialog takes it up with
+`startSession`, has the sessions list read again, closes, and says "New
+password set. Your other devices were signed out."
+
+Other tabs in this browser lose their session too, but the shared refresh
+cookie now holds the new one: their next request is refused with
+`AUTH_TOKEN_REVOKED`, refreshes once, and carries on
+([session.md](./session.md#how-the-api-client-handles-answers)). Other
+devices land on sign in by password under the same "Your password was just
+changed on another device" banner.
 
 ## Sessions
 
@@ -177,6 +220,8 @@ details are finally erased, is in the API starter's `docs/auth/accounts.md`.
 | Screen | Method and route | Sends | Answer used |
 |---|---|---|---|
 | Change password | `POST /auth/change-password` | `current_password`, `new_password`, `language` | — |
+| Change password: "Forgot password?", "Send again" | `POST /auth/forgot-password` | `email`, `language` | — |
+| Change password: with the code | `POST /auth/reset-password` (with the cookie) | `email`, `code`, `password`, `language` | the access token; the new session's cookie is set |
 | Sessions | `GET /auth/sessions` | — | `sessions`: `id`, `browser`, `os`, `device`, `ip`, `last_active_at`, `current` |
 | Sign out one device | `DELETE /auth/sessions/{id}` | — | — |
 | Sign out the other devices | `DELETE /auth/sessions` | — | `revoked`, how many ended |
