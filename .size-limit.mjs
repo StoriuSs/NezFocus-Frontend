@@ -7,7 +7,8 @@
 // Limits: measured after M0's slice L4 (06/11/2026: JS 242.78 kB, CSS
 // 7.28 kB), plus the 0.5% tolerance CONSTRAINTS.md allows. L4 added the
 // design tokens and self-hosted fonts (CSS up) and dropped the `ui` vendor
-// chunk (JS down). Raise them
+// chunk (JS down). JS raised to 246.75 kB after L12 (07/11/2026, 246.41 kB:
+// the profile page's words in both languages). Raise them
 // only as CONSTRAINTS.md says: the owner decides, in a commit of its own.
 import { existsSync, readFileSync } from 'node:fs'
 
@@ -34,6 +35,6 @@ const css = tags('link')
     .map(local)
 
 export default [
-    { name: 'Initial JS (gzip)', path: js, gzip: true, limit: '246.25 kB' },
+    { name: 'Initial JS (gzip)', path: js, gzip: true, limit: '246.75 kB' },
     { name: 'Initial CSS (gzip)', path: css, gzip: true, limit: '8.17 kB' }
 ]
