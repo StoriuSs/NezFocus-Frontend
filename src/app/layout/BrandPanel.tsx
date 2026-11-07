@@ -1,6 +1,7 @@
 import { Flame, LampDesk, ListChecks, type LucideIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import mascotHappy from '@/assets/mascot/runtime-happy-320.webp'
+import { Mascot } from '@/components/brand/mascot/Mascot'
 import { cn } from '@/lib/utils'
 
 const POINTS: { icon: LucideIcon; key: 'timer' | 'counted' | 'tasks' }[] = [
@@ -19,6 +20,13 @@ const SEATS = [
     { initial: 'B', angle: 330 }
 ]
 
+/**
+ * Where the ring, and so Runtime, is on screen: the panel shows from 1024 up
+ * (AuthShell) and the ring hides on windows shorter than 880 (below). Rive
+ * loads only then.
+ */
+const RING_SHOWN = '(min-width: 1024px) and (min-height: 880px)'
+
 /** The ring is 360 across; seats 48 sit on a circle of radius 180, so the drawing is 408 square. */
 const BOX = 408
 const CENTRE = BOX / 2
@@ -36,7 +44,7 @@ const TRACK_RADIUS = 180 - TRACK / 2
  * The ring is one image for screen readers; the text is real text. It hides
  * on short windows rather than overlap the text or be cut by an edge
  * (cutting a seat cuts a person, the opposite of the message).
- * Runtime's wave on load waits for the Rive runtime (DESIGN.md › Mascot).
+ * Runtime waves once as the page loads (01-auth.md › Mascot), drawn by Rive.
  */
 export function BrandPanel({ className }: { className?: string }) {
     const { t } = useTranslation()
@@ -96,11 +104,12 @@ export function BrandPanel({ className }: { className?: string }) {
                         className='stroke-primary'
                     />
                 </svg>
-                <img
-                    src={mascotHappy}
-                    alt=''
-                    width={160}
-                    height={160}
+                <Mascot
+                    mood='happy'
+                    wave
+                    size={160}
+                    still={mascotHappy}
+                    loadWhen={RING_SHOWN}
                     className='absolute'
                     style={{ left: CENTRE - 80, top: CENTRE - 80 }}
                 />

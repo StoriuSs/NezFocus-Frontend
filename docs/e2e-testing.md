@@ -6,6 +6,7 @@ five tests, one per main flow. The suites have different needs:
 | Suite | Needs | What it checks |
 |---|---|---|
 | `e2e/oauth.spec.ts` | This app and **the API with Google configured** (skipped otherwise) | "Continue with Google" on `/login`, pointing at the API with the page to return to; the API's redirect to Google with PKCE, the registered return address and the `oauth_state` cookie. Not the sign-in at Google itself, which needs a real Google account: that is a manual test |
+| `e2e/mascot.spec.ts` | This app only | At 1440 × 900, Rive takes over from the mascot's still picture on `/login`, its WebAssembly from this site, with no page errors; with movement reduced, Rive is never loaded |
 | `e2e/account.spec.ts` | This app, **the API**, and the **Mailpit** it sends email to | An account's whole life: create it on `/register` with only the email, type the code read from Mailpit on `/verify` (the address shown; the sixth digit sends it and signs in), then complete it on `/welcome` (any other page sends back there; a password missing two conditions refused; the time zone found by searching "tokyo"); a deep link coming back after sign-in; a reload keeping the session (the refresh cookie crossing origins); a forgotten password reset, which signs in (the old password refused after); the account deleted |
 
 Any CSP violation or uncaught page error fails a run.

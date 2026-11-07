@@ -44,6 +44,12 @@ importers:
       '@radix-ui/react-tooltip':
         specifier: ^1.4.1
         version: 1.4.1(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@rive-app/canvas-lite':
+        specifier: 2.49.2
+        version: 2.49.2
+      '@rive-app/react-canvas-lite':
+        specifier: 4.38.1
+        version: 4.38.1(react@19.2.6)
       '@sentry/react':
         specifier: 10.74.0
         version: 10.74.0(react@19.2.6)
@@ -1275,6 +1281,14 @@ packages:
   '@redocly/openapi-core@1.34.20':
     resolution: {integrity: sha512-ypeBZ/6BKXR9+7/TtbKhbl4UgD7raHhPS12oknlKno2A8+lnFkxIwiE/Aklu6L2cd/ioH+fCWuMxi9/p3EyAPw==}
     engines: {node: '>=18.17.0', npm: '>=9.5.0'}
+
+  '@rive-app/canvas-lite@2.49.2':
+    resolution: {integrity: sha512-telo7Hak0RzpAZzihs4pxKkd3OcpWNZ1e6PNJRF+H/3HtEYyb8asmBkFKN2wqmbPHDExB47WXnP3u8Jolp/qvw==}
+
+  '@rive-app/react-canvas-lite@4.38.1':
+    resolution: {integrity: sha512-dLb4q7/dKuyIlV28zyZ5SAdbuj7ZaTd0nlZgyp/GKSrvjtXNnmA4EDvg3UTmtxcbcDR9DO394cLNAvfv6OisLQ==}
+    peerDependencies:
+      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0
 
   '@rolldown/pluginutils@1.0.0-rc.3':
     resolution: {integrity: sha512-eybk3TjzzzV97Dlj5c+XrBFW57eTNhzod66y9HrBlzJ6NsCrWCp/2kaPS3K9wJmurBC0Tdw4yPjXKZqlznim3Q==}
@@ -4676,6 +4690,13 @@ snapshots:
       yaml-ast-parser: 0.0.43
     transitivePeerDependencies:
       - supports-color
+
+  '@rive-app/canvas-lite@2.49.2': {}
+
+  '@rive-app/react-canvas-lite@4.38.1(react@19.2.6)':
+    dependencies:
+      '@rive-app/canvas-lite': 2.49.2
+      react: 19.2.6
 
   '@rolldown/pluginutils@1.0.0-rc.3': {}
 

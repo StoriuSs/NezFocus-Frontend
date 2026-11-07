@@ -62,7 +62,10 @@ function policy({ api, errorTracking, extraImages, pages }) {
 
     return [
         "default-src 'self'",
-        `script-src ${unique("'self'", ...hashes)}`,
+        // 'wasm-unsafe-eval': Rive draws the mascot with WebAssembly, which the
+        // browser compiles only with this. It allows WebAssembly from the
+        // allowed scripts, not eval() of JavaScript ('unsafe-eval').
+        `script-src ${unique("'self'", "'wasm-unsafe-eval'", ...hashes)}`,
         // Radix and sonner position elements with inline style attributes.
         "style-src 'self' 'unsafe-inline'",
         // Avatars come from the API (local storage) or from a bucket whose host

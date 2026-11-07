@@ -21,6 +21,7 @@ describe('the Content-Security-Policy template', () => {
         ])
         expect(directive(policy, 'script-src')).toEqual([
             "'self'",
+            "'wasm-unsafe-eval'",
             sha256('var a = 1'),
             sha256('parent.postMessage(1)')
         ])
@@ -29,10 +30,16 @@ describe('the Content-Security-Policy template', () => {
         expect(directive(policy, 'frame-src')).toEqual(["'none'"])
     })
 
+    it('lets WebAssembly compile (Rive draws the mascot with it), never eval', () => {
+        const policy = cspTemplate(['<head></head>'])
+        expect(directive(policy, 'script-src')).toContain("'wasm-unsafe-eval'")
+        expect(policy).not.toMatch(/script-src[^;]*'unsafe-eval'/)
+    })
+
     it('hashes a script as the browser sees it, with CRLF line endings turned into LF', () => {
         // A Windows checkout produced hashes no browser matched, and the page's own scripts were blocked.
         const policy = cspTemplate(['<script>\r\n  go()\r\n</script>'])
-        expect(directive(policy, 'script-src')).toEqual(["'self'", sha256('\n  go()\n')])
+        expect(directive(policy, 'script-src')).toEqual(["'self'", "'wasm-unsafe-eval'", sha256('\n  go()\n')])
     })
 
     it('leaves every origin the server knows as a placeholder, and holds no address of its own', () => {

@@ -153,6 +153,20 @@ boundary above.
   button beside it: that page may be open for the wrong account, and offers no
   other way out.
 - **The brand panel** (`BrandPanel.tsx`) as the right half, from 1024 up.
+  Runtime, the mascot, sits in its ring and waves once as the page loads.
+
+**The mascot** (`src/components/brand/mascot/`, DESIGN.md › Illustration &
+Mascot). `Mascot` shows the still picture of a mood at once, then hands over
+to Rive (`RiveMascot`, `@rive-app/react-canvas-lite`), which draws
+`public/mascot/runtime.riv` (nez-mascot's `dist/runtime.riv`; the commit it
+came from is in `RiveMascot.tsx`). Rive is about 0.4 MB gzipped (68 kB of
+script, 353 kB of WebAssembly), so it loads in its own chunk after the page,
+and only where the mascot is on screen (`loadWhen`, a media query) and the
+person has not asked for less movement; otherwise, or if Rive fails, the still
+picture stays. The WebAssembly is served from this site
+(`RuntimeLoader.setWasmUrl`), not Rive's CDN, and the CSP allows it to compile
+with `'wasm-unsafe-eval'` in `script-src` (`scripts/csp.mjs`): that allows
+WebAssembly, not `eval()`. nginx gzips `application/wasm`.
 
 The legal pages, `/terms` and `/privacy` (`src/pages/Legal.tsx`), are in
 neither layout: one column of text under their own bar, for visitors and
