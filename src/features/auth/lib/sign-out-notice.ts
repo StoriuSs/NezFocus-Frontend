@@ -35,7 +35,7 @@ export const isSessionEnded = (reason: SignOutReason): boolean => sessionEndedOf
  */
 export function announceSignOut(reason: SignOutReason | null): void {
     if (reason === 'account-disabled') toast.error(i18n.t('api:AUTH_ACCOUNT_DISABLED'))
-    else if (reason === 'you-signed-out-everywhere' || reason === 'account-deleted') {
+    else if (reason === 'account-deleted') {
         toast.success(i18n.t(`auth:signedOut.${reason}`))
     }
 }

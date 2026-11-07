@@ -33,7 +33,7 @@ function renderAt(path: string) {
                         element: <MockChannelPage />,
                         handle: { column: 'server' }
                     },
-                    { path: '/settings', element: <h1>Settings page</h1>, handle: { column: 'settings' } },
+                    { path: '/settings/account', element: <h1>Settings page</h1>, handle: { column: 'settings' } },
                     { path: '/profile', element: <h1>Profile page</h1>, handle: { column: 'settings' } }
                 ]
             }
@@ -200,7 +200,7 @@ describe('AppShell (S-SHELL-01)', () => {
             expect(screen.getByRole('navigation', { name: 'Settings' })).toBeInTheDocument()
 
             await userEvent.click(within(await openMenu()).getByRole('menuitem', { name: 'Settings' }))
-            expect(router.state.location.pathname).toBe('/settings')
+            expect(router.state.location.pathname).toBe('/settings/account')
         })
 
         it('signs out', async () => {

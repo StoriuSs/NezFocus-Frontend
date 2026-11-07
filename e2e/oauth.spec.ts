@@ -18,12 +18,14 @@ test.beforeEach(async ({ context }) => {
 
 test('"Continue with Google" goes through the API to Google, remembering where it was heading', async ({ page }) => {
     const problems = await watchForProblems(page)
-    await page.goto('/settings')
-    await page.waitForURL(/\/login\?next=%2Fsettings/)
+    await page.goto('/settings/account')
+    await page.waitForURL(/\/login\?next=%2Fsettings%2Faccount/)
 
     const google = page.getByRole('link', { name: 'Continue with Google' })
     // It waits on the API (/auth/options): slower than the form in a cold browser.
-    await expect(google).toHaveAttribute('href', `${apiUrl}/auth/google?redirect=%2Fsettings`, { timeout: 15_000 })
+    await expect(google).toHaveAttribute('href', `${apiUrl}/auth/google?redirect=%2Fsettings%2Faccount`, {
+        timeout: 15_000
+    })
 
     // Where the API sends the browser: Google, with PKCE, and a cookie for the way back.
     const redirect = await page.request.get((await google.getAttribute('href'))!, { maxRedirects: 0 })

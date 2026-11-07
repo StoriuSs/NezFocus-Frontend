@@ -10,7 +10,8 @@ export const AUTH_PATHS = {
     resetPassword: '/reset-password',
     /** Where the API sends the browser back after signing in with Google. */
     oauthCallback: '/auth/callback',
-    settings: '/settings'
+    /** S-ME-03, the first settings page; `/settings` opens it (10-settings › URL). */
+    settings: '/settings/account'
 } as const
 
 /** The pages outside the app, as opposed to the signed-in settings page. */

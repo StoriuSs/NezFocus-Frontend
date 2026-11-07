@@ -7,7 +7,7 @@ import { mockAuthStore, queryWrapper } from '@/test/helpers'
 
 const authApi = {
     changePassword: vi.fn(),
-    logoutAll: vi.fn()
+    sessions: vi.fn().mockResolvedValue({ sessions: [] })
 }
 const authState = {
     user: { email: 'jane.doe@example.test', username: 'harbour_seven' },

@@ -1,7 +1,7 @@
 import api from '@/lib/api'
 import type { ApiEnvelope } from '@/lib/api-types'
 import { currentLanguage } from '@/i18n'
-import type { AccountCompletion, AuthOptions, EmailCodeSignIn, TokenResponse } from '@/features/auth/types'
+import type { AccountCompletion, AuthOptions, EmailCodeSignIn, SessionList, TokenResponse } from '@/features/auth/types'
 
 /**
  * The API's auth routes (the backend's docs/auth/api-reference.md).
@@ -81,10 +81,23 @@ export const authApi = {
         await api.post('/auth/logout', undefined, { ...auth, timeout: 5_000 })
     },
 
-    // Signed-in routes: an ordinary request with the bearer token. withCredentials
-    // because the answer clears the cookie.
-    async logoutEverywhere(): Promise<void> {
-        await api.post('/auth/logout-all', undefined, { withCredentials: true })
+    // Signed-in routes: an ordinary request with the bearer token.
+
+    /** The signed-in devices: this one first, then by latest use (D-75). */
+    async sessions(): Promise<SessionList> {
+        const response = await api.get<ApiEnvelope<SessionList>>('/auth/sessions')
+        return response.data.data
+    },
+
+    /** Sign out one device. The same answer if it had already ended. */
+    async revokeSession(id: string): Promise<void> {
+        await api.delete(`/auth/sessions/${encodeURIComponent(id)}`)
+    },
+
+    /** "Sign out the other devices": every session but this one ends. Resolves to how many ended. */
+    async revokeOtherSessions(): Promise<number> {
+        const response = await api.delete<ApiEnvelope<{ revoked: number }>>('/auth/sessions')
+        return response.data.data.revoked
     },
 
     async changePassword(currentPassword: string, newPassword: string): Promise<void> {

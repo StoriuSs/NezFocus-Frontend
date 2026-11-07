@@ -1,5 +1,5 @@
 import { lazy } from 'react'
-import { RouteObject } from 'react-router-dom'
+import { Navigate, RouteObject } from 'react-router-dom'
 import { AUTH_PATHS } from '@/features/auth/lib/paths'
 import { GuestOnlyRoute, IncompleteOnlyRoute } from '@/features/auth/components/ProtectedRoute'
 
@@ -37,4 +37,7 @@ export const authRoutes: RouteObject[] = [
 ]
 
 /** The auth feature's pages inside the app, for a signed-in user (the router puts them in the AppShell). */
-export const authAppRoutes: RouteObject[] = [{ path: AUTH_PATHS.settings, element: <Settings /> }]
+export const authAppRoutes: RouteObject[] = [
+    { path: '/settings', element: <Navigate to={AUTH_PATHS.settings} replace /> },
+    { path: AUTH_PATHS.settings, element: <Settings /> }
+]

@@ -10,11 +10,12 @@ import { ShellPage } from '@/components/shell/ShellPage'
 import { FormField } from '@/components/form/FormField'
 import { useAuthStore } from '@/features/auth/auth.store'
 import { useChangePassword } from '@/features/auth/api/useChangePassword'
-import { useLogoutEverywhere } from '@/features/auth/api/useLogoutEverywhere'
 import { authFormError } from '@/features/auth/lib/form-errors'
 import { newPasswordCheck, passwordFieldMessage } from '@/features/auth/lib/schemas'
 import type { PasswordContext, PasswordRule } from '@/features/auth/lib/password-rules'
 import { Notice } from '@/features/auth/components/AuthCard'
+import { SessionsSection } from '@/features/auth/components/SessionsSection'
+import { SettingsGroup, SettingsRow } from '@/components/settings/SettingsRow'
 import { PasswordInput } from '@/features/auth/components/PasswordInput'
 import { PasswordRules } from '@/features/auth/components/PasswordRules'
 
@@ -29,8 +30,7 @@ const createSchema = (t: TFunction<'auth'>, identity: PasswordContext) =>
 
 type Values = z.infer<ReturnType<typeof createSchema>>
 
-/** The signed-in user's password and sessions. */
-/** The account settings page (S-ME-03 in L10–L11), in the AppShell. */
+/** The account settings page (S-ME-03): sign-in, password and sessions, in the AppShell. */
 export default function Settings() {
     const { t } = useTranslation('auth')
     return (
@@ -43,15 +43,9 @@ export default function Settings() {
 function SettingsContent() {
     const { t } = useTranslation('auth')
     const user = useAuthStore((state) => state.user)
-    const logout = useAuthStore((state) => state.logout)
     const changePassword = useChangePassword()
-    const logoutEverywhere = useLogoutEverywhere()
     const [formError, setFormError] = useState<string | null>(null)
     const [serverRules, setServerRules] = useState<PasswordRule[]>([])
-    const [signingOut, setSigningOut] = useState(false)
-    const [signOutError, setSignOutError] = useState<string | null>(null)
-    // Every device, this one included: asked once more before it happens.
-    const [confirmingSignOut, setConfirmingSignOut] = useState(false)
     const schema = useMemo(
         () => createSchema(t, { email: user?.email, username: user?.username }),
         [t, user?.email, user?.username]
@@ -89,113 +83,68 @@ function SettingsContent() {
         }
     }
 
-    /**
-     * Only once the API has ended every session: if the request fails, the
-     * other devices are still signed in, so this one stays signed in too and
-     * says so, rather than looking done when it is not.
-     */
-    async function signOutEverywhere() {
-        setSignOutError(null)
-        setSigningOut(true)
-        try {
-            await logoutEverywhere.mutateAsync()
-        } catch (error) {
-            setSignOutError(t('settings.sessions.failed', { message: authFormError(error).message }))
-            setSigningOut(false)
-            return
-        }
-        logout('you-signed-out-everywhere')
-    }
-
     return (
         <div className='max-w-[720px] space-y-8 p-6 lg:p-8'>
-            <p className='text-text-secondary'>{t('settings.subtitle')}</p>
-
-            {/* Every account has a password (D-130). */}
-            <section className='space-y-4 rounded-xl border bg-background p-6' aria-labelledby='change-password'>
-                <div className='space-y-1'>
-                    <h2 id='change-password' className='text-lg font-semibold'>
-                        {t('settings.changePassword.title')}
-                    </h2>
-                    <p className='text-sm text-muted-foreground'>{t('settings.changePassword.description')}</p>
-                </div>
-                {formError ? <Notice tone='error'>{formError}</Notice> : null}
-                <form onSubmit={handleSubmit(onSubmit)} className='space-y-4' noValidate>
-                    {/* What a password manager files the new password under. */}
-                    <input type='email' autoComplete='username' value={user?.email ?? ''} readOnly hidden />
-                    <FormField label={t('fields.currentPassword')} error={errors.currentPassword?.message}>
-                        {(control) => (
-                            <PasswordInput
-                                autoComplete='current-password'
-                                {...control}
-                                {...register('currentPassword')}
+            <SettingsGroup id='sign-in' title={t('settings.signIn.title')}>
+                <SettingsRow
+                    label={t('settings.signIn.email')}
+                    value={user?.email}
+                    description={t('settings.signIn.emailHint')}
+                />
+                {/* Every account has a password (D-130). L11 moves the form into a dialog opened from this row. */}
+                <SettingsRow label={t('settings.signIn.password')} description={t('settings.signIn.passwordHint')} />
+                <div className='space-y-4' role='group' aria-label={t('settings.changePassword.title')}>
+                    {formError ? <Notice tone='error'>{formError}</Notice> : null}
+                    <form onSubmit={handleSubmit(onSubmit)} className='space-y-4' noValidate>
+                        {/* What a password manager files the new password under. */}
+                        <input type='email' autoComplete='username' value={user?.email ?? ''} readOnly hidden />
+                        <FormField label={t('fields.currentPassword')} error={errors.currentPassword?.message}>
+                            {(control) => (
+                                <PasswordInput
+                                    autoComplete='current-password'
+                                    {...control}
+                                    {...register('currentPassword')}
+                                />
+                            )}
+                        </FormField>
+                        <div className='space-y-2'>
+                            <FormField
+                                label={t('fields.newPassword')}
+                                error={errors.password?.message ?? passwordFieldMessage(t, serverRules)}
+                            >
+                                {(control) => (
+                                    <PasswordInput
+                                        autoComplete='new-password'
+                                        {...control}
+                                        {...register('password', { onChange: () => setServerRules([]) })}
+                                    />
+                                )}
+                            </FormField>
+                            <PasswordRules
+                                password={password}
+                                serverRules={serverRules}
+                                showErrors={Boolean(errors.password)}
                             />
-                        )}
-                    </FormField>
-                    <div className='space-y-2'>
-                        <FormField
-                            label={t('fields.newPassword')}
-                            error={errors.password?.message ?? passwordFieldMessage(t, serverRules)}
-                        >
+                        </div>
+                        <FormField label={t('fields.confirmPassword')} error={errors.confirmPassword?.message}>
                             {(control) => (
                                 <PasswordInput
                                     autoComplete='new-password'
                                     {...control}
-                                    {...register('password', { onChange: () => setServerRules([]) })}
+                                    {...register('confirmPassword')}
                                 />
                             )}
                         </FormField>
-                        <PasswordRules
-                            password={password}
-                            serverRules={serverRules}
-                            showErrors={Boolean(errors.password)}
-                        />
-                    </div>
-                    <FormField label={t('fields.confirmPassword')} error={errors.confirmPassword?.message}>
-                        {(control) => (
-                            <PasswordInput autoComplete='new-password' {...control} {...register('confirmPassword')} />
-                        )}
-                    </FormField>
-                    <Button type='submit' disabled={isSubmitting}>
-                        {isSubmitting ? t('settings.changePassword.submitting') : t('settings.changePassword.submit')}
-                    </Button>
-                </form>
-            </section>
-
-            <section className='space-y-4 rounded-xl border bg-background p-6' aria-labelledby='sign-out-everywhere'>
-                <div className='space-y-1'>
-                    <h2 id='sign-out-everywhere' className='text-lg font-semibold'>
-                        {t('settings.sessions.title')}
-                    </h2>
-                    <p className='text-sm text-muted-foreground'>{t('settings.sessions.description')}</p>
+                        <Button type='submit' disabled={isSubmitting}>
+                            {isSubmitting
+                                ? t('settings.changePassword.submitting')
+                                : t('settings.changePassword.submit')}
+                        </Button>
+                    </form>
                 </div>
-                {signOutError ? <Notice tone='error'>{signOutError}</Notice> : null}
-                {confirmingSignOut ? (
-                    <div
-                        className='space-y-3 rounded-lg border p-4'
-                        role='group'
-                        aria-label={t('settings.sessions.title')}
-                    >
-                        <p className='text-sm font-medium'>{t('settings.sessions.confirm')}</p>
-                        <div className='flex flex-wrap gap-2'>
-                            <Button
-                                variant='destructive'
-                                disabled={signingOut}
-                                onClick={() => void signOutEverywhere()}
-                            >
-                                {signingOut ? t('settings.sessions.submitting') : t('settings.sessions.confirmYes')}
-                            </Button>
-                            <Button variant='ghost' disabled={signingOut} onClick={() => setConfirmingSignOut(false)}>
-                                {t('settings.sessions.cancel')}
-                            </Button>
-                        </div>
-                    </div>
-                ) : (
-                    <Button variant='outline' onClick={() => setConfirmingSignOut(true)}>
-                        {t('settings.sessions.submit')}
-                    </Button>
-                )}
-            </section>
+            </SettingsGroup>
+
+            <SessionsSection />
         </div>
     )
 }

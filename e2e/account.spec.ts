@@ -78,8 +78,8 @@ test('create an account: the emailed code signs in, then "complete your account"
     await page.waitForURL(/\/welcome$/)
 
     // Nothing else opens until the account is complete (D-61): the page asked for comes after.
-    await page.goto('/settings')
-    await page.waitForURL(/\/welcome\?next=%2Fsettings$/)
+    await page.goto('/settings/account')
+    await page.waitForURL(/\/welcome\?next=%2Fsettings%2Faccount$/)
 
     await page.getByLabel('Display name').fill('E2E')
     await page.getByLabel('Username').fill(username)
@@ -101,23 +101,26 @@ test('create an account: the emailed code signs in, then "complete your account"
     await expect(page.getByRole('button', { name: 'Time zone' })).toHaveText(/GMT\+9 · Tokyo/)
 
     await page.getByRole('button', { name: 'Enter NezFocus' }).click()
-    await page.waitForURL(/\/settings$/)
-    await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible()
+    await page.waitForURL(/\/settings\/account$/)
+    await expect(page.getByRole('heading', { level: 1, name: 'Account' })).toBeVisible()
     expect(problems).toEqual([])
 })
 
 test('a reload keeps the session; a deep link comes back after sign-in', async ({ page }) => {
     const problems = await watchForProblems(page)
-    await page.goto('/settings')
-    await page.waitForURL(/\/login\?next=%2Fsettings/)
+    await page.goto('/settings/account')
+    await page.waitForURL(/\/login\?next=%2Fsettings%2Faccount/)
     await signIn(page, PASSWORD)
-    await page.waitForURL(/\/settings$/)
-    await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible()
+    await page.waitForURL(/\/settings\/account$/)
+    await expect(page.getByRole('heading', { level: 1, name: 'Account' })).toBeVisible()
 
     // A reload has no access token in memory: only the refresh cookie, sent
     // across origins to the API, can bring the session back.
     await page.reload()
-    await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: 'Account' })).toBeVisible()
+    // The list of sessions (D-75): this browser, first and marked as this device.
+    const sessions = page.getByRole('region', { name: 'Sessions' })
+    await expect(sessions.getByRole('listitem').first()).toContainText('This device')
     await expect(accountMenu(page)).toBeVisible()
 
     expect(problems).toEqual([])

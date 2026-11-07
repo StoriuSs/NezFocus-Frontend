@@ -27,12 +27,12 @@ describe('saying why a session ended', () => {
         expect(sessionEndedOf('session-expired')).toBe('ended')
         expect(sessionEndedOf('signed-out')).toBe('ended')
         expect(sessionEndedOf('password-changed')).toBe('password-changed')
-        expect(sessionEndedOf('you-signed-out-everywhere')).toBeNull()
+        expect(sessionEndedOf('account-deleted')).toBeNull()
         expect(sessionEndedOf(null)).toBeNull()
     })
 
     it('toasts what the person did themselves, and a disabled account as an error', () => {
-        announceSignOut('you-signed-out-everywhere')
+        announceSignOut('account-deleted')
         announceSignOut('account-disabled')
         expect(toast.success).toHaveBeenCalledTimes(1)
         expect(toast.error).toHaveBeenCalledTimes(1)
