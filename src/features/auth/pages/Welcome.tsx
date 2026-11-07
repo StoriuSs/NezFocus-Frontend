@@ -16,7 +16,7 @@ import { PageLoader } from '@/components/PageLoader'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { useMinuteClock } from '@/hooks/useMinuteClock'
 import { initialTimeZone, timeIn } from '@/lib/time-zones'
-import { USERNAME_PATTERN, useProfile, userKeys, useUsernameAvailability } from '@/features/users'
+import { displayNameIssue, USERNAME_PATTERN, useProfile, userKeys, useUsernameAvailability } from '@/features/users'
 import { authApi } from '@/features/auth/api/auth.api'
 import { useAuthStore } from '@/features/auth/auth.store'
 import { safeNext } from '@/features/auth/lib/paths'
@@ -38,9 +38,6 @@ function NewTabLink({ href, children }: { href: string; children?: ReactNode }) 
     )
 }
 
-/** The longest display name (REQ-AUTH-06, D-69). */
-const DISPLAY_NAME_MAX = 32
-
 /**
  * The form's rules. Messages are keys, put into words when shown
  * (form-problem.ts). `email` is what the password may not be (D-66), with the
@@ -57,9 +54,10 @@ const createSchema = (email: string | undefined) =>
         })
         .superRefine((values, ctx) => {
             const issue = (path: string, message: string) => ctx.addIssue({ code: 'custom', path: [path], message })
-            const name = values.displayName.trim()
-            if (!name) issue('displayName', 'auth:welcome.displayNameRequired')
-            else if (name.length > DISPLAY_NAME_MAX) issue('displayName', 'auth:welcome.displayNameTooLong')
+            // The profile page's rules and words (REQ-AUTH-06, D-139).
+            const nameIssue = displayNameIssue(values.displayName)
+            if (nameIssue === 'required') issue('displayName', 'users:validation.displayNameRequired')
+            else if (nameIssue === 'tooLong') issue('displayName', 'users:validation.displayNameTooLong')
 
             if (!values.username) issue('username', 'auth:welcome.usernameRequired')
             else if (!USERNAME_PATTERN.test(values.username)) issue('username', 'auth:welcome.usernameInvalid')
@@ -224,9 +222,9 @@ function WelcomeForm({ email, googleName }: { email: string | undefined; googleN
         >
             <form onSubmit={handleSubmit(onSubmit)} className='space-y-4' noValidate>
                 <FormField
-                    label={t('welcome.displayName')}
+                    label={t('profile.displayName', { ns: 'users' })}
                     error={errors.displayName?.message ? text({ key: errors.displayName.message }) : undefined}
-                    hint={t('welcome.displayNameHint')}
+                    hint={t('profile.displayNameHint', { ns: 'users' })}
                 >
                     {(field) => (
                         <Input

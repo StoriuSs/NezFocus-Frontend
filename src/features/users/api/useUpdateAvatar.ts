@@ -3,17 +3,19 @@ import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import api from '@/lib/api'
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation'
+import { cancelAvatarRemoval } from '../lib/avatar-removal'
 import { userKeys } from './keys'
 
 /**
- * Upload and update user avatar.
- * Automatically invalidates profile query and shows toast notifications.
+ * Upload a cropped avatar (S-ME-02). A removal still waiting out its "Undo"
+ * is called off: the new picture replaces the old one anyway.
  */
 export function useUpdateAvatar() {
     const queryClient = useQueryClient()
     const { t } = useTranslation('users')
 
     return useIdempotentMutation({
+        onMutate: cancelAvatarRemoval,
         mutationFn: async (blob: Blob, idempotencyKey) => {
             const formData = new FormData()
             formData.append('avatar', blob, 'avatar.jpg')

@@ -354,7 +354,11 @@ export interface paths {
         get?: never
         put?: never
         post: operations['UsersController_uploadAvatar_v1']
-        delete?: never
+        /**
+         * Back to the initial (S-ME-02, D-72). The profile page calls this only
+         *     once its "Undo" has run out. Without an avatar it answers the same.
+         */
+        delete: operations['UsersController_removeAvatar_v1']
         options?: never
         head?: never
         patch?: never
@@ -481,13 +485,13 @@ export interface components {
             email: string
         }
         CompleteAccountRequestDto: {
+            /** @description Shown in chat and study rooms: 1-32 characters, at least one visible (REQ-AUTH-06, D-69, D-139). */
+            display_name: string
             /**
              * @description The account's language: the switch at the foot of the page (D-64).
              * @enum {string}
              */
             language: 'vi' | 'en'
-            /** @description Shown in chat and study rooms: 1-32 characters (REQ-AUTH-06, D-69). */
-            display_name: string
             /**
              * @description 2-32 characters of `a-z 0-9 _ .`; upper case is lowered. Permanent.
              *     Whether it is free is decided now: taken → USERNAME_CONFLICT.
@@ -634,8 +638,9 @@ export interface components {
             bio: string | null
         }
         UpdateProfileRequestDto: {
+            /** @description 1-32 characters, at least one visible; it cannot be cleared (D-69). */
             display_name?: string
-            /** @description An empty string clears the bio. */
+            /** @description Up to 200 characters, line breaks allowed. An empty string clears the bio. */
             bio?: string
         }
         UploadAvatarResponseDto: {
@@ -1162,6 +1167,28 @@ export interface operations {
                     'application/json': {
                         meta: components['schemas']['ApiResponseMetaDto']
                         data: components['schemas']['UploadAvatarResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    UsersController_removeAvatar_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: null
                     }
                 }
             }

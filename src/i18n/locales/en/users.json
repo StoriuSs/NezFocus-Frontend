@@ -1,35 +1,46 @@
 {
   "profile": {
-    "backendCard": {
-      "title": "Backend Profile (PostgreSQL)",
-      "subtitle": "Data fetched from NestJS `/users/me`"
+    "avatar": {
+      "change": "Change photo",
+      "remove": "Remove photo",
+      "hint": "JPG, PNG or WEBP, up to 8 MB.",
+      "label": "Change your profile picture",
+      "tooLarge": "This image is larger than 8 MB. Choose another one.",
+      "wrongType": "Only JPG, PNG or WEBP images."
     },
-    "editDialog": {
-      "title": "Edit Profile",
-      "description": "Make changes to your profile here. Click save when you're done.",
-      "displayName": "Display Name",
-      "bio": "Bio"
-    },
-    "cropDialog": {
-      "title": "Edit Profile Picture",
-      "description": "Zoom and move the image to frame your profile picture."
-    },
-    "noBio": "No bio set in database.",
-    "failedToLoad": "Failed to load profile from backend.",
-    "dangerZone": {
-      "title": "Danger Zone",
-      "subtitle": "Irreversible and destructive actions"
-    },
-    "changeAvatar": "Change profile picture"
+    "displayName": "Display name",
+    "displayNameHint": "Shown in chat and study rooms.",
+    "username": "Username",
+    "usernameHint": "Friends find you by your username. It can't be changed.",
+    "bio": "Bio",
+    "bioPlaceholder": "A few lines about you",
+    "failedToLoad": "Your profile could not be loaded."
+  },
+  "discard": {
+    "title": "Discard changes?",
+    "description": "Your new profile is not saved yet.",
+    "stay": "Stay",
+    "confirm": "Discard changes"
+  },
+  "crop": {
+    "title": "Crop your profile picture",
+    "description": "Drag the image to place it; use the slider to zoom in.",
+    "zoom": "Zoom",
+    "zoomOut": "Zoom out",
+    "zoomIn": "Zoom in",
+    "cancel": "Cancel",
+    "save": "Save photo"
   },
   "validation": {
-    "displayNameRequired": "Display name is required",
-    "displayNameTooLong": "Display name must be at most 100 characters",
-    "bioTooLong": "Bio must be at most 500 characters"
+    "displayNameRequired": "Enter a display name",
+    "displayNameTooLong": "A display name has at most 32 characters",
+    "bioTooLong": "A bio has at most 200 characters"
   },
   "toasts": {
-    "profileUpdated": "Profile updated successfully",
-    "avatarUpdated": "File uploaded successfully",
-    "cropFailed": "Failed to crop image"
+    "profileUpdated": "Profile updated",
+    "avatarUpdated": "Profile picture changed",
+    "avatarRemoved": "Profile picture removed",
+    "undo": "Undo",
+    "cropFailed": "This image could not be read. Choose another one."
   }
 }

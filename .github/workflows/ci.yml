@@ -128,8 +128,8 @@ jobs:
         run: |
           cp .env.example .env.production
           pnpm build
-      # What the first screen downloads (.size-limit.mjs). Reports only until
-      # CONSTRAINTS.md records a budget.
+      # What the first screen downloads (.size-limit.mjs): fails over the
+      # budget CONSTRAINTS.md records.
       - name: Initial bundle size
         run: pnpm size
 

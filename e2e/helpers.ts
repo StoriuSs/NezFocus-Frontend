@@ -1,3 +1,4 @@
+import zlib from 'node:zlib'
 import { expect, type BrowserContext, type Page } from '@playwright/test'
 
 export const apiUrl = (process.env.E2E_API_URL ?? 'http://localhost:8888/api/v1').replace(/\/+$/, '')
@@ -109,4 +110,31 @@ export async function submitPatiently(page: Page, button: string): Promise<void>
         await page.waitForTimeout((seconds + 1) * 1000)
     }
     throw new Error(`"${button}" was still refused after waiting`)
+}
+
+/**
+ * A small PNG of one colour, made here: a real image the browser can crop and
+ * the API can decode, without a fixture file.
+ */
+export function solidPng(size = 64): Buffer {
+    const chunk = (type: string, data: Buffer) => {
+        const body = Buffer.concat([Buffer.from(type, 'ascii'), data])
+        const length = Buffer.alloc(4)
+        length.writeUInt32BE(data.length)
+        const crc = Buffer.alloc(4)
+        crc.writeUInt32BE(zlib.crc32(body))
+        return Buffer.concat([length, body, crc])
+    }
+    const header = Buffer.alloc(13)
+    header.writeUInt32BE(size, 0)
+    header.writeUInt32BE(size, 4)
+    header[8] = 8 // bits per channel
+    header[9] = 2 // RGB
+    const row = Buffer.concat([Buffer.from([0]), Buffer.from('33aa77'.repeat(size), 'hex')])
+    return Buffer.concat([
+        Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+        chunk('IHDR', header),
+        chunk('IDAT', zlib.deflateSync(Buffer.concat(Array.from({ length: size }, () => row)))),
+        chunk('IEND', Buffer.alloc(0))
+    ])
 }

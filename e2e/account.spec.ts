@@ -6,6 +6,7 @@ import {
     emailTo,
     accountMenu,
     openAccountMenuItem,
+    solidPng,
     submitPatiently,
     watchForProblems
 } from './helpers'
@@ -15,7 +16,7 @@ import {
  * with the emailed code (which signs in), complete it (display name, username,
  * password, time zone, terms), stay signed in across a reload, sign in by
  * password and by an emailed code, reset a forgotten password (which signs
- * in), delete the account. Plus the parts only a browser shows: the
+ * in), edit the profile, delete the account. Plus the parts only a browser shows: the
  * refresh cookie crossing origins, and a deep link coming back after sign-in.
  *
  * Needs the API (E2E_API_URL, default http://localhost:8888/api/v1) and the
@@ -192,11 +193,63 @@ test('reset a forgotten password with an emailed code; the old one no longer wor
     expect(problems).toEqual([])
 })
 
-test('delete the account: signed out, and the account is gone', async ({ page }) => {
+test('edit the profile: name and bio saved, a photo cropped in, then removed once Undo runs out', async ({ page }) => {
+    // Room for the 8 seconds of Undo (S-ME-02).
+    test.setTimeout(60_000)
     const problems = await watchForProblems(page)
     await page.goto('/login')
     await signIn(page, RESET_PASSWORD)
     await openAccountMenuItem(page, /view and edit your profile$/)
+    await page.waitForURL(/\/settings\/profile$/)
+
+    // Counted as the API counts: the emoji is one character (D-139).
+    const name = page.getByLabel('Display name')
+    await name.fill('Ada 🙂')
+    await expect(page.getByText('5/32')).toBeVisible()
+    await page.getByLabel('Bio').fill('Ôn Giải tích 2 mỗi tối')
+
+    // Leaving with changes asks first; staying keeps them.
+    await page.getByRole('link', { name: 'Account', exact: true }).click()
+    await page.getByRole('dialog', { name: 'Discard changes?' }).getByRole('button', { name: 'Stay' }).click()
+    await page.getByRole('button', { name: 'Save changes' }).click()
+    await expect(page.getByText('Profile updated')).toBeVisible()
+    await expect(page.getByText('You have unsaved changes')).toBeHidden()
+    await page.reload()
+    await expect(name).toHaveValue('Ada 🙂')
+    await expect(page.getByLabel('Bio')).toHaveValue('Ôn Giải tích 2 mỗi tối')
+
+    // A photo: chosen, cropped, uploaded.
+    await page
+        .locator('input[type=file]')
+        .setInputFiles({ name: 'photo.png', mimeType: 'image/png', buffer: solidPng() })
+    const crop = page.getByRole('dialog', { name: 'Crop your profile picture' })
+    await crop.getByRole('button', { name: 'Save photo' }).click()
+    await expect(page.getByText('Profile picture changed')).toBeVisible()
+    await expect(crop).toBeHidden()
+
+    // Removed: Undo keeps it; let Undo run out and it is gone for good.
+    const remove = page.getByRole('button', { name: 'Remove photo' })
+    await remove.click()
+    await page.getByRole('button', { name: 'Undo' }).click()
+    await expect(remove).toBeVisible()
+    await remove.click()
+    await expect(remove).toBeHidden()
+    await page.waitForResponse(
+        (response) => response.url().endsWith('/users/me/avatar') && response.request().method() === 'DELETE',
+        { timeout: 15_000 }
+    )
+    await page.reload()
+    await expect(page.getByRole('button', { name: 'Change photo' })).toBeVisible()
+    await expect(remove).toHaveCount(0)
+    expect(problems).toEqual([])
+})
+
+test('delete the account: signed out, and the account is gone', async ({ page }) => {
+    const problems = await watchForProblems(page)
+    await page.goto('/login')
+    await signIn(page, RESET_PASSWORD)
+    // On the Account page until L14 builds its own group.
+    await openAccountMenuItem(page, 'Settings')
 
     await page.getByRole('button', { name: 'Delete Account' }).click()
     const dialog = page.getByRole('dialog', { name: 'Delete your account' })

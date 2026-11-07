@@ -1,18 +1,9 @@
 {
   "buttons": {
-    "cancel": "Cancel",
-    "edit": "Edit",
-    "retry": "Retry",
-    "savePicture": "Save Picture",
-    "saveChanges": "Save changes",
     "close": "Close",
     "tryAgain": "Try again",
     "refreshPage": "Refresh page",
     "home": "Home"
-  },
-  "labels": {
-    "roles": "Roles",
-    "zoom": "Zoom"
   },
   "errorBoundary": {
     "title": "Something went wrong",
@@ -118,5 +109,10 @@
     "list": "Time zones",
     "browser": "From your browser: {{zone}}",
     "none": "No time zone matches"
+  },
+  "saveBar": {
+    "unsaved": "You have unsaved changes",
+    "discard": "Discard changes",
+    "save": "Save changes"
   }
 }

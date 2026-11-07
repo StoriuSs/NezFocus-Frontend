@@ -1,18 +1,9 @@
 {
   "buttons": {
-    "cancel": "Hủy",
-    "edit": "Chỉnh sửa",
-    "retry": "Thử lại",
-    "savePicture": "Lưu ảnh",
-    "saveChanges": "Lưu thay đổi",
     "close": "Đóng",
     "tryAgain": "Thử lại",
     "refreshPage": "Tải lại trang",
     "home": "Trang chủ"
-  },
-  "labels": {
-    "roles": "Vai trò",
-    "zoom": "Phóng to"
   },
   "errorBoundary": {
     "title": "Đã xảy ra lỗi",
@@ -118,5 +109,10 @@
     "list": "Múi giờ",
     "browser": "Theo trình duyệt: {{zone}}",
     "none": "Không tìm thấy múi giờ phù hợp"
+  },
+  "saveBar": {
+    "unsaved": "Bạn có thay đổi chưa lưu",
+    "discard": "Hủy thay đổi",
+    "save": "Lưu thay đổi"
   }
 }

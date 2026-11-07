@@ -34,7 +34,7 @@ function renderAt(path: string) {
                         handle: { column: 'server' }
                     },
                     { path: '/settings/account', element: <h1>Settings page</h1>, handle: { column: 'settings' } },
-                    { path: '/profile', element: <h1>Profile page</h1>, handle: { column: 'settings' } }
+                    { path: '/settings/profile', element: <h1>Profile page</h1>, handle: { column: 'settings' } }
                 ]
             }
         ],
@@ -196,7 +196,7 @@ describe('AppShell (S-SHELL-01)', () => {
             await expectNoA11yViolations()
 
             await userEvent.click(me)
-            expect(router.state.location.pathname).toBe('/profile')
+            expect(router.state.location.pathname).toBe('/settings/profile')
             expect(screen.getByRole('navigation', { name: 'Settings' })).toBeInTheDocument()
 
             await userEvent.click(within(await openMenu()).getByRole('menuitem', { name: 'Settings' }))

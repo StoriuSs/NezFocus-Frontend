@@ -31,4 +31,10 @@ if (typeof window !== 'undefined') {
         unobserve() {}
         disconnect() {}
     }
+
+    // jsdom has no pointer capture; a toast (sonner, for swiping it away)
+    // calls it on any press, such as on its "Undo" button.
+    Element.prototype.setPointerCapture ??= () => undefined
+    Element.prototype.releasePointerCapture ??= () => undefined
+    Element.prototype.hasPointerCapture ??= () => false
 }

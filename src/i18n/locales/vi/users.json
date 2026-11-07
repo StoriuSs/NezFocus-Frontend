@@ -1,35 +1,46 @@
 {
   "profile": {
-    "backendCard": {
-      "title": "Hồ sơ Backend (PostgreSQL)",
-      "subtitle": "Dữ liệu từ NestJS `/users/me`"
+    "avatar": {
+      "change": "Đổi ảnh",
+      "remove": "Xóa ảnh",
+      "hint": "JPG, PNG hoặc WEBP, tối đa 8 MB.",
+      "label": "Đổi ảnh đại diện",
+      "tooLarge": "Ảnh lớn hơn 8 MB. Chọn ảnh khác.",
+      "wrongType": "Chỉ nhận ảnh JPG, PNG hoặc WEBP."
     },
-    "editDialog": {
-      "title": "Chỉnh sửa hồ sơ",
-      "description": "Thay đổi thông tin cá nhân. Nhấn lưu khi hoàn tất.",
-      "displayName": "Tên hiển thị",
-      "bio": "Giới thiệu"
-    },
-    "cropDialog": {
-      "title": "Chỉnh sửa ảnh đại diện",
-      "description": "Phóng to và di chuyển để chọn vùng ảnh."
-    },
-    "noBio": "Chưa có giới thiệu.",
-    "failedToLoad": "Không thể tải hồ sơ từ backend.",
-    "dangerZone": {
-      "title": "Vùng nguy hiểm",
-      "subtitle": "Các hành động không thể hoàn tác"
-    },
-    "changeAvatar": "Đổi ảnh đại diện"
+    "displayName": "Tên hiển thị",
+    "displayNameHint": "Hiện trong chat và phòng học.",
+    "username": "Username",
+    "usernameHint": "Bạn bè tìm bạn bằng username. Không đổi được.",
+    "bio": "Giới thiệu",
+    "bioPlaceholder": "Vài dòng về bạn",
+    "failedToLoad": "Chưa tải được hồ sơ."
+  },
+  "discard": {
+    "title": "Bỏ thay đổi?",
+    "description": "Hồ sơ mới chưa được lưu.",
+    "stay": "Ở lại",
+    "confirm": "Bỏ thay đổi"
+  },
+  "crop": {
+    "title": "Cắt ảnh đại diện",
+    "description": "Kéo ảnh để căn, dùng thanh để phóng to.",
+    "zoom": "Phóng to",
+    "zoomOut": "Thu nhỏ",
+    "zoomIn": "Phóng to",
+    "cancel": "Hủy",
+    "save": "Lưu ảnh"
   },
   "validation": {
-    "displayNameRequired": "Vui lòng nhập tên hiển thị",
-    "displayNameTooLong": "Tên hiển thị tối đa 100 ký tự",
-    "bioTooLong": "Tiểu sử tối đa 500 ký tự"
+    "displayNameRequired": "Nhập tên hiển thị",
+    "displayNameTooLong": "Tên hiển thị tối đa 32 ký tự",
+    "bioTooLong": "Giới thiệu tối đa 200 ký tự"
   },
   "toasts": {
-    "profileUpdated": "Cập nhật hồ sơ thành công",
-    "avatarUpdated": "Tải file thành công",
-    "cropFailed": "Cắt ảnh thất bại"
+    "profileUpdated": "Đã cập nhật hồ sơ",
+    "avatarUpdated": "Đã đổi ảnh đại diện",
+    "avatarRemoved": "Đã xóa ảnh đại diện",
+    "undo": "Hoàn tác",
+    "cropFailed": "Không đọc được ảnh này. Chọn ảnh khác."
   }
 }
