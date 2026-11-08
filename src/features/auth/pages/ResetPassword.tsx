@@ -38,8 +38,12 @@ function ResetForm({ email }: { email: string }) {
         onReset: async (tokens) => {
             await startSession(tokens)
             toast.success(t('resetPassword.done'))
-            void navigate(afterSignIn({ completed: useAuthStore.getState().isComplete }, location.search), {
-                replace: true
+            const { isComplete, deletesAt } = useAuthStore.getState()
+            const account = { completed: isComplete, pendingDeletion: deletesAt !== null }
+            // Waiting to be deleted: sign in, on the password just chosen, under the restore dialog.
+            void navigate(afterSignIn(account, location.search, 'password'), {
+                replace: true,
+                state: authPageState(email)
             })
         }
     })

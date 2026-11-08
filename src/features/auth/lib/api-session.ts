@@ -13,5 +13,7 @@ export const apiSession: ApiSession = {
     ended: (error, why) =>
         useAuthStore.getState().logout(why === 'account-disabled' ? 'account-disabled' : signOutReasonOf(error)),
     // The routes see the store change and open /welcome (ProtectedRoute).
-    accountIncomplete: () => useAuthStore.getState().markIncomplete()
+    accountIncomplete: () => useAuthStore.getState().markIncomplete(),
+    // The routes see it too and open sign in, where the restore dialog shows.
+    pendingDeletion: (deletesAt) => useAuthStore.getState().markPendingDeletion(deletesAt)
 }

@@ -1,7 +1,10 @@
 import { useMutation } from '@tanstack/react-query'
 import { authApi } from './auth.api'
 
-/** Delete the account, confirmed with its password: every account has one (D-130). */
+/**
+ * Ask to delete the account, confirmed with its password: every account has
+ * one (D-130). Resolves to when it goes (D-141).
+ */
 export function useDeleteAccount() {
     return useMutation({
         mutationFn: (password: string) => authApi.deleteAccount(password),

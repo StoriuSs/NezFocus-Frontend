@@ -6,7 +6,6 @@
 export { useAuthStore } from './auth.store'
 export { ProtectedRoute } from './components/ProtectedRoute'
 export { RequireRole, useHasRole } from './components/RequireRole'
-export { DeleteAccountDialog } from './components/DeleteAccountDialog'
 export { AUTH_PATHS } from './lib/paths'
 // For main.tsx, which connects the API client to the session.
 export { apiSession } from './lib/api-session'

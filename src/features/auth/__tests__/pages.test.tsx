@@ -19,13 +19,17 @@ const authState = {
     isAuthenticated: false,
     isComplete: true,
     isSigningOut: false,
+    deletesAt: null as string | null,
     user: null as null | { email: string },
     signIn: vi.fn(),
     startSession: vi.fn(),
     resumeFromCookie: vi.fn(),
     logout: vi.fn(),
     peekSignOutReason: vi.fn(),
-    takeSignOutReason: vi.fn()
+    takeSignOutReason: vi.fn(),
+    peekDeletesAt: vi.fn(),
+    restoreAccount: vi.fn(),
+    setRestoreAside: vi.fn()
 }
 /** No other providers: what most tests run with. */
 const OFF = { providers: [] as string[] }
@@ -82,6 +86,9 @@ describe('the auth pages', () => {
             authState.logout,
             authState.peekSignOutReason,
             authState.takeSignOutReason,
+            authState.peekDeletesAt,
+            authState.restoreAccount,
+            authState.setRestoreAside,
             toast,
             toast.success
         ]) {
@@ -89,9 +96,11 @@ describe('the auth pages', () => {
         }
         authState.isAuthenticated = false
         authState.isComplete = true
+        authState.deletesAt = null
         authState.user = null
         authApi.options.mockResolvedValue(OFF)
         authState.peekSignOutReason.mockReturnValue(null)
+        authState.peekDeletesAt.mockReturnValue(null)
         sessionStorage.clear()
         localStorage.clear()
     })
@@ -288,6 +297,31 @@ describe('the auth pages', () => {
             expect(await screen.findByText(/Your password was just changed on another device/)).toBeVisible()
             expect(screen.getByLabelText('Password')).toBeVisible()
             await waitFor(() => expect(authState.takeSignOutReason).toHaveBeenCalledTimes(1))
+        })
+
+        it('says until when an account waiting to be deleted can be restored (S-AUTH-03 `account-deleted`, D-141)', async () => {
+            authState.peekSignOutReason.mockReturnValue('account-deleted')
+            authState.peekDeletesAt.mockReturnValue('2026-11-01T10:00:00.000Z')
+            renderAt('/login')
+
+            expect(
+                await screen.findByText(/Your account will be deleted for good on 01\/11\/2026 · sign in before then/)
+            ).toBeVisible()
+            await waitFor(() => expect(authState.takeSignOutReason).toHaveBeenCalledTimes(1))
+        })
+
+        it('stops a sign-in to an account waiting to be deleted at the restore dialog, the form as typed', async () => {
+            authState.signIn.mockImplementation(async () => {
+                authState.isAuthenticated = true
+                authState.deletesAt = '2026-10-29T14:47:00.000Z'
+            })
+            const router = renderAt('/login?next=%2Fprofile&method=password')
+
+            await signInByPassword()
+
+            expect(await screen.findByRole('dialog', { name: 'Your account is waiting to be deleted' })).toBeVisible()
+            expect(where(router)).toBe('/login?next=%2Fprofile&method=password')
+            expect(handedOver(router)).toEqual({ email: 'ada@example.test' })
         })
 
         it('says a session closed for safety in its own words', async () => {

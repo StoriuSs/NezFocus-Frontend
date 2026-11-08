@@ -27,14 +27,18 @@ describe('saying why a session ended', () => {
         expect(sessionEndedOf('session-expired')).toBe('ended')
         expect(sessionEndedOf('signed-out')).toBe('ended')
         expect(sessionEndedOf('password-changed')).toBe('password-changed')
-        expect(sessionEndedOf('account-deleted')).toBeNull()
+        expect(sessionEndedOf('account-disabled')).toBeNull()
         expect(sessionEndedOf(null)).toBeNull()
     })
 
-    it('toasts what the person did themselves, and a disabled account as an error', () => {
+    it('leaves an account waiting to be deleted to the banner, which gives the day (D-141)', () => {
+        expect(sessionEndedOf('account-deleted')).toBe('account-deleted')
         announceSignOut('account-deleted')
+        expect(toast.success).not.toHaveBeenCalled()
+    })
+
+    it('toasts a deleted account as an error', () => {
         announceSignOut('account-disabled')
-        expect(toast.success).toHaveBeenCalledTimes(1)
         expect(toast.error).toHaveBeenCalledTimes(1)
     })
 })

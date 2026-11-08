@@ -47,3 +47,13 @@ describe('the flow between auth pages (?next, ?invite)', () => {
         expect(signInPath(undefined, 'password')).toBe('/login?method=password')
     })
 })
+
+describe('signing in to an account waiting to be deleted (D-141)', () => {
+    it('stays on sign in, opened the way it came, keeping the flow, for the restore dialog', () => {
+        const search = '?next=%2Fprofile&invite=abc&other=1'
+        expect(afterSignIn({ completed: true, pendingDeletion: true }, search, 'password')).toBe(
+            '/login?next=%2Fprofile&invite=abc&method=password'
+        )
+        expect(afterSignIn({ completed: true, pendingDeletion: true }, '')).toBe('/login')
+    })
+})

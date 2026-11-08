@@ -47,6 +47,12 @@ export interface ApiSession {
      * is fine, the app must open that step instead.
      */
     accountIncomplete(): void
+    /**
+     * The API refused a request because the account waits to be deleted
+     * (403 ACCOUNT_PENDING_DELETION, D-141): the app must ask to restore it
+     * first. `deletesAt` says when it goes.
+     */
+    pendingDeletion(deletesAt: string): void
 }
 
 let session: ApiSession | undefined
@@ -135,6 +141,11 @@ api.interceptors.response.use(
         if (status === 401) current.ended(error, 'refused')
         else if (status === 403 && meta?.type === 'AUTH_ACCOUNT_DISABLED') current.ended(error, 'account-disabled')
         else if (status === 403 && meta?.type === 'ACCOUNT_INCOMPLETE') current.accountIncomplete()
+        // Signed in to an account waiting to be deleted, not restored yet (D-141).
+        else if (status === 403 && meta?.type === 'ACCOUNT_PENDING_DELETION') {
+            const deletesAt = (error.response?.data as { data?: { deletesAt?: unknown } } | undefined)?.data?.deletesAt
+            if (typeof deletesAt === 'string') current.pendingDeletion(deletesAt)
+        }
 
         return Promise.reject(error)
     }

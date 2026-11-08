@@ -33,10 +33,11 @@ export default function OAuthCallback() {
         started.current = true
         void resumeFromCookie().then((signedIn) => {
             if (!signedIn) return setFailure('failed')
-            const completed = useAuthStore.getState().isComplete
-            void navigate(afterSignIn({ completed }, next ? new URLSearchParams({ next }) : ''), {
+            const { isComplete, deletesAt, user } = useAuthStore.getState()
+            const account = { completed: isComplete, pendingDeletion: deletesAt !== null }
+            void navigate(afterSignIn(account, next ? new URLSearchParams({ next }) : ''), {
                 replace: true,
-                state: authPageState(undefined, { via: 'google' })
+                state: authPageState(account.pendingDeletion ? user?.email : undefined, { via: 'google' })
             })
         })
     }, [failure, navigate, next, resumeFromCookie])

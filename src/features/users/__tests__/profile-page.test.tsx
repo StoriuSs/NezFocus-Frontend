@@ -37,7 +37,8 @@ const saved: UserProfile = {
     bio: 'Ôn Giải tích 2 mỗi tối 21:00',
     avatarUrl: null,
     roles: ['user'],
-    completed: true
+    completed: true,
+    deletesAt: null
 }
 
 function GoToAccount() {

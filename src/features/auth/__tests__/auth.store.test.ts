@@ -4,7 +4,7 @@ import { apiError } from '@/test/helpers'
 const queryClientMock = { clear: vi.fn(), setQueryData: vi.fn(), invalidateQueries: vi.fn() }
 const hardNavigate = vi.fn()
 const setErrorTrackingUser = vi.fn()
-const authApi = { refresh: vi.fn(), login: vi.fn(), logout: vi.fn() }
+const authApi = { refresh: vi.fn(), login: vi.fn(), logout: vi.fn(), restoreAccount: vi.fn() }
 const fetchProfile = vi.fn()
 const tabs = { told: [] as string[], listener: undefined as undefined | ((message: string) => void) }
 
@@ -177,6 +177,98 @@ describe('auth store', () => {
 
             store.getState().markIncomplete()
             expect(store.getState().isComplete).toBe(true)
+        })
+    })
+
+    describe('an account waiting to be deleted (D-141)', () => {
+        const DELETES_AT = '2026-10-29T14:47:00.000Z'
+
+        it('learns it from the profile, and forgets it once restored', async () => {
+            fetchProfile.mockResolvedValue({ ...PROFILE, deletesAt: DELETES_AT })
+            authApi.restoreAccount.mockResolvedValue(undefined)
+            const store = await signedIn()
+            expect(store.getState().deletesAt).toBe(DELETES_AT)
+
+            await store.getState().restoreAccount()
+
+            expect(authApi.restoreAccount).toHaveBeenCalledOnce()
+            expect(store.getState().deletesAt).toBeNull()
+            expect(queryClientMock.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['users', 'profile'] })
+        })
+
+        it('is still finding out until the profile arrives, and learns it waits in the same step', async () => {
+            let arrive: (profile: unknown) => void = () => undefined
+            fetchProfile.mockReturnValue(new Promise((resolve) => (arrive = resolve)))
+            authApi.login.mockResolvedValue(tokens('secret-access-token', 900))
+            const store = (await import('@/features/auth/auth.store')).useAuthStore
+            const seen: [boolean, boolean, string | null][] = []
+            const stop = store.subscribe((s) => seen.push([s.isAuthenticated, s.isLoadingAccount, s.deletesAt]))
+
+            const signingIn = store.getState().signIn('ada@example.test', 'Harbour-Lantern-42')
+            await vi.waitFor(() => expect(store.getState().isLoadingAccount).toBe(true))
+            arrive({ ...PROFILE, deletesAt: DELETES_AT })
+            await signingIn
+            stop()
+
+            // Never signed in, done loading and not waiting: the sign-in page would move on.
+            expect(seen).not.toContainEqual([true, false, null])
+            expect(store.getState()).toMatchObject({ isLoadingAccount: false, deletesAt: DELETES_AT })
+        })
+
+        it('keeps waiting when the restore fails', async () => {
+            fetchProfile.mockResolvedValue({ ...PROFILE, deletesAt: DELETES_AT })
+            authApi.restoreAccount.mockRejectedValue(apiError(503, 'SERVICE_UNAVAILABLE'))
+            const store = await signedIn()
+
+            await expect(store.getState().restoreAccount()).rejects.toBeDefined()
+            expect(store.getState().deletesAt).toBe(DELETES_AT)
+        })
+
+        it('"Not now" ends the session here and in the other tabs, and leaves the page alone', async () => {
+            fetchProfile.mockResolvedValue({ ...PROFILE, deletesAt: DELETES_AT })
+            const store = await signedIn()
+
+            store.getState().setRestoreAside()
+            await vi.runAllTimersAsync()
+
+            expect(store.getState()).toMatchObject({ isAuthenticated: false, isSigningOut: false, deletesAt: null })
+            expect(tabs.told).toEqual(['signed-in', 'signed-out'])
+            expect(authApi.logout).toHaveBeenCalledOnce()
+            expect(hardNavigate).not.toHaveBeenCalled()
+        })
+
+        it('lands a deletion on sign in, with the day for its banner, said once', async () => {
+            const store = await signedIn()
+
+            store.getState().logout('account-deleted', undefined, DELETES_AT)
+            await vi.runAllTimersAsync()
+
+            expect(hardNavigate).toHaveBeenCalledExactlyOnceWith('/login')
+            expect(store.getState().peekDeletesAt()).toBe(DELETES_AT)
+            expect(store.getState().takeSignOutReason()).toBe('account-deleted')
+            expect(store.getState().peekDeletesAt()).toBeNull()
+        })
+
+        it('keeps the day a refused refresh gives, when another device asked', async () => {
+            const store = await signedIn(30)
+            authApi.refresh.mockRejectedValue(
+                apiError(401, 'AUTH_REFRESH_FAILED', { data: { reason: 'account_deleted', deletesAt: DELETES_AT } })
+            )
+
+            await store.getState().getToken()
+
+            expect(store.getState().peekSignOutReason()).toBe('account-deleted')
+            expect(store.getState().peekDeletesAt()).toBe(DELETES_AT)
+        })
+
+        it('turns waiting when the API says so, but not once signed out', async () => {
+            const store = await signedIn()
+            store.getState().markPendingDeletion(DELETES_AT)
+            expect(store.getState().deletesAt).toBe(DELETES_AT)
+
+            tabs.listener?.('signed-out')
+            store.getState().markPendingDeletion(DELETES_AT)
+            expect(store.getState().deletesAt).toBeNull()
         })
     })
 })

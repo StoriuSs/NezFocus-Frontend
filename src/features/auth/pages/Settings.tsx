@@ -3,10 +3,10 @@ import { ShellPage } from '@/components/shell/ShellPage'
 import { useAuthStore } from '@/features/auth/auth.store'
 import { ChangePasswordDialog } from '@/features/auth/components/ChangePasswordDialog'
 import { SessionsSection } from '@/features/auth/components/SessionsSection'
-import { DeleteAccountDialog } from '@/features/auth/components/DeleteAccountDialog'
+import { DeleteAccountSection } from '@/features/auth/components/DeleteAccountSection'
 import { SettingsGroup, SettingsRow } from '@/components/settings/SettingsRow'
 
-/** The account settings page (S-ME-03): sign-in, password and sessions, in the AppShell. */
+/** The account settings page (S-ME-03): sign-in, password, sessions and deleting the account, in the AppShell. */
 export default function Settings() {
     const { t } = useTranslation('auth')
     return (
@@ -38,8 +38,7 @@ function SettingsContent() {
 
             <SessionsSection />
 
-            {/* The base's dialog until L14 builds this group (S-ME-03 `delete-confirm`). */}
-            <DeleteAccountDialog />
+            {user?.email ? <DeleteAccountSection email={user.email} username={user.username} /> : null}
         </div>
     )
 }

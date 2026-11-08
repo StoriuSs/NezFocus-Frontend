@@ -244,30 +244,29 @@ test('edit the profile: name and bio saved, a photo cropped in, then removed onc
     expect(problems).toEqual([])
 })
 
-test('delete the account: signed out, and the account is gone', async ({ page }) => {
+test('delete the account: signed out, and it waits 14 days to be restored (D-141)', async ({ page }) => {
     const problems = await watchForProblems(page)
     await page.goto('/login')
     await signIn(page, RESET_PASSWORD)
-    // On the Account page until L14 builds its own group.
     await openAccountMenuItem(page, 'Settings')
 
-    await page.getByRole('button', { name: 'Delete Account' }).click()
-    const dialog = page.getByRole('dialog', { name: 'Delete your account' })
+    await page.getByRole('button', { name: 'Delete account' }).click()
+    const dialog = page.getByRole('dialog', { name: 'Delete your account?' })
     // Proof first: the password, and a wrong one is refused.
-    const confirmDelete = dialog.getByRole('button', { name: 'Delete my account' })
+    const confirmDelete = dialog.getByRole('button', { name: 'Delete account' })
     await expect(confirmDelete).toBeDisabled()
     await dialog.getByLabel('Password', { exact: true }).fill('Wrong-Password-1')
     await confirmDelete.click()
-    await expect(dialog.getByText("That password isn't right.")).toBeVisible()
+    await expect(dialog.getByText("That password isn't right")).toBeVisible()
     const deletedAt = new Date()
     await dialog.getByLabel('Password', { exact: true }).fill(RESET_PASSWORD)
     await confirmDelete.click()
     await page.waitForURL(/\/login$/, { timeout: 15_000 })
-    await expect(page.getByText('Your account was deleted.')).toBeVisible()
-    await emailTo(email, 'account was deleted', deletedAt)
+    await expect(page.getByText(/Your account will be deleted for good on \d\d\/\d\d\/\d{4}/)).toBeVisible()
+    await emailTo(email, 'will be deleted on', deletedAt)
 
-    await page.goto('/login')
+    // Not gone yet: signing in again offers to restore it (account-deletion.spec.ts goes on from here).
     await signIn(page, RESET_PASSWORD)
-    await expect(page.getByText('Incorrect email or password.')).toBeVisible()
+    await expect(page.getByRole('dialog', { name: 'Your account is waiting to be deleted' })).toBeVisible()
     expect(problems).toEqual([])
 })

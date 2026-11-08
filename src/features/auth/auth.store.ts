@@ -10,7 +10,7 @@ import { authApi } from './api/auth.api'
 import type { TokenResponse } from './types'
 import { onOtherTab, tellOtherTabs } from './lib/tab-sync'
 import { isSignInFlowPage, signInPath } from './lib/paths'
-import { SIGN_OUT_REASONS, signOutReasonOf, type SignOutReason } from './lib/sign-out-reason'
+import { deletesAtOf, SIGN_OUT_REASONS, signOutReasonOf, type SignOutReason } from './lib/sign-out-reason'
 
 /**
  * Who is signed in, and the access token their requests carry.
@@ -34,6 +34,8 @@ export interface AuthUser {
 export type { SignOutReason } from './lib/sign-out-reason'
 
 const NOTICE_KEY = 'auth:sign-out-reason'
+/** With the reason `account-deleted`: when the account goes, for the sign-in page's banner (D-141). */
+const DELETES_AT_KEY = 'auth:deletes-at'
 
 /**
  * Set while this browser may have a session. Only decides whether a page load
@@ -56,6 +58,20 @@ interface AuthState {
     isComplete: boolean
     /** A sign-out is under way; nothing should send anyone to sign in. */
     isSigningOut: boolean
+    /**
+     * Signed in, and its profile on the way: whether the account is complete
+     * or waiting to be deleted is not known yet, so the sign-in pages stay as
+     * they are rather than move on (an account waiting to be deleted stays on
+     * the page, under the restore dialog, with what was typed).
+     */
+    isLoadingAccount: boolean
+    /**
+     * When the account is deleted, if its owner asked to delete it (ISO
+     * 8601); null otherwise (D-141). While set, signing in stops at the
+     * restore dialog: the app's pages send to sign in, where it shows, and
+     * the API refuses them anyway (ACCOUNT_PENDING_DELETION).
+     */
+    deletesAt: string | null
     user: AuthUser | null
     /** Restore the session on page load, if there is one. Resolves true when signed in. */
     initAuth: () => Promise<boolean>
@@ -78,7 +94,7 @@ interface AuthState {
      * `to` (a path on this site). By default: sign-in, coming back to this
      * page, when the session ended by itself or elsewhere; home otherwise.
      */
-    logout: (reason?: SignOutReason, to?: string) => void
+    logout: (reason?: SignOutReason, to?: string, deletesAt?: string) => void
     /** An access token for a request: the current one, or a fresh one when it is about to expire. */
     getToken: () => Promise<string | undefined>
     /**
@@ -93,6 +109,18 @@ interface AuthState {
     markIncomplete: () => void
     /** "Complete your account" is done, here or in another tab (ACCOUNT_ALREADY_COMPLETE). */
     markComplete: () => void
+    /** The API answered ACCOUNT_PENDING_DELETION: the account waits to be deleted (api-session.ts). */
+    markPendingDeletion: (deletesAt: string) => void
+    /** "Restore account" in the restore dialog. Rejects with the API's error. */
+    restoreAccount: () => Promise<void>
+    /**
+     * "Not now" in the restore dialog: the session just opened ends, here and
+     * in the other tabs, and the page stays as it is, its form as typed
+     * (01-auth.md › Khôi phục tài khoản). Nothing is deleted.
+     */
+    setRestoreAside: () => void
+    /** When the account deleted at the last sign-out goes, for the banner; left in place, like peekSignOutReason. */
+    peekDeletesAt: () => string | null
     /**
      * The reason recorded by the last logout, removed as it is read. With
      * `which`, only a reason of that kind is taken; another stays for its
@@ -115,6 +143,8 @@ let refreshInFlight: Promise<string | undefined> | null = null
 
 /** Why the last refused refresh said the session ended. */
 let lastRefusal: SignOutReason = 'session-expired'
+/** With it, when the account goes, if its owner asked to delete it (D-141). */
+let lastDeletesAt: string | undefined
 
 function refreshOnce(): Promise<string | undefined> {
     refreshInFlight ??= (async () => {
@@ -127,6 +157,7 @@ function refreshOnce(): Promise<string | undefined> {
             if (axios.isAxiosError(error) && error.response?.status === 401) {
                 clearAccessToken()
                 lastRefusal = signOutReasonOf(error)
+                lastDeletesAt = deletesAtOf(error)
                 return undefined
             }
             throw error
@@ -142,9 +173,12 @@ function refreshOnce(): Promise<string | undefined> {
  * elsewhere goes to sign in, where a banner says why (S-AUTH-03
  * `session-revoked`), and back to this page afterwards; from a page outside
  * the app, to sign in alone. A password changed elsewhere opens the password
- * way. One the person ended (or a deleted account) goes home.
+ * way. An account waiting to be deleted goes to sign in, where a banner says
+ * until when it can be restored, and not back: the page is gone with the
+ * session. One the person ended (or a deleted account) goes home.
  */
 function afterSignOut(reason: SignOutReason | undefined): string {
+    if (reason === 'account-deleted') return signInPath()
     const ended =
         reason === 'session-expired' ||
         reason === 'password-changed' ||
@@ -175,17 +209,23 @@ export const useAuthStore = create<AuthState>((set, get) => {
     async function establish(tokens?: TokenResponse, completed = true): Promise<void> {
         if (tokens) setAccessToken(tokens.accessToken, tokens.expiresIn)
         safeLocalStorage.set(HINT_KEY, '1')
-        set({ isAuthenticated: true, isSigningOut: false, isComplete: completed })
+        set({ isAuthenticated: true, isSigningOut: false, isComplete: completed, isLoadingAccount: true })
         logoutStarted = false
         try {
             const profile = await fetchProfile()
             // The header and the profile page read this query; seeding it
             // saves them a second request.
             queryClient.setQueryData(userKeys.profile(), profile)
-            set({ user: toAuthUser(profile), isComplete: profile.completed })
+            set({
+                user: toAuthUser(profile),
+                isComplete: profile.completed,
+                deletesAt: profile.deletesAt ?? null,
+                isLoadingAccount: false
+            })
             setErrorTrackingUser(profile.id)
         } catch {
             // Signed in all the same; the profile query retries on its own.
+            set({ isLoadingAccount: false })
         }
     }
 
@@ -193,7 +233,14 @@ export const useAuthStore = create<AuthState>((set, get) => {
     function forget(): void {
         clearAccessToken()
         safeLocalStorage.remove(HINT_KEY)
-        set({ isSigningOut: true, isAuthenticated: false, isComplete: true, user: null })
+        set({
+            isSigningOut: true,
+            isAuthenticated: false,
+            isComplete: true,
+            isLoadingAccount: false,
+            deletesAt: null,
+            user: null
+        })
         setErrorTrackingUser(undefined)
         // User A's cached data must not stay visible, or be reused, for
         // whoever signs in next in this tab.
@@ -213,6 +260,8 @@ export const useAuthStore = create<AuthState>((set, get) => {
         isAuthenticated: false,
         isComplete: true,
         isSigningOut: false,
+        isLoadingAccount: false,
+        deletesAt: null,
         user: null,
 
         initAuth: async () => {
@@ -232,6 +281,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
                 // expiry nobody needs telling about.
                 if (lastRefusal !== 'session-expired' && lastRefusal !== 'signed-out') {
                     safeSessionStorage.set(NOTICE_KEY, lastRefusal)
+                    if (lastDeletesAt) safeSessionStorage.set(DELETES_AT_KEY, lastDeletesAt)
                 }
                 return false
             }
@@ -261,12 +311,14 @@ export const useAuthStore = create<AuthState>((set, get) => {
             return true
         },
 
-        logout: (reason, to = afterSignOut(reason)) => {
+        logout: (reason, to = afterSignOut(reason), deletesAt = lastDeletesAt) => {
             if (logoutStarted) return
             logoutStarted = true
             // A reason from an earlier sign-out must not be said for this one.
             if (reason) safeSessionStorage.set(NOTICE_KEY, reason)
             else safeSessionStorage.remove(NOTICE_KEY)
+            if (reason === 'account-deleted' && deletesAt) safeSessionStorage.set(DELETES_AT_KEY, deletesAt)
+            else safeSessionStorage.remove(DELETES_AT_KEY)
             const wasSignedIn = get().isAuthenticated
             forget()
             tellOtherTabs('signed-out')
@@ -307,6 +359,27 @@ export const useAuthStore = create<AuthState>((set, get) => {
             void queryClient.invalidateQueries({ queryKey: userKeys.profile() })
         },
 
+        markPendingDeletion: (deletesAt) => {
+            if (get().isAuthenticated) set({ deletesAt })
+        },
+
+        restoreAccount: async () => {
+            await authApi.restoreAccount()
+            set({ deletesAt: null })
+            void queryClient.invalidateQueries({ queryKey: userKeys.profile() })
+        },
+
+        setRestoreAside: () => {
+            forget()
+            set({ isSigningOut: false })
+            tellOtherTabs('signed-out')
+            // Ends the session on the API and clears the cookie, best effort
+            // as in logout; this page stays.
+            void authApi.logout().catch(() => undefined)
+        },
+
+        peekDeletesAt: () => safeSessionStorage.get(DELETES_AT_KEY),
+
         peekSignOutReason: () => {
             const stored = safeSessionStorage.get(NOTICE_KEY)
             return stored && SIGN_OUT_REASONS.has(stored) ? (stored as SignOutReason) : null
@@ -316,6 +389,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
             const reason = get().peekSignOutReason()
             if (reason && which && !which(reason)) return null
             safeSessionStorage.remove(NOTICE_KEY)
+            safeSessionStorage.remove(DELETES_AT_KEY)
             return reason
         }
     }

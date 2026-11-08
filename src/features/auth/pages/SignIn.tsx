@@ -4,7 +4,8 @@ import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { useTranslation } from 'react-i18next'
-import { Loader2, LogOut, ShieldAlert } from 'lucide-react'
+import { Loader2, LogOut, ShieldAlert, UserX } from 'lucide-react'
+import '@/i18n/deletion'
 import { Banner } from '@/components/Banner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -27,6 +28,7 @@ import {
     type SignInMethod
 } from '@/features/auth/lib/sign-in-method'
 import { isSessionEnded, sessionEndedOf } from '@/features/auth/lib/sign-out-notice'
+import { deletionDate } from '@/features/auth/lib/deletion-date'
 import { AuthCard } from '@/features/auth/components/AuthCard'
 import { PasswordInput } from '@/features/auth/components/PasswordInput'
 import { OAuthButtons } from '@/features/auth/components/OAuthButtons'
@@ -79,6 +81,7 @@ function limitKey(method: SignInMethod, reason: RateLimitReason | undefined): st
  */
 export default function SignIn() {
     const { t } = useTranslation('auth')
+    const { t: tDeletion } = useTranslation('deletion')
     const text = useMessageText()
     const navigate = useNavigate()
     const { pathname, search } = useLocation()
@@ -88,6 +91,8 @@ export default function SignIn() {
     const takeSignOutReason = useAuthStore((state) => state.takeSignOutReason)
     // Read while rendering, taken once shown: a reload does not say it again.
     const [ended] = useState(() => sessionEndedOf(useAuthStore.getState().peekSignOutReason()))
+    // With `account-deleted`: when the account goes (S-AUTH-03 `account-deleted`, D-141).
+    const [deletesAt] = useState(() => useAuthStore.getState().peekDeletesAt())
     // A password changed elsewhere: the new password is the way back in.
     const method: SignInMethod =
         !params.has(METHOD_PARAM) && ended === 'password-changed' ? 'password' : signInMethodOf(params)
@@ -164,7 +169,10 @@ export default function SignIn() {
         try {
             await signIn(address, password)
             rememberSignInMethod('password')
-            void navigate(afterSignIn({ completed: useAuthStore.getState().isComplete }, params), { replace: true })
+            const { isComplete, deletesAt } = useAuthStore.getState()
+            const account = { completed: isComplete, pendingDeletion: deletesAt !== null }
+            // Waiting to be deleted: this page, under the restore dialog, as it was typed.
+            void navigate(afterSignIn(account, params, 'password'), { replace: true, state: authPageState(address) })
         } catch (error) {
             const failure = requestFailure(error)
             if (failure.limit) return setLimit({ ...failure.limit, email: address })
@@ -186,9 +194,14 @@ export default function SignIn() {
     }
 
     const fieldError = (message: string | undefined) => (message ? text({ key: message }) : undefined)
-    const banner = ended ? (
-        <Banner icon={ended === 'security' ? ShieldAlert : LogOut}>{t(`sessionEnded.${ended}`)}</Banner>
-    ) : null
+    const banner =
+        ended === 'account-deleted' ? (
+            deletesAt ? (
+                <Banner icon={UserX}>{tDeletion('banner', { date: deletionDate(new Date(deletesAt)) })}</Banner>
+            ) : null
+        ) : ended ? (
+            <Banner icon={ended === 'security' ? ShieldAlert : LogOut}>{t(`sessionEnded.${ended}`)}</Banner>
+        ) : null
 
     return (
         <div className='space-y-6'>

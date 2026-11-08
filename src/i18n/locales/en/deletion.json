@@ -1,0 +1,24 @@
+{
+  "section": {
+    "title": "Delete account",
+    "description": "Your account is deleted for good after 14 days; sign in again before then to restore it.",
+    "open": "Delete account"
+  },
+  "confirm": {
+    "title": "Delete your account?",
+    "description": "Your account will be deleted for good on {{date}}. Until then, sign in again to restore it. After that your profile, study streak and friends are deleted; your messages show \"Deleted account\".",
+    "wrongPassword": "That password isn't right",
+    "tooManyWrong": "You entered a wrong password too many times. Try again in {{wait}}.",
+    "cancel": "Cancel",
+    "submit": "Delete account"
+  },
+  "banner": "Your account will be deleted for good on {{date}} · sign in before then to restore it",
+  "restore": {
+    "title": "Your account is waiting to be deleted",
+    "description_one": "Your account will be deleted for good on {{date}} ({{count}} day left). Restore it to keep using it: your servers, messages and study streak are all still there.",
+    "description_other": "Your account will be deleted for good on {{date}} ({{count}} days left). Restore it to keep using it: your servers, messages and study streak are all still there.",
+    "later": "Not now",
+    "submit": "Restore account",
+    "done": "Account restored"
+  }
+}

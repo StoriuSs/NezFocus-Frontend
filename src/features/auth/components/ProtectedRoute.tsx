@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { PageLoader } from '@/components/PageLoader'
@@ -7,19 +7,26 @@ import { useAuthStore } from '@/features/auth/auth.store'
 import { afterSignIn, AUTH_PATHS, safeNext, signInPath, withFlow } from '@/features/auth/lib/paths'
 import { AuthCard } from '@/features/auth/components/AuthCard'
 
+// Only for an account waiting to be deleted: its code and words load then.
+const PendingDeletionDialog = lazy(() => import('@/features/auth/components/PendingDeletionDialog'))
+
 /**
  * Renders its children only for a signed-in user whose account is complete.
  * Anyone else is sent to sign in and brought back to the page they asked for
  * — a deep link to /profile used to land on the home page instead, and
- * sign-in then returned there. An incomplete account goes to "complete your
- * account" first, keeping the page for afterwards (01-auth.md › Điều hướng).
+ * sign-in then returned there. An account waiting to be deleted goes to sign
+ * in, where the restore dialog asks first (D-141); an incomplete account to
+ * "complete your account". Both keep the page for afterwards (01-auth.md ›
+ * Điều hướng).
  */
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
     const isComplete = useAuthStore((state) => state.isComplete)
+    const pendingDeletion = useAuthStore((state) => state.deletesAt !== null)
     const isSigningOut = useAuthStore((state) => state.isSigningOut)
     const { pathname, search, hash } = useLocation()
 
+    if (isAuthenticated && pendingDeletion) return <Navigate to={signInPath(`${pathname}${search}${hash}`)} replace />
     if (isAuthenticated && !isComplete) {
         return (
             <Navigate
@@ -47,6 +54,8 @@ export function IncompleteOnlyRoute({ children }: { children: React.ReactNode })
     const { search } = useLocation()
 
     if (isAuthenticated && !isComplete) return <>{children}</>
+    // Incomplete accounts never wait to be deleted; a completed one goes on,
+    // and ProtectedRoute sends one that waits to sign in.
     if (isAuthenticated) return <Navigate to={safeNext(new URLSearchParams(search).get('next'))} replace />
     if (isSigningOut) return <PageLoader />
     return <Navigate to={withFlow(AUTH_PATHS.signIn, search)} replace />
@@ -55,7 +64,9 @@ export function IncompleteOnlyRoute({ children }: { children: React.ReactNode })
 /**
  * The sign-in pages, for someone not signed in. A signed-in user is sent on
  * (01-auth.md › Điều hướng): to "complete your account" if it is not done,
- * else to `?next=` if it is a page on this site, otherwise home.
+ * else to `?next=` if it is a page on this site, otherwise home. Signed in to
+ * an account waiting to be deleted, the page stays, under the restore dialog
+ * (S-AUTH-03 `pending-deletion`, D-141): restored, it moves on as above.
  *
  * `explainIfSignedIn`: for the pages emails link to ("Choose a new password"):
  * opened while signed in, the page says so and offers Settings, or signing
@@ -71,10 +82,25 @@ export function GuestOnlyRoute({
 }) {
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
     const isComplete = useAuthStore((state) => state.isComplete)
+    const pendingDeletion = useAuthStore((state) => state.deletesAt !== null)
+    const isLoadingAccount = useAuthStore((state) => state.isLoadingAccount)
     const [signedInOnArrival] = useState(isAuthenticated)
     const { search } = useLocation()
 
-    if (!isAuthenticated) return <>{children}</>
+    // Signed in just now, profile on the way: stay put, form as typed, until
+    // it says whether the account waits to be deleted (then the dialog shows
+    // over this page) or the page moves on.
+    if (!isAuthenticated || isLoadingAccount) return <>{children}</>
+    if (pendingDeletion) {
+        return (
+            <>
+                {children}
+                <Suspense fallback={null}>
+                    <PendingDeletionDialog />
+                </Suspense>
+            </>
+        )
+    }
     if (explainIfSignedIn && signedInOnArrival) return <SignedInNotice />
     // Signed in on this page: the app's code may still be loading, so show
     // that something is happening rather than an empty form column.

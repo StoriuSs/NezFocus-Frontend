@@ -104,8 +104,22 @@ export const authApi = {
         await api.post('/auth/change-password', { currentPassword, newPassword, language: currentLanguage() })
     },
 
-    /** Delete this account, confirmed with its password. Every session ends, this one included. */
-    async deleteAccount(password: string): Promise<void> {
-        await api.post('/auth/account/delete', { password, language: currentLanguage() }, { withCredentials: true })
+    /**
+     * Ask to delete this account, confirmed with its password: it goes 14 days
+     * later unless restored (D-141). Every session ends, this one included.
+     * Resolves to when it goes (ISO 8601).
+     */
+    async deleteAccount(password: string): Promise<string> {
+        const response = await api.post<ApiEnvelope<{ deletesAt: string }>>(
+            '/auth/account/delete',
+            { password, language: currentLanguage() },
+            { withCredentials: true }
+        )
+        return response.data.data.deletesAt
+    },
+
+    /** Take back the request to delete this account: right after signing in to it (D-141). */
+    async restoreAccount(): Promise<void> {
+        await api.post('/auth/account/restore')
     }
 }

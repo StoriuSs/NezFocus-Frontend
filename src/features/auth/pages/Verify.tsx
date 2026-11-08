@@ -103,7 +103,12 @@ function VerifyCode({ email, from }: { email: string; from: 'register' | 'login'
             rememberSignInMethod('code')
             // Came to create an account, and the address had one: say so (01-auth.md › Điều hướng).
             if (from === 'register' && !account.created) toast(t('verify.existingAccount'))
-            void navigate(afterSignIn(account, location.search), { replace: true })
+            // Waiting to be deleted: the sign-in page, on the code, under the restore dialog.
+            const pendingDeletion = useAuthStore.getState().deletesAt !== null
+            void navigate(afterSignIn({ ...account, pendingDeletion }, location.search), {
+                replace: true,
+                state: authPageState(email)
+            })
         } catch (error) {
             const failure = requestFailure(error)
             if (failure.limit) {

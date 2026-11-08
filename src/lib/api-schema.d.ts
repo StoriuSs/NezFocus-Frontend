@@ -259,10 +259,32 @@ export interface paths {
         get?: never
         put?: never
         /**
-         * Delete your own account, with the password as proof it is you. Every
-         *     session ends, this one included; the owner is emailed.
+         * Ask to delete your own account, with the password as proof it is you.
+         *     It is deleted 14 days later unless you sign in and restore it (D-141).
+         *     Every session ends, this one included; the owner is emailed the date.
          */
         post: operations['AccountDeletionController_delete_v1']
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/auth/account/restore': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        /**
+         * Restore an account waiting to be deleted: for the dialog shown after
+         *     signing in to one. The only route such an account may use besides
+         *     `GET /users/me`. Restoring one that is not waiting changes nothing.
+         */
+        post: operations['AccountDeletionController_restore_v1']
         delete?: never
         options?: never
         head?: never
@@ -317,7 +339,10 @@ export interface paths {
             path?: never
             cookie?: never
         }
-        /** Also before the account is completed: the client reads `completed` to know where to go. */
+        /**
+         * Also before the account is completed, and while it waits to be deleted:
+         *     the client reads `completed` and `deletes_at` to know where to go.
+         */
         get: operations['UsersController_getProfile_v1']
         put?: never
         post?: never
@@ -624,6 +649,14 @@ export interface components {
             /** @description Other providers linked to the account, by id (`google`). */
             providers: string[]
         }
+        AccountDeletionResponseDto: {
+            /**
+             * Format: date-time
+             * @description When the account is deleted: 14 days from now. Signing in before then
+             *     offers to restore it. The sign-in page shows the date.
+             */
+            deletes_at: string
+        }
         DeleteAccountRequestDto: {
             /**
              * @description The language of the page, for the email this sends.
@@ -652,6 +685,13 @@ export interface components {
              *     opens /welcome.
              */
             completed: boolean
+            /**
+             * Format: date-time
+             * @description When the account is deleted, if its owner asked to delete it; null
+             *     otherwise (D-141). While it is set, every other signed-in route answers
+             *     ACCOUNT_PENDING_DELETION: the client offers to restore it.
+             */
+            deletes_at: string | null
         }
         UsernameAvailabilityResponseDto: {
             available: boolean
@@ -1078,6 +1118,28 @@ export interface operations {
                 'application/json': components['schemas']['DeleteAccountRequestDto']
             }
         }
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['AccountDeletionResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    AccountDeletionController_restore_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        requestBody?: never
         responses: {
             200: {
                 headers: {

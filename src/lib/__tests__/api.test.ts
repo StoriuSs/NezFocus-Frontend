@@ -8,7 +8,8 @@ const authState = {
     getToken: vi.fn<() => Promise<string | undefined>>(),
     refreshToken: vi.fn<() => Promise<string | undefined>>(),
     logout: vi.fn(),
-    accountIncomplete: vi.fn()
+    accountIncomplete: vi.fn(),
+    pendingDeletion: vi.fn()
 }
 
 const { default: api, connectApiSession } = await import('@/lib/api')
@@ -19,7 +20,8 @@ connectApiSession({
     getToken: () => authState.getToken(),
     refreshToken: () => authState.refreshToken(),
     ended: (error, why) => authState.logout(why === 'account-disabled' ? 'account-disabled' : signOutReasonOf(error)),
-    accountIncomplete: () => authState.accountIncomplete()
+    accountIncomplete: () => authState.accountIncomplete(),
+    pendingDeletion: (deletesAt) => authState.pendingDeletion(deletesAt)
 })
 
 /** Replaces the network: a different answer for each request in turn (the last one repeats). */
@@ -47,6 +49,7 @@ describe('api client', () => {
         authState.refreshToken.mockReset()
         authState.logout.mockReset()
         authState.accountIncomplete.mockReset()
+        authState.pendingDeletion.mockReset()
     })
 
     it('attaches the bearer token when there is one, and nothing for anonymous visitors', async () => {
@@ -125,6 +128,13 @@ describe('api client', () => {
         respondInTurn(refusal(403, 'AUTH_FORBIDDEN'))
         await expect(api.get('/admin')).rejects.toThrow()
         expect(authState.accountIncomplete).toHaveBeenCalledOnce()
+    })
+
+    it('asks to restore an account waiting to be deleted, keeping the session (D-141)', async () => {
+        respondInTurn(refusal(403, 'ACCOUNT_PENDING_DELETION', { deletes_at: '2026-10-29T14:47:00.000Z' }))
+        await expect(api.get('/users/me/settings')).rejects.toThrow()
+        expect(authState.pendingDeletion).toHaveBeenCalledWith('2026-10-29T14:47:00.000Z')
+        expect(authState.logout).not.toHaveBeenCalled()
     })
 
     it('sends no bearer token to the auth routes, and treats their 401 as an answer, not a lost session', async () => {

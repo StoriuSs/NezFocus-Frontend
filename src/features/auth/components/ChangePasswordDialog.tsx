@@ -19,21 +19,21 @@ import {
 import { FormField } from '@/components/form/FormField'
 import { FormMessage } from '@/components/form/FormMessage'
 import { useCountdown } from '@/hooks/useCountdown'
-import { authApi } from '@/features/auth/api/auth.api'
 import { authKeys } from '@/features/auth/api/keys'
 import { useChangePassword } from '@/features/auth/api/useChangePassword'
 import { useAuthStore } from '@/features/auth/auth.store'
-import { recordCodeSent, resendAllowedAt } from '@/features/auth/lib/code-sent'
 import { formatWait } from '@/features/auth/lib/form-errors'
 import { requestFailure, useMessageText, type RequestFailure } from '@/features/auth/lib/form-problem'
 import { passwordFieldRule, type PasswordContext, type PasswordRule } from '@/features/auth/lib/password-rules'
 import { newPasswordIssue } from '@/features/auth/lib/schemas'
 import { useCodeReset, type Limit } from '@/features/auth/hooks/useCodeReset'
+import { sendResetCode } from '@/features/auth/lib/reset-code'
 import { ResendLine, ResetCodeField, ResetNotice, ResetPasswordField } from './CodeReset'
 import { PasswordInput } from './PasswordInput'
 import { PasswordRules } from './PasswordRules'
 
-type Mode = { kind: 'password' } | { kind: 'code'; failure: RequestFailure | null }
+/** Which way the dialog asks: the current password, or a code just emailed (with what went wrong sending it). */
+export type PasswordDialogMode = { kind: 'password' } | { kind: 'code'; failure: RequestFailure | null }
 
 /**
  * "Change password" on the account page (S-ME-03, REQ-AUTH-05): the button
@@ -49,41 +49,75 @@ type Mode = { kind: 'password' } | { kind: 'code'; failure: RequestFailure | nul
 export function ChangePasswordDialog({ email, username }: { email: string; username?: string | null }) {
     const { t } = useTranslation('auth')
     const [open, setOpen] = useState(false)
-    const [busy, setBusy] = useState(false)
-    const [mode, setMode] = useState<Mode>({ kind: 'password' })
-
-    function close() {
-        setBusy(false)
-        setOpen(false)
-        setMode({ kind: 'password' })
-    }
 
     return (
         <>
             <Button variant='outline' size='sm' onClick={() => setOpen(true)}>
                 {t('settings.changePassword.open')}
             </Button>
-            <Dialog open={open} onOpenChange={(next) => (next ? setOpen(true) : !busy && close())}>
-                <DialogContent className='sm:max-w-[520px]'>
-                    {mode.kind === 'password' ? (
-                        <CurrentPasswordForm
-                            identity={{ email, username }}
-                            setBusy={setBusy}
-                            onDone={close}
-                            onForgot={(failure) => setMode({ kind: 'code', failure })}
-                        />
-                    ) : (
-                        <CodeForm
-                            email={email}
-                            initialFailure={mode.failure}
-                            setBusy={setBusy}
-                            onBack={() => setMode({ kind: 'password' })}
-                            onDone={close}
-                        />
-                    )}
-                </DialogContent>
-            </Dialog>
+            <PasswordDialog email={email} username={username} open={open} onClose={() => setOpen(false)} />
         </>
+    )
+}
+
+/**
+ * The dialog itself, for a caller that opens it. "Forgot password?" in
+ * another dialog that asks for the password (Delete account) opens it on the
+ * code (`startWith`); "Back" (`onBack`) and setting the password (`onDone`)
+ * hand over to that dialog again (10-settings › S-ME-03 › Tương tác).
+ */
+export function PasswordDialog({
+    email,
+    username,
+    open,
+    onClose,
+    startWith = { kind: 'password' },
+    onBack,
+    onDone
+}: {
+    email: string
+    username?: string | null
+    open: boolean
+    onClose: () => void
+    startWith?: PasswordDialogMode
+    onBack?: () => void
+    onDone?: () => void
+}) {
+    const [busy, setBusy] = useState(false)
+    const [mode, setMode] = useState<PasswordDialogMode>(startWith)
+
+    function close() {
+        setBusy(false)
+        setMode(startWith)
+        onClose()
+    }
+
+    function done() {
+        close()
+        onDone?.()
+    }
+
+    return (
+        <Dialog open={open} onOpenChange={(next) => !next && !busy && close()}>
+            <DialogContent className='sm:max-w-[520px]'>
+                {mode.kind === 'password' ? (
+                    <CurrentPasswordForm
+                        identity={{ email, username }}
+                        setBusy={setBusy}
+                        onDone={done}
+                        onForgot={(failure) => setMode({ kind: 'code', failure })}
+                    />
+                ) : (
+                    <CodeForm
+                        email={email}
+                        initialFailure={mode.failure}
+                        setBusy={setBusy}
+                        onBack={onBack ?? (() => setMode({ kind: 'password' }))}
+                        onDone={done}
+                    />
+                )}
+            </DialogContent>
+        </Dialog>
     )
 }
 
@@ -157,20 +191,10 @@ function CurrentPasswordForm({
         }
     }
 
-    /**
-     * Email a reset code and switch to it (D-74). A code sent under a minute
-     * ago is still good: switch without sending another (L11).
-     */
+    /** Email a reset code and switch to it (D-74, sendResetCode). */
     async function forgot() {
-        if (resendAllowedAt('password-reset', identity.email)) return onForgot(null)
         setSendingCode(true)
-        let failure: RequestFailure | null = null
-        try {
-            await authApi.forgotPassword(identity.email)
-            recordCodeSent('password-reset', identity.email)
-        } catch (error) {
-            failure = requestFailure(error)
-        }
+        const failure = await sendResetCode(identity.email)
         setSendingCode(false)
         onForgot(failure)
     }

@@ -76,13 +76,27 @@ export function signInPath(next?: string, method?: 'password'): string {
     return text ? `${AUTH_PATHS.signIn}?${text}` : AUTH_PATHS.signIn
 }
 
+/** What the route after a sign-in depends on: the auth store's `isComplete` and `deletesAt`. */
+export interface SignedInAccount {
+    completed: boolean
+    /** Asked to be deleted, not restored yet (D-141). */
+    pendingDeletion?: boolean
+}
+
 /**
  * Where someone goes once signed in (01-auth.md › Điều hướng sau khi vào được
- * tài khoản): an incomplete account to "complete your account" first, keeping
- * the flow; otherwise to `next`, or home. `search` holds `next` / `invite`.
+ * tài khoản): an account waiting to be deleted to the sign-in page, where the
+ * restore dialog asks first, opened the way they came (`method`, keeping the
+ * flow); an incomplete account to "complete your account", keeping the flow;
+ * otherwise to `next`, or home. `search` holds `next` / `invite`.
  */
-export function afterSignIn(account: { completed: boolean }, search: string | URLSearchParams): string {
+export function afterSignIn(account: SignedInAccount, search: string | URLSearchParams, method?: 'password'): string {
     const params = typeof search === 'string' ? new URLSearchParams(search) : search
+    if (account.pendingDeletion) {
+        const query = new URLSearchParams(withFlow('', params).slice(1))
+        if (method) query.set('method', method)
+        return query.size ? `${AUTH_PATHS.signIn}?${query}` : AUTH_PATHS.signIn
+    }
     if (!account.completed) return withFlow(AUTH_PATHS.welcome, params)
     return safeNext(params.get('next'))
 }
