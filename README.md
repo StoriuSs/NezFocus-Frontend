@@ -88,6 +88,9 @@ trades the cookie for a new one. The pages:
 | `/auth/callback` | Where the API sends the browser back after Google |
 | `/settings/account` | "Account": change the password, see the signed-in devices and sign them out, delete the account (`/settings` redirects here) |
 | `/settings/profile` | The profile: the avatar (cropped, removed with Undo), the display name and the bio |
+| `/settings/appearance` | Appearance & language: the theme, the language and the time zone (once every 24 hours), kept by the account and followed by every tab and browser |
+| `/settings/notifications` | The phase sound, with **Play sample** |
+| `/settings/privacy` | Direct messages from people who share a server; show study activity |
 | `/terms`, `/privacy` | The Terms of Service and the Privacy Policy, for everyone |
 
 The details: [docs/auth/README.md](./docs/auth/README.md).

@@ -17,7 +17,8 @@ a few small Zustand stores, or in a component.**
 | Data the API owns (the profile, a list of orders) | TanStack Query, one hook per resource | `useProfile()` in `src/features/users/api/` ([data-fetching.md](./data-fetching.md)) |
 | Who is signed in | The auth store, `src/features/auth/auth.store.ts` | `useAuthStore((s) => s.user)` |
 | The access token | Module memory, `src/features/auth/lib/access-token.ts` — not a store, not storage | read only by the store and the API client |
-| The theme | The theme store, `src/hooks/useTheme.ts` | `useTheme()` |
+| The account's settings (theme, language, time zone, switches) | TanStack Query, key `userKeys.settings()`, loaded by the AppShell | `useSettings()` inside the users feature; elsewhere `useQuery({ queryKey: userKeys.settings(), enabled: false })` |
+| The theme on screen | The theme store, `src/hooks/useTheme.ts`, set from the settings once signed in | `useTheme()` |
 | A removed avatar waiting out its "Undo" | `useAvatarRemoval`, `src/features/users/lib/avatar-removal-state.ts` | read by `useProfile` |
 | A form's values and errors | React Hook Form | [shadcn-forms.md](./shadcn-forms.md) |
 | Whether a dialog is open, a tab, a hover | `useState` in the component | — |
@@ -52,7 +53,11 @@ an httpOnly cookie the app never sees. How the session works:
 **The theme store** (`useThemeStore`, used through `useTheme()`): the chosen
 theme (`light`, `dark` or `system`) and what is on screen. It is one store
 rather than state inside the hook so every component — the toaster included —
-sees the same choice ([theme-system.md](./theme-system.md)).
+sees the same choice ([theme-system.md](./theme-system.md)). Signed in, the
+choice is the account's: the settings query holds it, and
+`useAccountSettings()` (mounted by the AppShell) calls `setTheme()` with it.
+The store is not a second copy to keep in step by hand; it is what the page
+shows, and what `index.html` reads before the next load.
 
 **The avatar removal flag** (`useAvatarRemoval`, `{ pending }`): true while a
 removed profile picture waits out its 8-second "Undo" (S-ME-02). Meanwhile

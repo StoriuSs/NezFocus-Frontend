@@ -8,6 +8,7 @@ spinner is usually not seen.
 - [What code splitting is](#what-code-splitting-is)
 - [Lazy routes](#lazy-routes)
 - [The chunks a build makes](#the-chunks-a-build-makes)
+- [What lands in the first download](#what-lands-in-the-first-download)
 - [Why the spinner is often skipped](#why-the-spinner-is-often-skipped)
 - [The two loading indicators](#the-two-loading-indicators)
 - [When to split, and when not to](#when-to-split-and-when-not-to)
@@ -54,6 +55,14 @@ The auth pages (`src/features/auth/routes.tsx`) and the profile
 layouts: a visitor on the sign-in page does not download the AppShell, and a
 signed-in user does not download the AuthShell.
 
+Small pages on the same data can share one lazy import. Appearance &
+language, Notifications and Privacy are one chunk:
+`src/features/users/pages/Preferences.tsx` imports the three and renders the
+one its route names, and `src/features/users/routes.tsx` makes one
+`lazy(() => import('@/features/users/pages/Preferences'))` for the three
+routes. Each lazy import adds its loader to the first download, so three
+small pages read together are cheaper as one.
+
 Each layout (`src/app/layout/AuthShell.tsx`,
 `src/app/layout/app-shell/AppShell.tsx`) has a `<Suspense>` boundary around
 its page outlet, inside the error boundary, so the logo or the rail stays on
@@ -94,6 +103,34 @@ is when the deployment has a DSN ([error-tracking.md](./error-tracking.md)).
 The files are named with a hash of their content (`index-D7I3D5tE.js`), so
 nginx can tell browsers to cache them for a year: a changed file gets a new
 name.
+
+## What lands in the first download
+
+The first download is the entry chunk: `src/main.tsx` and everything it
+imports, directly or not, whichever page opens. A module there pulls its
+imports in with it, and Rollup does not split a feature's `index.ts`
+(a barrel) by what each importer uses:
+
+- `src/features/auth/auth.store.ts` is in the first download (`main.tsx`
+  and `App.tsx` import the auth feature), and it imports `@/features/users`.
+  So the users index is there, and **every module it re-exports that any chunk uses**
+  is placed there too, even if the first screen never runs it.
+- Hence a module only lazy pages need stays out of the index. The AppShell
+  imports `useAccountSettings` by its file path
+  (`@/features/users/hooks/useAccountSettings`); `src/app` may import deep,
+  as it wires the features in. A feature cannot (the ESLint rule), so
+  another feature reads the settings straight from the cache the AppShell
+  fills: `useQuery({ queryKey: userKeys.settings(), enabled: false })`, with
+  `userKeys` that the index exports already. No new module reaches the first
+  download.
+- What only the AppShell and the settings pages use is kept apart:
+  `src/features/users/api/settings.api.ts` (`fetchSettings`,
+  `settingsQuery`, `updateSettings`) is not in `users.api.ts`, and the
+  `settings` words load with the pages
+  ([i18n.md](./i18n.md#words-that-load-with-their-pages)).
+
+Check after adding to an index, or importing one from somewhere new: run
+`pnpm build` and look at the entry chunk (`index-*.js`) in the list it prints.
 
 ## Why the spinner is often skipped
 

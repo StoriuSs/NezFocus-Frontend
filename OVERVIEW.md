@@ -252,8 +252,8 @@ editing a central list of every route in the application.
 | **Errors the user reads** | The API answers with a `type`, not a sentence, and the catalogue turns it into a translated message | [i18n.md](./docs/i18n.md) |
 | **Forms** | React Hook Form and zod, with one `FormField` deciding how a label, control and error are laid out | [shadcn-forms.md](./docs/shadcn-forms.md) |
 | **Components** | shadcn/ui — copied into the repository, so you can edit them | [components.md](./docs/components.md) |
-| **Theming** | Light, dark and system, remembered, with no flash of the wrong one on load | [theme-system.md](./docs/theme-system.md) |
-| **Languages** | English and Vietnamese, with typed keys (a key that does not exist is a type error) and a test that fails when Vietnamese misses one | [i18n.md](./docs/i18n.md) |
+| **Theming** | Light, dark and system, kept by the account and followed by every tab and browser, with no flash of the wrong one on load | [theme-system.md](./docs/theme-system.md) |
+| **Languages** | English and Vietnamese, with typed keys (a key that does not exist is a type error) and a test that fails when Vietnamese misses one; a page's words can load with its chunk | [i18n.md](./docs/i18n.md) |
 | **Loading fast** | Routes split into chunks, a progress bar, skeletons instead of layout jumps | [code-splitting.md](./docs/code-splitting.md) |
 | **Not crashing** | Error boundaries at two levels, and storage access that survives blocked site data | [project-structure.md](./docs/project-structure.md) |
 | **Idempotency** | One key per user intent, so a double-tapped button does the work once | [data-fetching.md](./docs/data-fetching.md) |

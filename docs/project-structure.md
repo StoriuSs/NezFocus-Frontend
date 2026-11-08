@@ -64,18 +64,23 @@ react-starter/
     │   │   │                  #   authAppRoutes (/settings/account; /settings redirects)
     │   │   ├── types.ts
     │   │   └── index.ts       # What other features may import
-    │   └── users/             # The profile feature
-    │       ├── api/           # users.api.ts (fetchProfile, removeAvatar), the query and mutation hooks, keys
-    │       ├── components/    # AvatarSection, AvatarCropDialog, ProfileForm, ProfileSkeleton
-    │       ├── hooks/         # useAvatarErrorRefresh
+    │   └── users/             # The profile and the account's settings
+    │       ├── api/           # users.api.ts (fetchProfile, removeAvatar),
+    │       │                  #   settings.api.ts (fetchSettings, settingsQuery, updateSettings), hooks, keys
+    │       ├── components/    # AvatarSection, AvatarCropDialog, ProfileForm, ProfileSkeleton,
+    │       │                  #   SettingsLoader, TimeZoneSetting
+    │       ├── hooks/         # useAvatarErrorRefresh, useAccountSettings (the AppShell applies
+    │       │                  #   the account's theme and language)
     │       ├── lib/           # USERS_PATHS, crop-image, profile-text (the API's name and bio rules),
-    │       │                  #   avatar-removal (Undo, then DELETE) and its pending flag
-    │       ├── pages/         # Profile.tsx (/settings/profile)
+    │       │                  #   avatar-removal (Undo, then DELETE) and its pending flag,
+    │       │                  #   settings-sync (the other tabs)
+    │       ├── pages/         # Profile.tsx (/settings/profile); Appearance, Notifications, Privacy
+    │       │                  #   (/settings/appearance, /notifications, /privacy), one chunk via Preferences.tsx
     │       ├── routes.tsx     # This feature's routes
     │       ├── types.ts
     │       └── index.ts       # What other features may import
     ├── hooks/                 # Shared hooks: useTheme, useMediaQuery, useDebouncedValue, useCountdown, useMinuteClock…
-    ├── i18n/                  # i18next setup and the translation catalogues
+    ├── i18n/                  # i18next setup and the translation catalogues (settings.ts: words loaded with their pages)
     ├── lib/                   # Shared, feature-free: the API client, and friends
     ├── pages/                 # Pages that belong to no feature: Study, Legal, NotFound
     ├── styles/fonts.css       # The self-hosted fonts
@@ -174,7 +179,8 @@ Shared and feature-free.
 | `safe-storage.ts` | `localStorage` and `sessionStorage` that do not throw when site data is blocked |
 | `navigation.ts` | A full page load (`hardNavigate`), e.g. after signing out |
 | `utils.ts` | `cn()`, which merges Tailwind classes |
-| `time-zones.ts` | The time zones to pick from (C-25), named and ordered, and the search over them |
+| `time-zones.ts` | The time zones to pick from (C-25), named and ordered, and the search over them; `wallClock()`, the calendar and clock in a zone (times shown in the account's zone) |
+| `phase-sound.ts` | `playPhaseSound()`: the phase sound, two short notes (C6 then E6) made with Web Audio (D-140), silent where the browser cannot play. "Play sample" on Notifications now, the end of a study phase later |
 | `simple-markdown.ts` | The small Markdown subset the legal pages are written in, read into blocks React draws (never `innerHTML`) |
 
 ### `src/pages/`
@@ -253,6 +259,10 @@ Two habits worth keeping:
   API client declares `ApiSession`, auth implements it, and `main.tsx`
   connects the two. `src/app` is the exception: it wires the features into the
   app, so it may reach in.
+- **An index is not free.** A feature's `index.ts` imported from the first
+  download puts every module it re-exports there too, if any chunk uses it.
+  Export from it what other features need, and keep page-only modules out
+  ([code-splitting.md](./code-splitting.md#what-lands-in-the-first-download)).
 
 ## How data flows
 

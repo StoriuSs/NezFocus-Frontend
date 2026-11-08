@@ -1,19 +1,19 @@
 # Theme
 
-Light, dark, or whatever the operating system is set to — remembered in the
-browser, and applied before the page first paints, so a dark-mode user never
-sees a white flash.
+Light, dark, or whatever the operating system is set to — kept by the
+account, so it is the same in every browser, remembered in the browser too,
+and applied before the page first paints, so a dark-mode user never sees a
+white flash.
 
 - [Using it](#using-it)
 - [How it works](#how-it-works)
 - [Using the theme in a component](#using-the-theme-in-a-component)
-- [Remembering it per account](#remembering-it-per-account)
+- [It follows the account](#it-follows-the-account)
 
 ## Using it
 
-There is no theme switcher on screen yet: the theme follows the system until
-the Appearance settings page (a later milestone) calls `setTheme()`. The
-choices it will offer:
+The choice is on Appearance & language (`/settings/appearance`, S-ME-04),
+in the order System · Dark · Light:
 
 - **Light** — always light
 - **Dark** — always dark
@@ -65,24 +65,28 @@ uses the token names, not the shadcn aliases. The values come from
 `DESIGN.md`: change it first, then `src/index.css` to match; never a value in
 `src/index.css` alone.
 
-## Remembering it per account
+## It follows the account
 
-Today the choice belongs to the browser. To follow a user across devices,
-the API would store it and the app would read it after sign-in. An outline:
+The theme is one of the account's settings (`theme` in
+`GET` / `PATCH /users/me/settings`, default `system`), so a choice made in one
+browser shows in the others (REQ-AUTH-08, D-37):
 
-1. **The API** — a `theme` field on the user (`light`, `dark` or `system`,
-   default `system`), returned in `GET /users/me` and accepted by
-   `PATCH /users/me`. In the API starter that is a Prisma field, the
-   profile's response and update DTOs, and the users module's handler (its
-   `docs/adding-a-module.md` shows the layers). Then `pnpm api:types` here
-   ([api-types.md](./api-types.md)).
-2. **On load** — keep the `index.html` script exactly as it is: it applies
-   the browser's saved choice instantly, before anyone is known.
-3. **After sign-in** — when `useProfile()` returns a `theme` that differs from
-   the saved one, call `setTheme(profile.theme)`: it saves it locally too, so
-   the next load starts right.
-4. **When the user changes it** — `setTheme(choice)` as now, plus the
-   profile update (`useUpdateProfile`) when signed in.
+1. **On load** — the `index.html` script applies the browser's saved choice
+   at once, before anyone is known.
+2. **Once signed in** — `useAccountSettings()`
+   (`src/features/users/hooks/useAccountSettings.ts`), mounted once by the
+   AppShell, reads the settings (`useSettings()`) and calls
+   `setTheme(settings.theme)`. That saves it locally too, so the next load
+   starts right.
+3. **When the user changes it** — the Appearance page saves it
+   (`useUpdateSettings`). The change is optimistic: the cached settings change
+   at once, so the hook above applies it before the API answers; a failed
+   save puts the old one back, with a toast.
+4. **In the other tabs** — a saved change is sent on a `BroadcastChannel`
+   named `settings` (`src/features/users/lib/settings-sync.ts`); the hook
+   puts it in each tab's cache, and the theme follows.
 
 The local copy stays the source for the first paint; the account's copy wins
-once it is known.
+once it is known. The pages outside the app (sign-in, the legal pages) use the
+local copy only. The language follows the account the same way
+([i18n.md](./i18n.md#the-language-switch)).

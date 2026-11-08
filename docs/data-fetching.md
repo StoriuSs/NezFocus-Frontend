@@ -10,6 +10,7 @@ This page is how the starter uses it.
 - [A query](#a-query)
 - [Query keys](#query-keys)
 - [Mutations and idempotency](#mutations-and-idempotency)
+  - [Optimistic saves](#optimistic-saves)
 - [Showing API errors](#showing-api-errors)
 - [Retries](#retries)
 - [What the API client does](#what-the-api-client-does)
@@ -95,6 +96,7 @@ Keys for a feature live in one factory, next to its hooks:
 export const userKeys = {
     all: ['users'] as const,
     profile: () => [...userKeys.all, 'profile'] as const,
+    settings: () => [...userKeys.all, 'settings'] as const,
     usernameAvailability: (username: string) => [...userKeys.all, 'username-availability', username] as const
 }
 ```
@@ -108,6 +110,17 @@ The auth store writes the profile into this same entry at sign-in
 (`queryClient.setQueryData(userKeys.profile(), profile)`), so your menu, the
 profile page and "complete your account" need no second request. Signing out
 clears the whole cache, so one user's data never shows for the next.
+
+**Sharing a query with another feature.** The account's settings
+(`settingsQuery` in `src/features/users/api/settings.api.ts`: key,
+`queryFn`, a one-minute `staleTime`) are loaded by the AppShell as the app
+opens; inside the users feature they are `useSettings()`. Another feature
+only reads that cache, `useQuery({ queryKey: userKeys.settings(), enabled:
+false })`, as the Sessions group does for the account's time zone. Exporting
+a hook or the options from the users index would put their modules in the
+first download ([code-splitting.md](./code-splitting.md#what-lands-in-the-first-download)).
+The AppShell reads the query as the app opens (`useAccountSettings`), so the
+pages find it in the cache.
 
 ## Mutations and idempotency
 
@@ -162,6 +175,29 @@ repeat. `src/lib/api.ts` deliberately leaves the header alone.
 Keys come from `generateIdempotencyKey()` (`src/lib/idempotency.ts`), which
 falls back to `crypto.getRandomValues` because `crypto.randomUUID` does not
 exist on plain-HTTP origins (a deployment opened by LAN IP, say).
+
+### Optimistic saves
+
+`PATCH /users/me/settings` is not `@Idempotent` (sending the same values
+again changes nothing), so the settings pages use a plain `useMutation`:
+`useUpdateSettings()` (`src/features/users/api/useUpdateSettings.ts`). Each
+switch or choice saves on its own and shows at once:
+
+- `onMutate` cancels the settings query and writes the change into its
+  cache, keeping the old value;
+- `onSuccess` writes what the API saved and tells the other tabs
+  (`tellOtherTabs`, a `BroadcastChannel` in
+  `src/features/users/lib/settings-sync.ts`);
+- `onError` puts the old value back, reads the settings again (another save
+  may have landed), and shows a toast with **Try again**, which sends the
+  same change. That toast replaces the app's generic one, so the mutation
+  sets `meta: { errorToast: false }` (without it a failed save showed two).
+
+The time zone is not optimistic: it asks first and can be refused for 24
+hours, so `TimeZoneSetting` (`src/features/users/components/`) saves it
+with its own mutation. A `429` with `data.reason: "timezone"` (changed from
+another tab or device meanwhile) reads the settings again, so the page shows
+the lock, with no toast (it also sets `meta: { errorToast: false }`).
 
 **A form that shows its own errors** (field by field) calls the hook's
 `mutateAsync` in a `try`, and the hook sets `meta: { errorToast: false }` so

@@ -86,7 +86,7 @@ src/features/auth/
 | [keys.ts](../../src/features/auth/api/keys.ts) | `authKeys`: `all`, `options()`, `sessions()` |
 | [useSessions.ts](../../src/features/auth/api/useSessions.ts) | `useSessions()`: `GET /auth/sessions`, read again on mount and on window focus, no retry; `useRevokeSession()`: one device, its row dropped from the cache on success; `useRevokeOtherSessions()`: every other device, the cache left with this one ([account-settings.md](./account-settings.md#sessions)) |
 | [useChangePassword.ts](../../src/features/auth/api/useChangePassword.ts) | `useChangePassword()`; on success it invalidates `authKeys.sessions()`, since the other devices were signed out |
-| [session-label.ts](../../src/features/auth/lib/session-label.ts) | `deviceName(session, t)` ("Safari · macOS", or "Unknown browser"); `lastActiveLabel(when, now, t)` ("Today 21:30", "Yesterday 22:15", "Fri, 16/10/2026", or the date alone after a year), in the browser's time zone until the account's reaches the client (L13) |
+| [session-label.ts](../../src/features/auth/lib/session-label.ts) | `deviceName(session, t)` ("Safari · macOS", or "Unknown browser"); `lastActiveLabel(when, now, t, timeZone?)` ("Today 21:30", "Yesterday 22:15", "Fri, 16/10/2026", or the date alone after a year), in the account's time zone (`settingsQuery`), the browser's until it has loaded |
 
 **Pages and navigation**
 
@@ -158,7 +158,7 @@ is no first password to set and no code to delete an account with.
 | [src/app/router.tsx](../../src/app/router.tsx) | Puts `authRoutes` in the AuthShell and the signed-in pages behind `ProtectedRoute`; sends `/` to `/study` or `/login`; `/terms` and `/privacy` for everyone |
 | [src/app/layout/AuthShell.tsx](../../src/app/layout/AuthShell.tsx) | The frame of the pages outside the app; **Sign out** in its footer on `/welcome` only |
 | [src/app/layout/app-shell/MeMenu.tsx](../../src/app/layout/app-shell/MeMenu.tsx) | Your menu, from your avatar at the foot of the rail (Profile, status, Settings, Sign out) |
-| [src/features/users/](../../src/features/users/) | The profile page (`/settings/profile`), `useProfile`, `useUsernameAvailability`, `USERNAME_PATTERN` and `displayNameIssue` (used by `/welcome`) |
+| [src/features/users/](../../src/features/users/) | The profile page (`/settings/profile`), the Appearance, Notifications and Privacy pages, `useProfile`, `useUsernameAvailability`, `USERNAME_PATTERN` and `displayNameIssue` (used by `/welcome`), `settingsQuery` (the Sessions group reads the account's time zone from it) |
 | [src/i18n/index.ts](../../src/i18n/index.ts) | `currentLanguage()`: the language on screen, as the API names it (`vi`, `en`) |
 | [src/config/env.ts](../../src/config/env.ts) | `VITE_API_URL`, the only setting sign-in uses |
 | `src/i18n/locales/<language>/auth.json`, `api.json` | The pages' texts, and a sentence per API error type |
@@ -179,7 +179,8 @@ AppRoot           NavigationProgress, then the page
 │   ├── /study                                      (src/pages/Study.tsx)
 │   ├── /channels/:serverId/:channelId?             (mock, until channels exist)
 │   ├── authAppRoutes  /settings/account (/settings redirects)   (src/features/auth/routes.tsx)
-│   └── usersRoutes    /settings/profile            (src/features/users/routes.tsx)
+│   └── usersRoutes    /settings/profile, /settings/appearance, /settings/notifications,
+│                      /settings/privacy            (src/features/users/routes.tsx)
 └── *             NotFound
 ```
 

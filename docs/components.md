@@ -33,13 +33,15 @@ src/components/
 ├── Banner.tsx             # One line of news about the page (C-16), e.g. why a session ended
 ├── settings/SettingsRow.tsx  # SettingsGroup, SettingsRow (C-27) and Tag (C-36) for the settings pages
 ├── settings/SaveBar.tsx   # The save bar of a settings form with text fields (C-27)
+├── settings/SwitchRow.tsx # A settings row with a switch (C-27 + C-24a)
 └── LanguageToggle.tsx     # "Tiếng Việt · English" at the AuthShell's foot
 
 src/app/layout/AuthShell.tsx                       # The sign-in pages' layout
 src/app/layout/BrandPanel.tsx                      # Its brand half, from 1024 up
 src/app/layout/app-shell/                          # The app's layout: AppShell, Rail, ListColumn, MeMenu
 src/features/users/components/ProfileSkeleton.tsx  # The profile page's placeholder
-src/features/users/components/                     # The profile page's pieces: AvatarSection, AvatarCropDialog, ProfileForm
+src/features/users/components/                     # The profile page's pieces: AvatarSection, AvatarCropDialog, ProfileForm;
+                                                   # the settings pages': SettingsLoader, TimeZoneSetting
 src/features/auth/components/                      # The auth pages' pieces (CodeInput among them)
 src/pages/Legal.tsx                                # /terms and /privacy, with their own bar
 ```
@@ -203,7 +205,9 @@ below 768 the rail joins it.
 ### `LanguageToggle`
 
 "Tiếng Việt · English" at the foot of the AuthShell. The language in use is
-plain text; the other is a button ([i18n.md](./i18n.md)).
+plain text; the other is a button ([i18n.md](./i18n.md)). Its list,
+`LANGUAGE_NAMES`, is exported: the Appearance page's language choice uses it
+too, each language by its own name.
 
 ## Banner
 
@@ -257,6 +261,21 @@ field, never over it. "You have unsaved changes", **Discard changes** (calls
 
 ```tsx
 {isDirty ? <SaveBar saving={isSubmitting} onDiscard={() => reset()} /> : null}
+```
+
+**`SwitchRow`** (`src/components/settings/SwitchRow.tsx`; `label`,
+`description?`, `checked`, `onCheckedChange`): a settings row whose control
+is a [`Switch`](#switch). The label is a `<label>` for the switch, so
+clicking the words flips it too; the description is tied to it with
+`aria-describedby`. The switch saves on its own, with no save bar
+(Notifications, Privacy).
+
+```tsx
+<SwitchRow
+    label={t('privacy.showStudyActivity')}
+    checked={settings.showStudyActivity}
+    onCheckedChange={(showStudyActivity) => update.mutate({ showStudyActivity })}
+/>
 ```
 
 ## Forms
@@ -329,7 +348,11 @@ Under the field the page puts "Time there now: 21:47" as the field's hint
 (`timeIn()` from the same file, with `useMinuteClock`, which updates as each
 minute starts): a person checks the pick against the clock where they are.
 The combobox itself does not show it; a page that uses it adds the line, as
-"complete your account" does and Settings › Appearance will (S-ME-04).
+"complete your account" and Appearance & language (S-ME-04) do.
+
+Two more props for the settings page: `aria-labelledby`, to be named by a
+settings group's title instead of a field label, and `disabled`, while the
+zone may not change yet (once every 24 hours; `timezone-rate-limited`).
 
 ### `Checkbox`
 
@@ -337,6 +360,26 @@ The combobox itself does not show it; a page that uses it adds the line, as
 drawn as an 18 px box; checked is a `primary` box with a tick. Put its
 sentence in a `<label>` for it, so clicking the words ticks it too.
 Unticked by default. Used for the terms on "complete your account".
+
+### `Switch`
+
+`src/components/ui/switch.tsx` (C-24a): a `<button role="switch">` with
+`aria-checked`; `checked` and `onCheckedChange`. A 36 × 20 track with a 16
+knob: off is a `surface-3` track with a `border-input` edge, on is a
+`primary` track. The knob changes side, so the state reads without colour.
+Name it with `aria-labelledby` or a `<label htmlFor>`; in a settings row, use
+[`SwitchRow`](#settings-rows).
+
+### `SegmentedControl`
+
+`src/components/ui/segmented-control.tsx` (C-26a): a few choices side by
+side, one of them on (`value`, `onValueChange`, `segments`,
+`aria-labelledby`, `disabled`). 36 high on `surface-2`; the chosen one is
+lifted to `surface-1`. A radio group for assistive tech: Tab reaches the
+chosen segment, and the arrow keys move **and choose** at once. A segment
+can carry `lang` when its label is in another language ("English" on a
+Vietnamese page). Used for the theme and the language on Appearance &
+language.
 
 ### `CodeInput`
 
@@ -393,9 +436,11 @@ into the repository by the shadcn CLI, so you can edit them:
 | `Input` | Text inputs, drawn to C-22 ([above](#formfield)) |
 | `Label` | Form labels |
 | `Popover` | A floating panel anchored to the control that opened it (C-15; `@radix-ui/react-popover`). The time zone picker's panel |
+| `SegmentedControl` | A few choices side by side (C-26a), written for this project ([above](#segmentedcontrol)) |
 | `Skeleton` | Loading placeholders |
 | `Slider` | A range input, drawn to C-35: a 4-high track, `primary` up to the value; a 16 knob in `text-primary` (the avatar crop's zoom) |
 | `Sonner` | The toaster, following the theme |
+| `Switch` | An on/off switch (C-24a), a plain button rather than a Radix primitive ([above](#switch)) |
 | `Textarea` | Multi-line text, drawn to C-22 `multiline`: the `Input`'s edge, colours and states; three lines high, growing with its text to six where the browser can (`field-sizing`), then scrolling |
 | `Tooltip` | Tooltips; `WithTooltip` is the common case. `TooltipProvider` wraps the app in `App.tsx` |
 
