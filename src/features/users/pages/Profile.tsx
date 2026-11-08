@@ -39,7 +39,7 @@ function ProfileContent() {
     }
 
     return (
-        <div className='flex w-full max-w-[720px] flex-1 flex-col gap-8 p-6 pb-6 lg:p-8 lg:pb-6'>
+        <div className='flex w-full max-w-settings flex-1 flex-col gap-8 p-6 pb-6 lg:p-8 lg:pb-6'>
             <AvatarSection profile={profile} />
             <ProfileForm profile={profile} />
         </div>

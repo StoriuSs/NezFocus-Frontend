@@ -1,12 +1,24 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { apiError } from '@/test/helpers'
 
-const queryClientMock = { clear: vi.fn(), setQueryData: vi.fn(), invalidateQueries: vi.fn() }
+/** The profile query's cache events, as the store listens to them. */
+const cache = { listener: undefined as undefined | ((event: unknown) => void) }
+const queryClientMock = {
+    clear: vi.fn(),
+    setQueryData: vi.fn(),
+    invalidateQueries: vi.fn(),
+    getQueryCache: () => ({
+        subscribe: (listener: (event: unknown) => void) => {
+            cache.listener = listener
+            return () => undefined
+        }
+    })
+}
 const hardNavigate = vi.fn()
 const setErrorTrackingUser = vi.fn()
 const authApi = { refresh: vi.fn(), login: vi.fn(), logout: vi.fn(), restoreAccount: vi.fn() }
 const fetchProfile = vi.fn()
-const tabs = { told: [] as string[], listener: undefined as undefined | ((message: string) => void) }
+const tabs = { told: [] as unknown[], listener: undefined as undefined | ((message: unknown) => void) }
 
 vi.mock('@/lib/query-client', () => ({ queryClient: queryClientMock }))
 vi.mock('@/lib/navigation', () => ({ hardNavigate }))
@@ -14,8 +26,8 @@ vi.mock('@/lib/error-tracking', () => ({ setErrorTrackingUser }))
 vi.mock('@/features/auth/api/auth.api', () => ({ authApi }))
 vi.mock('@/features/users', () => ({ fetchProfile, userKeys: { profile: () => ['users', 'profile'] } }))
 vi.mock('@/features/auth/lib/tab-sync', () => ({
-    tellOtherTabs: (message: string) => tabs.told.push(message),
-    onOtherTab: (listener: (message: string) => void) => {
+    tellOtherTabs: (message: unknown) => tabs.told.push(message),
+    onOtherTab: (listener: (message: unknown) => void) => {
         tabs.listener = listener
         return () => undefined
     }
@@ -41,7 +53,13 @@ describe('auth store', () => {
         // A fresh store (and access-token module) for each test.
         vi.resetModules()
         vi.useFakeTimers()
-        for (const fn of [...Object.values(queryClientMock), hardNavigate, setErrorTrackingUser]) {
+        for (const fn of [
+            queryClientMock.clear,
+            queryClientMock.setQueryData,
+            queryClientMock.invalidateQueries,
+            hardNavigate,
+            setErrorTrackingUser
+        ]) {
             fn.mockReset()
         }
         for (const fn of Object.values(authApi)) fn.mockReset()
@@ -72,7 +90,7 @@ describe('auth store', () => {
         // Any script on the page can read storage: one XSS bug would hand the token over.
         expect(storedValues().filter((entry) => entry.includes('secret-access-token'))).toEqual([])
         expect(localStorage.getItem('auth:session')).toBe('1')
-        expect(tabs.told).toEqual(['signed-in'])
+        expect(tabs.told).toEqual([{ type: 'signed-in', userId: 'user-1' }])
     })
 
     it('ends the session when the refresh is refused, with the reason it gave', async () => {
@@ -123,7 +141,7 @@ describe('auth store', () => {
         // User A's cached data must not be shown to whoever signs in next in this tab.
         expect(queryClientMock.clear).toHaveBeenCalled()
         expect(setErrorTrackingUser).toHaveBeenLastCalledWith(undefined)
-        expect(tabs.told).toEqual(['signed-out'])
+        expect(tabs.told).toEqual([{ type: 'signed-out' }])
         expect(hardNavigate).toHaveBeenCalledExactlyOnceWith('/')
         await expect(store.getState().getToken()).resolves.toBeUndefined()
     })
@@ -131,7 +149,7 @@ describe('auth store', () => {
     it('follows a sign-out in another tab, without asking the API again', async () => {
         const store = await signedIn()
 
-        tabs.listener?.('signed-out')
+        tabs.listener?.({ type: 'signed-out' })
 
         expect(store.getState().isAuthenticated).toBe(false)
         expect(queryClientMock.clear).toHaveBeenCalled()
@@ -173,7 +191,7 @@ describe('auth store', () => {
 
         it('ignores ACCOUNT_INCOMPLETE once signed out, and starts the next session afresh', async () => {
             const store = await signedInWithCode(false)
-            tabs.listener?.('signed-out')
+            tabs.listener?.({ type: 'signed-out' })
 
             store.getState().markIncomplete()
             expect(store.getState().isComplete).toBe(true)
@@ -217,7 +235,7 @@ describe('auth store', () => {
 
         it('keeps waiting when the restore fails', async () => {
             fetchProfile.mockResolvedValue({ ...PROFILE, deletesAt: DELETES_AT })
-            authApi.restoreAccount.mockRejectedValue(apiError(503, 'SERVICE_UNAVAILABLE'))
+            authApi.restoreAccount.mockRejectedValue(apiError(503, 'SERVICE_UNAVAILABLE_ERROR'))
             const store = await signedIn()
 
             await expect(store.getState().restoreAccount()).rejects.toBeDefined()
@@ -232,7 +250,7 @@ describe('auth store', () => {
             await vi.runAllTimersAsync()
 
             expect(store.getState()).toMatchObject({ isAuthenticated: false, isSigningOut: false, deletesAt: null })
-            expect(tabs.told).toEqual(['signed-in', 'signed-out'])
+            expect(tabs.told).toEqual([{ type: 'signed-in', userId: 'user-1' }, { type: 'signed-out' }])
             expect(authApi.logout).toHaveBeenCalledOnce()
             expect(hardNavigate).not.toHaveBeenCalled()
         })
@@ -266,9 +284,127 @@ describe('auth store', () => {
             store.getState().markPendingDeletion(DELETES_AT)
             expect(store.getState().deletesAt).toBe(DELETES_AT)
 
-            tabs.listener?.('signed-out')
+            tabs.listener?.({ type: 'signed-out' })
             store.getState().markPendingDeletion(DELETES_AT)
             expect(store.getState().deletesAt).toBeNull()
         })
+    })
+    it('never lands off-site, however the address is written', async () => {
+        const store = await signedIn()
+
+        store.getState().logout(undefined, '/\\evil.example/steal')
+        await vi.runAllTimersAsync()
+
+        expect(hardNavigate).toHaveBeenCalledExactlyOnceWith('/')
+    })
+
+    it('asks the API for one refresh when several requests find the token expiring at once', async () => {
+        const store = await signedIn(30)
+        authApi.refresh.mockResolvedValue(tokens('fresh-token'))
+
+        const tokensSeen = await Promise.all([store.getState().getToken(), store.getState().refreshToken()])
+
+        expect(tokensSeen).toEqual(['fresh-token', 'fresh-token'])
+        expect(authApi.refresh).toHaveBeenCalledOnce()
+    })
+
+    it('signs out once when several requests are refused together, with the first reason', async () => {
+        const store = await signedIn()
+
+        store.getState().logout('password-changed')
+        store.getState().logout('security')
+        await vi.runAllTimersAsync()
+
+        expect(authApi.logout).toHaveBeenCalledOnce()
+        expect(hardNavigate).toHaveBeenCalledOnce()
+        expect(store.getState().peekSignOutReason()).toBe('password-changed')
+    })
+
+    it('sends a change still waiting before it forgets the token, with that token', async () => {
+        const { onBeforeSignOut, tokenNow } = await import('@/lib/before-sign-out')
+        const store = await signedIn()
+        const sentWith: (string | undefined)[] = []
+        onBeforeSignOut(() => sentWith.push(tokenNow()))
+
+        store.getState().logout()
+
+        expect(sentWith).toEqual(['secret-access-token'])
+        expect(store.getState().isAuthenticated).toBe(false)
+    })
+
+    describe('the other tabs of this browser (D-63)', () => {
+        const DELETES_AT = '2026-10-29T14:47:00.000Z'
+
+        it('loads the page again as the new account when another tab signs in to another one', async () => {
+            window.history.pushState({}, '', '/study?tab=a')
+            const store = await signedIn()
+
+            tabs.listener?.({ type: 'signed-in', userId: 'user-2' })
+
+            expect(store.getState().isAuthenticated).toBe(false)
+            expect(queryClientMock.clear).toHaveBeenCalled()
+            // The shared cookie is still there for the reload to take up.
+            expect(localStorage.getItem('auth:session')).toBe('1')
+            expect(hardNavigate).toHaveBeenCalledExactlyOnceWith('/study?tab=a')
+            window.history.pushState({}, '', '/')
+        })
+
+        it('stays as it is when another tab signs in to the same account', async () => {
+            const store = await signedIn()
+
+            tabs.listener?.({ type: 'signed-in', userId: 'user-1' })
+
+            expect(store.getState().isAuthenticated).toBe(true)
+            expect(hardNavigate).not.toHaveBeenCalled()
+        })
+
+        it('lands where the tab that signed out did, with the same banner and day', async () => {
+            const store = await signedIn()
+
+            tabs.listener?.({ type: 'signed-out', reason: 'account-deleted', deletesAt: DELETES_AT })
+
+            expect(store.getState().isAuthenticated).toBe(false)
+            expect(hardNavigate).toHaveBeenCalledExactlyOnceWith('/login')
+            expect(store.getState().peekSignOutReason()).toBe('account-deleted')
+            expect(store.getState().peekDeletesAt()).toBe(DELETES_AT)
+        })
+
+        it('tells the other tabs why it signed out, and the day for a deletion', async () => {
+            const store = await signedIn()
+            tabs.told = []
+
+            store.getState().logout('account-deleted', undefined, DELETES_AT)
+
+            expect(tabs.told).toEqual([{ type: 'signed-out', reason: 'account-deleted', deletesAt: DELETES_AT }])
+        })
+
+        it('closes its restore dialog when another tab restores the account, and says so when it restores', async () => {
+            fetchProfile.mockResolvedValue({ ...PROFILE, deletesAt: DELETES_AT })
+            authApi.restoreAccount.mockResolvedValue(undefined)
+            const store = await signedIn()
+
+            tabs.listener?.({ type: 'restored' })
+
+            expect(store.getState().deletesAt).toBeNull()
+            expect(queryClientMock.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['users', 'profile'] })
+
+            tabs.told = []
+            await store.getState().restoreAccount()
+            expect(tabs.told).toEqual([{ type: 'restored' }])
+        })
+    })
+
+    it('keeps the signed-in user in step with the profile query (the username after "complete your account")', async () => {
+        fetchProfile.mockResolvedValue({ ...PROFILE, username: undefined, completed: false })
+        const store = await signedIn()
+        expect(store.getState().user?.username).toBeUndefined()
+
+        cache.listener?.({
+            type: 'updated',
+            action: { type: 'success' },
+            query: { queryKey: ['users', 'profile'], state: { data: { ...PROFILE, username: 'ada' } } }
+        })
+
+        expect(store.getState().user?.username).toBe('ada')
     })
 })

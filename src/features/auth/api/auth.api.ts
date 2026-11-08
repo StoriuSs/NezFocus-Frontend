@@ -2,6 +2,7 @@ import api from '@/lib/api'
 import type { ApiEnvelope } from '@/lib/api-types'
 import { currentLanguage } from '@/i18n'
 import type { AccountCompletion, AuthOptions, EmailCodeSignIn, SessionList, TokenResponse } from '@/features/auth/types'
+import { untilSignedOut } from '@/features/auth/lib/sign-out-in-flight'
 
 /**
  * The API's auth routes (the backend's docs/auth/api-reference.md).
@@ -14,11 +15,15 @@ import type { AccountCompletion, AuthOptions, EmailCodeSignIn, SessionList, Toke
  *
  * Every request that makes the API send an email carries the language on
  * screen, so the email reads like the page that asked for it (D-132).
+ *
+ * The requests that set the refresh cookie wait for a sign-out still on its
+ * way, whose answer would clear the new cookie (sign-out-in-flight.ts).
  */
 const auth = { skipAuth: true, withCredentials: true } as const
 
 export const authApi = {
     async login(email: string, password: string): Promise<TokenResponse> {
+        await untilSignedOut()
         const response = await api.post<ApiEnvelope<TokenResponse>>('/auth/login', { email, password }, auth)
         return response.data.data
     },
@@ -38,6 +43,7 @@ export const authApi = {
      * account" (D-61).
      */
     async verifyEmailCode(email: string, code: string): Promise<EmailCodeSignIn> {
+        await untilSignedOut()
         const response = await api.post<ApiEnvelope<EmailCodeSignIn>>('/auth/email-code/verify', { email, code }, auth)
         return response.data.data
     },
@@ -56,6 +62,7 @@ export const authApi = {
 
     /** Ends every earlier session, then signs in here: tokens, and a new refresh cookie. */
     async resetPassword(email: string, code: string, password: string): Promise<TokenResponse> {
+        await untilSignedOut()
         const response = await api.post<ApiEnvelope<TokenResponse>>(
             '/auth/reset-password',
             { email, code, password, language: currentLanguage() },
@@ -72,6 +79,7 @@ export const authApi = {
 
     /** A new access token for the cookie. Rejects with a 401 when the session is over. */
     async refresh(): Promise<TokenResponse> {
+        await untilSignedOut()
         const response = await api.post<ApiEnvelope<TokenResponse>>('/auth/refresh', undefined, auth)
         return response.data.data
     },

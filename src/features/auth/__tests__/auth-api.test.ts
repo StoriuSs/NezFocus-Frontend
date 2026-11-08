@@ -5,6 +5,7 @@ const post = vi.hoisted(() => vi.fn())
 vi.mock('@/lib/api', () => ({ default: { post } }))
 
 import { authApi } from '../api/auth.api'
+import { trackSignOut } from '../lib/sign-out-in-flight'
 
 const PUBLIC = expect.objectContaining({ skipAuth: true, withCredentials: true })
 
@@ -68,5 +69,19 @@ describe('authApi', () => {
             { password: 'Ontap2026!', language: 'vi' },
             { withCredentials: true }
         )
+    })
+    it('waits for a sign-out still on its way before a request that sets the cookie', async () => {
+        // "Not now" in the restore dialog, then signing in again at once: the
+        // sign-out's answer clears the cookie, and must not clear the new one.
+        let answer: () => void = () => undefined
+        trackSignOut(new Promise<void>((resolve) => (answer = resolve)))
+
+        const signingIn = authApi.login('an.nguyen@gmail.com', 'Harbour-Lantern-42')
+        await Promise.resolve()
+        expect(post).not.toHaveBeenCalled()
+
+        answer()
+        await signingIn
+        expect(post).toHaveBeenCalledWith('/auth/login', expect.anything(), PUBLIC)
     })
 })

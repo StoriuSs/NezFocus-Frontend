@@ -54,7 +54,7 @@ export default function PendingDeletionDialog() {
 
     return (
         <Dialog open onOpenChange={(open) => !open && !restoring && setRestoreAside()}>
-            <DialogContent className='sm:max-w-[440px]' hideCloseButton>
+            <DialogContent className='sm:max-w-dialog' hideCloseButton>
                 <DialogHeader>
                     <DialogTitle>{t('restore.title')}</DialogTitle>
                     <DialogDescription>

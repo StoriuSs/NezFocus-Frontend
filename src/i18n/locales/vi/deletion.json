@@ -13,6 +13,7 @@
     "submit": "Xóa tài khoản"
   },
   "banner": "Tài khoản sẽ bị xóa vĩnh viễn vào {{date}} · đăng nhập trước ngày đó để khôi phục",
+  "bannerUndated": "Tài khoản của bạn đang chờ xóa · đăng nhập trong vòng 14 ngày kể từ khi yêu cầu để khôi phục",
   "restore": {
     "title": "Tài khoản đang chờ xóa",
     "description_one": "Tài khoản của bạn sẽ bị xóa vĩnh viễn vào {{date}} (còn {{count}} ngày). Khôi phục để dùng tiếp: server, tin nhắn và chuỗi ngày học vẫn còn nguyên.",

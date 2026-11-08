@@ -118,6 +118,18 @@ export default {
                 micro: '120ms',
                 short: '200ms',
                 medium: '320ms'
+            },
+            // DESIGN.md › Layout: the rail and the right panel's widths
+            // (`w-rail`, `left-rail`, `w-panel`).
+            spacing: {
+                rail: '72px',
+                panel: '280px'
+            },
+            maxWidth: {
+                // DESIGN.md › Layout, reading width of the settings pages.
+                settings: '720px',
+                // The dialogs' width in the frames (S-ME-02, S-ME-03, S-AUTH-03).
+                dialog: '440px'
             }
         }
     },

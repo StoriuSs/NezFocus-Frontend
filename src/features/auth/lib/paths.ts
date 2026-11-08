@@ -33,15 +33,25 @@ const DEFAULT_AFTER_SIGN_IN = '/study'
  * step.
  */
 export function safeNext(value: string | null | undefined): string {
-    if (!value) return DEFAULT_AFTER_SIGN_IN
+    const path = sameSitePath(value)
+    // Never back to an auth page: after signing in, /login is a dead end.
+    if (!path || isSignInFlowPage(new URL(path, window.location.origin).pathname)) return DEFAULT_AFTER_SIGN_IN
+    return path
+}
+
+/**
+ * `value` as a path on this site (path, query and hash), or undefined when it
+ * names another site or is not an address. Read as the browser would:
+ * `//evil.example` and `/\evil.example` are addresses elsewhere.
+ */
+export function sameSitePath(value: string | null | undefined): string | undefined {
+    if (!value) return undefined
     try {
         const url = new URL(value, window.location.origin)
-        if (url.origin !== window.location.origin) return DEFAULT_AFTER_SIGN_IN
-        // Never back to an auth page: after signing in, /login is a dead end.
-        if (isSignInFlowPage(url.pathname)) return DEFAULT_AFTER_SIGN_IN
+        if (url.origin !== window.location.origin) return undefined
         return `${url.pathname}${url.search}${url.hash}`
     } catch {
-        return DEFAULT_AFTER_SIGN_IN
+        return undefined
     }
 }
 

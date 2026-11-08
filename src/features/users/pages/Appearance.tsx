@@ -42,7 +42,7 @@ function AppearanceContent({ settings }: { settings: UserSettings }) {
     }))
 
     return (
-        <div className='max-w-[720px] space-y-8 p-6 lg:p-8'>
+        <div className='max-w-settings space-y-8 p-6 lg:p-8'>
             <SettingsGroup id='theme' title={t('appearance.theme')}>
                 <div className='space-y-2 py-2'>
                     <SegmentedControl

@@ -28,6 +28,7 @@ vi.mock('@/features/users/lib/crop-image', () => ({ default: () => Promise.resol
 
 const { default: Profile } = await import('@/features/users/pages/Profile')
 const { AVATAR_UNDO_MS } = await import('@/features/users/lib/avatar-removal')
+const { flushBeforeSignOut, setTokenSource } = await import('@/lib/before-sign-out')
 
 const saved: UserProfile = {
     id: 'user-1',
@@ -309,6 +310,23 @@ describe('the profile picture', () => {
             })
             await act(() => vi.advanceTimersByTimeAsync(AVATAR_UNDO_MS))
             expect(api.delete).toHaveBeenCalledTimes(1)
+        })
+
+        it('still removes it when signing out before Undo runs out, with the token signing out forgets', async () => {
+            setTokenSource(() => 'access-in-memory')
+            await removeIt()
+
+            await act(async () => flushBeforeSignOut())
+
+            expect(api.delete).toHaveBeenCalledWith('/users/me/avatar', {
+                adapter: 'fetch',
+                fetchOptions: { keepalive: true },
+                skipAuth: true,
+                headers: { Authorization: 'Bearer access-in-memory' }
+            })
+            await act(() => vi.advanceTimersByTimeAsync(AVATAR_UNDO_MS))
+            expect(api.delete).toHaveBeenCalledTimes(1)
+            setTokenSource(() => undefined)
         })
     })
 })

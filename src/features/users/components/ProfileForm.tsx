@@ -178,7 +178,7 @@ export function ProfileForm({ profile }: { profile: UserProfile }) {
             </div>
             {isDirty ? <SaveBar saving={isSubmitting} onDiscard={() => reset()} /> : null}
             <Dialog open={blocker.state === 'blocked'} onOpenChange={(open) => !open && blocker.reset?.()}>
-                <DialogContent className='sm:max-w-[440px]'>
+                <DialogContent className='sm:max-w-dialog'>
                     <DialogHeader>
                         <DialogTitle>{t('discard.title')}</DialogTitle>
                         <DialogDescription>{t('discard.description')}</DialogDescription>

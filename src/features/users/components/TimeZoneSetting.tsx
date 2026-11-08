@@ -103,7 +103,7 @@ export function TimeZoneSetting({ settings }: { settings: UserSettings }) {
             </div>
 
             <Dialog open={picked !== null} onOpenChange={(open) => !open && !change.isPending && setPicked(null)}>
-                <DialogContent className='sm:max-w-[440px]'>
+                <DialogContent className='sm:max-w-dialog'>
                     <DialogHeader>
                         <DialogTitle>
                             {t('appearance.confirm.title', {

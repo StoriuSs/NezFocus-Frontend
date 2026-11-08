@@ -122,7 +122,7 @@ export function Rail({ id, className }: { id?: string; className?: string }) {
     const { t } = useTranslation()
 
     return (
-        <div id={id} className={cn('w-[72px] shrink-0 flex-col items-center gap-2 bg-bg py-3', className)}>
+        <div id={id} className={cn('w-rail shrink-0 flex-col items-center gap-2 bg-bg py-3', className)}>
             <Group label={t('shell.rail.servers')} className='min-h-0 w-full flex-1 overflow-y-auto py-1'>
                 <SoonItem icon={MessageCircle} name={t('shell.rail.dm')} squircle />
                 <li aria-hidden='true' className='h-0.5 w-8 shrink-0 rounded-full bg-border' />

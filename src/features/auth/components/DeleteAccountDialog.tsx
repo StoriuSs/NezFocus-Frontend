@@ -99,7 +99,7 @@ export function DeleteAccountDialog({
     return (
         <Dialog open={open} onOpenChange={(next) => (next ? onOpenChange(true) : !busy && onOpenChange(false))}>
             <DialogContent
-                className='sm:max-w-[440px]'
+                className='sm:max-w-dialog'
                 // The password, not "Forgot password?" before it (S-ME-03 `delete-confirm`).
                 onOpenAutoFocus={(event) => {
                     event.preventDefault()

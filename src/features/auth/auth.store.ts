@@ -8,8 +8,10 @@ import { fetchProfile, userKeys, type UserProfile } from '@/features/users'
 import { accessTokenValidFor, clearAccessToken, setAccessToken } from './lib/access-token'
 import { authApi } from './api/auth.api'
 import type { TokenResponse } from './types'
-import { onOtherTab, tellOtherTabs } from './lib/tab-sync'
-import { isSignInFlowPage, signInPath } from './lib/paths'
+import { onOtherTab, tellOtherTabs, type TabMessage } from './lib/tab-sync'
+import { isSignInFlowPage, sameSitePath, signInPath } from './lib/paths'
+import { trackSignOut } from './lib/sign-out-in-flight'
+import { flushBeforeSignOut, setTokenSource } from '@/lib/before-sign-out'
 import { deletesAtOf, SIGN_OUT_REASONS, signOutReasonOf, type SignOutReason } from './lib/sign-out-reason'
 
 /**
@@ -199,6 +201,15 @@ const toAuthUser = (profile: UserProfile): AuthUser => ({
     roles: profile.roles
 })
 
+const PROFILE_KEY = JSON.stringify(userKeys.profile())
+
+// A request sent as the page goes, or just before signing out, takes the
+// token as it is: no time to refresh (src/lib/before-sign-out.ts).
+setTokenSource(() => accessTokenValidFor(0))
+
+/** This tab's address, to load it again as it is. */
+const currentPath = () => `${window.location.pathname}${window.location.search}${window.location.hash}`
+
 export const useAuthStore = create<AuthState>((set, get) => {
     /**
      * A token is in hand: mark the session, then find out who it belongs to.
@@ -229,10 +240,14 @@ export const useAuthStore = create<AuthState>((set, get) => {
         }
     }
 
-    /** Forget the session in this tab only. */
-    function forget(): void {
+    /**
+     * Forget the session in this tab only. `keepHint`: the browser still has
+     * a session (another tab signed in to another account), so the next page
+     * load must take it up.
+     */
+    function forget({ keepHint = false } = {}): void {
         clearAccessToken()
-        safeLocalStorage.remove(HINT_KEY)
+        if (!keepHint) safeLocalStorage.remove(HINT_KEY)
         set({
             isSigningOut: true,
             isAuthenticated: false,
@@ -247,13 +262,57 @@ export const useAuthStore = create<AuthState>((set, get) => {
         queryClient.clear()
     }
 
-    onOtherTab((message) => {
-        if (message === 'signed-out' && get().isAuthenticated) {
-            forget()
-            hardNavigate('/')
+    /** What the sign-in page's banner says next, in this tab (sessionStorage is per tab). */
+    function recordSignOut(reason: SignOutReason | undefined, deletesAt: string | undefined): void {
+        // A reason from an earlier sign-out must not be said for this one.
+        if (reason) safeSessionStorage.set(NOTICE_KEY, reason)
+        else safeSessionStorage.remove(NOTICE_KEY)
+        if (reason === 'account-deleted' && deletesAt) safeSessionStorage.set(DELETES_AT_KEY, deletesAt)
+        else safeSessionStorage.remove(DELETES_AT_KEY)
+    }
+
+    function onTabMessage(message: TabMessage): void {
+        const { isAuthenticated, user, deletesAt } = get()
+        switch (message.type) {
+            // Signed out in another tab: land where that tab did, with the same banner.
+            case 'signed-out':
+                if (!isAuthenticated) return
+                recordSignOut(message.reason, message.deletesAt)
+                forget()
+                hardNavigate(afterSignOut(message.reason))
+                return
+            case 'signed-in':
+                // Pick the session up from the shared cookie.
+                if (!isAuthenticated) return void get().initAuth()
+                // The cookie now belongs to another account (or one this tab
+                // cannot tell apart): this tab's data is someone else's. Load
+                // the page again, as the new account.
+                if (!message.userId || message.userId !== user?.id) {
+                    forget({ keepHint: true })
+                    hardNavigate(currentPath())
+                }
+                return
+            // Restored in another tab: this tab's restore dialog closes.
+            case 'restored':
+                if (isAuthenticated && deletesAt !== null) {
+                    set({ deletesAt: null })
+                    void queryClient.invalidateQueries({ queryKey: userKeys.profile() })
+                }
+                return
         }
-        // Another tab signed in: pick the session up from the shared cookie.
-        if (message === 'signed-in' && !get().isAuthenticated) void get().initAuth()
+    }
+
+    onOtherTab(onTabMessage)
+
+    // The profile query is read again after "complete your account" (the
+    // username), after a profile edit, after a failed first read: the header,
+    // role checks and the password rules read `user`, so keep it in step.
+    queryClient.getQueryCache().subscribe((event) => {
+        if (event.type !== 'updated' || event.action.type !== 'success') return
+        if (JSON.stringify(event.query.queryKey) !== PROFILE_KEY) return
+        const profile = event.query.state.data as UserProfile | undefined
+        const { isAuthenticated, user } = get()
+        if (profile && isAuthenticated && (!user || user.id === profile.id)) set({ user: toAuthUser(profile) })
     })
 
     return {
@@ -295,7 +354,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
 
         startSession: async (tokens, account) => {
             await establish(tokens, account?.completed)
-            tellOtherTabs('signed-in')
+            tellOtherTabs({ type: 'signed-in', userId: get().user?.id })
         },
 
         resumeFromCookie: async () => {
@@ -307,26 +366,30 @@ export const useAuthStore = create<AuthState>((set, get) => {
             }
             if (!token) return false
             await establish()
-            tellOtherTabs('signed-in')
+            tellOtherTabs({ type: 'signed-in', userId: get().user?.id })
             return true
         },
 
         logout: (reason, to = afterSignOut(reason), deletesAt = lastDeletesAt) => {
             if (logoutStarted) return
             logoutStarted = true
-            // A reason from an earlier sign-out must not be said for this one.
-            if (reason) safeSessionStorage.set(NOTICE_KEY, reason)
-            else safeSessionStorage.remove(NOTICE_KEY)
-            if (reason === 'account-deleted' && deletesAt) safeSessionStorage.set(DELETES_AT_KEY, deletesAt)
-            else safeSessionStorage.remove(DELETES_AT_KEY)
+            recordSignOut(reason, deletesAt)
             const wasSignedIn = get().isAuthenticated
+            // A change still waiting to be sent goes now, with the token in hand.
+            flushBeforeSignOut()
             forget()
-            tellOtherTabs('signed-out')
+            tellOtherTabs({
+                type: 'signed-out',
+                reason,
+                deletesAt: reason === 'account-deleted' ? deletesAt : undefined
+            })
             // Ends the session on the API and clears the cookie. Best effort:
             // a failure leaves a session that nothing in this browser holds a
             // token for, and it ends by itself.
-            const ended = wasSignedIn ? authApi.logout().catch(() => undefined) : Promise.resolve()
-            void ended.then(() => hardNavigate(to.startsWith('/') && !to.startsWith('//') ? to : '/'))
+            const ended = wasSignedIn ? authApi.logout() : Promise.resolve()
+            trackSignOut(ended)
+            // Never off-site, however `to` is written (`//evil.example`, `/\evil.example`).
+            void ended.catch(() => undefined).then(() => hardNavigate(sameSitePath(to) ?? '/'))
         },
 
         getToken: async () => {
@@ -367,15 +430,21 @@ export const useAuthStore = create<AuthState>((set, get) => {
             await authApi.restoreAccount()
             set({ deletesAt: null })
             void queryClient.invalidateQueries({ queryKey: userKeys.profile() })
+            // Another tab of this browser shows the restore dialog too.
+            tellOtherTabs({ type: 'restored' })
         },
 
         setRestoreAside: () => {
+            flushBeforeSignOut()
             forget()
             set({ isSigningOut: false })
-            tellOtherTabs('signed-out')
+            tellOtherTabs({ type: 'signed-out' })
             // Ends the session on the API and clears the cookie, best effort
-            // as in logout; this page stays.
-            void authApi.logout().catch(() => undefined)
+            // as in logout; this page stays, and signing in again from it
+            // waits for this answer (sign-out-in-flight.ts).
+            const ended = authApi.logout()
+            trackSignOut(ended)
+            void ended.catch(() => undefined)
         },
 
         peekDeletesAt: () => safeSessionStorage.get(DELETES_AT_KEY),

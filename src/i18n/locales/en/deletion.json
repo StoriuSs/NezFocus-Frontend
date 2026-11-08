@@ -13,6 +13,7 @@
     "submit": "Delete account"
   },
   "banner": "Your account will be deleted for good on {{date}} · sign in before then to restore it",
+  "bannerUndated": "Your account is waiting to be deleted · sign in within 14 days of your request to restore it",
   "restore": {
     "title": "Your account is waiting to be deleted",
     "description_one": "Your account will be deleted for good on {{date}} ({{count}} day left). Restore it to keep using it: your servers, messages and study streak are all still there.",

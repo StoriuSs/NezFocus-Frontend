@@ -310,6 +310,14 @@ describe('the auth pages', () => {
             await waitFor(() => expect(authState.takeSignOutReason).toHaveBeenCalledTimes(1))
         })
 
+        it('still says the account waits to be deleted when the day did not come with the sign-out', async () => {
+            authState.peekSignOutReason.mockReturnValue('account-deleted')
+            renderAt('/login')
+
+            expect(
+                await screen.findByText(/Your account is waiting to be deleted · sign in within 14 days/)
+            ).toBeVisible()
+        })
         it('stops a sign-in to an account waiting to be deleted at the restore dialog, the form as typed', async () => {
             authState.signIn.mockImplementation(async () => {
                 authState.isAuthenticated = true

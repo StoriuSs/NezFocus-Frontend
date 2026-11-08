@@ -10,6 +10,8 @@ const authState = {
     isSigningOut: false,
     isLoadingAccount: false,
     deletesAt: null as string | null,
+    user: { email: 'ada@example.test' },
+    logout: vi.fn(),
     restoreAccount: vi.fn(),
     setRestoreAside: vi.fn()
 }
@@ -29,6 +31,14 @@ function renderAt(path: string) {
                 element: (
                     <GuestOnlyRoute>
                         <p>Sign-in form</p>
+                    </GuestOnlyRoute>
+                )
+            },
+            {
+                path: '/reset-password',
+                element: (
+                    <GuestOnlyRoute explainIfSignedIn>
+                        <p>New password form</p>
                     </GuestOnlyRoute>
                 )
             },
@@ -95,6 +105,26 @@ describe('route guards', () => {
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     })
 
+    it('shows that something is happening while signing out, instead of bouncing through sign in', async () => {
+        authState.isSigningOut = true
+        let router = renderAt('/profile')
+        expect(document.querySelector('.animate-spin')).toBeInTheDocument()
+        expect(screen.queryByText('Sign-in form')).not.toBeInTheDocument()
+        expect(router.state.location.pathname).toBe('/profile')
+
+        router = renderAt('/welcome')
+        expect(screen.queryByText('Sign-in form')).not.toBeInTheDocument()
+        expect(router.state.location.pathname).toBe('/welcome')
+    })
+
+    it('says so on a page an email links to when opened signed in, rather than going home', async () => {
+        authState.isAuthenticated = true
+        const router = renderAt('/reset-password')
+
+        expect(await screen.findByText("You're already signed in")).toBeInTheDocument()
+        expect(screen.queryByText('New password form')).not.toBeInTheDocument()
+        expect(router.state.location.pathname).toBe('/reset-password')
+    })
     describe('an incomplete account (D-61)', () => {
         beforeEach(() => {
             authState.isAuthenticated = true

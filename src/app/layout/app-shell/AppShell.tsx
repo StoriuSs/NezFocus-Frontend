@@ -90,7 +90,7 @@ export default function AppShell() {
                     className={cn(
                         'hidden lg:flex',
                         navOpen &&
-                            'max-lg:fixed max-lg:inset-y-0 max-lg:left-[72px] max-lg:z-40 max-lg:flex max-lg:shadow-sheet-left'
+                            'max-lg:fixed max-lg:inset-y-0 max-lg:left-rail max-lg:z-40 max-lg:flex max-lg:shadow-sheet-left'
                     )}
                 />
                 <main className='flex min-w-0 flex-1'>

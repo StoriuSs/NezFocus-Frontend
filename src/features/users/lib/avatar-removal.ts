@@ -1,6 +1,7 @@
 import { toast } from 'sonner'
 import type { QueryClient } from '@tanstack/react-query'
 import { notifyMutationError } from '@/lib/query-client'
+import { onBeforeSignOut } from '@/lib/before-sign-out'
 import { removeAvatar } from '../api/users.api'
 import { userKeys } from '../api/keys'
 import { useAvatarRemoval } from './avatar-removal-state'
@@ -9,13 +10,16 @@ import { useAvatarRemoval } from './avatar-removal-state'
 export const AVATAR_UNDO_MS = 8000
 
 /** The removal waiting, if any. Module-level: it outlives the profile page, as the toast does. */
-let waiting: { timer: ReturnType<typeof setTimeout>; onLeave: () => void; toastId: string | number } | undefined
+let waiting:
+    | { timer: ReturnType<typeof setTimeout>; onLeave: () => void; stopFlush: () => void; toastId: string | number }
+    | undefined
 
 /** Ends the wait; false when there was none (already sent, or undone). */
 function stopWaiting(): boolean {
     if (!waiting) return false
     clearTimeout(waiting.timer)
     window.removeEventListener('pagehide', waiting.onLeave)
+    waiting.stopFlush()
     toast.dismiss(waiting.toastId)
     waiting = undefined
     return true
@@ -24,7 +28,8 @@ function stopWaiting(): boolean {
 /**
  * "Remove photo" (S-ME-02): the avatar goes at once, but the API is asked
  * only once the toast's "Undo" has run out; "Undo" asks nothing. Closing or
- * reloading the tab during the wait still removes it (a keepalive request).
+ * reloading the tab during the wait still removes it (a keepalive request),
+ * and so does signing out: it goes before the token is forgotten.
  */
 export function removeAvatarWithUndo(client: QueryClient, text: { removed: string; undo: string }): void {
     if (waiting) return
@@ -47,6 +52,7 @@ export function removeAvatarWithUndo(client: QueryClient, text: { removed: strin
     waiting = {
         timer: setTimeout(() => void send(false), AVATAR_UNDO_MS),
         onLeave,
+        stopFlush: onBeforeSignOut(onLeave),
         toastId: toast.success(text.removed, {
             duration: AVATAR_UNDO_MS,
             action: { label: text.undo, onClick: cancelAvatarRemoval }

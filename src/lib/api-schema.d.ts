@@ -232,23 +232,6 @@ export interface paths {
         patch?: never
         trace?: never
     }
-    '/api/v1/auth/sign-in-methods': {
-        parameters: {
-            query?: never
-            header?: never
-            path?: never
-            cookie?: never
-        }
-        /** How this account signs in: a password, other providers, or both. */
-        get: operations['PasswordController_signInMethods_v1']
-        put?: never
-        post?: never
-        delete?: never
-        options?: never
-        head?: never
-        patch?: never
-        trace?: never
-    }
     '/api/v1/auth/account/delete': {
         parameters: {
             query?: never
@@ -643,12 +626,6 @@ export interface components {
             current_password: string
             new_password: string
         }
-        SignInMethodsResponseDto: {
-            /** @description The account has a password: email-and-password sign-in works. False for one made with Google, until a password is set. */
-            password: boolean
-            /** @description Other providers linked to the account, by id (`google`). */
-            providers: string[]
-        }
         AccountDeletionResponseDto: {
             /**
              * Format: date-time
@@ -665,7 +642,7 @@ export interface components {
              */
             language: 'vi' | 'en'
             /** @description The account's password. */
-            password?: string
+            password: string
         }
         UserProfileResponseDto: {
             id: string
@@ -1079,28 +1056,6 @@ export interface operations {
                     'application/json': {
                         meta: components['schemas']['ApiResponseMetaDto']
                         data: null
-                    }
-                }
-            }
-        }
-    }
-    PasswordController_signInMethods_v1: {
-        parameters: {
-            query?: never
-            header?: never
-            path?: never
-            cookie?: never
-        }
-        requestBody?: never
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown
-                }
-                content: {
-                    'application/json': {
-                        meta: components['schemas']['ApiResponseMetaDto']
-                        data: components['schemas']['SignInMethodsResponseDto']
                     }
                 }
             }

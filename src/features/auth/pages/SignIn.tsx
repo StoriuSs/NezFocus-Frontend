@@ -196,9 +196,12 @@ export default function SignIn() {
     const fieldError = (message: string | undefined) => (message ? text({ key: message }) : undefined)
     const banner =
         ended === 'account-deleted' ? (
-            deletesAt ? (
-                <Banner icon={UserX}>{tDeletion('banner', { date: deletionDate(new Date(deletesAt)) })}</Banner>
-            ) : null
+            // Without the date (it did not come with the sign-out), still say why.
+            <Banner icon={UserX}>
+                {deletesAt
+                    ? tDeletion('banner', { date: deletionDate(new Date(deletesAt)) })
+                    : tDeletion('bannerUndated')}
+            </Banner>
         ) : ended ? (
             <Banner icon={ended === 'security' ? ShieldAlert : LogOut}>{t(`sessionEnded.${ended}`)}</Banner>
         ) : null

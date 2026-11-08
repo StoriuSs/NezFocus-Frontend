@@ -21,6 +21,11 @@ const toast = Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn(), info: v
 vi.mock('@/features/auth/api/auth.api', () => ({ authApi }))
 vi.mock('@/features/auth/auth.store', () => mockAuthStore(authState))
 vi.mock('sonner', () => ({ toast }))
+// The account page reads the address and username from the profile query.
+vi.mock('@/features/users/api/users.api', async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    fetchProfile: () => Promise.resolve({ id: 'user-1', ...authState.user, roles: ['user'], completed: true })
+}))
 
 const { default: Settings } = await import('@/features/auth/pages/Settings')
 

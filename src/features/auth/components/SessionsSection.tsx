@@ -152,7 +152,7 @@ function SignOutOthers({ count }: { count: number }) {
                 {t('settings.sessions.signOutOthers')}
             </Button>
             <Dialog open={open} onOpenChange={(next) => !revokeOthers.isPending && setOpen(next)}>
-                <DialogContent className='sm:max-w-[440px]'>
+                <DialogContent className='sm:max-w-dialog'>
                     <DialogHeader>
                         <DialogTitle>{t('settings.sessions.confirmTitle', { count })}</DialogTitle>
                         <DialogDescription>{t('settings.sessions.confirmText')}</DialogDescription>

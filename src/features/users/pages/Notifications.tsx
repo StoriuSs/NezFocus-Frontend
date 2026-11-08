@@ -29,7 +29,7 @@ function NotificationsContent({ settings }: { settings: UserSettings }) {
     const update = useUpdateSettings()
 
     return (
-        <div className='max-w-[720px] space-y-8 p-6 lg:p-8'>
+        <div className='max-w-settings space-y-8 p-6 lg:p-8'>
             <SettingsGroup id='study-sessions' title={t('notifications.studySessions')}>
                 <SwitchRow
                     label={t('notifications.phaseSound')}

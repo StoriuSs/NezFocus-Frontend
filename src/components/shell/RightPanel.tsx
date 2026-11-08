@@ -99,7 +99,7 @@ export function RightPanel({
             ref={ref}
             aria-label={title}
             className={cn(
-                'flex w-[280px] shrink-0 flex-col border-l bg-surface-1',
+                'flex w-panel shrink-0 flex-col border-l bg-surface-1',
                 sheet && 'fixed inset-y-0 right-0 z-40 shadow-sheet-right'
             )}
         >

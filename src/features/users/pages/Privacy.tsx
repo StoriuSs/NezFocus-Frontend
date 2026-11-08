@@ -27,7 +27,7 @@ function PrivacyContent({ settings }: { settings: UserSettings }) {
     const update = useUpdateSettings()
 
     return (
-        <div className='max-w-[720px] space-y-8 p-6 lg:p-8'>
+        <div className='max-w-settings space-y-8 p-6 lg:p-8'>
             <SettingsGroup id='direct-messages' title={t('privacy.directMessages')}>
                 <SwitchRow
                     label={t('privacy.allowServerMembers')}
