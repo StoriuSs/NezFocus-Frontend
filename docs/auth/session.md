@@ -199,12 +199,15 @@ API's `/auth` routes. Two request options matter:
 
 All tabs share the cookie, but each has its own access token in memory.
 [tab-sync.ts](../../src/features/auth/lib/tab-sync.ts) keeps them in step with a
-`BroadcastChannel` named `auth`, which carries two messages:
+`BroadcastChannel` named `auth`, which carries three messages (objects; a tab
+ignores anything else on the channel, such as the plain strings an older
+version of the app sent):
 
 | A tab says | The other tabs |
 |---|---|
-| `signed-out` | A signed-in tab forgets its session at once and reloads at the home page, rather than showing the account until its next request is refused. It shows no message; only the tab that signed out says why |
-| `signed-in` | A signed-out tab runs `initAuth()`: the flag is set now, so it trades the shared cookie for its own token |
+| `signed-out`, with the reason and, for a deletion, the day | A signed-in tab forgets its session at once and lands where the tab that signed out did, with the same banner: sign in with "your password was changed", the dated "account will be deleted" banner, or the home page after an ordinary sign-out. It no longer shows the account until its next request is refused |
+| `signed-in`, with the account's id | A signed-out tab runs `initAuth()`: the flag is set now, so it trades the shared cookie for its own token. A tab signed in to **another** account (it missed the sign-out, say on a network blip) reloads the page: the shared cookie is the new account's now, and its data, cache and token are someone else's. Signed in to the same account, nothing happens |
+| `restored` | A tab showing the restore dialog closes it: the account no longer waits to be deleted. Without this, its **Not now** would end the session the other tab just restored |
 
 Some embedded browsers have no `BroadcastChannel`. There, each tab finds out
 on its next request instead.

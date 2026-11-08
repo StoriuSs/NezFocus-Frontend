@@ -66,8 +66,9 @@ shows, and what `index.html` reads before the next load.
 **The avatar removal flag** (`useAvatarRemoval`, `{ pending }`): true while a
 removed profile picture waits out its 8-second "Undo" (S-ME-02). Meanwhile
 `useProfile` hides the avatar everywhere (its `select`), though the API still
-has it; `avatar-removal.ts` sends the `DELETE` when the wait runs out, or as
-the tab closes. It is not server data copied into a store: it is what the
+has it; `avatar-removal.ts` sends the `DELETE` when the wait runs out, as
+the tab closes, or just before signing out (`src/lib/before-sign-out.ts`: the
+auth store runs it while the token is still in hand). It is not server data copied into a store: it is what the
 person did and the API has not heard yet. It sits in a file of its own
 because `useProfile` reads it and is in the first download; the removal logic
 stays in the profile page's chunk.
