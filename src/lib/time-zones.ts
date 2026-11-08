@@ -84,6 +84,45 @@ export function timeIn(id: string, at: Date): string {
     }).format(at)
 }
 
+/** The calendar and the clock somewhere at one moment. `weekday`: 0 is Sunday, as Date#getDay. */
+export interface WallClock {
+    year: number
+    month: number
+    day: number
+    hour: number
+    minute: number
+    weekday: number
+}
+
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+/**
+ * What the calendar and the clock say in zone `id` at `at` (NFR-I18N-01:
+ * times in the account's zone); in the browser's own zone when `id` is not
+ * given (before the account's settings have loaded).
+ */
+export function wallClock(at: Date, id?: string): WallClock {
+    const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: id,
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric',
+        hourCycle: 'h23',
+        weekday: 'short'
+    }).formatToParts(at)
+    const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((found) => found.type === type)?.value ?? ''
+    return {
+        year: Number(part('year')),
+        month: Number(part('month')),
+        day: Number(part('day')),
+        hour: Number(part('hour')),
+        minute: Number(part('minute')),
+        weekday: WEEKDAYS.indexOf(part('weekday'))
+    }
+}
+
 function gmtOf(minutes: number): string {
     const sign = minutes < 0 ? '−' : '+'
     const whole = Math.abs(minutes)

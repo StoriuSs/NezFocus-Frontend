@@ -364,6 +364,28 @@ export interface paths {
         patch?: never
         trace?: never
     }
+    '/api/v1/users/me/settings': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        /** What a browser applies once signed in: theme, language, time zone… the same everywhere (REQ-AUTH-08). */
+        get: operations['UsersController_getSettings_v1']
+        put?: never
+        post?: never
+        delete?: never
+        options?: never
+        head?: never
+        /**
+         * Save the settings sent, each on its own (S-ME-04 → S-ME-06). Naturally
+         *     idempotent, so no Idempotency-Key: a retry sets the same values, and a
+         *     retried zone change finds the zone already in use, which is no change.
+         */
+        patch: operations['UsersController_updateSettings_v1']
+        trace?: never
+    }
     '/api/v1/health': {
         parameters: {
             query?: never
@@ -488,6 +510,11 @@ export interface components {
             /** @description Shown in chat and study rooms: 1-32 characters, at least one visible (REQ-AUTH-06, D-69, D-139). */
             display_name: string
             /**
+             * @description An IANA time zone name, e.g. `Asia/Ho_Chi_Minh`. Does not count as the day's change (D-61).
+             * @example Asia/Ho_Chi_Minh
+             */
+            timezone: string
+            /**
              * @description The account's language: the switch at the foot of the page (D-64).
              * @enum {string}
              */
@@ -503,8 +530,6 @@ export interface components {
              *     AUTH_PASSWORD_REJECTED naming the rules broken.
              */
             password: string
-            /** @description An IANA time zone name, e.g. `Asia/Ho_Chi_Minh`. Does not count as the day's change (D-61). */
-            timezone: string
             /**
              * @description "I agree to the Terms of Service and the Privacy Policy": must be true.
              *     The value as sent: the global pipe's implicit conversion would make
@@ -648,6 +673,51 @@ export interface components {
             width?: number
             height?: number
             uploaded_at: string
+        }
+        UserSettingsResponseDto: {
+            /** @enum {string} */
+            language: 'vi' | 'en'
+            /** @enum {string} */
+            theme: 'light' | 'dark' | 'system'
+            /** @description An IANA zone name, in ICU's letter case (asia/tokyo is stored as Asia/Tokyo). */
+            timezone: string
+            /**
+             * Format: date-time
+             * @description When the zone may change again (once every 24 hours); null if it may
+             *     now. Worked out by the server, so the device's clock does not matter.
+             */
+            timezone_changeable_at: string | null
+            phase_sound: boolean
+            browser_notifications: boolean
+            notify_mentions: boolean
+            notify_direct_messages: boolean
+            notify_incoming_calls: boolean
+            notify_phase_changes: boolean
+            notification_prompt_dismissed: boolean
+            allow_server_member_messages: boolean
+            show_study_activity: boolean
+        }
+        UpdateSettingsRequestDto: {
+            /** @example Asia/Ho_Chi_Minh */
+            timezone?: string
+            /** @enum {string} */
+            language?: 'vi' | 'en'
+            /** @enum {string} */
+            theme?: 'light' | 'dark' | 'system'
+            /** @description The sound when a study phase ends (REQ-STUDY-06). */
+            phase_sound?: boolean
+            /** @description Browser notifications (REQ-NOTIF-04): the main switch, then one per kind. */
+            browser_notifications?: boolean
+            notify_mentions?: boolean
+            notify_direct_messages?: boolean
+            notify_incoming_calls?: boolean
+            notify_phase_changes?: boolean
+            /** @description "Not now" on the prompt to turn browser notifications on (D-100). */
+            notification_prompt_dismissed?: boolean
+            /** @description Direct messages from people who share a server (REQ-SOCIAL-04). */
+            allow_server_member_messages?: boolean
+            /** @description "Show study activity" (D-79). */
+            show_study_activity?: boolean
         }
     }
     responses: never
@@ -1189,6 +1259,54 @@ export interface operations {
                     'application/json': {
                         meta: components['schemas']['ApiResponseMetaDto']
                         data: null
+                    }
+                }
+            }
+        }
+    }
+    UsersController_getSettings_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['UserSettingsResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    UsersController_updateSettings_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['UpdateSettingsRequestDto']
+            }
+        }
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['UserSettingsResponseDto']
                     }
                 }
             }

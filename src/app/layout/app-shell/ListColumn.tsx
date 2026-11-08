@@ -130,7 +130,7 @@ function StudyColumn() {
     )
 }
 
-/** SettingsNav (C-27): the five settings pages; the last three arrive later in M0. */
+/** SettingsNav (C-27): the five settings pages. */
 function SettingsColumn() {
     const { t } = useTranslation()
     return (
@@ -143,9 +143,15 @@ function SettingsColumn() {
                 <RowLink to={USERS_PATHS.profile} icon={IdCard} rounded='rounded-button'>
                     {t('shell.settings.profile')}
                 </RowLink>
-                <SoonRow icon={Palette} name={t('shell.settings.appearance')} rounded='rounded-button' />
-                <SoonRow icon={Bell} name={t('shell.settings.notifications')} rounded='rounded-button' />
-                <SoonRow icon={Shield} name={t('shell.settings.privacy')} rounded='rounded-button' />
+                <RowLink to={USERS_PATHS.appearance} icon={Palette} rounded='rounded-button'>
+                    {t('shell.settings.appearance')}
+                </RowLink>
+                <RowLink to={USERS_PATHS.notifications} icon={Bell} rounded='rounded-button'>
+                    {t('shell.settings.notifications')}
+                </RowLink>
+                <RowLink to={USERS_PATHS.privacy} icon={Shield} rounded='rounded-button'>
+                    {t('shell.settings.privacy')}
+                </RowLink>
             </nav>
         </>
     )

@@ -4,6 +4,9 @@ import { useQueryErrorResetBoundary } from '@tanstack/react-query'
 
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { PageLoader } from '@/components/PageLoader'
+// Straight from its file, not the users index: the index is in the first download
+// (the auth store imports it), and whatever it exports goes there too.
+import { useAccountSettings } from '@/features/users/hooks/useAccountSettings'
 import { cn } from '@/lib/utils'
 import { ListColumn } from './ListColumn'
 import { Rail } from './Rail'
@@ -32,6 +35,8 @@ export default function AppShell() {
     const { pathname } = useLocation()
     const { reset: resetQueryErrors } = useQueryErrorResetBoundary()
     const [navOpen, setNavOpen] = useState(false)
+    // The account's theme and language, here and in this browser's other tabs (REQ-AUTH-08).
+    useAccountSettings()
 
     const toggleNav = useCallback(() => setNavOpen((open) => !open), [])
     const shell = useMemo<ShellContextValue>(() => ({ navOpen, toggleNav }), [navOpen, toggleNav])

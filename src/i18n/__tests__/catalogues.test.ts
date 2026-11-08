@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { resources } from '@/i18n'
+import i18n, { resources } from '@/i18n'
+import { settingsResources } from '@/i18n/settings'
 
 /** Every leaf key, dotted and namespaced: { a: { b: 'x' } } in "ns" -> ['ns:a.b']. */
 function keysOf(value: unknown, prefix: string): string[] {
@@ -12,11 +13,18 @@ function keysOf(value: unknown, prefix: string): string[] {
 describe('translation catalogues', () => {
     // t() is typed against English; this keeps Vietnamese from silently
     // falling back to English (or showing a raw key) for anything added later.
-    it('has exactly the English keys in Vietnamese, in every namespace', () => {
+    it('has exactly the English keys in Vietnamese, in every namespace, the ones loaded with their pages too', () => {
         const all = (catalogue: Record<string, unknown>) =>
             Object.entries(catalogue)
                 .flatMap(([namespace, entries]) => keysOf(entries, `${namespace}:`))
                 .sort()
         expect(all(resources.vi)).toEqual(all(resources.en))
+        expect(all({ settings: settingsResources.vi })).toEqual(all({ settings: settingsResources.en }))
+    })
+
+    it('adds the settings words to i18n once their pages load', async () => {
+        await i18n.changeLanguage('vi')
+        expect(i18n.t('settings:appearance.timeZone')).toBe('Múi giờ')
+        await i18n.changeLanguage('en')
     })
 })

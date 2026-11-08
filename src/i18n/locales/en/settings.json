@@ -1,0 +1,43 @@
+{
+  "failedToLoad": "Couldn't load your settings.",
+  "appearance": {
+    "theme": "Theme",
+    "themes": {
+      "system": "System",
+      "dark": "Dark",
+      "light": "Light"
+    },
+    "systemHint": "System: follows your device's light / dark setting.",
+    "language": "Language",
+    "timeZone": "Time zone",
+    "timeZoneNow": "Time there now: {{time}}",
+    "timeZoneHint": "Used to count study days and streaks. You can change it once every 24 hours.",
+    "timeZoneLocked": "You can change it again after {{time}} on {{date}} ({{gmt}})",
+    "confirm": {
+      "title": "Change your time zone to {{zone}}?",
+      "text": "Study days and streaks count in the new time zone from now on. You can only change it once every 24 hours.",
+      "cancel": "Cancel",
+      "change": "Change time zone"
+    }
+  },
+  "notifications": {
+    "studySessions": "Study sessions",
+    "phaseSound": "Phase change sound",
+    "phaseSoundHint": "Plays a short sound when switching between Focus and Break.",
+    "playSample": "Play sample"
+  },
+  "privacy": {
+    "directMessages": "Direct messages",
+    "allowServerMembers": "Allow direct messages from server members",
+    "allowServerMembersOn": "People who aren't your friends but share a server with you can message you.",
+    "allowServerMembersOff": "Only your friends can message you.",
+    "activity": "Activity",
+    "showStudyActivity": "Show study activity",
+    "showStudyActivityOn": "Friends and people in your servers see which room you're in or that you're studying alone. People in a room still see you in its list.",
+    "showStudyActivityOff": "No one sees that you're studying or which room you're in. People in a room still see you in its list."
+  },
+  "toasts": {
+    "notSaved": "Couldn't save your change",
+    "retry": "Try again"
+  }
+}

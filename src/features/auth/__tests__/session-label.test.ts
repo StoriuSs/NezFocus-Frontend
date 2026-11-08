@@ -27,6 +27,14 @@ describe('when a session was last active (10-settings › Số và giờ)', () =
         expect(lastActiveLabel(at(2026, 11, 7, 21, 48), NOW, t)).toBe('Hôm nay 21:48')
     })
 
+    it("reads the day and the time in the account's time zone (NFR-I18N-01)", () => {
+        const when = new Date('2026-11-06T16:00:00Z')
+        const now = new Date('2026-11-07T14:47:00Z')
+        expect(lastActiveLabel(when, now, t, 'Asia/Ho_Chi_Minh')).toBe('Hôm qua 23:00')
+        expect(lastActiveLabel(when, now, t, 'Asia/Tokyo')).toBe('Hôm nay 01:00')
+        expect(lastActiveLabel(new Date('2026-10-16T02:30:00Z'), now, t, 'America/Lima')).toBe('Thứ 5, 15/10/2026')
+    })
+
     it('words them in English too', () => {
         const en = i18n.getFixedT('en', 'auth')
         expect(lastActiveLabel(at(2026, 11, 6, 22, 15), NOW, en)).toBe('Yesterday 22:15')

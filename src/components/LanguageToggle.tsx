@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 /** Each language by its own name, so a reader finds theirs whatever is on screen. */
-const LANGUAGES = [
+export const LANGUAGE_NAMES = [
     { code: 'vi', name: 'Tiếng Việt' },
     { code: 'en', name: 'English' }
 ] as const
@@ -21,7 +21,7 @@ export function LanguageToggle({ className }: { className?: string }) {
 
     return (
         <div role='group' aria-label={t('language.label')} className={cn('flex items-center gap-1', className)}>
-            {LANGUAGES.map(({ code, name }, index) => (
+            {LANGUAGE_NAMES.map(({ code, name }, index) => (
                 <Fragment key={code}>
                     {index > 0 && (
                         <span aria-hidden='true' className='text-body-sm text-text-tertiary'>

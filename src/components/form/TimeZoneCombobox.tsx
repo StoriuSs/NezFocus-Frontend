@@ -16,6 +16,10 @@ interface TimeZoneComboboxProps extends Partial<FieldControlProps> {
     /** The IANA name picked. */
     value: string
     onChange: (zone: string) => void
+    /** Named by a heading instead of a field label: a settings group's title. */
+    'aria-labelledby'?: string
+    /** The zone was changed under 24 hours ago (S-ME-04 `timezone-rate-limited`). */
+    disabled?: boolean
 }
 
 /** A row of the list: the browser's zone first (a shortcut), then every zone. */
@@ -35,7 +39,15 @@ interface Row {
  * picks and closes; Esc closes and keeps the value.
  */
 export const TimeZoneCombobox = forwardRef<HTMLButtonElement, TimeZoneComboboxProps>(function TimeZoneCombobox(
-    { value, onChange, id, 'aria-describedby': describedBy, 'aria-invalid': invalid },
+    {
+        value,
+        onChange,
+        id,
+        'aria-describedby': describedBy,
+        'aria-invalid': invalid,
+        'aria-labelledby': labelledBy,
+        disabled
+    },
     ref
 ) {
     const { t, i18n } = useTranslation()
@@ -107,6 +119,8 @@ export const TimeZoneCombobox = forwardRef<HTMLButtonElement, TimeZoneComboboxPr
                     aria-haspopup='listbox'
                     aria-expanded={open}
                     aria-describedby={describedBy}
+                    aria-labelledby={labelledBy}
+                    disabled={disabled}
                     data-invalid={invalid || undefined}
                     onKeyDown={(event) => {
                         if (event.key === 'ArrowDown') {
@@ -117,7 +131,8 @@ export const TimeZoneCombobox = forwardRef<HTMLButtonElement, TimeZoneComboboxPr
                     className={cn(
                         'flex h-10 w-full items-center justify-between gap-2 rounded-input border border-border-input bg-surface-1 px-3 text-left text-body-sm text-text-primary transition-colors duration-micro',
                         'hover:border-text-secondary focus:border-primary focus:shadow-[inset_0_0_0_1px_rgb(var(--primary))] focus:outline-none',
-                        'data-[invalid]:border-danger'
+                        'data-[invalid]:border-danger',
+                        'disabled:cursor-not-allowed disabled:border-border disabled:bg-surface-2 disabled:text-text-tertiary'
                     )}
                 >
                     <span className='whitespace-nowrap'>{selected.label}</span>

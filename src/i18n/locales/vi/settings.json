@@ -1,0 +1,43 @@
+{
+  "failedToLoad": "Chưa tải được cài đặt của bạn.",
+  "appearance": {
+    "theme": "Giao diện",
+    "themes": {
+      "system": "Theo hệ thống",
+      "dark": "Tối",
+      "light": "Sáng"
+    },
+    "systemHint": "Theo hệ thống: đổi theo cài đặt sáng / tối của máy.",
+    "language": "Ngôn ngữ",
+    "timeZone": "Múi giờ",
+    "timeZoneNow": "Bây giờ ở múi giờ này: {{time}}",
+    "timeZoneHint": "Dùng để tính ngày học và chuỗi. Đổi tối đa 1 lần mỗi 24 giờ.",
+    "timeZoneLocked": "Đổi lại được sau {{time}} ngày {{date}} ({{gmt}})",
+    "confirm": {
+      "title": "Đổi múi giờ sang {{zone}}?",
+      "text": "Ngày học và chuỗi tính theo múi giờ mới từ bây giờ. Bạn chỉ đổi được 1 lần mỗi 24 giờ.",
+      "cancel": "Hủy",
+      "change": "Đổi múi giờ"
+    }
+  },
+  "notifications": {
+    "studySessions": "Phiên học",
+    "phaseSound": "Âm báo chuyển pha",
+    "phaseSoundHint": "Phát một âm ngắn khi chuyển giữa Tập trung và Nghỉ.",
+    "playSample": "Nghe thử"
+  },
+  "privacy": {
+    "directMessages": "Tin nhắn riêng",
+    "allowServerMembers": "Cho phép tin nhắn từ thành viên server",
+    "allowServerMembersOn": "Người chưa là bạn nhưng cùng ở một server nhắn tin riêng được cho bạn.",
+    "allowServerMembersOff": "Chỉ bạn bè nhắn tin riêng được cho bạn.",
+    "activity": "Hoạt động",
+    "showStudyActivity": "Hiện hoạt động học",
+    "showStudyActivityOn": "Bạn bè và người cùng server thấy bạn đang ở phòng nào hoặc đang học một mình. Người trong phòng vẫn thấy bạn trong danh sách của phòng.",
+    "showStudyActivityOff": "Không ai thấy bạn đang học hay đang ở phòng nào. Người trong phòng vẫn thấy bạn trong danh sách của phòng."
+  },
+  "toasts": {
+    "notSaved": "Chưa lưu được thay đổi",
+    "retry": "Thử lại"
+  }
+}

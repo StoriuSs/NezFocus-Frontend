@@ -17,6 +17,8 @@ import { useMinuteClock } from '@/hooks/useMinuteClock'
 import { useRevokeOtherSessions, useRevokeSession, useSessions } from '@/features/auth/api/useSessions'
 import { deviceName, lastActiveLabel } from '@/features/auth/lib/session-label'
 import type { SessionInfo } from '@/features/auth/types'
+import { useQuery } from '@tanstack/react-query'
+import { userKeys, type UserSettings } from '@/features/users'
 
 const DEVICE_ICONS = { desktop: Monitor, tablet: Tablet, mobile: Smartphone } as const
 
@@ -90,12 +92,14 @@ function SessionsLoading() {
 function SessionRow({ session }: { session: SessionInfo }) {
     const { t } = useTranslation('auth')
     const now = useMinuteClock()
+    // Read only: the AppShell loads the account's settings as the app opens.
+    const timeZone = useQuery<UserSettings>({ queryKey: userKeys.settings(), enabled: false }).data?.timezone
     const revoke = useRevokeSession()
     const name = deviceName(session, t)
     const Icon = DEVICE_ICONS[session.device] ?? Monitor
     const when = session.current
         ? t('settings.sessions.active')
-        : lastActiveLabel(new Date(session.lastActiveAt), now, t)
+        : lastActiveLabel(new Date(session.lastActiveAt), now, t, timeZone)
 
     async function signOut() {
         await revoke.mutateAsync(session.id)
