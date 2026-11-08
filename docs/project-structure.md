@@ -52,13 +52,14 @@ react-starter/
     │   │   ├── pages/         # SignIn, Register, Verify, Welcome, ForgotPassword,
     │   │   │                  #   ResetPassword, OAuthCallback, Settings
     │   │   ├── components/    # AuthCard, PasswordInput, PasswordRules, CodeInput, OAuthButtons,
-    │   │   │                  #   CodeReset, ChangePasswordDialog, DeleteAccountDialog,
+    │   │   │                  #   CodeReset, ChangePasswordDialog, SessionsSection,
+    │   │   │                  #   DeleteAccountSection, DeleteAccountDialog, PendingDeletionDialog,
     │   │   │                  #   ProtectedRoute, RequireRole
     │   │   ├── api/           # auth.api.ts (every call to /auth), keys.ts, the query hooks
     │   │   ├── hooks/         # useOAuthProviders, useCodeReset
     │   │   ├── lib/           # The pages' paths, the access token (in memory only), tab sync,
     │   │   │                  #   form errors and problems, password rules, sign-out reasons,
-    │   │   │                  #   the sign-in way remembered
+    │   │   │                  #   the sign-in way remembered, the deletion day, sending a reset code
     │   │   ├── auth.store.ts  # Who is signed in; sign-in, refresh, sign-out
     │   │   ├── routes.tsx     # authRoutes (sign-in pages, GuestOnlyRoute; /welcome, IncompleteOnlyRoute),
     │   │   │                  #   authAppRoutes (/settings/account; /settings redirects)
@@ -80,7 +81,7 @@ react-starter/
     │       ├── types.ts
     │       └── index.ts       # What other features may import
     ├── hooks/                 # Shared hooks: useTheme, useMediaQuery, useDebouncedValue, useCountdown, useMinuteClock…
-    ├── i18n/                  # i18next setup and the translation catalogues (settings.ts: words loaded with their pages)
+    ├── i18n/                  # i18next setup and the translation catalogues (settings.ts, deletion.ts: words loaded with their pages)
     ├── lib/                   # Shared, feature-free: the API client, and friends
     ├── pages/                 # Pages that belong to no feature: Study, Legal, NotFound
     ├── styles/fonts.css       # The self-hosted fonts
@@ -159,9 +160,10 @@ hooks and its types.
 else, beside the eight pages — sign-in, create an account, enter the code,
 complete your account, forgotten and reset password, the Google return page,
 and settings
-([auth/in-the-code.md](./auth/in-the-code.md)). Deleting an account
-(`DeleteAccountDialog`) is on the account page (`/settings/account`), until
-L14 builds its own group.
+([auth/in-the-code.md](./auth/in-the-code.md)). Deleting an account is the
+**Delete account** group on the account page (`/settings/account`,
+`DeleteAccountSection`); restoring one is the dialog `GuestOnlyRoute` shows
+over a sign-in page (`PendingDeletionDialog`).
 
 ### `src/lib/`
 
@@ -169,7 +171,7 @@ Shared and feature-free.
 
 | File | What it does |
 | --- | --- |
-| `api.ts` | The axios instance: the token, `snake_case` ⇄ `camelCase`, and the response interceptor: a 401 for an expired, unreadable or revoked token (`REFRESHABLE`: `AUTH_TOKEN_EXPIRED`, `AUTH_TOKEN_INVALID`, `AUTH_TOKEN_REVOKED`, since another tab may have left a newer session in the shared cookie, D-74) is refreshed and retried once; a 401 that a refresh cannot fix, or a 403 `AUTH_ACCOUNT_DISABLED`, signs out; a 403 `ACCOUNT_INCOMPLETE` opens "complete your account" |
+| `api.ts` | The axios instance: the token, `snake_case` ⇄ `camelCase`, and the response interceptor: a 401 for an expired, unreadable or revoked token (`REFRESHABLE`: `AUTH_TOKEN_EXPIRED`, `AUTH_TOKEN_INVALID`, `AUTH_TOKEN_REVOKED`, since another tab may have left a newer session in the shared cookie, D-74) is refreshed and retried once; a 401 that a refresh cannot fix, or a 403 `AUTH_ACCOUNT_DISABLED`, signs out; a 403 `ACCOUNT_INCOMPLETE` opens "complete your account"; a 403 `ACCOUNT_PENDING_DELETION` opens the restore dialog |
 | `api-error.ts` | Turns an error into the message the user sees, keyed on `meta.type` |
 | `api-types.ts`, `api-schema.d.ts` | Types generated from the backend's OpenAPI document — see [api-types.md](./api-types.md) |
 | `case-transform.ts` | The key conversion, which survives `FormData`, `Blob` and arrays |

@@ -44,7 +44,9 @@ loaded only when first opened (`lazy`).
 is sent on ([below](#already-signed-in-what-visitor-pages-do)). "Signed in,
 complete" means `ProtectedRoute`: a visitor is sent to sign in and brought
 back afterwards, an incomplete account to `/welcome`
-([below](#the-gate-an-incomplete-account-sees-only-welcome)). `/welcome` has
+([below](#the-gate-an-incomplete-account-sees-only-welcome)), and an account
+waiting to be deleted to sign in, under the restore dialog
+([session.md](./session.md#an-account-waiting-to-be-deleted)). `/welcome` has
 its own guard, `IncompleteOnlyRoute`.
 
 The pages before `/welcome` used to be `/sign-in`, `/sign-up` and
@@ -72,7 +74,11 @@ waiting for them travels as `?invite=`:
    `replace`, so the browser's Back button does not return to a sign-in page.
    An account that has not done "complete your account" goes to `/welcome`,
    keeping `next` and `invite`; any other goes to `safeNext(next)`. Without a
-   `?next=`, that is "home": the Study page, `/study`.
+   `?next=`, that is "home": the Study page, `/study`. An account waiting to
+   be deleted goes first to `/login`, keeping `next` and `invite` (and
+   `?method=password` after a password), with the email handed over, so the
+   restore dialog opens over the form as it was typed
+   ([session.md](./session.md#an-account-waiting-to-be-deleted)).
 
 **`safeNext()` only allows a page on this site.** It returns the path
 (with its query and `#` part) when the address resolves to this app's own
@@ -180,7 +186,8 @@ keeps it on its own history entry before moving on.
   `startSession(tokens, account)` ([session.md](./session.md#starting-a-session))
   and goes to `afterSignIn(account, search)`: a new or never-completed account
   to `/welcome`, keeping `next` and `invite`; a complete one to `?next=` or
-  home.
+  home; one waiting to be deleted to `/login`, on the code way, with the
+  address, under the restore dialog.
 - **Came to create an account, and the address had one** (`from: 'register'`
   and `created: false`): a toast says "You already have an account with this
   email, so you are signed in".
@@ -329,7 +336,9 @@ navigation state), a message or a limit on screen is cleared, and `next` and
    `password`.
 3. On `200` the store starts the session, the browser remembers the password
    as its way in (D-68), and the page goes to
-   `afterSignIn({ completed: isComplete }, search)`.
+   `afterSignIn({ completed: isComplete, pendingDeletion }, search, 'password')`
+   (`pendingDeletion` is `deletesAt !== null`): an account waiting to be
+   deleted stays here, by password, under the restore dialog.
 
 The form checks only the fields of the way on screen: the way reaches the
 schema through react-hook-form's `context` option (`useForm({ context:
@@ -366,8 +375,9 @@ said once: a reload does not say it again.
 | `signed-out-everywhere` | "One of your devices chose "Sign out the other devices" · sign in again" |
 | `security` | "Your session was closed to protect your account because it was in use in two places at once · sign in again, and change your password if that wasn't you" (a shield icon) |
 | `session-expired`, `signed-out` | "Your session has ended · sign in again to continue" |
+| `account-deleted` | "Your account will be deleted for good on dd/mm/yyyy · sign in before then to restore it" (a UserX icon; S-AUTH-03 `account-deleted`, D-141). The day comes from `peekDeletesAt()`, in the browser's time zone; without one, no banner. Shown on this device after asking to delete, and on the other devices the request signed out |
 
-The other reasons are toasts ([session.md](./session.md#why-a-session-ended-every-reason)).
+The other reason, `account-disabled`, is a toast ([session.md](./session.md#why-a-session-ended-every-reason)).
 
 "Forgot password?" and "Create an account" carry the email typed so far to
 the next page. A page that sends someone here may hand over an address; it is
@@ -438,7 +448,9 @@ same ones for a forgotten current password
    session of the account, and signs in here: an access token and a new
    refresh cookie.
 5. The page starts the session, says "New password set. Your other devices
-   were signed out.", and goes on with `afterSignIn`.
+   were signed out.", and goes on with `afterSignIn`. An account waiting to be
+   deleted goes to `/login?method=password` with the address, under the
+   restore dialog.
 
 | Refusal | What the page does |
 |---|---|
@@ -506,7 +518,8 @@ other tabs, and goes on as every sign-in does: `afterSignIn` with
 A new account made with Google, or one never completed, lands on `/welcome`
 with `via: 'google'`: the display name is filled in from Google, and the
 person still chooses a username and a password (every account has one,
-D-130). It runs once, even though React runs effects twice in development.
+D-130). An account waiting to be deleted lands on `/login` with its address,
+under the restore dialog. It runs once, even though React runs effects twice in development.
 
 What the page reads from its address:
 
@@ -540,6 +553,10 @@ wraps the visitor pages. A signed-in person who opens one:
 - `/login`, `/register`, `/verify`: is sent on, at once, with
   `afterSignIn`: to `/welcome` if the account is incomplete, else to
   `safeNext(?next=)`, or home.
+- Any visitor page, for an account waiting to be deleted: the page stays as
+  it is, and the restore dialog opens over it (loaded lazily); restored, the
+  person is sent on as above
+  ([session.md](./session.md#an-account-waiting-to-be-deleted)).
 - `/forgot-password` and `/reset-password`: these are the pages emails link
   to, so the person may well be signed in to another account. They see a card
   instead: "You're already signed in", "You're signed in as you@example.com",

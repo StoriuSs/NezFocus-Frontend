@@ -26,7 +26,9 @@ a few small Zustand stores, or in a component.**
 **Don't copy server data into a store.** The copy is what goes stale: a
 mutation updates the query cache, and the store keeps showing the old value.
 The auth store holds who is signed in (id, email, username, display name,
-roles) because route guards and role checks need it before any query runs;
+roles), and whether the account is complete or waits to be deleted
+(`isComplete`, `deletesAt`), because route guards and role checks need it
+before any query runs;
 the full profile is still the `useProfile` query, which the store seeds at
 sign-in so your menu (`MeMenu`) does not ask twice.
 
@@ -39,10 +41,12 @@ sign-in so your menu (`MeMenu`) does not ask twice.
 | `isAuthenticated` | A session is in hand |
 | `isSigningOut` | A sign-out is under way: guards wait instead of sending anyone to sign in |
 | `user` | `{ id, email, username, displayName, roles }`, or `null` |
+| `deletesAt` | When the account goes, if its owner asked to delete it (D-141), or `null`. While set, the guards keep the person on sign-in under the restore dialog |
 | `initAuth()` | On page load: restore the session from the refresh cookie, if this browser has one |
 | `signIn()`, `startSession()`, `resumeFromCookie()` | Start a session: with a password, from tokens the API returned (confirming the address, resetting the password), or after Google |
 | `getToken()`, `refreshToken()` | The access token for a request, refreshed when it is about to expire |
-| `logout(reason?, to?)` | End the session here, on the API and in the other tabs, then reload the app |
+| `logout(reason?, to?, deletesAt?)` | End the session here, on the API and in the other tabs, then reload the app |
+| `restoreAccount()`, `setRestoreAside()` | The restore dialog's two choices: restore the account, or end the session without a reload ([auth/session.md](./auth/session.md#an-account-waiting-to-be-deleted)) |
 
 **Tokens are not in the store.** The access token sits in
 `access-token.ts`'s module memory: not in `localStorage` or

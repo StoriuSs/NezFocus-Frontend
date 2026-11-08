@@ -10,8 +10,8 @@ The account page is `/settings/account` (S-ME-03, "Tài khoản" / "Account"; yo
 menu → **Settings**, or **Account** in the settings list column;
 [Settings.tsx](../../src/features/auth/pages/Settings.tsx)). `/settings` alone
 sends there, replacing itself in the history. Deleting the account is on this
-page too, below Sessions: the base's dialog, until a later slice (L14) builds
-its own group. The profile is a page of its own, `/settings/profile` (S-ME-02).
+page too, in its own group below Sessions. The profile is a page of its own,
+`/settings/profile` (S-ME-02).
 Both are for signed-in people only.
 
 - [The account page at a glance](#the-account-page-at-a-glance)
@@ -32,6 +32,7 @@ cards.
 | **Sign-in** | **Email** | The account's address, read only: "Codes are sent to this address." |
 | | **Password** | A hint: "Sign in with a code or your password. Your password also confirms important actions." On the right, a small outline **Change password** button opens the change-password dialog |
 | **Sessions** | one per device | Every signed-in device, this one first. Sign out any other one, or all of them at once |
+| **Delete account** | no rows | What deleting means, and a small red **Delete account** button that opens the confirm dialog |
 
 Every account has a password (D-130): it is chosen on "complete your account"
 ([pages-and-flows.md](./pages-and-flows.md#complete-your-account)), whether
@@ -88,7 +89,9 @@ the new password" ([session.md](./session.md#why-a-session-ended-every-reason)).
 **Forgot password?** emails a reset code to the account's address
 (`POST /auth/forgot-password`, recorded with
 `recordCodeSent('password-reset', email)`) and turns the dialog into the code
-mode. If a reset code went to this address under a minute ago
+mode. `sendResetCode(email)` in
+[reset-code.ts](../../src/features/auth/lib/reset-code.ts) does the sending,
+for this dialog and for the delete dialog. If a reset code went to this address under a minute ago
 (`resendAllowedAt('password-reset', email)` in
 [code-sent.ts](../../src/features/auth/lib/code-sent.ts)), it switches
 without sending another: that code still works (decided in L11). A send that
@@ -193,31 +196,67 @@ the list cannot be read: "Couldn’t load your sessions" and **Try again**.
 
 ## Delete the account
 
-On `/settings/account`, below Sessions: **Delete Account** opens a dialog
-([DeleteAccountDialog.tsx](../../src/features/auth/components/DeleteAccountDialog.tsx)):
-"This can't be undone. You'll be signed out on every device, and your personal
-details will be erased."
+Deleting waits 14 days (REQ-AUTH-09, D-141): asking only marks the account and
+ends every session. Signing in again before the day restores it; after it, the
+API deletes the account for good.
+
+**The group.** The last group on `/settings/account`, "Delete account"
+([DeleteAccountSection.tsx](../../src/features/auth/components/DeleteAccountSection.tsx)):
+"Your account is deleted for good after 14 days; sign in again before then to
+restore it.", then a small red **Delete account** button. The section owns the
+dialog's open state, and mounts the dialog only while it is open, so it opens
+empty every time.
+
+**The dialog** ("Delete your account?", 440 wide at most;
+[DeleteAccountDialog.tsx](../../src/features/auth/components/DeleteAccountDialog.tsx),
+S-ME-03 `delete-confirm`) says what deleting means and names the day: "Your
+account will be deleted for good on dd/mm/yyyy. Until then, sign in again to
+restore it. ...". The day is 14 days from when the dialog opened, in the
+account's time zone, read from the settings query the AppShell already loaded
+(`deletionDate` in
+[deletion-date.ts](../../src/features/auth/lib/deletion-date.ts)). The password
+field takes the focus (not **Forgot password?**, which comes first in the
+markup). A hidden field carries the email for password managers. The dialog
+cannot be closed while a request runs.
 
 **Why proof is needed.** A signed-in session alone (an unlocked laptop, a
-borrowed phone) must not be enough to destroy an account. The API refuses
+borrowed phone) must not be enough to delete an account. The API refuses
 without proof, so the dialog asks for the password. Every account has one
 (D-130); deleting with an emailed code, for accounts that once had none, is
 gone.
 
-**Delete my account** is enabled once the password is typed. It sends
+**Delete account** is enabled once the password is typed. It sends
 `POST /auth/account/delete` with `password` (and the language on screen, for
-the confirmation email). The API checks it, deletes the account, ends every
-session, clears the cookie, and emails a confirmation. The app then signs out
-and reloads at the home page with "Your account was deleted. We've emailed you
-a confirmation."
+the email). The API checks it, marks the account, ends every session, clears
+the cookie, emails the day the account goes, and answers with that day,
+`deletes_at`. The app then signs out with `logout('account-deleted', undefined,
+deletesAt)`: this tab lands on `/login` (no `?next`), under the banner "Your
+account will be deleted for good on dd/mm/yyyy · sign in before then to
+restore it" ([session.md](./session.md#an-account-waiting-to-be-deleted)).
+Other devices get the same banner at their next request.
 
 | Refusal | The dialog |
 |---|---|
-| `400 AUTH_CURRENT_PASSWORD_INVALID` | "That password isn't right.", under the password |
-| `429`, reason `wrong_password` | the wait, above the form |
+| `400 AUTH_CURRENT_PASSWORD_INVALID` | "That password isn't right", under the password, which takes the focus |
+| `429`, reason `wrong_password` | five wrong passwords in 15 minutes (D-121): a neutral message, "You entered a wrong password too many times. Try again in ...", counting down; **Delete account** stays disabled until then |
+| no answer, or anything else | "You're offline..." or the API's message, in red above the buttons |
 
-Closing the dialog clears it. What the API removes, and when the personal
-details are finally erased, is in the API starter's `docs/auth/accounts.md`.
+**Forgot password?** sends a reset code with `sendResetCode(email)`, closes
+this dialog, and opens the change-password dialog on the code
+(`PasswordDialog` with `startWith`, exported from
+[ChangePasswordDialog.tsx](../../src/features/auth/components/ChangePasswordDialog.tsx)).
+**Back** there, or a new password set, closes it and opens the delete dialog
+again, empty (`onBack`, `onDone`). A send that fails still opens the code
+mode, which says why, as in [Change the password](#change-the-password).
+
+**An Owner of servers.** The API refuses an Owner of servers with other
+members (`409 OWNERSHIP_TRANSFER_REQUIRED`). Its dialog (`delete-blocked-owner`,
+the servers to hand over) waits for servers in M1; until then no account owns
+one.
+
+What the API removes, and when, is in the API's `docs/account-deletion.md`.
+Restoring is on the sign-in page:
+[session.md](./session.md#an-account-waiting-to-be-deleted).
 
 ## Every API call on these screens
 
@@ -229,7 +268,9 @@ details are finally erased, is in the API starter's `docs/auth/accounts.md`.
 | Sessions | `GET /auth/sessions` | — | `sessions`: `id`, `browser`, `os`, `device`, `ip`, `last_active_at`, `current` |
 | Sign out one device | `DELETE /auth/sessions/{id}` | — | — |
 | Sign out the other devices | `DELETE /auth/sessions` | — | `revoked`, how many ended |
-| Delete | `POST /auth/account/delete` | `password`, `language` (with the cookie) | — |
+| Delete | `POST /auth/account/delete` | `password`, `language` (with the cookie) | `deletes_at`, when the account goes |
+| Delete: "Forgot password?" | `POST /auth/forgot-password` | `email`, `language` | — |
+| Restore (the dialog over the sign-in page) | `POST /auth/account/restore` | — | — |
 
 The app writes these in camelCase (`currentPassword`, `newPassword`,
 `lastActiveAt`); the API client turns them into snake_case on the way out, and

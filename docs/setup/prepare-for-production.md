@@ -423,8 +423,8 @@ could have checked them. Tick each one.
       API's (the API starter's `docs/setup/uptime-check.md`).
 - [ ] After your second deploy: rehearse `./deploy.sh --rollback` while it is
       calm, then `./deploy.sh` to come forward again.
-- [ ] Delete the test account (Settings → Account → Delete Account), or keep it as your
-      own.
+- [ ] Delete the test account (Settings → Account → Delete account; it is gone
+      14 days later unless you sign in to it again), or keep it as your own.
 
 Do not run the end-to-end tests against production: they create accounts and
 read codes from Mailpit ([../e2e-testing.md](../e2e-testing.md)).

@@ -24,7 +24,7 @@ Everything about signing in is in `src/features/auth/`, except the API client
 
 ```
 src/features/auth/
-├── index.ts               what other features may import (store, ProtectedRoute, RequireRole, DeleteAccountDialog)
+├── index.ts               what other features may import (store, ProtectedRoute, RequireRole, AUTH_PATHS, apiSession)
 ├── auth.store.ts          the session: who is signed in, sign in, sign out, tokens
 ├── types.ts               the API's auth response shapes
 ├── routes.tsx             the routes
@@ -44,19 +44,21 @@ src/features/auth/
 │   ├── tab-sync.ts        telling the other tabs
 │   ├── sign-out-reason.ts why a session ended, from the API's data.reason
 │   ├── sign-out-notice.ts which reasons the sign-in page's banner says, and the toasts for the rest
+│   ├── deletion-date.ts   the day an account waiting to be deleted goes, and the days left
+│   ├── reset-code.ts      sendResetCode(): "Forgot password?" in the change-password and delete dialogs
 │   ├── session-label.ts   a session's name ("Safari · macOS") and when it was last used
 │   ├── sign-in-method.ts  the sign-in page's two ways, and the one this browser remembers
 │   ├── page-state.ts      what one page hands the next
 │   ├── form-problem.ts    an API refusal → a message kept as a key (every auth page, the change-password dialog)
-│   ├── form-errors.ts     an API refusal → what a form shows (the delete dialog); formatWait()
+│   ├── form-errors.ts     formatWait(), RateLimitReason
 │   ├── username-prefill.ts    the username "complete your account" starts with
 │   ├── schemas.ts         newPasswordIssue(): what is wrong with a new password, as a key
 │   ├── password-rules.ts  the API's password rules, mirrored
 │   ├── oauth.ts           Google: the button's address, the callback's errors
 │   └── code-sent.ts       when a code was last emailed (for the timers)
 ├── pages/                 the eight pages
-├── components/            the pieces the pages share (CodeInput, CodeReset among them), the Sessions group, the
-│                          change-password and delete dialogs, and the
+├── components/            the pieces the pages share (CodeInput, CodeReset among them), the Sessions and
+│                          Delete account groups, the change-password, delete and restore dialogs, and the
 │                          route guards (ProtectedRoute, GuestOnlyRoute, IncompleteOnlyRoute, RequireRole)
 └── __tests__/             unit tests
 ```
@@ -67,11 +69,12 @@ src/features/auth/
 
 | File | What it holds |
 |---|---|
-| [auth.store.ts](../../src/features/auth/auth.store.ts) | `useAuthStore` (zustand): `isAuthenticated`, `isComplete`, `isSigningOut`, `user`, and `initAuth`, `signIn`, `startSession`, `resumeFromCookie`, `logout`, `getToken`, `refreshToken`, `markIncomplete`, `markComplete`, `takeSignOutReason`, `peekSignOutReason`. Inside: one refresh at a time, sign out once, where a sign-out lands ([session.md](./session.md)) |
+| [auth.store.ts](../../src/features/auth/auth.store.ts) | `useAuthStore` (zustand): `isAuthenticated`, `isComplete`, `isSigningOut`, `isLoadingAccount`, `deletesAt`, `user`, and `initAuth`, `signIn`, `startSession`, `resumeFromCookie`, `logout`, `getToken`, `refreshToken`, `markIncomplete`, `markComplete`, `markPendingDeletion`, `restoreAccount`, `setRestoreAside`, `takeSignOutReason`, `peekSignOutReason`, `peekDeletesAt`. Inside: one refresh at a time, sign out once, where a sign-out lands ([session.md](./session.md)) |
 | [access-token.ts](../../src/features/auth/lib/access-token.ts) | The access token and when it expires, in a module variable: `setAccessToken`, `clearAccessToken`, `accessTokenValidFor(margin)` |
 | [tab-sync.ts](../../src/features/auth/lib/tab-sync.ts) | `tellOtherTabs('signed-in' \| 'signed-out')`, `onOtherTab(listener)`, over a `BroadcastChannel` named `auth` |
-| [sign-out-reason.ts](../../src/features/auth/lib/sign-out-reason.ts) | The `SignOutReason` names, and `signOutReasonOf(error)`: the API's `data.reason` → a reason |
-| [sign-out-notice.ts](../../src/features/auth/lib/sign-out-notice.ts) | `sessionEndedOf(reason)`: the sign-in page's banner for a session that ended by itself or elsewhere (`SessionEnded`), or null; `isSessionEnded(reason)`; `announceSignOut(reason)`: the toast for the other reasons |
+| [sign-out-reason.ts](../../src/features/auth/lib/sign-out-reason.ts) | The `SignOutReason` names, and `signOutReasonOf(error)`: the API's `data.reason` → a reason (`account_deleted` is `account-deleted` with a `deletes_at`, `account-disabled` without); `deletesAtOf(error)`: that `deletes_at` |
+| [sign-out-notice.ts](../../src/features/auth/lib/sign-out-notice.ts) | `sessionEndedOf(reason)`: the sign-in page's banner for a session that ended by itself or elsewhere (`SessionEnded`), or null; `isSessionEnded(reason)`; `announceSignOut(reason)`: the toast for the other reason, `account-disabled` |
+| [deletion-date.ts](../../src/features/auth/lib/deletion-date.ts) | `DELETION_WAIT_MS` (14 days); `deletionDate(deletesAt, timeZone?)` (dd/mm/yyyy in both languages); `deletionDaysLeft(deletesAt, now, timeZone?)` (calendar days, at least 1) ([session.md](./session.md#an-account-waiting-to-be-deleted)) |
 
 **Talking to the API**
 
@@ -82,21 +85,23 @@ src/features/auth/
 | [useAuthOptions.ts](../../src/features/auth/api/useAuthOptions.ts) | `useAuthOptions()`: `GET /auth/options` once per page load. `providers` (empty while loading or when the API cannot be asked) |
 | [oauth.ts](../../src/features/auth/lib/oauth.ts) | `oauthStartUrl(provider, next)` (sent to the API as `?redirect=`, its name); [useOAuthProviders()](../../src/features/auth/hooks/useOAuthProviders.ts) (the providers both the API and this app know: `google`); `oauthFailure(value)` (the callback's `?error=`) |
 | [form-problem.ts](../../src/features/auth/lib/form-problem.ts) | `requestFailure(error)` → `RequestFailure` (`type`, `limit`, `passwordRules`, `offline`, `message`); `Message` (a key and its values); `useMessageText()`. Used by every auth page and the change-password dialog ([forms-and-errors.md](./forms-and-errors.md#messages-kept-as-keys)) |
-| [form-errors.ts](../../src/features/auth/lib/form-errors.ts) | `authFormError(error)`, for the delete dialog; `RateLimitReason`; `formatWait(seconds)` for every page ([forms-and-errors.md](./forms-and-errors.md#turning-a-refusal-into-a-message)) |
+| [form-errors.ts](../../src/features/auth/lib/form-errors.ts) | `RateLimitReason`; `formatWait(seconds)` for every page and dialog ([forms-and-errors.md](./forms-and-errors.md#turning-a-refusal-into-a-message)) |
 | [keys.ts](../../src/features/auth/api/keys.ts) | `authKeys`: `all`, `options()`, `sessions()` |
 | [useSessions.ts](../../src/features/auth/api/useSessions.ts) | `useSessions()`: `GET /auth/sessions`, read again on mount and on window focus, no retry; `useRevokeSession()`: one device, its row dropped from the cache on success; `useRevokeOtherSessions()`: every other device, the cache left with this one ([account-settings.md](./account-settings.md#sessions)) |
 | [useChangePassword.ts](../../src/features/auth/api/useChangePassword.ts) | `useChangePassword()`; on success it invalidates `authKeys.sessions()`, since the other devices were signed out |
+| [useDeleteAccount.ts](../../src/features/auth/api/useDeleteAccount.ts) | `useDeleteAccount()`: resolves to `deletesAt`, when the account goes; no error toast (the dialog says what went wrong) |
+| [reset-code.ts](../../src/features/auth/lib/reset-code.ts) | `sendResetCode(email)`: emails a reset code (unless one went under a minute ago) and resolves to what went wrong, or null. For **Forgot password?** in the change-password and delete dialogs |
 | [session-label.ts](../../src/features/auth/lib/session-label.ts) | `deviceName(session, t)` ("Safari · macOS", or "Unknown browser"); `lastActiveLabel(when, now, t, timeZone?)` ("Today 21:30", "Yesterday 22:15", "Fri, 16/10/2026", or the date alone after a year), in the account's time zone (`settingsQuery`), the browser's until it has loaded |
 
 **Pages and navigation**
 
 | File | What it holds |
 |---|---|
-| [paths.ts](../../src/features/auth/lib/paths.ts) | `AUTH_PATHS`, `isSignInFlowPage`, `safeNext`, `withFlow` (keeps `?next` and `?invite`), `signInPath(next?, method?)` (`'password'` adds `?method=password`), `afterSignIn` ([pages-and-flows.md](./pages-and-flows.md#where-the-person-goes-afterwards-next-and-invite)) |
+| [paths.ts](../../src/features/auth/lib/paths.ts) | `AUTH_PATHS`, `isSignInFlowPage`, `safeNext`, `withFlow` (keeps `?next` and `?invite`), `signInPath(next?, method?)` (`'password'` adds `?method=password`), `afterSignIn(account, search, method?)` with `SignedInAccount` (`completed`, `pendingDeletion`) ([pages-and-flows.md](./pages-and-flows.md#where-the-person-goes-afterwards-next-and-invite)) |
 | [page-state.ts](../../src/features/auth/lib/page-state.ts) | `authPageState(email, { from, via })`, `useAuthPageState()` |
 | [sign-in-method.ts](../../src/features/auth/lib/sign-in-method.ts) | `SignInMethod` (`'code'` or `'password'`), `METHOD_PARAM` (`?method=`), `signInMethodOf(search)` (the URL's, else the remembered one), `rememberedSignInMethod()`, `rememberSignInMethod(method)` (D-68) |
 | [routes.tsx](../../src/features/auth/routes.tsx) | `authRoutes`: the seven pages outside the app, lazily loaded, each wrapped in its guard; `authAppRoutes`: `/settings/account` (`AUTH_PATHS.settings`), and `/settings`, which redirects there with `replace` |
-| [ProtectedRoute.tsx](../../src/features/auth/components/ProtectedRoute.tsx) | `ProtectedRoute` (an incomplete account goes to `/welcome`), `IncompleteOnlyRoute` (guards `/welcome`), `GuestOnlyRoute` (with `explainIfSignedIn`), and the "You're already signed in" card |
+| [ProtectedRoute.tsx](../../src/features/auth/components/ProtectedRoute.tsx) | `ProtectedRoute` (an account waiting to be deleted goes to sign-in, an incomplete one to `/welcome`), `IncompleteOnlyRoute` (guards `/welcome`), `GuestOnlyRoute` (with `explainIfSignedIn`; shows the lazily loaded restore dialog over the page for an account waiting to be deleted), and the "You're already signed in" card |
 | [RequireRole.tsx](../../src/features/auth/components/RequireRole.tsx) | `RequireRole`, `useHasRole` |
 
 **Forms**
@@ -128,15 +133,17 @@ src/features/auth/
 
 | File | What it is |
 |---|---|
-| [AuthCard.tsx](../../src/features/auth/components/AuthCard.tsx) | `AuthCard`, the frame of every sign-in page, and `Notice`, a message in it (`info`, `success`, `error`), still used by the delete dialog and `/auth/callback` |
+| [AuthCard.tsx](../../src/features/auth/components/AuthCard.tsx) | `AuthCard`, the frame of every sign-in page, and `Notice`, a message in it (`info`, `success`, `error`), still used by `/auth/callback` |
 | [PasswordInput.tsx](../../src/features/auth/components/PasswordInput.tsx) | A password field with a show/hide button |
 | [PasswordRules.tsx](../../src/features/auth/components/PasswordRules.tsx) | The five conditions under a new-password field (C-22): unmet, met, error |
 | [CodeInput.tsx](../../src/features/auth/components/CodeInput.tsx) | Six boxes for an emailed code (C-23), on verify, reset-password and the change-password dialog's code mode; `onComplete` at the sixth digit; states `default`, `verifying`, `error`, `disabled` |
 | [OAuthButtons.tsx](../../src/features/auth/components/OAuthButtons.tsx) | The "or" divider, then `children` (the sign-in page's other way), then "Continue with Google" when the API offers it; takes the page's `next`, and `disabled` (a disabled button instead of the link while the form is sent). Nothing when there is neither |
 | [SessionsSection.tsx](../../src/features/auth/components/SessionsSection.tsx) | The account page's **Sessions** group: every signed-in device, this one first; **Sign out** on a row, **Sign out the other devices** with a confirm dialog; the loading and failed states ([account-settings.md](./account-settings.md#sessions)) |
 | [CodeReset.tsx](../../src/features/auth/components/CodeReset.tsx) | The pieces of `useCodeReset`, each laid out by its user: `ResetCodeField` (the code, with an optional visible label), `ResetPasswordField` (the new password and its conditions), `ResetNotice` (a code limit, a sending limit, or a refusal, first that applies), `ResendLine` ("Send again" and its countdown) |
-| [ChangePasswordDialog.tsx](../../src/features/auth/components/ChangePasswordDialog.tsx) | The account page's **Change password** button and its dialog: with the current password (`useChangePassword`), or, after **Forgot password?**, with an emailed code (`useCodeReset`, then `startSession`, D-74) ([account-settings.md](./account-settings.md#change-the-password)) |
-| [DeleteAccountDialog.tsx](../../src/features/auth/components/DeleteAccountDialog.tsx) | "Delete account", used on the account page (`/settings/account`) until L14 builds its own group; asks for the password |
+| [ChangePasswordDialog.tsx](../../src/features/auth/components/ChangePasswordDialog.tsx) | The account page's **Change password** button (`ChangePasswordDialog`) and the dialog itself (`PasswordDialog`): with the current password (`useChangePassword`), or, after **Forgot password?**, with an emailed code (`useCodeReset`, then `startSession`, D-74). `PasswordDialog` is exported for the delete group, which opens it on the code (`startWith`) and takes it back with `onBack` and `onDone` ([account-settings.md](./account-settings.md#change-the-password)) |
+| [DeleteAccountSection.tsx](../../src/features/auth/components/DeleteAccountSection.tsx) | The account page's **Delete account** group: the description, the button, and which dialog is open, the delete dialog or the password dialog after **Forgot password?** ([account-settings.md](./account-settings.md#delete-the-account)) |
+| [DeleteAccountDialog.tsx](../../src/features/auth/components/DeleteAccountDialog.tsx) | "Delete your account?", controlled by the group (`open`, `onOpenChange`, `onForgot`): the day the account goes, the password, the refusals; done, `logout('account-deleted', undefined, deletesAt)` |
+| [PendingDeletionDialog.tsx](../../src/features/auth/components/PendingDeletionDialog.tsx) | The restore dialog over a sign-in page (S-AUTH-03 `pending-deletion`), a default export loaded lazily by `GuestOnlyRoute`: **Restore account** (`restoreAccount`) or **Not now** (`setRestoreAside`) ([session.md](./session.md#an-account-waiting-to-be-deleted)) |
 
 `SetPasswordSettings`, `useSignInMethods`, `sign-up-password.ts` and the
 deletion-code hook are gone: every account has a password (D-130), so there
@@ -146,7 +153,7 @@ is no first password to set and no code to delete an account with.
 
 | File | Its part in signing in |
 |---|---|
-| [src/lib/api.ts](../../src/lib/api.ts) | The axios client: adds the token, refreshes and retries once, signs out when the session is over, and calls `ApiSession.accountIncomplete()` on `403 ACCOUNT_INCOMPLETE` ([session.md](./session.md#how-the-api-client-handles-answers)) |
+| [src/lib/api.ts](../../src/lib/api.ts) | The axios client: adds the token, refreshes and retries once, signs out when the session is over, calls `ApiSession.accountIncomplete()` on `403 ACCOUNT_INCOMPLETE`, and `ApiSession.pendingDeletion(deletesAt)` on `403 ACCOUNT_PENDING_DELETION` ([session.md](./session.md#how-the-api-client-handles-answers)) |
 | [src/lib/api-error.ts](../../src/lib/api-error.ts) | Reads the API's error envelope; `getApiErrorMessage` translates a type |
 | [src/lib/case-transform.ts](../../src/lib/case-transform.ts) | camelCase in the app, snake_case on the wire |
 | [src/lib/safe-storage.ts](../../src/lib/safe-storage.ts) | `localStorage` and `sessionStorage` that never throw (some browsers block them) |
@@ -244,6 +251,9 @@ public.
 `ProtectedRoute` lets a signed-in person through only once the account is
 complete (`isComplete` in the store); an incomplete one goes to
 `/welcome?next=<the page>` ([pages-and-flows.md](./pages-and-flows.md#the-gate-an-incomplete-account-sees-only-welcome)).
+An account waiting to be deleted (`deletesAt` set) goes to
+`/login?next=<the page>`, where `GuestOnlyRoute` keeps the page and shows the
+restore dialog over it ([session.md](./session.md#an-account-waiting-to-be-deleted)).
 
 **Part of a page, by role:**
 
@@ -289,16 +299,22 @@ Read state with a selector (`useAuthStore((s) => s.user)`); outside React,
 | `isAuthenticated` | A session is in hand |
 | `isComplete` | The account has done "complete your account" (D-61). `true` when signed out |
 | `isSigningOut` | A sign-out is reloading the app; guards should not send anyone anywhere |
+| `isLoadingAccount` | Signed in, profile still on the way: `GuestOnlyRoute` keeps the sign-in page as it is (form as typed) until it knows whether the account waits to be deleted |
+| `deletesAt` | When the account goes (ISO 8601), if its owner asked to delete it and has not restored it (D-141); `null` otherwise and when signed out |
 | `user` | `{ id, email, username, displayName, roles }`, or `null` |
 | `initAuth()` | On page load: restore the session from the cookie, if this browser may have one. Resolves `true` when signed in |
 | `signIn(email, password)` | `POST /auth/login`, then start the session. Rejects with the API's error |
 | `startSession(tokens, account?)` | Take up a session another route answered with (the emailed code, reset). `account.completed` sets `isComplete` until the profile arrives |
 | `resumeFromCookie()` | Take up a session from the cookie alone (after Google). Resolves `false` if there is none |
-| `logout(reason?, to?)` | Sign out here, on the API and in other tabs, then reload at `to` (default: [by reason](./session.md#why-a-session-ended-every-reason)) |
+| `logout(reason?, to?, deletesAt?)` | Sign out here, on the API and in other tabs, then reload at `to` (default: [by reason](./session.md#why-a-session-ended-every-reason)). With `account-deleted`, `deletesAt` (or the last refused refresh's) is kept for the sign-in page's banner |
 | `getToken()` | A token for a request: the current one, or a fresh one when it has under a minute left |
 | `refreshToken()` | A fresh token now, whatever the age of the current one. `undefined` when the session is over; rejects when the API could not be asked |
 | `markIncomplete()` | The API answered `ACCOUNT_INCOMPLETE`: `isComplete` becomes `false` (only while signed in) |
 | `markComplete()` | "Complete your account" is done, here or in another tab: `isComplete` becomes `true`, and the profile is fetched again |
+| `markPendingDeletion(deletesAt)` | The API answered `ACCOUNT_PENDING_DELETION`: `deletesAt` is set (only while signed in) |
+| `restoreAccount()` | **Restore account** in the restore dialog: `POST /auth/account/restore`, `deletesAt` back to `null`, the profile fetched again. Rejects with the API's error |
+| `setRestoreAside()` | **Not now** in the restore dialog: forget the session here, tell the other tabs `signed-out`, and call `POST /auth/logout`; no reload, so the page stays as typed |
+| `peekDeletesAt()` | The day kept by the last `account-deleted` sign-out, left in place (it goes with the reason) |
 | `takeSignOutReason(which?)` | The reason the last sign-out left, removed as it is read. With `which`, only a reason it accepts is taken; another stays for its reader (`App.tsx`'s toasts, the sign-in page's banner) |
 | `peekSignOutReason()` | The same reason, left in place: read while rendering, taken in an effect |
 
@@ -319,7 +335,8 @@ Read state with a selector (`useAuthStore((s) => s.user)`); outside React,
 | `revokeSession(id)` | `DELETE /auth/sessions/{id}` | — |
 | `revokeOtherSessions()` | `DELETE /auth/sessions` | how many sessions ended (the answer's `revoked`) |
 | `changePassword(currentPassword, newPassword)` | `POST /auth/change-password` (with `language`) | — |
-| `deleteAccount(password)` | `POST /auth/account/delete` (with `language`) | — |
+| `deleteAccount(password)` | `POST /auth/account/delete` (with `language`) | `deletesAt`, when the account goes |
+| `restoreAccount()` | `POST /auth/account/restore` | — |
 
 `register`, `verifyEmail`, `resendVerification`, `signInMethods`,
 `sendPasswordSetCode`, `setPassword` and `sendAccountDeletionCode` are gone
@@ -340,7 +357,8 @@ What every route accepts and answers: the API starter's
 | `localStorage` | `auth:session` | `"1"`: this browser may be signed in | the store |
 | `localStorage` | `auth:sign-in-method` | `code` or `password`: the way of the last sign-in that worked, which `/login` opens on (D-68) | sign-in (password), verify (code) |
 | `sessionStorage` | `auth:sign-out-reason` | the reason of the last sign-out, until shown (a toast, or the sign-in page's banner) | the store; a sign-out without a reason removes it |
-| `sessionStorage` | `auth:code-sent:sign-in:<address>`, `auth:code-sent:password-reset:<address>` | when the last code was sent | register, sign-in (by code), verify (send again), forgot-password, reset-password (send again), the change-password dialog ("Forgot password?", send again) |
+| `sessionStorage` | `auth:deletes-at` | with the reason `account-deleted`: when the account goes, for the sign-in page's banner | the store (`logout`, or a page load whose refresh was refused); removed with the reason |
+| `sessionStorage` | `auth:code-sent:sign-in:<address>`, `auth:code-sent:password-reset:<address>` | when the last code was sent | register, sign-in (by code), verify (send again), forgot-password, reset-password (send again), "Forgot password?" in the change-password and delete dialogs (`sendResetCode`), and the change-password dialog's send again |
 | React Query | `['auth', 'options']` | the API's options, for the page load | `useAuthOptions` |
 | React Query | `['auth', 'sessions']` | the signed-in devices, on the account page | `useSessions`; changed by the two sign-out hooks, invalidated by `useChangePassword` and by the change-password dialog after a reset by code |
 | React Query | `['users', 'profile']` | the profile from `/users/me` | the store at sign-in, `useProfile` |
@@ -353,22 +371,23 @@ The refresh cookie is not in this list: the app cannot see it.
 
 | File | Covers |
 |---|---|
-| `src/features/auth/__tests__/auth.store.test.ts` | The access token in memory only, never in `localStorage` or `sessionStorage`; a refused refresh ends the session with its reason; an ended session lands on sign-in, by password when the password was changed, and comes back afterwards; each reader (`App.tsx`'s toasts, the sign-in banner) takes only its kind of reason; signing out clears the token and the cached data, tells the other tabs and never lands off-site; a sign-out in another tab followed here; `isComplete` from the profile, or from the code's answer when the profile does not arrive; `markIncomplete` and `markComplete`, and `ACCOUNT_INCOMPLETE` ignored once signed out |
-| `src/lib/__tests__/api.test.ts` | The client: the bearer token, refresh and retry once (never twice), sign-out only when the session really ended (not on a 503 or an ordinary 403), a revoked session that takes up a newer one of this browser (a reset in another tab, D-74), `403 ACCOUNT_INCOMPLETE` opens "complete your account" and keeps the session, the auth routes left alone |
-| `src/features/auth/__tests__/pages.test.tsx` | Sign in (S-AUTH-03): opens on the code and sends one, keeping `next` and `invite`; the code way's own words for an empty email; switching to the password and back keeps the email, the URL keeps the way; a password sign-in goes to `next` and is remembered (D-68), and the page opens on the way remembered; an incomplete account to `/welcome`; one message for a wrong password or an unknown address, the password asked again; the address's limits (another address may go on), the network's whatever the address, the code emails' pointing to the password; the banner for a session that ended, said once, on the password when it was changed elsewhere, and a session closed for safety; the email handed to "forgot password". Forgot and reset (S-AUTH-04): the code sent with the address out of the URL, Back to sign in by password, no address goes to step one, the hedged words and nothing sent at six digits, the new password kept when only the code was wrong, the password checked before sending, sending again in the same hedged words, the network's wrong-code limit with the password kept; `/register`: the code sent and `next` / `invite` kept with the address out of the URL, no second email within the minute, the address's and the network's limits, a message that follows the language switch; `/verify`: no address goes to `/register`, sent at the sixth digit, a pasted code, "you already have an account", a wrong code, a dead code and "Send a new code", too many wrong codes, the countdown from the real send time, a refused resend, Back, "Sign in with password", a code that signs in remembered as the way (D-68); Google: never off-site, an incomplete account to `/welcome` with `via: 'google'` |
+| `src/features/auth/__tests__/auth.store.test.ts` | The access token in memory only, never in `localStorage` or `sessionStorage`; a refused refresh ends the session with its reason; an ended session lands on sign-in, by password when the password was changed, and comes back afterwards; each reader (`App.tsx`'s toasts, the sign-in banner) takes only its kind of reason; signing out clears the token and the cached data, tells the other tabs and never lands off-site; a sign-out in another tab followed here; `isComplete` from the profile, or from the code's answer when the profile does not arrive; `markIncomplete` and `markComplete`, and `ACCOUNT_INCOMPLETE` ignored once signed out; an account waiting to be deleted (D-141): `deletesAt` from the profile and cleared once restored, kept when the restore fails, "Not now" signing out here and in other tabs without a reload, a deletion landing on sign-in with its day said once, the day a refused refresh gives kept, `ACCOUNT_PENDING_DELETION` ignored once signed out |
+| `src/lib/__tests__/api.test.ts` | The client: the bearer token, refresh and retry once (never twice), sign-out only when the session really ended (not on a 503 or an ordinary 403), a revoked session that takes up a newer one of this browser (a reset in another tab, D-74), `403 ACCOUNT_INCOMPLETE` opens "complete your account" and keeps the session, `403 ACCOUNT_PENDING_DELETION` asks to restore and keeps the session (D-141), the auth routes left alone |
+| `src/features/auth/__tests__/pages.test.tsx` | Sign in (S-AUTH-03): opens on the code and sends one, keeping `next` and `invite`; the code way's own words for an empty email; switching to the password and back keeps the email, the URL keeps the way; a password sign-in goes to `next` and is remembered (D-68), and the page opens on the way remembered; an incomplete account to `/welcome`; one message for a wrong password or an unknown address, the password asked again; the address's limits (another address may go on), the network's whatever the address, the code emails' pointing to the password; the banner for a session that ended, said once, on the password when it was changed elsewhere, and a session closed for safety; the email handed to "forgot password". Forgot and reset (S-AUTH-04): the code sent with the address out of the URL, Back to sign in by password, no address goes to step one, the hedged words and nothing sent at six digits, the new password kept when only the code was wrong, the password checked before sending, sending again in the same hedged words, the network's wrong-code limit with the password kept; `/register`: the code sent and `next` / `invite` kept with the address out of the URL, no second email within the minute, the address's and the network's limits, a message that follows the language switch; `/verify`: no address goes to `/register`, sent at the sixth digit, a pasted code, "you already have an account", a wrong code, a dead code and "Send a new code", too many wrong codes, the countdown from the real send time, a refused resend, Back, "Sign in with password", a code that signs in remembered as the way (D-68); Google: never off-site, an incomplete account to `/welcome` with `via: 'google'`; an account waiting to be deleted: the dated banner after a deletion, and a sign-in stopped at the restore dialog with the form as typed (D-141) |
 | `src/features/auth/__tests__/welcome.test.tsx` | "Complete your account": the prefilled username, a taken prefill emptied without an error, a name typed that is taken, every wrong field marked and the first focused, the username refused as the password (D-66), the full request then `next`, picking a time zone by searching, `USERNAME_CONFLICT` on submit, another tab finishing first, Google's name filled in |
 | `src/features/auth/__tests__/form-problem.test.ts` | `requestFailure`: limits as a moment and a reason, offline, a 5xx, the API's type, the refused password rules; a message words itself again after the language changes; `formatWait` in seconds, minutes and hours |
 | `src/features/auth/__tests__/username-prefill.test.ts` | The username made from the email |
-| `src/features/auth/__tests__/delete-account.test.tsx` | The delete dialog: nothing happens before the password |
+| `src/features/auth/__tests__/delete-account.test.tsx` | The Delete account group and dialog (S-ME-03, D-141): the day it goes, 14 days ahead, and nothing before the password; the request, then a sign-out with the API's day; a wrong password under the field; five wrong passwords waited out (D-121); "Forgot password?" sends a code and hands over to the password dialog, whose Back comes back here |
+| `src/features/auth/__tests__/deletion-date.test.ts` | The day an account goes: 14 days after the request, written dd/mm/yyyy in the zone asked for; days left counted in calendar days, never 0 |
 | `src/features/auth/__tests__/auth-api.test.ts` | A code asked for in the language on screen, without a bearer token; signing in with the code alone; completing the account with the bearer token and the language; deleting with the password |
-| `src/features/auth/__tests__/paths.test.ts` | `safeNext` never leaves the site, nor returns to a sign-in page; `withFlow` carries `next` and `invite` only; `afterSignIn`; `signInPath`, with `?method=password` when asked |
-| `src/features/auth/__tests__/sign-out-reason.test.ts` | The API's `data.reason` names what another device did (D-65, D-75); a sign-out from the list of sessions (`revoked`) is worded like an expiry |
+| `src/features/auth/__tests__/paths.test.ts` | `safeNext` never leaves the site, nor returns to a sign-in page; `withFlow` carries `next` and `invite` only; `afterSignIn`, which keeps an account waiting to be deleted on sign-in, the way it came and the flow kept; `signInPath`, with `?method=password` when asked |
+| `src/features/auth/__tests__/sign-out-reason.test.ts` | The API's `data.reason` names what another device did (D-65, D-75); a sign-out from the list of sessions (`revoked`) is worded like an expiry; `account_deleted` with a day (waiting, `account-deleted`) told from one without (gone, `account-disabled`) |
 | `src/features/auth/__tests__/change-password-dialog.test.tsx` | The change-password dialog (S-ME-03): the current password and one new one, no second copy (01 Q14); the unmet conditions marked once sent and cleared as the password gets fixed; the username named when the new password is the username (D-66); closed after a change that worked, with the toast and the sessions read again; a wrong current password under its field, focused, the new one kept; five wrong ones waited out with the button off (D-73). Forgot the current password (D-74): a reset code emailed and the code form shown; no second code within the minute, back and forth (L11); the password set with the code and the new session taken up; a failed send explained in the dialog |
 | `src/features/auth/__tests__/schemas.test.ts` | `newPasswordIssue`: a good password passes; an unmet condition points at the grid; the email or the username named in the field (D-66); the length cap named in the field |
 | `src/features/auth/__tests__/sessions-section.test.tsx` | The Sessions group (S-ME-03, D-75): each device named, this one first and active, the others with their last use and network; one device signed out at once without asking and its row dropped; the row kept when that fails; the question before signing out the other devices, then only this one left; nobody signed out on Cancel; "Only this device is signed in." with no button; **Try again** when the list cannot be loaded |
 | `src/features/auth/__tests__/session-label.test.ts` | Today and yesterday with the time in 24 hours; an older day with its weekday and date, over a year the date alone; a clock a little ahead read as now; the English words; the device name, or "Unknown browser" |
-| `src/features/auth/__tests__/sign-out-notice.test.ts` | A session that ended by itself or elsewhere left to the sign-in page's banner; an expiry and a session ended from another device worded alike; toasts for what the person did, and a disabled account as an error |
-| `src/features/auth/__tests__/ProtectedRoute.test.tsx` | The guards: the whole address kept for after sign-in, no redirect to another site; an incomplete account sent to `/welcome` from the app and from sign-in, keeping `next` and `invite`; `/welcome` for a visitor and for a complete account |
+| `src/features/auth/__tests__/sign-out-notice.test.ts` | A session that ended by itself or elsewhere left to the sign-in page's banner; an expiry and a session ended from another device worded alike; an account waiting to be deleted left to the banner, which gives the day; a deleted account toasted as an error |
+| `src/features/auth/__tests__/ProtectedRoute.test.tsx` | The guards: the whole address kept for after sign-in, no redirect to another site; an incomplete account sent to `/welcome` from the app and from sign-in, keeping `next` and `invite`; `/welcome` for a visitor and for a complete account; an account waiting to be deleted sent from the app to sign in, keeping the page, and kept on sign-in under the restore dialog |
 | `src/features/auth/__tests__/RequireRole.test.tsx` | Children for the role, the fallback otherwise |
 
 How they are built: `pages.test.tsx` replaces `authApi` and the store with
@@ -384,6 +403,7 @@ test helpers need the development build.
 | Suite | Covers | Needs |
 |---|---|---|
 | `e2e/account.spec.ts` | Create an account with the emailed code, then complete it (the time zone searched as "tokyo"); a reload keeps the session; a deep link after sign-in (to `/settings/account`, the page headed "Account"), with "This device" first in its Sessions group; reset a forgotten password (the old one refused after); edit the profile (name and bio, a photo cropped and uploaded, then removed once Undo runs out); delete the account from Settings | the API (`E2E_API_URL`, default `http://localhost:8888/api/v1`) and its Mailpit (`E2E_MAILPIT_URL`, default `http://localhost:8025`) |
+| `e2e/account-deletion.spec.ts` | Deleting waits 14 days (D-141), two serial tests on an account made through the API: asking to delete signs out this device and another one (a browser context each), both under the dated banner, and the email names the day; signing in again stops at the restore dialog, "Not now" leaves the page signed out with the email typed, then "Restore account" carries on to the page asked for | the API and its Mailpit, as for `account.spec.ts` |
 | `e2e/oauth.spec.ts` | The Google button and the API's redirect to Google (PKCE, the state cookie) | the API with Google set up; skipped otherwise |
 | `e2e/sessions.spec.ts` | One account on several devices (a browser context each): the list of sessions, signing out one device or the others, changing the password in its dialog, and resetting a forgotten current password by code in the dialog (a second tab of the same browser carries on, another device is sent to sign in) | the API and its Mailpit, as for `account.spec.ts` |
 
@@ -415,7 +435,10 @@ Say, a page where a signed-out person confirms a new email address.
 5. **Where to go next:** carry `?next=` and `?invite=` with `withFlow()`,
    finish with `navigate(afterSignIn(account, search), { replace: true })` if
    the page signs in (`safeNext(next)` otherwise), and hand the address to the
-   next page with `authPageState()`, never in the URL.
+   next page with `authPageState()`, never in the URL. Pass
+   `pendingDeletion: deletesAt !== null` from the store in `account`, and the
+   email as state, so an account waiting to be deleted lands on `/login`
+   under the restore dialog, as on the other sign-in pages.
 6. **If it signs in:** call `startSession(tokens, account)` (tokens in the
    answer) or `resumeFromCookie()` (only a cookie).
 7. **The texts:** a new block in `auth.json`, in English and Vietnamese (the

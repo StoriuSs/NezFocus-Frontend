@@ -35,7 +35,7 @@ already done.
 
 | | |
 | --- | --- |
-| **Sign-in** | Creating an account with an emailed code, "complete your account", sign-in, Google, password reset, deleting the account — the rules in the API, the pages here |
+| **Sign-in** | Creating an account with an emailed code, "complete your account", sign-in, Google, password reset, deleting the account (14 days to restore it) — the rules in the API, the pages here |
 | **Server data** | TanStack Query, with the retry and invalidation rules already thought through |
 | **A real API client** | Case conversion both ways, idempotency keys, an error catalogue |
 | **Types from the backend** | Generated from its OpenAPI document, so a changed response is a compile error |
@@ -158,7 +158,8 @@ sequenceDiagram
 - **`ProtectedRoute`** sends a visitor to sign in with the page they asked for,
   so they come back to it afterwards; `?next=` can only point at this site.
   It sends a signed-in account that has not done "complete your account" to
-  `/welcome?next=<the page>`.
+  `/welcome?next=<the page>`, and one waiting to be deleted to sign in, where
+  `GuestOnlyRoute` keeps the page and opens the restore dialog over it.
 - **An expired token is refreshed, not a sign-out.** A request refused with
   `AUTH_TOKEN_EXPIRED` or `AUTH_TOKEN_INVALID` is refreshed and retried once,
   without the user noticing. So is `AUTH_TOKEN_REVOKED`: another tab may have
@@ -166,7 +167,8 @@ sequenceDiagram
   cookie (D-74); if the refresh is refused, the sign-out gives its reason.
 - **Not every 403 ends a session.** A `403` does *only* when the API says
   `AUTH_ACCOUNT_DISABLED`. A `403 ACCOUNT_INCOMPLETE` keeps the session and
-  opens "complete your account". Every other 403 means "you may not do this",
+  opens "complete your account"; a `403 ACCOUNT_PENDING_DELETION` keeps it
+  too and opens the restore dialog. Every other 403 means "you may not do this",
   which is for the page to handle — signing people out for an ordinary
   permission error was a real bug.
 - **A sign-out says why, and lands where it makes sense.** The API's 401 names
@@ -174,8 +176,9 @@ sequenceDiagram
   on another device, a security problem…). The app reloads. A session that
   ended by itself or elsewhere goes to `/login?next=<the page you were on>`,
   where a banner says why (and a password changed elsewhere opens on the
-  password); signing out yourself goes home, and deleting the account goes
-  home with a toast.
+  password); signing out yourself goes home. Deleting the account waits 14
+  days: every device lands on `/login` under a banner with the day it goes,
+  and signing in before then offers to restore it (D-141).
 - **Tabs stay in step.** Signing out in one tab signs the others out at once;
   signing in in one picks the session up in the others.
 

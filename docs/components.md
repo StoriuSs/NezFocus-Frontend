@@ -325,8 +325,8 @@ errors never go to a toast.
 <FormMessage tone='danger' icon={problem.offline ? 'wifi-off' : undefined}>{text(problem.message)}</FormMessage>
 ```
 
-Used by every auth page and the change-password dialog; the delete dialog
-still uses `Notice` from `AuthCard.tsx`.
+Used by every auth page and by the change-password, delete and restore
+dialogs. `Notice` from `AuthCard.tsx` is left on `/auth/callback` only.
 
 ### `TimeZoneCombobox`
 
@@ -404,9 +404,26 @@ it is a disabled button instead.
 
 ### `DeleteAccountDialog`
 
-On the account page (`/settings/account`), below Sessions, until L14 builds
-its own group: deleting the account, confirmed with its password
+"Delete your account?" (`src/features/auth/components/DeleteAccountDialog.tsx`,
+S-ME-03 `delete-confirm`), opened by the **Delete account** group at the foot
+of the account page (`DeleteAccountSection.tsx`), which controls it: the day
+the account goes, then its password, focused on open. "Forgot password?"
+hands over to the change-password dialog on an emailed code
+(`PasswordDialog`), which hands back
 ([auth/account-settings.md](./auth/account-settings.md#delete-the-account)).
+It is not exported from `src/features/auth/index.ts`: the entry imports that
+index, so an export would put the dialog in the first download
+([code-splitting.md](./code-splitting.md#what-lands-in-the-first-download)).
+
+### `PendingDeletionDialog`
+
+"Your account is waiting to be deleted"
+(`src/features/auth/components/PendingDeletionDialog.tsx`, S-AUTH-03
+`pending-deletion`), over a sign-in page once someone signs in to an account
+waiting to be deleted. No close button: **Not now**, Esc and the scrim all
+sign out and leave the page as it was; **Restore account** restores it and
+goes on. `GuestOnlyRoute` loads it with `lazy()`
+([auth/session.md](./auth/session.md#an-account-waiting-to-be-deleted)).
 
 ### `AvatarCropDialog`
 

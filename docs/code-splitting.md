@@ -128,6 +128,15 @@ imports in with it, and Rollup does not split a feature's `index.ts`
   `settingsQuery`, `updateSettings`) is not in `users.api.ts`, and the
   `settings` words load with the pages
   ([i18n.md](./i18n.md#words-that-load-with-their-pages)).
+- The same trap, met in M0's slice L14: `src/features/auth/index.ts`
+  exported `DeleteAccountDialog`. That index is imported by the entry, so
+  the dialog came with the first download, and with it react-hook-form, zod
+  and the `Dialog` code, though only the account page shows it. Removing
+  the export (the account page imports the group by its file path) took the
+  first download's JS from 246.72 kB to 235.31 kB gzipped, under the same
+  246.75 kB limit. Likewise the restore dialog, which only an account
+  waiting to be deleted sees, is a `lazy()` import in `GuestOnlyRoute`, and
+  the `deletion` words come with the chunks that use them.
 
 Check after adding to an index, or importing one from somewhere new: run
 `pnpm build` and look at the entry chunk (`index-*.js`) in the list it prints.

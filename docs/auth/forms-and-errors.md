@@ -8,8 +8,9 @@ form says something you do not understand.
 Every auth page (`/login`, `/register`, `/verify`, `/welcome`,
 `/forgot-password`, `/reset-password`) keeps each message as a key and puts it
 into words when shown ([below](#messages-kept-as-keys)), and so does the
-account page's change-password dialog. The delete dialog is the older
-generation: it still turns a refusal into words at once with `authFormError`.
+account page's change-password and delete dialogs, and the restore dialog.
+(The base's `authFormError`, which turned a refusal into words at once, went
+with the old delete dialog in L14.)
 
 - [How an auth form is built](#how-an-auth-form-is-built)
 - [What a form checks before asking the API](#what-a-form-checks-before-asking-the-api)
@@ -34,9 +35,9 @@ Every auth form follows the same pattern:
    the schema for that way. A new password (welcome, reset, the
    change-password dialog) is checked by `newPasswordIssue(password, context)`
    in [schemas.ts](../../src/features/auth/lib/schemas.ts), which returns the
-   message key of the first problem, or nothing. The delete-account dialog is
-   the one form left whose schema is built with the translation function, so
-   its messages are words at once.
+   message key of the first problem, or nothing. The delete-account dialog
+   has no schema: its one field only has to be filled, which its button
+   waits for.
 2. **Fields through `FormField`** ([../shadcn-forms.md](../shadcn-forms.md)),
    which links the label, the input and the line under it for screen readers:
    the error (with an icon), else a `status` line ("Checking..."), else a hint.
@@ -47,8 +48,8 @@ Every auth form follows the same pattern:
 3. **The frame is `AuthCard`** ([AuthCard.tsx](../../src/features/auth/components/AuthCard.tsx)):
    a title, a subtitle, the form, and links underneath. An error for the whole
    form is a `FormMessage` right above the main button
-   ([../components.md](../components.md)), in the change-password dialog
-   too; the delete-account dialog still uses a `Notice` above the form.
+   ([../components.md](../components.md)), in the change-password and
+   delete-account dialogs too.
 4. **On submit**, a page for signing in (login, register, verify, welcome, a
    new password) calls `authApi` or the store directly: what it does next is
    the session itself, which the store owns. The change-password dialog's
@@ -58,10 +59,8 @@ Every auth form follows the same pattern:
    page, through `useCodeReset`. The button is disabled while the request is
    out.
 5. **On a refusal**, the page calls `requestFailure(error)`
-   ([form-problem.ts](../../src/features/auth/lib/form-problem.ts)) on the auth
-   pages and in the change-password dialog, `authFormError(error)`
-   ([form-errors.ts](../../src/features/auth/lib/form-errors.ts)) in the
-   delete-account dialog, and decides where to show what it returns
+   ([form-problem.ts](../../src/features/auth/lib/form-problem.ts)), on the
+   auth pages and in every dialog, and decides where to show what it returns
    ([below](#where-each-error-shows)).
 
 Either way the app-wide "toast on every failed mutation" does not apply:
@@ -99,23 +98,13 @@ Every API refusal has the same shape (after the API client camelCases it):
   the `api` translations (`src/i18n/locales/<language>/api.json`). The API's
   `meta.message` is English, written for developers, and never shown.
 - A type without a translation shows "Something went wrong". No answer at all
-  shows "Can't reach the server. Check your connection and try again." in the
-  delete dialog; the auth pages and the change-password dialog say "You're offline. Check your connection and
-  try again." (with a `wifi-off` icon), and a `5xx` "Something went wrong. Try
-  again in a few minutes."
+  shows "You're offline. Check your connection and try again." (with a
+  `wifi-off` icon), and a `5xx` "Something went wrong. Try again in a few
+  minutes."
 - `data` carries details: the broken password rules, why a limit refused.
 
-`authFormError(error)` (the delete dialog) reads all of it and returns:
-
-| Field | Filled when | Used for |
-|---|---|---|
-| `message` | always | the sentence to show |
-| `type` | the answer had an envelope | special cases on a page (`AUTH_INVALID_CREDENTIALS`...) |
-| `passwordRules` | `422 AUTH_PASSWORD_REJECTED`, from `data.rules` | the [checklist](#the-password-rules) |
-| `retryAfterSeconds`, `rateLimitReason` | a `429` | [waiting](#too-many-attempts-429) |
-
-`requestFailure(error)` (the auth pages and the change-password dialog) returns
-the same facts without words:
+`requestFailure(error)` (the auth pages and every dialog) reads all of it and
+returns the facts without words:
 
 | Field | Filled when | Used for |
 |---|---|---|
@@ -129,11 +118,11 @@ the same facts without words:
 
 | Shown as | For |
 |---|---|
-| A message for the whole form (`FormMessage` above the button on the auth pages and in the change-password dialog, `Notice` above the form in the delete dialog; read out by screen readers) | most refusals; on `/verify`, `/reset-password` and the dialog's code mode, a wrong or dead code and the limits; in the dialog, too many wrong current passwords |
+| A message for the whole form (`FormMessage` above the button on the auth pages and in the dialogs; read out by screen readers) | most refusals; on `/verify`, `/reset-password` and the change-password dialog's code mode, a wrong or dead code and the limits; in the change-password and delete dialogs, too many wrong passwords |
 | A message under one field | a wrong current password (change password); a wrong password (delete the account); a username taken (welcome) |
 | The password checklist | `AUTH_PASSWORD_REJECTED`: the rules the API refused, including the ones only it checks |
-| A toast (a small message in the corner) | successes ("New password set...", "A new code is on its way"), "you already have an account" on `/verify`, and the sign-out reasons the person caused (or a deleted account) after a reload ([session.md](./session.md#why-a-session-ended-every-reason)). Never a form's error |
-| A banner above the sign-in card (`Banner`, C-16) | why a session that ended by itself or elsewhere ended ([pages-and-flows.md](./pages-and-flows.md#sign-in)) |
+| A toast (a small message in the corner) | successes ("New password set...", "A new code is on its way"), "you already have an account" on `/verify`, "Account restored", and a deleted account (`account-disabled`) after a reload ([session.md](./session.md#why-a-session-ended-every-reason)). Never a form's error |
+| A banner above the sign-in card (`Banner`, C-16) | why a session that ended by itself or elsewhere ended, and the day an account waiting to be deleted goes ([pages-and-flows.md](./pages-and-flows.md#sign-in)) |
 
 At sign-in, `AUTH_INVALID_CREDENTIALS` shows the `api` catalogue's sentence
 like any other type: "Incorrect email or password. Try again, or sign in with
@@ -155,9 +144,10 @@ API starter's `docs/auth/api-reference.md`.
 | `AUTH_CODE_EXPIRED` | 400 | The code is over 10 minutes old, or had 5 wrong tries | "This code no longer works (over 10 minutes old, or 5 wrong tries). Send a new code to continue." On `/verify` and `/reset-password` the button becomes Send a new code |
 | `USERNAME_CONFLICT` | | The username was taken after it was checked | "This username is taken. Choose another one." (welcome: "Someone just took this username...", on the field) |
 | `ACCOUNT_INCOMPLETE` | 403 | The account has not done "complete your account" | no message: the app opens `/welcome` ([pages-and-flows.md](./pages-and-flows.md#the-gate-an-incomplete-account-sees-only-welcome)) |
+| `ACCOUNT_PENDING_DELETION` | 403 | The account waits to be deleted and has not been restored (D-141) | no message: the app opens sign-in under the restore dialog ([session.md](./session.md#an-account-waiting-to-be-deleted)) |
 | `ACCOUNT_ALREADY_COMPLETE` | | "Complete your account" was done already (another tab) | no message: welcome goes on |
 | `AUTH_PASSWORD_REJECTED` | 422 | The new password breaks a rule | the rules on the checklist |
-| `AUTH_CURRENT_PASSWORD_INVALID` | 400 | Wrong current password | "Your current password is not right" (the delete dialog: "That password isn't right.") |
+| `AUTH_CURRENT_PASSWORD_INVALID` | 400 | Wrong current password | "Your current password is not right" (the delete dialog: "That password isn't right") |
 | `RATE_LIMIT_EXCEEDED`, `THROTTLE_ERROR` | 429 | A limit refused | [below](#too-many-attempts-429) |
 | `VALIDATION_ERROR` | 422 | A field the API refused (the form's own checks usually catch it first) | "Please check your input" |
 
@@ -195,8 +185,10 @@ the code (D-67). A limit on one address lifts when another address is
 typed (register, sign-in, forgot-password); a network's does not. The
 change-password dialog says "You entered the wrong current password too many
 times. Try again in 12 minutes." for `wrong_password`, and its code mode
-words the rest as `/reset-password` does. The delete dialog, through
-`authFormError`, reads:
+words the rest as `/reset-password` does. The delete dialog says "You
+entered a wrong password too many times. Try again in 12 minutes." for
+`wrong_password`, the only limit it meets. The reasons the API gives, with the
+kind of sentence each page builds from them:
 
 | `data.reason` | When | The message |
 |---|---|---|
@@ -204,15 +196,15 @@ words the rest as `/reset-password` does. The delete dialog, through
 | `recent_email` | A code emailed to one address under a minute ago (one a minute) | "We just sent an email with a code to this address. Try again in 42 seconds." |
 | `emails` | Codes emailed to one address: five an hour | "We've already sent several emails to this address. Try again in 12 minutes." |
 | `sign_ins` | Failed sign-ins for one address (5 per 15 minutes) | "Too many failed sign-ins for this address. Try again in 12 minutes, or choose a new password." |
-| `wrong_password` | Wrong current passwords (change password, delete account): 5 per 15 minutes; the change-password dialog words it its own way (above) | "Too many wrong passwords. Try again in 12 minutes." |
+| `wrong_password` | Wrong current passwords (change password, delete account): 5 per 15 minutes; both dialogs word it their own way (above) | "Too many wrong passwords. Try again in 12 minutes." |
 | none, header readable | The API's general per-route limit, per minute: per user when signed in, per network otherwise | "Too many attempts. Try again in 42 seconds." |
 | header not readable | | the type's catalogue text, e.g. "Too many attempts. Please wait and try again." |
 
 On the auth pages the button also stays disabled, counting down, for as
 long as the API asks: the main button on sign-in, register and
 forgot-password; "Send again" and the code boxes on verify and reset; and
-**Change password** in the change-password dialog (D-73). The delete dialog
-shows the message. The exact limits are in the
+**Change password** in the change-password dialog (D-73), and **Delete
+account** in the delete dialog (D-121). The exact limits are in the
 API starter's `docs/auth/rate-limits.md`.
 
 ## The password rules
@@ -332,5 +324,4 @@ until it is shown ([form-problem.ts](../../src/features/auth/lib/form-problem.ts
   `text(problem.message)`.
 
 The keys arrive at run time, so the compiler cannot check them;
-`catalogues.test.ts` and each page's tests check the ones used. The delete
-dialog still uses `authFormError`.
+`catalogues.test.ts` and each page's tests check the ones used.

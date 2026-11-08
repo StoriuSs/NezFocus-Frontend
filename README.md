@@ -36,7 +36,8 @@ languages, dark mode, tests, and a production image with CI and deploys.
   (display name, username, password, time zone, the terms), sign in,
   "Continue with Google", forgotten-password reset, a session that survives a
   reload and stays in step across tabs, a list of the signed-in devices
-  (sign out one, or all but this one), and deleting the account
+  (sign out one, or all but this one), and deleting the account, which waits
+  14 days and can be restored by signing in again
 - **Internationalization** — i18next, English and Vietnamese
 - **Dark mode** — light, dark or the system's setting, remembered, with no
   flash of the wrong one on load
@@ -83,10 +84,10 @@ trades the cookie for a new one. The pages:
 | `/register` | Create an account with only an email; the API emails a 6-digit code |
 | `/verify` | Enter the code; the right code signs you in, to a new account or to the address's own |
 | `/welcome` | "Complete your account", once, before any other page: display name, username, password, time zone, the terms |
-| `/login` | Email and password, or "Continue with Google" |
+| `/login` | Email and password, or "Continue with Google"; for an account waiting to be deleted, the dialog that restores it |
 | `/forgot-password`, `/reset-password` | An emailed code, then a new password; that also signs you in |
 | `/auth/callback` | Where the API sends the browser back after Google |
-| `/settings/account` | "Account": change the password, see the signed-in devices and sign them out, delete the account (`/settings` redirects here) |
+| `/settings/account` | "Account": change the password, see the signed-in devices and sign them out, delete the account (it goes 14 days later) (`/settings` redirects here) |
 | `/settings/profile` | The profile: the avatar (cropped, removed with Undo), the display name and the bio |
 | `/settings/appearance` | Appearance & language: the theme, the language and the time zone (once every 24 hours), kept by the account and followed by every tab and browser |
 | `/settings/notifications` | The phase sound, with **Play sample** |

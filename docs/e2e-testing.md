@@ -1,7 +1,7 @@
 # End-to-end tests (Playwright)
 
 `pnpm test:e2e` drives real Chromium and Firefox browsers through the app:
-five suites, a few tests each, one suite per area. The suites have different needs:
+six suites, a few tests each, one suite per area. The suites have different needs:
 
 | Suite | Needs | What it checks |
 |---|---|---|
@@ -9,6 +9,7 @@ five suites, a few tests each, one suite per area. The suites have different nee
 | `e2e/sessions.spec.ts` | This app, **the API**, and **Mailpit** | One account signed in on several devices at once, each a browser context of its own (its own cookie, so its own session): `/settings` opening `/settings/account` and one Back leaving the settings; this device first with "This device", the others named with their last use and masked IP; a device signed in meanwhile appearing when the tab comes back; signing one device out without a question, that device then sent to sign in with the plain sentence; "Sign out the other devices" asking with the right count, Cancel changing nothing, the other device told the button's name; changing the password in its dialog leaving only this device; a forgotten current password reset by code in the same dialog ("Forgot password?", the code read from Mailpit), after which a second tab of the same browser carries on with the new session (D-74), this tab still reads "This device" after a reload, and another device is sent to sign in under the password-changed banner. That test is marked `test.slow()`: when the account's last code went out under a minute ago, it waits for "Send again". A device finds out at its next request while the app is open (a reload says nothing for an ending that reads like an expiry, D-65) |
 | `e2e/mascot.spec.ts` | This app only | At 1440 × 900, Rive takes over from the mascot's still picture on `/login`, its WebAssembly from this site, with no page errors; with movement reduced, Rive is never loaded |
 | `e2e/account.spec.ts` | This app, **the API**, and the **Mailpit** it sends email to | An account's whole life: create it on `/register` with only the email, type the code read from Mailpit on `/verify` (the address shown; the sixth digit sends it and signs in), then complete it on `/welcome` (any other page sends back there; a password missing two conditions refused; the time zone found by searching "tokyo"); a deep link to `/settings/account` coming back after sign-in, to the page headed "Account"; a reload keeping the session (the refresh cookie crossing origins), with "This device" first in the Sessions group; a forgotten password reset, which signs in (the old password refused after); the profile on `/settings/profile` (a name with an emoji counted as the API counts it, name and bio saved and still there after a reload, leaving with changes asks first, a photo chosen, cropped and uploaded, then removed: **Undo** keeps it, and once Undo runs out the `DELETE` is sent); the account deleted from the Settings page |
+| `e2e/account-deletion.spec.ts` | This app, **the API**, and **Mailpit** (the account is made through the API first) | Deleting waits 14 days (D-141), two tests run in order: asking to delete on `/settings/account` (the dialog names the day, 14 days ahead in the account's zone) signs out this device and another one (a browser context each), both on `/login` under the banner with that day, and the email names it too; signing in again stops at the restore dialog ("14 days left"), **Not now** leaves `/login?method=password` signed out with the email still typed and the app's pages sending to sign in, then **Restore account** goes on to the page asked for with "Account restored" |
 | `e2e/settings.spec.ts` | This app, **the API**, and **Mailpit** (the account is made through the API first) | The account's settings, each device a browser context and each tab a page of one: on Appearance & language, Dark and Tiếng Việt shown at once and followed by another tab of the same browser, then by another browser once signed in there (its sign-in page still in English); the time zone asking first, then locked for 24 hours with the line said in the new zone, and a second device that still showed it enabled told the same after its try; the switches of Notifications and Privacy saved and still there when the page is opened again |
 
 Any CSP violation or uncaught page error fails a run.
@@ -94,7 +95,8 @@ and submits again. That checks the message along the way. It is why that test
 takes up to a minute.
 
 Each run makes one account per browser (`e2e-chromium…@example.test`). The
-account suite deletes its account at the end (that is its last test). One
+account suite deletes its account at the end (that is its last test); since
+D-141 a deleted account waits 14 days before it is gone. One
 left behind by a failed run is harmless in a development database, and the
 `example.test` addresses make it easy to find.
 

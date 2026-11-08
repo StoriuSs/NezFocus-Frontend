@@ -17,6 +17,7 @@ want to know why.
 - [Several tabs](#several-tabs)
 - [Signing out, step by step](#signing-out-step-by-step)
 - [Why a session ended: every reason](#why-a-session-ended-every-reason)
+- [An account waiting to be deleted](#an-account-waiting-to-be-deleted)
 - [The numbers the API decides](#the-numbers-the-api-decides)
 
 ## In plain words
@@ -52,6 +53,7 @@ back after a reload.
 | Who is signed in (`id`, `email`, `username`, `displayName`, `roles`) | the store, [auth.store.ts](../../src/features/auth/auth.store.ts) (`useAuthStore`) | this tab | until sign-out |
 | The full profile | the React Query cache, key `['users', 'profile']` | this tab | cleared at sign-out |
 | Why the last session ended | `sessionStorage`, key `auth:sign-out-reason` | this tab | until said once: by a toast after the reload, or by the sign-in page's banner; then removed |
+| When the account goes, if it waits to be deleted | the store's `deletesAt` while signed in (from the profile's `deletes_at`); `sessionStorage`, key `auth:deletes-at`, after a sign-out with the reason `account-deleted` | this tab | the store's until restored or signed out; the stored one goes with the reason ([below](#an-account-waiting-to-be-deleted)) |
 
 **Why the `auth:session` flag is not a security problem.** It is not the
 session; the cookie is. The flag only decides whether a page load asks the API
@@ -70,8 +72,9 @@ Every way in ends in the same private step of the store, `establish()`:
    carries `account.completed`; otherwise it counts as complete).
 4. Ask `GET /users/me` who this is. Put the answer in the profile cache, so
    your menu, the profile page and "complete your account" do not ask again,
-   keep the short form as `user`, and take `isComplete` from the profile's
-   `completed`. Tell error tracking the user's id (only the id:
+   keep the short form as `user`, take `isComplete` from the profile's
+   `completed` and `deletesAt` from its `deletes_at` (null unless the account
+   waits to be deleted, [below](#an-account-waiting-to-be-deleted)). Tell error tracking the user's id (only the id:
    [../error-tracking.md](../error-tracking.md)).
 
 If `/users/me` fails, the person is signed in all the same; the profile query
@@ -147,7 +150,8 @@ browser).
 [src/lib/api.ts](../../src/lib/api.ts) is the one axios client every feature
 uses. It imports nothing from auth: it asks an `ApiSession` for the token, a
 refresh, and to sign out, and tells it when the account is incomplete
-(`accountIncomplete()`); [main.tsx](../../src/main.tsx) connects the auth
+(`accountIncomplete()`) or waits to be deleted (`pendingDeletion(deletesAt)`);
+[main.tsx](../../src/main.tsx) connects the auth
 store to it (`connectApiSession(apiSession)`, the adapter being
 [api-session.ts](../../src/features/auth/lib/api-session.ts)). On the way out it
 adds the token (above) and turns the body's and the query's keys into
@@ -164,6 +168,7 @@ camelCase, and looks at every refusal:
 | Any other `401` (`AUTH_TOKEN_MISSING`, or refused again after the retry) | The session ended | Signs out, with the reason from the answer's `data.reason` |
 | `403 AUTH_ACCOUNT_DISABLED` | The account was deleted | Signs out (`account-disabled`) |
 | `403 ACCOUNT_INCOMPLETE` | The account has not done "complete your account" (D-61); the session is fine | Calls `accountIncomplete()`, which is the store's `markIncomplete()`; the route guards then open `/welcome`. The request still fails for its caller |
+| `403 ACCOUNT_PENDING_DELETION` | The account waits to be deleted and has not been restored (D-141); the session is fine but can only read the profile or restore | Calls `pendingDeletion(data.deletes_at)`, which is the store's `markPendingDeletion()`; the route guards then open the sign-in page under the restore dialog ([below](#an-account-waiting-to-be-deleted)). Not a sign-out. The request still fails for its caller |
 | Any other `403` | Signed in, but not allowed to do *this* | Nothing; the page shows the error. Signing out would throw away the session and whatever the person was doing |
 | `429`, `5xx`, anything else | Not about the session | Nothing |
 
@@ -188,7 +193,7 @@ API's `/auth` routes. Two request options matter:
 |---|---|---|---|---|
 | `POST /auth/login`, `/email-code`, `/email-code/verify`, `/forgot-password`, `/reset-password`, `/refresh`, `/logout`; `GET /auth/options` | yes | no | yes | Public routes; some set or read the cookie. `/auth/logout` gives up after 5 seconds |
 | `POST /auth/account/delete` | no | yes | yes | Signed in, and the answer clears the cookie |
-| `POST /auth/complete-account`, `POST /auth/change-password`; `GET /auth/sessions`, `DELETE /auth/sessions`, `DELETE /auth/sessions/{id}`; `GET /users/me` | no | yes | no | Ordinary signed-in requests. The app never ends this device's own session through the session routes, so its cookie stays |
+| `POST /auth/complete-account`, `POST /auth/change-password`, `POST /auth/account/restore`; `GET /auth/sessions`, `DELETE /auth/sessions`, `DELETE /auth/sessions/{id}`; `GET /users/me` | no | yes | no | Ordinary signed-in requests. The app never ends this device's own session through the session routes, so its cookie stays |
 
 ## Several tabs
 
@@ -210,14 +215,16 @@ token, instead of suspecting a stolen cookie.
 
 ## Signing out, step by step
 
-Everything goes through the store's `logout(reason?, to?)`:
+Everything goes through the store's `logout(reason?, to?, deletesAt?)`:
 
 1. **Once only.** Several requests often fail together when a session is
    revoked (every query gets its `401`). The first call signs out; the rest do
    nothing until the next sign-in.
 2. **Remember the reason** in `sessionStorage`, to say it after the reload.
    A sign-out without a reason removes any reason an earlier one left, so it
-   is never said for this one.
+   is never said for this one. With `account-deleted`, the day the account
+   goes is kept too (`auth:deletes-at`): the `deletesAt` given, or the one
+   the last refused refresh carried.
 3. **Forget the session in this tab:** clear the access token, remove the
    `auth:session` flag, mark the store signed out (and `isSigningOut`, so
    `ProtectedRoute` shows a spinner instead of bouncing through the sign-in
@@ -243,10 +250,14 @@ Who calls it:
 | Your menu's **Sign out** | none | home |
 | **Sign out** in the AuthShell's footer, on `/welcome` | none | home |
 | **Sign out and continue** on the "already signed in" card | none | the same page, now as a visitor |
-| The delete-account dialog, once `POST /auth/account/delete` succeeded | `account-deleted` | home |
+| The delete-account dialog, once `POST /auth/account/delete` succeeded (with its `deletes_at`) | `account-deleted` | sign-in, without `?next` |
 | The API client, on a `401` that ends the session | from the API's `data.reason` | see below |
 | The API client, on `403 AUTH_ACCOUNT_DISABLED` | `account-disabled` | home |
 | `getToken()`, when the refresh is refused | from the refresh's `data.reason` | see below |
+
+"Not now" in the restore dialog does not call `logout`: it uses
+`setRestoreAside()`, which forgets the session without a reload
+([below](#an-account-waiting-to-be-deleted)).
 
 ## Why a session ended: every reason
 
@@ -254,8 +265,8 @@ The reasons are in [sign-out-reason.ts](../../src/features/auth/lib/sign-out-rea
 which are said by the sign-in page's banner and which by a toast, in
 [sign-out-notice.ts](../../src/features/auth/lib/sign-out-notice.ts)
 (`sessionEndedOf`, `isSessionEnded`, `announceSignOut`; texts in
-`src/i18n/locales/<language>/auth.json`, `sessionEnded` and `signedOut`, and
-`api.json`); where each lands, in `afterSignOut()` in the store. The store
+`src/i18n/locales/<language>/auth.json`, `sessionEnded`; `deletion.json`,
+`banner`; and `api.json`); where each lands, in `afterSignOut()` in the store. The store
 hands each reader only its kind: `takeSignOutReason(which)` takes the reason
 only when `which(reason)` is true, and leaves it for the other reader
 otherwise; `peekSignOutReason()` reads it without taking it.
@@ -273,8 +284,8 @@ own name:
 | `signed-out-everywhere` | `signed_out_everywhere`: "Sign out the other devices" was chosen on another device (D-75) | banner: "One of your devices chose "Sign out the other devices" · sign in again" | sign-in, then back |
 | `signed-out` | `signed_out`: this session was signed out somewhere the broadcast did not reach | banner: the same as `session-expired` | sign-in, then back |
 | `security` | `security`: the refresh cookie was used twice, so the API suspects it was copied, and ended the session | banner: "Your session was closed to protect your account because it was in use in two places at once · sign in again, and change your password if that wasn't you" | sign-in, then back |
-| `account-disabled` | `account_deleted` from a refresh, or `403 AUTH_ACCOUNT_DISABLED` from any route | toast: "This account has been deleted" (error) | home |
-| `account-deleted` | the person deleted the account, here | toast: "Your account was deleted. We've emailed you a confirmation." (success) | home |
+| `account-disabled` | `account_deleted` without `deletes_at` from a refresh (the account is gone), or `403 AUTH_ACCOUNT_DISABLED` from any route | toast: "This account has been deleted" (error) | home |
+| `account-deleted` | the person asked to delete the account, here (the delete dialog), or `account_deleted` with `deletes_at` from a refresh: asked on another device (D-141) | banner, with the icon UserX: "Your account will be deleted for good on dd/mm/yyyy · sign in before then to restore it" (no banner if the day is missing) | sign-in, without `?next`: the pages are gone with the session |
 | none | the person chose Sign out | no message | home |
 
 "Sign-in, then back" means `/login?next=<this page's path, query and #>`
@@ -285,17 +296,56 @@ the app it is `/login` alone.
 
 **Ended while the app was closed.** The page load's refresh is refused with
 the reason. It is kept for `password-changed`, `signed-out-everywhere`,
-`security` and `account-disabled`; not for `session-expired` or
-`signed-out`. The page they opened renders as for a visitor: a signed-in-only
-page sends them to sign in, and back afterwards, where the banner says why
-(and `password-changed` opens on the password); `account-disabled` is a toast
-at once.
+`security`, `account-deleted` (with its day) and `account-disabled`; not for
+`session-expired` or `signed-out`. The page they opened renders as for a
+visitor: a signed-in-only page sends them to sign in, and back afterwards,
+where the banner says why (and `password-changed` opens on the password);
+`account-disabled` is a toast at once.
 
 One detail: when the API client refreshes after a `401` (`REFRESHABLE`:
 `AUTH_TOKEN_EXPIRED`, `AUTH_TOKEN_INVALID`, `AUTH_TOKEN_REVOKED`) and the
 refresh then finds the session over, the reason comes from the refresh's
 answer (`refreshToken()` in the store signs out with it), not from that first
 `401`.
+
+## An account waiting to be deleted
+
+Asking to delete the account
+([account-settings.md](./account-settings.md#delete-the-account)) deletes
+nothing for 14 days (REQ-AUTH-09, D-141). Every session ends, and each device
+lands on sign-in under the dated `account-deleted` banner (above). The
+account stays whole: signing in again by password, code or Google opens a
+real session on it, but the API refuses that session everything except
+reading the profile and `POST /auth/account/restore`.
+
+**How the app knows.** The store's `deletesAt` is set from the profile's
+`deletes_at` at every sign-in (`establish()`), or by a `403
+ACCOUNT_PENDING_DELETION` from any request (`markPendingDeletion`). While it
+is set:
+
+| Where | What happens |
+|---|---|
+| `ProtectedRoute` (the app's pages) | sends to `/login?next=<this page>`, as for a signed-out person |
+| `GuestOnlyRoute` (the sign-in pages) | keeps the page as it is and shows the restore dialog over it, instead of sending the person on |
+| Every sign-in page that signs in (`/login` by password, `/verify`, `/auth/callback` after Google, `/reset-password`) | goes to `afterSignIn({ completed, pendingDeletion }, search, method?)`, which is `/login` keeping `?next` and `?invite`, plus `?method=password` for a password. The email goes along as router state, so the form shows what was typed |
+
+**The restore dialog** ([PendingDeletionDialog.tsx](../../src/features/auth/components/PendingDeletionDialog.tsx),
+S-AUTH-03 `pending-deletion`), loaded lazily by `GuestOnlyRoute` with the
+`deletion` words: "Your account is waiting to be deleted", then "Your account
+will be deleted for good on dd/mm/yyyy (11 days left). ...". The days are
+calendar days from when it opened, at least 1 (`deletionDaysLeft` in
+[deletion-date.ts](../../src/features/auth/lib/deletion-date.ts)); the date
+is in the browser's time zone, since nobody has said which account zone yet.
+
+| Choice | What happens |
+|---|---|
+| **Restore account** | `restoreAccount()`: `POST /auth/account/restore`, `deletesAt` back to null, the profile read again, and the toast "Account restored". `GuestOnlyRoute` then sends the person on with `afterSignIn` (to `?next`, or home). A refusal shows in red in the dialog |
+| **Not now**, Esc, or a click on the scrim | `setRestoreAside()`: forget the session in this tab (as step 3 of [signing out](#signing-out-step-by-step)), tell the other tabs `signed-out`, and call `POST /auth/logout`, best effort. No reload and no reason: the page stays, its form as typed, and the account still waits |
+
+**Restored, the old devices stay signed out**: their refresh now reads the
+reason `revoked`, worded like an expiry. Once the 14 days are over the
+account is gone, and a refresh carries `account_deleted` without a day:
+`account-disabled`, a toast.
 
 ## The numbers the API decides
 

@@ -53,9 +53,10 @@ app finds out at run time what the API has turned on
 | Change the password (other devices are signed out, this one stays) | `/settings/account` | [account-settings.md](./account-settings.md#change-the-password) |
 | Sign out | your menu (avatar at the foot of the rail) | [session.md](./session.md#signing-out-step-by-step) |
 | See every signed-in device; sign out one of them, or all but this one | `/settings/account`, **Sessions** | [account-settings.md](./account-settings.md#sessions) |
-| Delete the account, with its password | `/settings/account` | [account-settings.md](./account-settings.md#delete-the-account) |
+| Delete the account, with its password; it goes 14 days later | `/settings/account`, **Delete account** | [account-settings.md](./account-settings.md#delete-the-account) |
+| Restore an account waiting to be deleted, by signing in to it before the day | any sign-in page, then the restore dialog | [session.md](./session.md#an-account-waiting-to-be-deleted) |
 | Stay signed in across reloads and new tabs; sign in or out in every open tab at once | everywhere | [session.md](./session.md) |
-| Be told why, when a session ends (password changed elsewhere, signed out from another device, account deleted, expired) | a banner on the sign-in page, or a toast after the page reloads | [session.md](./session.md#why-a-session-ended-every-reason) |
+| Be told why, when a session ends (password changed elsewhere, signed out from another device, account waiting to be deleted, expired) | a banner on the sign-in page, or a toast after the page reloads (an account already deleted) | [session.md](./session.md#why-a-session-ended-every-reason) |
 
 ## What the app gives you as a developer
 
@@ -116,7 +117,7 @@ ground up, with the reasons behind each.
 | Page | What it covers |
 |---|---|
 | [pages-and-flows.md](./pages-and-flows.md) | Every auth page: its address, who may open it, what it shows, what it asks the API, where it goes next. `?next=`, "complete your account" and the gate before the app, Google, the "already signed in" card, the legal pages. Diagrams of creating an account, sign-in and Google |
-| [session.md](./session.md) | Where the session lives, the page load, getting a fresh token, what the API client does with each answer, tabs, every reason a session ends and what the person sees |
+| [session.md](./session.md) | Where the session lives, the page load, getting a fresh token, what the API client does with each answer, tabs, every reason a session ends and what the person sees, an account waiting to be deleted and the restore dialog |
 | [forms-and-errors.md](./forms-and-errors.md) | How forms check input, turn API refusals into messages, handle "too many attempts", the password checklist, and the "send another code" timers |
 | [account-settings.md](./account-settings.md) | The account page (the email, change the password, the signed-in devices) and deleting an account |
 | [in-the-code.md](./in-the-code.md) | The files, the guards, the store, the tests, and how to add a page |
