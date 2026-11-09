@@ -25,10 +25,6 @@
   "crop": {
     "title": "Crop your profile picture",
     "description": "Drag the image to place it; use the slider to zoom in.",
-    "zoom": "Zoom",
-    "zoomOut": "Zoom out",
-    "zoomIn": "Zoom in",
-    "cancel": "Cancel",
     "save": "Save photo"
   },
   "validation": {
@@ -40,7 +36,6 @@
     "profileUpdated": "Profile updated",
     "avatarUpdated": "Profile picture changed",
     "avatarRemoved": "Profile picture removed",
-    "undo": "Undo",
-    "cropFailed": "This image could not be read. Choose another one."
+    "undo": "Undo"
   }
 }

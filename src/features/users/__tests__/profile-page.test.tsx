@@ -24,7 +24,7 @@ vi.mock('react-easy-crop', () => ({
         return <div data-testid='cropper' />
     }
 }))
-vi.mock('@/features/users/lib/crop-image', () => ({ default: () => Promise.resolve(new Blob(['jpeg'])) }))
+vi.mock('@/lib/crop-image', () => ({ default: () => Promise.resolve(new Blob(['jpeg'])) }))
 
 const { default: Profile } = await import('@/features/users/pages/Profile')
 const { AVATAR_UNDO_MS } = await import('@/features/users/lib/avatar-removal')

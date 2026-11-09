@@ -443,6 +443,49 @@ export interface paths {
         patch?: never
         trace?: never
     }
+    '/api/v1/servers': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        /**
+         * Every server they are in, with the channels they may see and what they
+         *     may do there (D-115, D-145). The rail and the channel list read this.
+         */
+        get: operations['ServersController_list_v1']
+        put?: never
+        /**
+         * A new server from a template (S-SRV-01). Answers with the server as the
+         *     list shows it, so the client adds it to the rail and opens its first
+         *     text channel without another request.
+         */
+        post: operations['ServersController_create_v1']
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/servers/{serverId}/icon': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        /** A new icon, cropped square by the client (MANAGE_SERVER). */
+        post: operations['ServersController_uploadIcon_v1']
+        /** Back to the initials (MANAGE_SERVER). */
+        delete: operations['ServersController_removeIcon_v1']
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
 }
 export type webhooks = Record<string, never>
 export interface components {
@@ -735,6 +778,77 @@ export interface components {
             allow_server_member_messages?: boolean
             /** @description "Show study activity" (D-79). */
             show_study_activity?: boolean
+        }
+        ServerCategoryResponseDto: {
+            id: string
+            /** @description As typed; the channel list shows it in capitals. */
+            name: string
+            /** @description Order among the categories, 0 first. */
+            position: number
+        }
+        ServerChannelResponseDto: {
+            /**
+             * @description What they may do in this channel (appendix B, steps 1–6).
+             * @example 3657472
+             */
+            permissions: string
+            id: string
+            /** @description Null: listed above the first category. */
+            category_id: string | null
+            /** @enum {string} */
+            type: 'text' | 'voice'
+            name: string
+            /** @description Order within its category, 0 first. */
+            position: number
+            is_private: boolean
+            /**
+             * @description `managers`: only those with MANAGE_MESSAGES may post.
+             * @enum {string}
+             */
+            send_mode: 'everyone' | 'managers'
+            is_study_room: boolean
+            task_board_enabled: boolean
+        }
+        ServerResponseDto: {
+            /**
+             * @description What they may do in the server as a whole: menus and settings pages.
+             * @example 3657600
+             */
+            permissions: string
+            id: string
+            name: string
+            /** @description Null: show the initials. */
+            icon_url: string | null
+            /** @description The owner outranks every role and may do everything. */
+            is_owner: boolean
+            /** @description Their highest role's position, 0 with none. Roles at or above it are locked for them, unless they are the owner. */
+            top_role_position: number
+            /**
+             * Format: date-time
+             * @description Set only while they are timed out.
+             */
+            timeout_until: string | null
+            /** @description The text channel that gets "X joined the server"; null for none, or one they cannot see. */
+            welcome_channel_id: string | null
+            /** @description Only those with a channel they can see, unless they manage channels. */
+            categories: components['schemas']['ServerCategoryResponseDto'][]
+            /** @description Only the ones they can see, by position; group them by category_id. */
+            channels: components['schemas']['ServerChannelResponseDto'][]
+        }
+        ServerListResponseDto: {
+            servers: components['schemas']['ServerResponseDto'][]
+        }
+        CreateServerRequestDto: {
+            /** @description 2–100 characters, counted after composing and trimming. */
+            name: string
+            /**
+             * @description Study Server or a plain one: only the channels it starts with differ.
+             * @enum {string}
+             */
+            template: 'study' | 'standard'
+        }
+        ServerIconResponseDto: {
+            icon_url: string
         }
     }
     responses: never
@@ -1579,6 +1693,115 @@ export interface operations {
                     [name: string]: unknown
                 }
                 content?: never
+            }
+        }
+    }
+    ServersController_list_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['ServerListResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    ServersController_create_v1: {
+        parameters: {
+            query?: never
+            header: {
+                /** @description UUID identifying one user intent */
+                'Idempotency-Key': string
+            }
+            path?: never
+            cookie?: never
+        }
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['CreateServerRequestDto']
+            }
+        }
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['ServerResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    ServersController_uploadIcon_v1: {
+        parameters: {
+            query?: never
+            header: {
+                /** @description UUID identifying one user intent */
+                'Idempotency-Key': string
+            }
+            path: {
+                serverId: string
+            }
+            cookie?: never
+        }
+        requestBody: {
+            content: {
+                'multipart/form-data': {
+                    /** Format: binary */
+                    icon: string
+                }
+            }
+        }
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['ServerIconResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    ServersController_removeIcon_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                serverId: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: null
+                    }
+                }
             }
         }
     }

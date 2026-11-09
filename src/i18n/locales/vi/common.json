@@ -51,14 +51,12 @@
       "addServer": "Tạo hoặc tham gia server",
       "study": "Học",
       "tasks": "Việc cần làm",
-      "notifications": "Thông báo",
-      "mentions": "{{name}}, {{count}} lượt nhắc tới bạn chưa đọc",
-      "unread": "{{name}}, có tin chưa đọc"
+      "notifications": "Thông báo"
     },
     "channels": {
       "label": "Kênh của {{name}}",
-      "mentions": "{{name}}, {{count}} lượt nhắc tới bạn chưa đọc",
-      "unread": "{{name}}, có tin chưa đọc"
+      "private": "Kênh riêng tư",
+      "noConnect": "Bạn không có quyền vào phòng này"
     },
     "study": {
       "title": "Học",
@@ -102,6 +100,16 @@
           "detail": "Mọi người thấy bạn ngoại tuyến"
         }
       }
+    },
+    "noServer": {
+      "title": "Chưa có server nào",
+      "firstTitle": "Chào mừng {{name}} đến với NezFocus",
+      "body": "Tạo Study Server để học cùng bạn bè, hoặc nhập mã mời bạn bè gửi.",
+      "create": "Tạo Study Server"
+    },
+    "voiceSoon": {
+      "title": "Phòng voice có ở bản sau",
+      "body": "Bạn đã thấy phòng này trong danh sách. Vào phòng, nói chuyện và học cùng nhau sẽ có khi phòng voice ra mắt."
     }
   },
   "timeZone": {
@@ -114,5 +122,12 @@
     "unsaved": "Bạn có thay đổi chưa lưu",
     "discard": "Hủy thay đổi",
     "save": "Lưu thay đổi"
+  },
+  "imageCrop": {
+    "zoom": "Phóng to",
+    "zoomOut": "Thu nhỏ",
+    "zoomIn": "Phóng to",
+    "cancel": "Hủy",
+    "failed": "Không đọc được ảnh này. Chọn ảnh khác."
   }
 }

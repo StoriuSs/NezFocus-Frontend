@@ -156,7 +156,8 @@ function WelcomeForm({ email, googleName }: { email: string | undefined; googleN
 
     function finish() {
         markComplete()
-        void navigate(safeNext(params.get('next')), { replace: true })
+        // The Study page greets a new account once (02 S-SHELL-01 `no-server-first`).
+        void navigate(safeNext(params.get('next')), { replace: true, state: { firstVisit: true } })
     }
 
     async function onSubmit(values: Values) {

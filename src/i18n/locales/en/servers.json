@@ -1,0 +1,44 @@
+{
+  "create": {
+    "title": "Create a server",
+    "description": "A server is where your group chats, studies together and shares tasks.",
+    "templates": "Server template",
+    "study": {
+      "title": "Study Server",
+      "tag": "Suggested",
+      "description": "Comes with welcome, announcements, materials, questions and group tasks channels, two 25/5 study rooms and a Team lead role."
+    },
+    "standard": {
+      "title": "Plain server",
+      "description": "A light start: one chat channel and one voice room."
+    },
+    "note": "A template is only the channels you start with. Any server can add channels, study rooms and roles later.",
+    "icon": {
+      "label": "Server picture (optional)",
+      "pick": "Choose a server picture",
+      "choose": "Choose image",
+      "change": "Change image",
+      "remove": "Remove image",
+      "hint": "JPG, PNG or WEBP, up to 8 MB.",
+      "tooLarge": "The image is larger than 8 MB. Choose another one.",
+      "wrongType": "Only JPG, PNG or WEBP images."
+    },
+    "name": {
+      "label": "Server name",
+      "placeholder": "e.g. Calculus 2 exam prep",
+      "invalid": "A server name needs 2–100 characters"
+    },
+    "cancel": "Cancel",
+    "submit": "Create server",
+    "maxServers": "You are in 100 servers, the most you can be in. Leave one to create or join another.",
+    "offline": "You need a connection to create or join a server",
+    "failed": "The server could not be created. Try again.",
+    "iconFailed": "{{name}} was created, but its picture was not saved.",
+    "retry": "Try again"
+  },
+  "crop": {
+    "title": "Crop the server picture",
+    "description": "Drag the image to place it; use the slider to zoom.",
+    "confirm": "Use image"
+  }
+}

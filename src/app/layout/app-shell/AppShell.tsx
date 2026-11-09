@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { useQueryErrorResetBoundary } from '@tanstack/react-query'
 
@@ -7,6 +7,7 @@ import { PageLoader } from '@/components/PageLoader'
 // Straight from its file, not the users index: the index is in the first download
 // (the auth store imports it), and whatever it exports goes there too.
 import { useAccountSettings } from '@/features/users/hooks/useAccountSettings'
+import { useCreateServerDialog } from '@/features/servers/create-server.store'
 import { cn } from '@/lib/utils'
 import { ListColumn } from './ListColumn'
 import { Rail } from './Rail'
@@ -17,6 +18,9 @@ import {
     ShellContext,
     type ShellContextValue
 } from '@/components/shell/shell-context'
+
+// Loaded the first time it opens: the cropper and its words stay out of the shell's download.
+const CreateServerDialog = lazy(() => import('@/features/servers/components/CreateServerDialog'))
 
 /**
  * The frame of every page after sign-in (02 S-SHELL-01): rail 72, list
@@ -35,6 +39,7 @@ export default function AppShell() {
     const { pathname } = useLocation()
     const { reset: resetQueryErrors } = useQueryErrorResetBoundary()
     const [navOpen, setNavOpen] = useState(false)
+    const creatingServer = useCreateServerDialog((state) => state.open)
     // The account's theme and language, here and in this browser's other tabs (REQ-AUTH-08).
     useAccountSettings()
 
@@ -101,6 +106,11 @@ export default function AppShell() {
                     </ErrorBoundary>
                 </main>
             </div>
+            {creatingServer ? (
+                <Suspense fallback={null}>
+                    <CreateServerDialog />
+                </Suspense>
+            ) : null}
         </ShellContext.Provider>
     )
 }

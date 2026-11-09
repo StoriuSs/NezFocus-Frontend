@@ -2,10 +2,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
+import { Users } from 'lucide-react'
 import i18n from '@/i18n'
+import { IconButton } from '@/components/ui/icon-button'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { RightPanel, usePanel } from '@/components/shell/RightPanel'
+import { ShellPage } from '@/components/shell/ShellPage'
 import { expectNoA11yViolations } from '@/test/a11y'
 import { mockAuthStore, queryWrapper } from '@/test/helpers'
+import type { Server, ServerChannel } from '@/features/servers'
 
 const authState = {
     isAuthenticated: true,
@@ -14,14 +19,85 @@ const authState = {
 }
 const profile = { ...authState.user, avatarUrl: null, bio: 'Ôn Giải tích 2 mỗi tối 21:00' }
 
+const serversApi = { fetchServers: vi.fn(), createServer: vi.fn(), uploadServerIcon: vi.fn() }
 vi.mock('@/features/auth/auth.store', () => mockAuthStore(authState))
 vi.mock('@/features/users/api/useProfile', () => ({ useProfile: () => ({ data: profile }) }))
+vi.mock('@/features/servers/api/servers.api', () => serversApi)
 
 const { default: AppShell } = await import('@/app/layout/app-shell/AppShell')
-const { default: MockChannelPage } = await import('@/app/layout/app-shell/MockChannelPage')
+const { default: ChannelPage } = await import('@/features/servers/pages/ChannelPage')
 const { default: Study } = await import('@/pages/Study')
+const { useCreateServerDialog } = await import('@/features/servers')
 
-function renderAt(path: string) {
+/** VIEW_CHANNEL, SEND_MESSAGES, CONNECT; and the same without CONNECT. */
+const MEMBER = String((1n << 8n) | (1n << 10n) | (1n << 15n))
+const NO_CONNECT = String((1n << 8n) | (1n << 10n))
+
+const channel = (id: string, extra: Partial<ServerChannel> = {}): ServerChannel => ({
+    id,
+    categoryId: 'info',
+    type: 'text',
+    name: id,
+    position: 0,
+    isPrivate: false,
+    sendMode: 'everyone',
+    isStudyRoom: false,
+    taskBoardEnabled: false,
+    permissions: MEMBER,
+    ...extra
+})
+
+/** ÔT as Phong sees it: a private channel outside any category, two categories, a room he may not join. */
+const OT: Server = {
+    id: 'ot',
+    name: 'Ôn thi Giải tích 2',
+    iconUrl: null,
+    isOwner: false,
+    permissions: MEMBER,
+    topRolePosition: 0,
+    timeoutUntil: null,
+    welcomeChannelId: 'chao-mung',
+    categories: [
+        { id: 'rooms', name: 'Phòng học', position: 1 },
+        { id: 'info', name: 'Thông tin', position: 0 }
+    ],
+    channels: [
+        channel('hoi-dap', { position: 1 }),
+        channel('chao-mung'),
+        channel('ban-can-su', { categoryId: null, isPrivate: true }),
+        channel('quiet', { categoryId: 'rooms', type: 'voice', name: 'Phòng học im lặng', isStudyRoom: true }),
+        channel('loud', {
+            categoryId: 'rooms',
+            type: 'voice',
+            name: 'Phòng thoại',
+            position: 1,
+            permissions: NO_CONNECT
+        })
+    ]
+}
+const ND: Server = { ...OT, id: 'nd', name: 'Nhóm đồ án Mobile', iconUrl: 'https://cdn.test/nd.webp' }
+
+/** A page with the members panel, as channel pages will have from M2. */
+function PanelPage() {
+    const [panel, panelButton] = usePanel('members')
+    return (
+        <ShellPage
+            title='hoi-dap'
+            actions={
+                <IconButton ref={panelButton} label='Members' on={panel.open} onClick={panel.toggle}>
+                    <Users />
+                </IconButton>
+            }
+            panel={
+                <RightPanel state={panel} buttonRef={panelButton} title='Members'>
+                    <p>Bình</p>
+                </RightPanel>
+            }
+        />
+    )
+}
+
+function renderAt(path: string | { pathname: string; state: unknown }) {
     const router = createMemoryRouter(
         [
             {
@@ -30,9 +106,10 @@ function renderAt(path: string) {
                     { path: '/study', element: <Study />, handle: { column: 'study' } },
                     {
                         path: '/channels/:serverId/:channelId?',
-                        element: <MockChannelPage />,
+                        element: <ChannelPage />,
                         handle: { column: 'server' }
                     },
+                    { path: '/panel', element: <PanelPage />, handle: { column: 'study' } },
                     { path: '/settings/account', element: <h1>Settings page</h1>, handle: { column: 'settings' } },
                     { path: '/settings/profile', element: <h1>Profile page</h1>, handle: { column: 'settings' } }
                 ]
@@ -56,6 +133,9 @@ describe('AppShell (S-SHELL-01)', () => {
         await i18n.changeLanguage('en')
         authState.logout.mockReset()
         localStorage.clear()
+        serversApi.fetchServers.mockResolvedValue([OT, ND])
+        // One dialog for the whole app: a test that opened it must not leave it over the next.
+        useCreateServerDialog.getState().hide()
     })
 
     describe('on the Study page', () => {
@@ -79,15 +159,19 @@ describe('AppShell (S-SHELL-01)', () => {
             expect(screen.getByRole('button', { name: 'To-do · coming soon' })).toBeInTheDocument()
         })
 
-        it('reads each server with what is unread in it', async () => {
+        it('lists your servers in the order they came, each by its picture or its initials', async () => {
             renderAt('/study')
-            await screen.findByRole('heading', { level: 1, name: 'Study' })
-            expect(
-                within(rail()).getByRole('link', { name: 'Nhóm đồ án Mobile, unread mentions of you: 2' })
-            ).toBeInTheDocument()
-            expect(
-                within(rail()).getByRole('link', { name: 'CLB Guitar PTIT, has unread messages' })
-            ).toBeInTheDocument()
+            const ot = await within(rail()).findByRole('link', { name: 'Ôn thi Giải tích 2' })
+            const nd = within(rail()).getByRole('link', { name: 'Nhóm đồ án Mobile' })
+            expect(ot.compareDocumentPosition(nd) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+            expect(ot).toHaveTextContent('ÔT')
+            expect(nd.querySelector('img')).toHaveAttribute('src', 'https://cdn.test/nd.webp')
+        })
+
+        it('opens "Create a server" from ＋', async () => {
+            renderAt('/study')
+            await userEvent.click(await within(rail()).findByRole('button', { name: 'Create or join a server' }))
+            expect(await screen.findByRole('heading', { name: 'Create a server' })).toBeInTheDocument()
         })
 
         it('has no critical or serious accessibility problem', async () => {
@@ -97,57 +181,107 @@ describe('AppShell (S-SHELL-01)', () => {
         })
     })
 
-    describe('in a channel of a (mock) server', () => {
-        it('opens a server at its first channel, and marks both', async () => {
-            const router = renderAt('/channels/on-thi-giai-tich-2')
-            await waitFor(() => expect(router.state.location.pathname).toBe('/channels/on-thi-giai-tich-2/chao-mung'))
+    describe('in no server yet (S-SHELL-01 no-server)', () => {
+        it('offers to create a Study Server, with it chosen', async () => {
+            serversApi.fetchServers.mockResolvedValue([])
+            renderAt('/study')
+            expect(await screen.findByRole('heading', { level: 2, name: 'No servers yet' })).toBeInTheDocument()
+            await userEvent.click(screen.getByRole('button', { name: 'Create a Study Server' }))
+            const dialog = await screen.findByRole('dialog', { name: 'Create a server' })
+            expect(within(dialog).getByRole('radio', { name: /Study Server/ })).toHaveAttribute('aria-checked', 'true')
+        })
+
+        it('welcomes a new account by name, right after it is completed', async () => {
+            serversApi.fetchServers.mockResolvedValue([])
+            renderAt({ pathname: '/study', state: { firstVisit: true } })
+            expect(
+                await screen.findByRole('heading', { level: 2, name: 'Welcome to NezFocus, An' })
+            ).toBeInTheDocument()
+        })
+
+        it('says nothing of it to someone in a server', async () => {
+            renderAt('/study')
+            await within(rail()).findByRole('link', { name: 'Ôn thi Giải tích 2' })
+            expect(screen.queryByRole('heading', { name: 'No servers yet' })).not.toBeInTheDocument()
+        })
+    })
+
+    describe('in a server', () => {
+        it('opens a server at its first text channel, and marks both', async () => {
+            const router = renderAt('/channels/ot')
+            await waitFor(() => expect(router.state.location.pathname).toBe('/channels/ot/ban-can-su'))
             expect(within(rail()).getByRole('link', { name: 'Ôn thi Giải tích 2' })).toHaveAttribute(
                 'aria-current',
                 'page'
             )
             const channels = screen.getByRole('navigation', { name: 'Channels of Ôn thi Giải tích 2' })
-            expect(within(channels).getByRole('link', { name: 'chao-mung' })).toHaveAttribute('aria-current', 'page')
-            expect(screen.getByRole('heading', { level: 1, name: 'chao-mung' })).toBeInTheDocument()
+            expect(await screen.findByRole('heading', { level: 1, name: 'ban-can-su' })).toBeInTheDocument()
+            expect(within(channels).getByRole('link', { name: /ban-can-su/ })).toHaveAttribute('aria-current', 'page')
         })
 
-        it('folds a category', async () => {
-            renderAt('/channels/on-thi-giai-tich-2/hoi-dap')
-            const category = await screen.findByRole('button', { name: 'PHÒNG HỌC' })
-            expect(screen.getByRole('link', { name: 'Phòng học im lặng' })).toBeVisible()
+        it('lists channels outside any category first, then each category in order, titles in capitals', async () => {
+            renderAt('/channels/ot/hoi-dap')
+            const channels = await screen.findByRole('navigation', { name: 'Channels of Ôn thi Giải tích 2' })
+            expect(
+                within(channels)
+                    .getAllByRole('link')
+                    .map((link) => link.textContent)
+            ).toEqual(['ban-can-su', 'chao-mung', 'hoi-dap', 'Phòng học im lặng', 'Phòng thoại'])
+            expect(within(channels).getByRole('button', { name: 'Thông tin' })).toHaveClass('uppercase')
+        })
+
+        it('marks a private channel, and a room one may not join', async () => {
+            renderAt('/channels/ot/hoi-dap')
+            const channels = await screen.findByRole('navigation', { name: 'Channels of Ôn thi Giải tích 2' })
+            const privateRow = within(channels).getByRole('link', { name: /ban-can-su/ })
+            expect(within(privateRow).getByRole('img', { name: 'Private channel' })).toBeInTheDocument()
+            const loud = within(channels).getByRole('link', { name: /Phòng thoại/ })
+            expect(within(loud).getByRole('img', { name: 'You may not join this room' })).toBeInTheDocument()
+            const quiet = within(channels).getByRole('link', { name: /Phòng học im lặng/ })
+            expect(within(quiet).queryByRole('img')).not.toBeInTheDocument()
+        })
+
+        it('folds a category, keeping the open channel', async () => {
+            renderAt('/channels/ot/hoi-dap')
+            const category = await screen.findByRole('button', { name: 'Thông tin' })
             await userEvent.click(category)
             expect(category).toHaveAttribute('aria-expanded', 'false')
-            expect(screen.queryByRole('link', { name: 'Phòng học im lặng' })).not.toBeInTheDocument()
+            expect(screen.getByRole('link', { name: 'hoi-dap' })).toHaveAttribute('aria-current', 'page')
+            expect(screen.queryByRole('link', { name: 'chao-mung' })).not.toBeInTheDocument()
 
             await userEvent.click(category)
-            expect(screen.getByRole('link', { name: 'Phòng học im lặng' })).toBeInTheDocument()
+            expect(screen.getByRole('link', { name: 'chao-mung' })).toBeInTheDocument()
         })
 
-        it('keeps the open channel and the ones that mention you in a folded category (C-06)', async () => {
-            renderAt('/channels/on-thi-giai-tich-2/hoi-dap')
-            await userEvent.click(await screen.findByRole('button', { name: 'THÔNG TIN' }))
-            const channels = screen.getByRole('navigation', { name: 'Channels of Ôn thi Giải tích 2' })
-            expect(within(channels).getByRole('link', { name: 'hoi-dap' })).toHaveAttribute('aria-current', 'page')
-            expect(
-                within(channels).getByRole('link', { name: 'viec-nhom, unread mentions of you: 2' })
-            ).toBeInTheDocument()
-            expect(within(channels).queryByRole('link', { name: 'tai-lieu' })).not.toBeInTheDocument()
-            expect(
-                within(channels).queryByRole('link', { name: 'thong-bao, has unread messages' })
-            ).not.toBeInTheDocument()
+        it('says a voice room arrives later', async () => {
+            renderAt('/channels/ot/quiet')
+            expect(await screen.findByRole('heading', { level: 1, name: 'Phòng học im lặng' })).toBeInTheDocument()
+            expect(screen.getByRole('heading', { level: 2, name: 'Voice rooms come in a later version' })).toBeVisible()
         })
 
-        it('opens the members panel as a sheet below 1280; Esc closes it and focus goes back', async () => {
-            renderAt('/channels/on-thi-giai-tich-2/hoi-dap')
+        it('goes back to the Study page from a server one is not in', async () => {
+            const router = renderAt('/channels/gone/hoi-dap')
+            await waitFor(() => expect(router.state.location.pathname).toBe('/study'))
+        })
+
+        it('has no critical or serious accessibility problem', async () => {
+            renderAt('/channels/ot/hoi-dap')
+            await screen.findByRole('heading', { level: 1, name: 'hoi-dap' })
+            await expectNoA11yViolations()
+        })
+    })
+
+    describe('the right panel', () => {
+        it('opens as a sheet below 1280; Esc closes it and focus goes back', async () => {
+            renderAt('/panel')
             const button = await screen.findByRole('button', { name: 'Members' })
             // A narrow window (jsdom matches no media query): closed at first.
             expect(button).toHaveAttribute('aria-pressed', 'false')
             expect(screen.queryByRole('complementary', { name: 'Members' })).not.toBeInTheDocument()
 
             await userEvent.click(button)
-            const panel = screen.getByRole('complementary', { name: 'Members' })
+            expect(within(screen.getByRole('complementary', { name: 'Members' })).getByText('Bình')).toBeVisible()
             expect(button).toHaveAttribute('aria-pressed', 'true')
-            expect(within(panel).getByRole('heading', { name: 'Online — 5' })).toBeInTheDocument()
-            expect(within(panel).getByRole('heading', { name: 'Offline — 3' })).toBeInTheDocument()
             await expectNoA11yViolations()
 
             await userEvent.keyboard('{Escape}')
@@ -175,8 +309,8 @@ describe('AppShell (S-SHELL-01)', () => {
             renderAt('/study')
             const menu = await screen.findByRole('button', { name: 'Open navigation' })
             await userEvent.click(menu)
-            await userEvent.click(within(rail()).getByRole('link', { name: 'Ôn thi Giải tích 2' }))
-            await screen.findByRole('heading', { level: 1, name: 'chao-mung' })
+            await userEvent.click(await within(rail()).findByRole('link', { name: 'Ôn thi Giải tích 2' }))
+            await screen.findByRole('heading', { level: 1, name: 'ban-can-su' })
             expect(screen.getByRole('button', { name: 'Open navigation' })).toHaveAttribute('aria-expanded', 'false')
         })
     })

@@ -25,10 +25,6 @@
   "crop": {
     "title": "Cắt ảnh đại diện",
     "description": "Kéo ảnh để căn, dùng thanh để phóng to.",
-    "zoom": "Phóng to",
-    "zoomOut": "Thu nhỏ",
-    "zoomIn": "Phóng to",
-    "cancel": "Hủy",
     "save": "Lưu ảnh"
   },
   "validation": {
@@ -40,7 +36,6 @@
     "profileUpdated": "Đã cập nhật hồ sơ",
     "avatarUpdated": "Đã đổi ảnh đại diện",
     "avatarRemoved": "Đã xóa ảnh đại diện",
-    "undo": "Hoàn tác",
-    "cropFailed": "Không đọc được ảnh này. Chọn ảnh khác."
+    "undo": "Hoàn tác"
   }
 }

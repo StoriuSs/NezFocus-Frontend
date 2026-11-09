@@ -8,20 +8,28 @@ import {
     IdCard,
     LampDesk,
     LayoutGrid,
+    Lock,
     Palette,
     Shield,
     Timer,
     UserRoundCog,
+    Volume2,
     type LucideIcon
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
-import { CountBadge } from '@/components/ui/count-badge'
 import { WithTooltip } from '@/components/ui/tooltip'
 import { AUTH_PATHS } from '@/features/auth'
+import {
+    can,
+    channelGroups,
+    useServers,
+    type Server,
+    type ServerCategory,
+    type ServerChannel
+} from '@/features/servers'
 import { USERS_PATHS } from '@/features/users'
 import { cn } from '@/lib/utils'
-import { findServer, type MockCategory, type MockServer } from './mock-data'
 
 /** The column's 48-high title row, level with the page Header's bottom rule. */
 function ColumnTitle({ children }: { children: ReactNode }) {
@@ -45,6 +53,7 @@ function RowLink({
     icon: Icon,
     children,
     bold,
+    muted,
     trailing,
     rounded = 'rounded-input',
     label
@@ -55,6 +64,8 @@ function RowLink({
     children: ReactNode
     /** Unread (C-06): the name in `text-primary` 600. */
     bold?: boolean
+    /** Not for them (a room they may not join): the name in `text-tertiary`. */
+    muted?: boolean
     trailing?: ReactNode
     rounded?: string
     label?: string
@@ -72,7 +83,11 @@ function RowLink({
                         ? 'bg-surface-3 font-semibold text-text-primary'
                         : cn(
                               'hover:bg-surface-2',
-                              bold ? 'font-semibold text-text-primary' : 'font-medium text-text-secondary'
+                              bold
+                                  ? 'font-semibold text-text-primary'
+                                  : muted
+                                    ? 'font-medium text-text-tertiary'
+                                    : 'font-medium text-text-secondary'
                           )
                 )
             }
@@ -157,22 +172,68 @@ function SettingsColumn() {
     )
 }
 
-/**
- * A category (CategoryRow, C-06): its title folds and unfolds the channels
- * under it. Folded, it still shows the open channel and channels that mention
- * you (C-06). The rows are left out rather than hidden with `hidden`: the
- * row's `flex` class would override that attribute and keep them on screen.
- */
-function Category({ server, category }: { server: MockServer; category: MockCategory }) {
+const CHANNEL_ICON = (channel: ServerChannel): LucideIcon =>
+    channel.type === 'text' ? Hash : channel.isStudyRoom ? LampDesk : Volume2
+
+/** A 12 lock after the name (C-06): a private channel, or a room one may not join. */
+const SmallLock = ({ label }: { label: string }) => (
+    <Lock role='img' aria-label={label} style={{ width: 12, height: 12 }} className='text-text-tertiary' />
+)
+
+/** One channel or room (ChannelRow, C-06). */
+function ChannelRow({ server, channel }: { server: Server; channel: ServerChannel }) {
     const { t } = useTranslation()
+    const locked = channel.type === 'voice' && !can(channel.permissions, 'CONNECT')
+    const row = (
+        <RowLink
+            to={`/channels/${server.id}/${channel.id}`}
+            icon={CHANNEL_ICON(channel)}
+            muted={locked}
+            trailing={
+                locked ? (
+                    <SmallLock label={t('shell.channels.noConnect')} />
+                ) : channel.isPrivate ? (
+                    <SmallLock label={t('shell.channels.private')} />
+                ) : null
+            }
+        >
+            {channel.name}
+        </RowLink>
+    )
+    return (
+        <li>
+            {locked ? (
+                <WithTooltip label={t('shell.channels.noConnect')} side='right'>
+                    {row}
+                </WithTooltip>
+            ) : (
+                row
+            )}
+        </li>
+    )
+}
+
+/**
+ * A category (CategoryRow, C-06): its title, in capitals as the list shows
+ * them (the name is stored as typed), folds and unfolds the channels under
+ * it. Folded, it still shows the open channel. The rows are left out rather
+ * than hidden with `hidden`: the row's `flex` class would override that
+ * attribute and keep them on screen.
+ */
+function Category({
+    server,
+    group
+}: {
+    server: Server
+    group: { category: ServerCategory; channels: ServerChannel[] }
+}) {
     const { pathname } = useLocation()
     const [open, setOpen] = useState(true)
-    const listId = `category-${server.id}-${category.id}`
+    const listId = `category-${server.id}-${group.category.id}`
     const Chevron = open ? ChevronDown : ChevronRight
-    const pathOf = (channelId: string) => `/channels/${server.id}/${channelId}`
     const visible = open
-        ? category.channels
-        : category.channels.filter((channel) => pathname === pathOf(channel.id) || Boolean(channel.mentions))
+        ? group.channels
+        : group.channels.filter((channel) => pathname === `/channels/${server.id}/${channel.id}`)
 
     return (
         <li>
@@ -181,30 +242,14 @@ function Category({ server, category }: { server: MockServer; category: MockCate
                 aria-expanded={open}
                 aria-controls={listId}
                 onClick={() => setOpen(!open)}
-                className='flex h-7 w-full items-center gap-1 rounded-input px-1 text-label font-semibold text-text-tertiary hover:text-text-secondary'
+                className='flex h-7 w-full items-center gap-1 rounded-input px-1 text-label font-semibold uppercase text-text-tertiary hover:text-text-secondary'
             >
                 <Chevron className='size-3' aria-hidden='true' />
-                {category.name}
+                {group.category.name}
             </button>
             <ul id={listId} className='flex flex-col gap-0.5'>
                 {visible.map((channel) => (
-                    <li key={channel.id}>
-                        <RowLink
-                            to={pathOf(channel.id)}
-                            icon={channel.kind === 'study-room' ? LampDesk : Hash}
-                            bold={channel.unread || Boolean(channel.mentions)}
-                            label={
-                                channel.mentions
-                                    ? t('shell.channels.mentions', { name: channel.name, count: channel.mentions })
-                                    : channel.unread
-                                      ? t('shell.channels.unread', { name: channel.name })
-                                      : undefined
-                            }
-                            trailing={<CountBadge count={channel.mentions ?? 0} />}
-                        >
-                            {channel.name}
-                        </RowLink>
-                    </li>
+                    <ChannelRow key={channel.id} server={server} channel={channel} />
                 ))}
             </ul>
         </li>
@@ -212,12 +257,13 @@ function Category({ server, category }: { server: MockServer; category: MockCate
 }
 
 /**
- * A server's channels (C-06), from mock data in M0. The server's name heads
- * the column; its menu (03 S-SRV-04) arrives with servers in M1.
+ * A server's channels (C-06): those outside any category first, without a
+ * heading, then each category. The server's name heads the column; its menu
+ * (03 S-SRV-04) arrives in L4.
  */
 function ServerColumn({ serverId }: { serverId: string | undefined }) {
     const { t } = useTranslation()
-    const server = findServer(serverId)
+    const server = useServers().data?.find((candidate) => candidate.id === serverId)
     if (!server) return null
     return (
         <>
@@ -227,9 +273,23 @@ function ServerColumn({ serverId }: { serverId: string | undefined }) {
                 className='min-h-0 flex-1 overflow-y-auto p-2'
             >
                 <ul className='flex flex-col gap-3'>
-                    {server.categories.map((category) => (
-                        <Category key={category.id} server={server} category={category} />
-                    ))}
+                    {channelGroups(server).map((group) =>
+                        group.category ? (
+                            <Category
+                                key={group.category.id}
+                                server={server}
+                                group={{ category: group.category, channels: group.channels }}
+                            />
+                        ) : (
+                            <li key='loose'>
+                                <ul className='flex flex-col gap-0.5'>
+                                    {group.channels.map((channel) => (
+                                        <ChannelRow key={channel.id} server={server} channel={channel} />
+                                    ))}
+                                </ul>
+                            </li>
+                        )
+                    )}
                 </ul>
             </nav>
         </>

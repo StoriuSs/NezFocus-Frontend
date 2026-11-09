@@ -1,0 +1,44 @@
+{
+  "create": {
+    "title": "Tạo server",
+    "description": "Server là nơi nhóm của bạn nhắn tin, học cùng và giao việc.",
+    "templates": "Mẫu server",
+    "study": {
+      "title": "Study Server",
+      "tag": "Gợi ý",
+      "description": "Có sẵn kênh chào mừng, thông báo, tài liệu, hỏi đáp, việc nhóm, 2 phòng học 25/5 và vai trò Trưởng nhóm."
+    },
+    "standard": {
+      "title": "Server thường",
+      "description": "Bắt đầu gọn: một kênh chat và một phòng thoại."
+    },
+    "note": "Mẫu chỉ là bộ kênh ban đầu. Server nào cũng thêm được kênh, phòng học và vai trò về sau.",
+    "icon": {
+      "label": "Ảnh server (không bắt buộc)",
+      "pick": "Chọn ảnh server",
+      "choose": "Chọn ảnh",
+      "change": "Đổi ảnh",
+      "remove": "Xóa ảnh",
+      "hint": "JPG, PNG hoặc WEBP, tối đa 8 MB.",
+      "tooLarge": "Ảnh lớn hơn 8 MB. Chọn ảnh khác.",
+      "wrongType": "Chỉ nhận ảnh JPG, PNG hoặc WEBP."
+    },
+    "name": {
+      "label": "Tên server",
+      "placeholder": "ví dụ: Ôn thi Giải tích 2",
+      "invalid": "Tên server cần 2–100 ký tự"
+    },
+    "cancel": "Hủy",
+    "submit": "Tạo server",
+    "maxServers": "Bạn đã ở 100 server, mức tối đa. Rời bớt một server để tạo hoặc tham gia server mới.",
+    "offline": "Cần kết nối mạng để tạo hoặc tham gia server",
+    "failed": "Không tạo được server. Thử lại.",
+    "iconFailed": "Đã tạo {{name}} nhưng chưa lưu được ảnh server.",
+    "retry": "Thử lại"
+  },
+  "crop": {
+    "title": "Cắt ảnh server",
+    "description": "Kéo ảnh để căn, dùng thanh để phóng to.",
+    "confirm": "Dùng ảnh"
+  }
+}

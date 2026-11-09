@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import i18n, { resources } from '@/i18n'
 import { settingsResources } from '@/i18n/settings'
 import { deletionResources } from '@/i18n/deletion'
+import { serversResources } from '@/i18n/servers'
 
 /** Every leaf key, dotted and namespaced: { a: { b: 'x' } } in "ns" -> ['ns:a.b']. */
 function keysOf(value: unknown, prefix: string): string[] {
@@ -22,6 +23,7 @@ describe('translation catalogues', () => {
         expect(all(resources.vi)).toEqual(all(resources.en))
         expect(all({ settings: settingsResources.vi })).toEqual(all({ settings: settingsResources.en }))
         expect(all({ deletion: deletionResources.vi })).toEqual(all({ deletion: deletionResources.en }))
+        expect(all({ servers: serversResources.vi })).toEqual(all({ servers: serversResources.en }))
     })
 
     it('adds the settings words to i18n once their pages load', async () => {

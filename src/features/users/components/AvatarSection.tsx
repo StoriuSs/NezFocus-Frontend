@@ -7,13 +7,8 @@ import { Button } from '@/components/ui/button'
 import { useAvatarErrorRefresh } from '@/features/users/hooks/useAvatarErrorRefresh'
 import { removeAvatarWithUndo } from '@/features/users/lib/avatar-removal'
 import type { UserProfile } from '@/features/users/types'
+import { IMAGE_TYPES, imageProblem, type ImageProblem } from '@/lib/image-file'
 import { AvatarCropDialog } from './AvatarCropDialog'
-
-/** What the API takes (REQ-AUTH-06): checked here first, so a wrong file never opens the cropper. */
-const AVATAR_TYPES = ['image/jpeg', 'image/png', 'image/webp']
-const AVATAR_MAX_BYTES = 8 * 1024 * 1024
-
-type Problem = 'tooLarge' | 'wrongType'
 
 /**
  * The picture part of S-ME-02: the avatar (a button, and a place to drop an
@@ -26,17 +21,16 @@ export function AvatarSection({ profile }: { profile: UserProfile }) {
     const { t } = useTranslation('users')
     const queryClient = useQueryClient()
     const fileInput = useRef<HTMLInputElement>(null)
-    const [problem, setProblem] = useState<Problem | null>(null)
+    const [problem, setProblem] = useState<ImageProblem | null>(null)
     const [chosen, setChosen] = useState<string | null>(null)
     const refreshAvatar = useAvatarErrorRefresh(profile.avatarUrl)
     const name = profile.displayName || profile.username || ''
 
     function choose(file: File | undefined) {
         if (!file) return
-        if (!AVATAR_TYPES.includes(file.type)) return setProblem('wrongType')
-        if (file.size > AVATAR_MAX_BYTES) return setProblem('tooLarge')
-        setProblem(null)
-        setChosen(URL.createObjectURL(file))
+        const refused = imageProblem(file)
+        setProblem(refused)
+        if (!refused) setChosen(URL.createObjectURL(file))
     }
 
     function drop(event: DragEvent) {
@@ -92,7 +86,7 @@ export function AvatarSection({ profile }: { profile: UserProfile }) {
             <input
                 ref={fileInput}
                 type='file'
-                accept={AVATAR_TYPES.join(',')}
+                accept={IMAGE_TYPES.join(',')}
                 className='hidden'
                 aria-hidden='true'
                 tabIndex={-1}

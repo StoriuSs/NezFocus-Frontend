@@ -51,14 +51,12 @@
       "addServer": "Create or join a server",
       "study": "Study",
       "tasks": "To-do",
-      "notifications": "Notifications",
-      "mentions": "{{name}}, unread mentions of you: {{count}}",
-      "unread": "{{name}}, has unread messages"
+      "notifications": "Notifications"
     },
     "channels": {
       "label": "Channels of {{name}}",
-      "mentions": "{{name}}, unread mentions of you: {{count}}",
-      "unread": "{{name}}, has unread messages"
+      "private": "Private channel",
+      "noConnect": "You may not join this room"
     },
     "study": {
       "title": "Study",
@@ -102,6 +100,16 @@
           "detail": "Everyone sees you as offline"
         }
       }
+    },
+    "noServer": {
+      "title": "No servers yet",
+      "firstTitle": "Welcome to NezFocus, {{name}}",
+      "body": "Create a Study Server to study with friends, or enter an invite code a friend sent you.",
+      "create": "Create a Study Server"
+    },
+    "voiceSoon": {
+      "title": "Voice rooms come in a later version",
+      "body": "The room is in your list already. Joining it, talking and studying together arrive with voice rooms."
     }
   },
   "timeZone": {
@@ -114,5 +122,12 @@
     "unsaved": "You have unsaved changes",
     "discard": "Discard changes",
     "save": "Save changes"
+  },
+  "imageCrop": {
+    "zoom": "Zoom",
+    "zoomOut": "Zoom out",
+    "zoomIn": "Zoom in",
+    "cancel": "Cancel",
+    "failed": "This image could not be read. Choose another one."
   }
 }
