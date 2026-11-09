@@ -89,7 +89,7 @@ export function DeleteChannelDialog({
     return (
         <Dialog open onOpenChange={(open) => !open && !deleting && onCancel()}>
             {/* Never closed by a click outside (C-14 `type-name`). */}
-            <DialogContent className='sm:max-w-[440px]' onInteractOutside={(event) => event.preventDefault()}>
+            <DialogContent className='sm:max-w-dialog' onInteractOutside={(event) => event.preventDefault()}>
                 <form onSubmit={(event) => void submit(event)} className='space-y-4' noValidate>
                     <DialogHeader>
                         <DialogTitle>

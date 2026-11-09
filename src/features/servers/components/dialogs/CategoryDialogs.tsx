@@ -105,7 +105,7 @@ function CategoryForm({
 
     return (
         <DialogContent
-            className='sm:max-w-[440px]'
+            className='sm:max-w-dialog'
             aria-describedby={undefined}
             onOpenAutoFocus={(event) => {
                 event.preventDefault()
@@ -136,7 +136,7 @@ function CategoryForm({
                             type='button'
                             variant='text'
                             size='sm'
-                            className='text-danger hover:text-danger'
+                            className='text-danger'
                             disabled={saving}
                             onClick={onDelete}
                         >
@@ -252,7 +252,7 @@ function DeleteCategoryDialog({
 
     return (
         <Dialog open onOpenChange={(open) => !open && !deleting && onCancel()}>
-            <DialogContent className='sm:max-w-[440px]'>
+            <DialogContent className='sm:max-w-dialog'>
                 <DialogHeader>
                     <DialogTitle>{t('category.deleteTitle', { name: upper(category.name) })}</DialogTitle>
                     <DialogDescription>

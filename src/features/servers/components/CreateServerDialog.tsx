@@ -217,7 +217,7 @@ export default function CreateServerDialog() {
                             onClick={() => fileInput.current?.click()}
                             onDragOver={(event) => event.dataTransfer.types.includes('Files') && event.preventDefault()}
                             onDrop={drop}
-                            className='size-[72px] shrink-0 overflow-hidden rounded-[24px] bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-bg'
+                            className='size-[72px] shrink-0 overflow-hidden rounded-[33%] bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-bg'
                         >
                             {icon ? (
                                 <img src={icon.url} alt='' className='size-full object-cover' />

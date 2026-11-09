@@ -204,7 +204,7 @@ export function ChannelSettingsDialog({
                                 type='button'
                                 variant='text'
                                 size='sm'
-                                className='text-danger hover:text-danger'
+                                className='text-danger'
                                 disabled={saving}
                                 onClick={() => setDeleting(true)}
                             >
