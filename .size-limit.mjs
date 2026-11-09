@@ -8,7 +8,10 @@
 // 7.28 kB), plus the 0.5% tolerance CONSTRAINTS.md allows. L4 added the
 // design tokens and self-hosted fonts (CSS up) and dropped the `ui` vendor
 // chunk (JS down). JS raised to 246.75 kB after L12 (07/11/2026, 246.41 kB:
-// the profile page's words in both languages). Raise them
+// the profile page's words in both languages). CSS raised to 8.72 kB after
+// M1 L5 (09/11/2026, 8.67 kB: the classes of the rail, channel list, drag
+// and drop, channel dialogs, Select and server settings; Tailwind puts every
+// page's classes in the one stylesheet loaded first). Raise them
 // only as CONSTRAINTS.md says: the owner decides, in a commit of its own.
 import { existsSync, readFileSync } from 'node:fs'
 
@@ -36,5 +39,5 @@ const css = tags('link')
 
 export default [
     { name: 'Initial JS (gzip)', path: js, gzip: true, limit: '246.75 kB' },
-    { name: 'Initial CSS (gzip)', path: css, gzip: true, limit: '8.17 kB' }
+    { name: 'Initial CSS (gzip)', path: css, gzip: true, limit: '8.72 kB' }
 ]
