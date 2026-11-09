@@ -486,6 +486,90 @@ export interface paths {
         patch?: never
         trace?: never
     }
+    '/api/v1/servers/{serverId}/categories': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        /** A category at the end of the list (MANAGE_CHANNELS). */
+        post: operations['ChannelLayoutController_createCategory_v1']
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/servers/{serverId}/categories/{categoryId}': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        post?: never
+        /** Its channels move above the first category (REQ-SRV-02). */
+        delete: operations['ChannelLayoutController_deleteCategory_v1']
+        options?: never
+        head?: never
+        patch: operations['ChannelLayoutController_renameCategory_v1']
+        trace?: never
+    }
+    '/api/v1/servers/{serverId}/channels': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        /** A text channel or a room at the end of its group (MANAGE_CHANNELS). */
+        post: operations['ChannelLayoutController_createChannel_v1']
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/servers/{serverId}/channels/order': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        post?: never
+        delete?: never
+        options?: never
+        head?: never
+        /** One drop (D-149). Declared before channels/:channelId, which would take "order" for an id. */
+        patch: operations['ChannelLayoutController_move_v1']
+        trace?: never
+    }
+    '/api/v1/servers/{serverId}/channels/{channelId}': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        post?: never
+        delete: operations['ChannelLayoutController_deleteChannel_v1']
+        options?: never
+        head?: never
+        patch: operations['ChannelLayoutController_updateChannel_v1']
+        trace?: never
+    }
 }
 export type webhooks = Record<string, never>
 export interface components {
@@ -779,6 +863,14 @@ export interface components {
             /** @description "Show study activity" (D-79). */
             show_study_activity?: boolean
         }
+        ServerRoleResponseDto: {
+            id: string
+            name: string
+            /** @description Higher is more senior. */
+            position: number
+            /** @description Holds ADMINISTRATOR: sees every channel, so it is shown ticked and locked. */
+            administrator: boolean
+        }
         ServerCategoryResponseDto: {
             id: string
             /** @description As typed; the channel list shows it in capitals. */
@@ -792,6 +884,8 @@ export interface components {
              * @example 3657472
              */
             permissions: string
+            /** @description The roles that see it when private, sent only to those who may edit that; null otherwise. */
+            view_role_ids: string[] | null
             id: string
             /** @description Null: listed above the first category. */
             category_id: string | null
@@ -823,6 +917,10 @@ export interface components {
             is_owner: boolean
             /** @description Their highest role's position, 0 with none. Roles at or above it are locked for them, unless they are the owner. */
             top_role_position: number
+            /** @description The roles they hold, not @everyone. */
+            role_ids: string[]
+            /** @description Every role but @everyone, highest first. */
+            roles: components['schemas']['ServerRoleResponseDto'][]
             /**
              * Format: date-time
              * @description Set only while they are timed out.
@@ -849,6 +947,56 @@ export interface components {
         }
         ServerIconResponseDto: {
             icon_url: string
+        }
+        CreatedInServerResponseDto: {
+            /** @description The new category's or channel's id. */
+            id: string
+            server: components['schemas']['ServerResponseDto']
+        }
+        CategoryNameRequestDto: {
+            /** @description 1–100 characters, kept as typed; the list shows it in capitals. */
+            name: string
+        }
+        CreateChannelRequestDto: {
+            /** @enum {string} */
+            type: 'text' | 'voice'
+            /** @description A text channel's is stored normalised: "Hỏi Đáp Chung" → "hỏi-đáp-chung". */
+            name: string
+            /**
+             * Format: uuid
+             * @description Left out or null: above the first category.
+             */
+            category_id?: string | null
+            /** @description Voice rooms only: a shared Pomodoro, 25/5 to start with (D-45). */
+            is_study_room?: boolean
+            is_private?: boolean
+            /** @description For a private channel: the roles that see it, not @everyone. */
+            view_role_ids?: string[]
+        }
+        MoveInLayoutRequestDto: {
+            /** @enum {string} */
+            kind: 'channel' | 'category'
+            /** Format: uuid */
+            id: string
+            /**
+             * Format: uuid
+             * @description Channels only.
+             */
+            category_id?: string | null
+            /** Format: uuid */
+            after_id: string | null
+        }
+        UpdateChannelRequestDto: {
+            name?: string
+            /**
+             * @description Text channels: `managers` lets only MANAGE_MESSAGES post.
+             * @enum {string}
+             */
+            send_mode?: 'everyone' | 'managers'
+            /** @description Public again: its view roles are cleared. */
+            is_private?: boolean
+            /** @description Replaces the whole set. */
+            view_role_ids?: string[]
         }
     }
     responses: never
@@ -1800,6 +1948,204 @@ export interface operations {
                     'application/json': {
                         meta: components['schemas']['ApiResponseMetaDto']
                         data: null
+                    }
+                }
+            }
+        }
+    }
+    ChannelLayoutController_createCategory_v1: {
+        parameters: {
+            query?: never
+            header: {
+                /** @description UUID identifying one user intent */
+                'Idempotency-Key': string
+            }
+            path: {
+                serverId: string
+            }
+            cookie?: never
+        }
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['CategoryNameRequestDto']
+            }
+        }
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['CreatedInServerResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    ChannelLayoutController_deleteCategory_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                serverId: string
+                categoryId: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['ServerResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    ChannelLayoutController_renameCategory_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                serverId: string
+                categoryId: string
+            }
+            cookie?: never
+        }
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['CategoryNameRequestDto']
+            }
+        }
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['ServerResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    ChannelLayoutController_createChannel_v1: {
+        parameters: {
+            query?: never
+            header: {
+                /** @description UUID identifying one user intent */
+                'Idempotency-Key': string
+            }
+            path: {
+                serverId: string
+            }
+            cookie?: never
+        }
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['CreateChannelRequestDto']
+            }
+        }
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['CreatedInServerResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    ChannelLayoutController_move_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                serverId: string
+            }
+            cookie?: never
+        }
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['MoveInLayoutRequestDto']
+            }
+        }
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['ServerResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    ChannelLayoutController_deleteChannel_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                serverId: string
+                channelId: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['ServerResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    ChannelLayoutController_updateChannel_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                serverId: string
+                channelId: string
+            }
+            cookie?: never
+        }
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['UpdateChannelRequestDto']
+            }
+        }
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['ServerResponseDto']
                     }
                 }
             }

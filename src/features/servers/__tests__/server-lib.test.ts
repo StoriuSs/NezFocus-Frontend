@@ -15,6 +15,7 @@ const channel = (id: string, extra: Partial<ServerChannel> = {}): ServerChannel 
     isStudyRoom: false,
     taskBoardEnabled: false,
     permissions: '0',
+    viewRoleIds: null,
     ...extra
 })
 

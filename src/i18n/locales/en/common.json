@@ -110,6 +110,32 @@
     "voiceSoon": {
       "title": "Voice rooms come in a later version",
       "body": "The room is in your list already. Joining it, talking and studying together arrive with voice rooms."
+    },
+    "serverMenu": {
+      "createChannel": "Create channel",
+      "createCategory": "Create category"
+    },
+    "channelsExtra": {
+      "settings": "Channel settings",
+      "roomSettings": "Room settings",
+      "categorySettings": "Settings of the category {{name}}",
+      "createIn": "Create a channel in {{name}}",
+      "categoryCount": "{{name}} · {{count}} channels"
+    },
+    "drag": {
+      "lifted": "Picked up {{name}}. Use the up and down arrows to move it, Space to drop, Esc to cancel",
+      "at": "{{name}}: {{place}}",
+      "top": "top of the list, position {{position}}",
+      "inCategory": "in {{category}}, position {{position}}",
+      "dropped": "Dropped {{name}}",
+      "cancelled": "Cancelled, {{name}} is back where it was",
+      "blocked": "Cannot drop here: {{reason}}",
+      "saveFailed": "The channel order could not be saved",
+      "retry": "Try again",
+      "takenIn": "{{category}} already has a channel #{{name}}",
+      "takenTop": "The top of the list already has a channel #{{name}}",
+      "takenInRoom": "{{category}} already has a room {{name}}",
+      "takenTopRoom": "The top of the list already has a room {{name}}"
     }
   },
   "timeZone": {

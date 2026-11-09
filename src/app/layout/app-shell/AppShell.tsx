@@ -8,6 +8,7 @@ import { PageLoader } from '@/components/PageLoader'
 // (the auth store imports it), and whatever it exports goes there too.
 import { useAccountSettings } from '@/features/users/hooks/useAccountSettings'
 import { useCreateServerDialog } from '@/features/servers/create-server.store'
+import { useChannelDialogs } from '@/features/servers/channel-dialogs.store'
 import { cn } from '@/lib/utils'
 import { ListColumn } from './ListColumn'
 import { Rail } from './Rail'
@@ -21,6 +22,8 @@ import {
 
 // Loaded the first time it opens: the cropper and its words stay out of the shell's download.
 const CreateServerDialog = lazy(() => import('@/features/servers/components/CreateServerDialog'))
+// The channel list's dialogs (S-SRV-05, S-SET-05), the same way.
+const ChannelDialogs = lazy(() => import('@/features/servers/components/dialogs/ChannelDialogs'))
 
 /**
  * The frame of every page after sign-in (02 S-SHELL-01): rail 72, list
@@ -40,6 +43,7 @@ export default function AppShell() {
     const { reset: resetQueryErrors } = useQueryErrorResetBoundary()
     const [navOpen, setNavOpen] = useState(false)
     const creatingServer = useCreateServerDialog((state) => state.open)
+    const channelDialog = useChannelDialogs((state) => state.open)
     // The account's theme and language, here and in this browser's other tabs (REQ-AUTH-08).
     useAccountSettings()
 
@@ -109,6 +113,11 @@ export default function AppShell() {
             {creatingServer ? (
                 <Suspense fallback={null}>
                     <CreateServerDialog />
+                </Suspense>
+            ) : null}
+            {channelDialog ? (
+                <Suspense fallback={null}>
+                    <ChannelDialogs />
                 </Suspense>
             ) : null}
         </ShellContext.Provider>

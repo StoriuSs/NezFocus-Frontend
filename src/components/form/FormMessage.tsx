@@ -1,11 +1,15 @@
 import type { ReactNode } from 'react'
-import { Clock, Info, Mail, OctagonX, WifiOff, type LucideIcon } from 'lucide-react'
+import { Clock, EyeOff, Info, Mail, OctagonX, WifiOff, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-const ICONS = { info: Info, clock: Clock, mail: Mail, 'wifi-off': WifiOff, 'octagon-x': OctagonX } satisfies Record<
-    string,
-    LucideIcon
->
+const ICONS = {
+    info: Info,
+    clock: Clock,
+    mail: Mail,
+    'wifi-off': WifiOff,
+    'octagon-x': OctagonX,
+    'eye-off': EyeOff
+} satisfies Record<string, LucideIcon>
 
 export type FormMessageIcon = keyof typeof ICONS
 

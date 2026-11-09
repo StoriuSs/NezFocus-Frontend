@@ -1,33 +1,11 @@
-import { useState, type ReactNode } from 'react'
-import { NavLink, useLocation, useMatches } from 'react-router-dom'
-import {
-    Bell,
-    ChevronDown,
-    ChevronRight,
-    Hash,
-    IdCard,
-    LampDesk,
-    LayoutGrid,
-    Lock,
-    Palette,
-    Shield,
-    Timer,
-    UserRoundCog,
-    Volume2,
-    type LucideIcon
-} from 'lucide-react'
+import type { ReactNode } from 'react'
+import { NavLink, useMatches } from 'react-router-dom'
+import { Bell, IdCard, LayoutGrid, Palette, Shield, Timer, UserRoundCog, type LucideIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { WithTooltip } from '@/components/ui/tooltip'
 import { AUTH_PATHS } from '@/features/auth'
-import {
-    can,
-    channelGroups,
-    useServers,
-    type Server,
-    type ServerCategory,
-    type ServerChannel
-} from '@/features/servers'
+import { ServerChannelColumn } from '@/features/servers'
 import { USERS_PATHS } from '@/features/users'
 import { cn } from '@/lib/utils'
 
@@ -172,130 +150,6 @@ function SettingsColumn() {
     )
 }
 
-const CHANNEL_ICON = (channel: ServerChannel): LucideIcon =>
-    channel.type === 'text' ? Hash : channel.isStudyRoom ? LampDesk : Volume2
-
-/** A 12 lock after the name (C-06): a private channel, or a room one may not join. */
-const SmallLock = ({ label }: { label: string }) => (
-    <Lock role='img' aria-label={label} style={{ width: 12, height: 12 }} className='text-text-tertiary' />
-)
-
-/** One channel or room (ChannelRow, C-06). */
-function ChannelRow({ server, channel }: { server: Server; channel: ServerChannel }) {
-    const { t } = useTranslation()
-    const locked = channel.type === 'voice' && !can(channel.permissions, 'CONNECT')
-    const row = (
-        <RowLink
-            to={`/channels/${server.id}/${channel.id}`}
-            icon={CHANNEL_ICON(channel)}
-            muted={locked}
-            trailing={
-                locked ? (
-                    <SmallLock label={t('shell.channels.noConnect')} />
-                ) : channel.isPrivate ? (
-                    <SmallLock label={t('shell.channels.private')} />
-                ) : null
-            }
-        >
-            {channel.name}
-        </RowLink>
-    )
-    return (
-        <li>
-            {locked ? (
-                <WithTooltip label={t('shell.channels.noConnect')} side='right'>
-                    {row}
-                </WithTooltip>
-            ) : (
-                row
-            )}
-        </li>
-    )
-}
-
-/**
- * A category (CategoryRow, C-06): its title, in capitals as the list shows
- * them (the name is stored as typed), folds and unfolds the channels under
- * it. Folded, it still shows the open channel. The rows are left out rather
- * than hidden with `hidden`: the row's `flex` class would override that
- * attribute and keep them on screen.
- */
-function Category({
-    server,
-    group
-}: {
-    server: Server
-    group: { category: ServerCategory; channels: ServerChannel[] }
-}) {
-    const { pathname } = useLocation()
-    const [open, setOpen] = useState(true)
-    const listId = `category-${server.id}-${group.category.id}`
-    const Chevron = open ? ChevronDown : ChevronRight
-    const visible = open
-        ? group.channels
-        : group.channels.filter((channel) => pathname === `/channels/${server.id}/${channel.id}`)
-
-    return (
-        <li>
-            <button
-                type='button'
-                aria-expanded={open}
-                aria-controls={listId}
-                onClick={() => setOpen(!open)}
-                className='flex h-7 w-full items-center gap-1 rounded-input px-1 text-label font-semibold uppercase text-text-tertiary hover:text-text-secondary'
-            >
-                <Chevron className='size-3' aria-hidden='true' />
-                {group.category.name}
-            </button>
-            <ul id={listId} className='flex flex-col gap-0.5'>
-                {visible.map((channel) => (
-                    <ChannelRow key={channel.id} server={server} channel={channel} />
-                ))}
-            </ul>
-        </li>
-    )
-}
-
-/**
- * A server's channels (C-06): those outside any category first, without a
- * heading, then each category. The server's name heads the column; its menu
- * (03 S-SRV-04) arrives in L4.
- */
-function ServerColumn({ serverId }: { serverId: string | undefined }) {
-    const { t } = useTranslation()
-    const server = useServers().data?.find((candidate) => candidate.id === serverId)
-    if (!server) return null
-    return (
-        <>
-            <ColumnTitle>{server.name}</ColumnTitle>
-            <nav
-                aria-label={t('shell.channels.label', { name: server.name })}
-                className='min-h-0 flex-1 overflow-y-auto p-2'
-            >
-                <ul className='flex flex-col gap-3'>
-                    {channelGroups(server).map((group) =>
-                        group.category ? (
-                            <Category
-                                key={group.category.id}
-                                server={server}
-                                group={{ category: group.category, channels: group.channels }}
-                            />
-                        ) : (
-                            <li key='loose'>
-                                <ul className='flex flex-col gap-0.5'>
-                                    {group.channels.map((channel) => (
-                                        <ChannelRow key={channel.id} server={server} channel={channel} />
-                                    ))}
-                                </ul>
-                            </li>
-                        )
-                    )}
-                </ul>
-            </nav>
-        </>
-    )
-}
-
 /**
  * The 240-wide list column (`surface-1`) next to the rail. Which list it
  * shows is the route's choice, in its `handle` (ShellHandle).
@@ -312,7 +166,7 @@ export function ListColumn({ className, id }: { className?: string; id?: string 
         <div id={id} className={cn('w-60 shrink-0 flex-col border-r bg-surface-1', className)}>
             {column === 'study' && <StudyColumn />}
             {column === 'settings' && <SettingsColumn />}
-            {column === 'server' && <ServerColumn serverId={deepest?.params.serverId} />}
+            {column === 'server' && <ServerChannelColumn serverId={deepest?.params.serverId} />}
         </div>
     )
 }

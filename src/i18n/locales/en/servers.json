@@ -40,5 +40,96 @@
     "title": "Crop the server picture",
     "description": "Drag the image to place it; use the slider to zoom.",
     "confirm": "Use image"
+  },
+  "channel": {
+    "createTitle": "Create a channel",
+    "settingsTitle": "Channel settings",
+    "roomSettingsTitle": "Room settings",
+    "type": {
+      "label": "Channel type",
+      "text": "Text channel",
+      "textDescription": "Messages, files and tasks",
+      "voice": "Voice room",
+      "voiceDescription": "Talk and study together"
+    },
+    "name": {
+      "text": "Channel name",
+      "voice": "Room name"
+    },
+    "storedAs": "Will be saved as #{{name}}",
+    "category": {
+      "label": "Category",
+      "none": "No category",
+      "noneDescription": "At the top of the list"
+    },
+    "study": {
+      "label": "Make it a study room",
+      "description": "A shared Pomodoro timer for the room, 25/5. Change it in the room settings."
+    },
+    "private": {
+      "label": "Private channel",
+      "description": "Only the server owner and the roles chosen can see this channel.",
+      "roles": "Roles that can see it · {{count}} chosen",
+      "administrator": "Administrator · always sees the channel",
+      "yours": "Your role",
+      "selfHidden": "You will not see this channel once it is created",
+      "selfHiddenEdit": "You will not see this channel once you save",
+      "search": "Search roles",
+      "noMatch": "No role matches “{{query}}”",
+      "noRoles": "The server has no roles yet. Only the owner and administrators will see this channel."
+    },
+    "sendMode": {
+      "label": "Who can send messages",
+      "everyone": "Everyone",
+      "managers": "Only message managers",
+      "managersDescription": "People who can manage messages. Good for announcements."
+    },
+    "welcome": "The server’s welcome channel.",
+    "delete": "Delete channel",
+    "deleteRoom": "Delete room",
+    "deleteTitle": "Delete #{{name}}?",
+    "deleteRoomTitle": "Delete {{name}}?",
+    "deleteBody": "Its messages are deleted and cannot be brought back.",
+    "deleteRoomBody": "The room’s chat is deleted and cannot be brought back.",
+    "deleteWelcome": "The server will send no welcome messages until you choose another channel.",
+    "typeToConfirm": "Type {{name}} to confirm",
+    "deleted": "Deleted #{{name}}",
+    "roomDeleted": "Deleted {{name}}"
+  },
+  "category": {
+    "createTitle": "Create a category",
+    "settingsTitle": "Category settings",
+    "name": "Category name",
+    "delete": "Delete category",
+    "deleteTitle": "Delete the category {{name}}?",
+    "deleteBody": "Its {{count}} channels move to the top of the list. They are not deleted.",
+    "deleteEmpty": "The category has no channels.",
+    "deleteBlocked": "There is already a channel {{names}} outside any category. Rename one of the two before deleting the category.",
+    "deleted": "Deleted the category {{name}}"
+  },
+  "layoutError": {
+    "lengthText": "A channel name needs 1–100 characters",
+    "lengthVoice": "A room name needs 1–100 characters",
+    "lengthCategory": "A category name needs 1–100 characters",
+    "noLetterOrDigit": "A channel name needs at least one letter or digit",
+    "takenText": "{{category}} already has a channel #{{name}}",
+    "takenVoice": "{{category}} already has a room {{name}}",
+    "takenTopText": "The top of the list already has a channel #{{name}}",
+    "takenTopVoice": "The top of the list already has a room {{name}}",
+    "takenCategory": "The server already has a category {{name}}",
+    "limit": "The server has 500 channels and categories, the most it can have. Delete some to create more.",
+    "createFailed": "The channel could not be created. Try again.",
+    "createOffline": "You need a connection to create a channel",
+    "forbidden": "You can no longer change channels in this server",
+    "saveFailed": "The changes could not be saved. Try again.",
+    "saveOffline": "You need a connection to save",
+    "gone": "This channel or category was just deleted"
+  },
+  "actions": {
+    "cancel": "Cancel",
+    "close": "Close",
+    "save": "Save",
+    "createChannel": "Create channel",
+    "createCategory": "Create category"
   }
 }

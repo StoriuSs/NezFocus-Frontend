@@ -44,6 +44,7 @@ const channel = (id: string, extra: Partial<ServerChannel> = {}): ServerChannel 
     isStudyRoom: false,
     taskBoardEnabled: false,
     permissions: MEMBER,
+    viewRoleIds: null,
     ...extra
 })
 
@@ -55,6 +56,8 @@ const OT: Server = {
     isOwner: false,
     permissions: MEMBER,
     topRolePosition: 0,
+    roleIds: [],
+    roles: [],
     timeoutUntil: null,
     welcomeChannelId: 'chao-mung',
     categories: [

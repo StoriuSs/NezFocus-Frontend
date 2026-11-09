@@ -15,3 +15,15 @@ export type ServerCategory = ApiModel<'ServerCategoryResponseDto'>
 export type CreateServerRequest = ApiModel<'CreateServerRequestDto'>
 
 export type ServerTemplate = CreateServerRequest['template']
+
+/** A role of the server but @everyone, highest first (the private-channel picker). */
+export type ServerRole = ApiModel<'ServerRoleResponseDto'>
+
+export type CreateChannelRequest = ApiModel<'CreateChannelRequestDto'>
+
+export type UpdateChannelRequest = ApiModel<'UpdateChannelRequestDto'>
+
+/** One drop in the channel list (D-149): right after `afterId`, first when null. */
+export type LayoutMove =
+    | { kind: 'channel'; id: string; categoryId: string | null; afterId: string | null }
+    | { kind: 'category'; id: string; afterId: string | null }

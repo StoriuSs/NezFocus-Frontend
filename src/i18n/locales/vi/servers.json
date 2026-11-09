@@ -40,5 +40,96 @@
     "title": "Cắt ảnh server",
     "description": "Kéo ảnh để căn, dùng thanh để phóng to.",
     "confirm": "Dùng ảnh"
+  },
+  "channel": {
+    "createTitle": "Tạo kênh",
+    "settingsTitle": "Cài đặt kênh",
+    "roomSettingsTitle": "Cài đặt phòng",
+    "type": {
+      "label": "Loại kênh",
+      "text": "Kênh văn bản",
+      "textDescription": "Nhắn tin, gửi tệp, giao việc",
+      "voice": "Phòng thoại",
+      "voiceDescription": "Nói chuyện, học cùng nhau"
+    },
+    "name": {
+      "text": "Tên kênh",
+      "voice": "Tên phòng"
+    },
+    "storedAs": "Sẽ lưu là #{{name}}",
+    "category": {
+      "label": "Danh mục",
+      "none": "Không có danh mục",
+      "noneDescription": "Kênh nằm trên cùng danh sách"
+    },
+    "study": {
+      "label": "Bật phòng học",
+      "description": "Có đồng hồ Pomodoro chung cho cả phòng, chu kỳ 25/5. Đổi trong cài đặt phòng."
+    },
+    "private": {
+      "label": "Kênh riêng tư",
+      "description": "Chỉ chủ server và các vai trò được chọn thấy kênh này.",
+      "roles": "Vai trò được xem · đã chọn {{count}}",
+      "administrator": "Toàn quyền · luôn thấy kênh",
+      "yours": "Vai trò của bạn",
+      "selfHidden": "Bạn sẽ không thấy kênh này sau khi tạo",
+      "selfHiddenEdit": "Bạn sẽ không thấy kênh này sau khi lưu",
+      "search": "Tìm vai trò",
+      "noMatch": "Không có vai trò nào khớp “{{query}}”",
+      "noRoles": "Server chưa có vai trò nào. Chỉ chủ server và người có Toàn quyền thấy kênh này."
+    },
+    "sendMode": {
+      "label": "Ai được gửi tin",
+      "everyone": "Mọi người",
+      "managers": "Chỉ người quản lý tin nhắn",
+      "managersDescription": "Người có quyền Quản lý tin nhắn. Hợp với kênh thông báo."
+    },
+    "welcome": "Kênh tin chào mừng của server.",
+    "delete": "Xóa kênh",
+    "deleteRoom": "Xóa phòng",
+    "deleteTitle": "Xóa #{{name}}?",
+    "deleteRoomTitle": "Xóa {{name}}?",
+    "deleteBody": "Tin nhắn của kênh bị xóa, không khôi phục được.",
+    "deleteRoomBody": "Khung chat của phòng bị xóa, không khôi phục được.",
+    "deleteWelcome": "Server sẽ không gửi tin chào mừng tới khi bạn chọn kênh khác.",
+    "typeToConfirm": "Gõ {{name}} để xác nhận",
+    "deleted": "Đã xóa #{{name}}",
+    "roomDeleted": "Đã xóa {{name}}"
+  },
+  "category": {
+    "createTitle": "Tạo danh mục",
+    "settingsTitle": "Cài đặt danh mục",
+    "name": "Tên danh mục",
+    "delete": "Xóa danh mục",
+    "deleteTitle": "Xóa danh mục {{name}}?",
+    "deleteBody": "{{count}} kênh trong danh mục chuyển lên trên cùng danh sách, không bị xóa.",
+    "deleteEmpty": "Danh mục không có kênh nào.",
+    "deleteBlocked": "Đã có kênh {{names}} ngoài danh mục. Đổi tên một trong hai kênh trước khi xóa danh mục.",
+    "deleted": "Đã xóa danh mục {{name}}"
+  },
+  "layoutError": {
+    "lengthText": "Tên kênh cần 1–100 ký tự",
+    "lengthVoice": "Tên phòng cần 1–100 ký tự",
+    "lengthCategory": "Tên danh mục cần 1–100 ký tự",
+    "noLetterOrDigit": "Tên kênh cần ít nhất một chữ cái hoặc chữ số",
+    "takenText": "{{category}} đã có kênh #{{name}}",
+    "takenVoice": "{{category}} đã có phòng {{name}}",
+    "takenTopText": "Trên cùng danh sách đã có kênh #{{name}}",
+    "takenTopVoice": "Trên cùng danh sách đã có phòng {{name}}",
+    "takenCategory": "Server đã có danh mục {{name}}",
+    "limit": "Server đã có 500 kênh và danh mục, mức tối đa. Xóa bớt để tạo mới.",
+    "createFailed": "Không tạo được kênh. Thử lại.",
+    "createOffline": "Cần kết nối mạng để tạo kênh",
+    "forbidden": "Bạn không còn quyền thay đổi kênh trong server này",
+    "saveFailed": "Chưa lưu được thay đổi. Thử lại.",
+    "saveOffline": "Cần kết nối mạng để lưu",
+    "gone": "Kênh hoặc danh mục này vừa bị xóa"
+  },
+  "actions": {
+    "cancel": "Hủy",
+    "close": "Đóng",
+    "save": "Lưu",
+    "createChannel": "Tạo kênh",
+    "createCategory": "Tạo danh mục"
   }
 }

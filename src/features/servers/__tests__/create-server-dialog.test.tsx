@@ -38,6 +38,8 @@ const created: Server = {
     isOwner: true,
     permissions: '8388607',
     topRolePosition: 1,
+    roleIds: [],
+    roles: [],
     timeoutUntil: null,
     welcomeChannelId: 'chao-mung',
     categories: [{ id: 'info', name: 'Thông tin', position: 0 }],
@@ -52,7 +54,8 @@ const created: Server = {
             sendMode: 'everyone',
             isStudyRoom: false,
             taskBoardEnabled: false,
-            permissions: '8388607'
+            permissions: '8388607',
+            viewRoleIds: []
         }
     ]
 }
