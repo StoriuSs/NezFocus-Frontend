@@ -1,4 +1,5 @@
 import * as SelectPrimitive from '@radix-ui/react-select'
+import type { ReactNode } from 'react'
 import { Check, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -7,6 +8,10 @@ export interface SelectOption {
     label: string
     /** A second line (the row grows to 48), e.g. "Kênh nằm trên cùng danh sách". */
     description?: string
+    /** Before the label, in the field too: a 12 `lock` for a private channel. */
+    icon?: ReactNode
+    /** At the right of the row only (`label`, `text-tertiary`): a channel's category. */
+    trailing?: string
 }
 
 interface SelectProps {
@@ -75,9 +80,19 @@ export function Select({
                                     option.description ? 'min-h-12' : 'min-h-8'
                                 )}
                             >
-                                <SelectPrimitive.ItemText>
-                                    <span className={labelClassName}>{option.label}</span>
-                                </SelectPrimitive.ItemText>
+                                <span className='flex min-w-0 items-center gap-2'>
+                                    <SelectPrimitive.ItemText>
+                                        <span className='inline-flex min-w-0 items-center gap-1'>
+                                            {option.icon}
+                                            <span className={cn('truncate', labelClassName)}>{option.label}</span>
+                                        </span>
+                                    </SelectPrimitive.ItemText>
+                                    {option.trailing ? (
+                                        <span className='ml-auto shrink-0 text-label uppercase text-text-tertiary'>
+                                            {option.trailing}
+                                        </span>
+                                    ) : null}
+                                </span>
                                 {option.description ? (
                                     <span className='text-label text-text-tertiary'>{option.description}</span>
                                 ) : null}

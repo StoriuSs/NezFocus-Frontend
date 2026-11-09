@@ -468,6 +468,26 @@ export interface paths {
         patch?: never
         trace?: never
     }
+    '/api/v1/servers/{serverId}': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        post?: never
+        delete?: never
+        options?: never
+        head?: never
+        /**
+         * Name and welcome channel (MANAGE_SERVER, S-SET-01). Answers with the
+         *     server as the list shows it, so the client swaps its copy in one go.
+         */
+        patch: operations['ServersController_update_v1']
+        trace?: never
+    }
     '/api/v1/servers/{serverId}/icon': {
         parameters: {
             query?: never
@@ -944,6 +964,14 @@ export interface components {
              * @enum {string}
              */
             template: 'study' | 'standard'
+        }
+        UpdateServerRequestDto: {
+            name?: string
+            /**
+             * Format: uuid
+             * @description A text channel of the server; null: "Send none" (D-83).
+             */
+            welcome_channel_id?: string | null
         }
         ServerIconResponseDto: {
             icon_url: string
@@ -1879,6 +1907,34 @@ export interface operations {
         requestBody: {
             content: {
                 'application/json': components['schemas']['CreateServerRequestDto']
+            }
+        }
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['ServerResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    ServersController_update_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                serverId: string
+            }
+            cookie?: never
+        }
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['UpdateServerRequestDto']
             }
         }
         responses: {

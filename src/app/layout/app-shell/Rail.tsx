@@ -1,10 +1,18 @@
-import type { ReactNode } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Bell, GraduationCap, ListChecks, MessageCircle, Plus, type LucideIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { WithTooltip } from '@/components/ui/tooltip'
-import { ServerIcon, useCreateServerDialog, useServers, type Server } from '@/features/servers'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import {
+    hasServerMenu,
+    ServerIcon,
+    ServerMenuItems,
+    useCreateServerDialog,
+    useServers,
+    type Server
+} from '@/features/servers'
 import { cn } from '@/lib/utils'
 import { MeMenu } from './MeMenu'
 
@@ -25,23 +33,67 @@ function Indicator({ kind }: { kind?: 'selected' | 'unread' }) {
 const SQUIRCLE =
     'relative flex size-12 items-center justify-center rounded-server bg-surface-2 transition-colors duration-micro hover:bg-surface-3'
 
-/** A server: its icon or initials; where you are has the long bar. Unread arrives with messages (M2). */
+/**
+ * A server: its icon or initials; where you are (its channels or its
+ * settings, 04 › Khung) has the long bar. Unread arrives with messages (M2).
+ * Right-click or Shift+F10 opens the server menu (C-05, S-SRV-04) 8 to the
+ * right of the picture, when it has a row for them.
+ */
 function ServerItem({ server }: { server: Server }) {
-    const isActive = useLocation().pathname.startsWith(`/channels/${server.id}`)
+    const { pathname } = useLocation()
+    const isActive = pathname.startsWith(`/channels/${server.id}`) || pathname.startsWith(`/servers/${server.id}/`)
+    const [menuOpen, setMenuOpen] = useState(false)
+    const link = useRef<HTMLAnchorElement>(null)
+    const withMenu = hasServerMenu(server)
 
     return (
         <li className='relative flex w-full justify-center'>
             <Indicator kind={isActive ? 'selected' : undefined} />
             <WithTooltip label={server.name} side='right'>
                 <Link
+                    ref={link}
                     to={`/channels/${server.id}`}
                     aria-label={server.name}
                     aria-current={isActive ? 'page' : undefined}
+                    aria-haspopup={withMenu ? 'menu' : undefined}
                     className={cn(SQUIRCLE, 'overflow-hidden')}
+                    onContextMenu={(event) => {
+                        if (!withMenu) return
+                        event.preventDefault()
+                        setMenuOpen(true)
+                    }}
+                    onKeyDown={(event) => {
+                        if (withMenu && (event.key === 'ContextMenu' || (event.key === 'F10' && event.shiftKey))) {
+                            event.preventDefault()
+                            setMenuOpen(true)
+                        }
+                    }}
                 >
                     <ServerIcon name={server.name} iconUrl={server.iconUrl} className='size-full' />
                 </Link>
             </WithTooltip>
+            {withMenu ? (
+                <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+                    {/* Where the menu hangs: the picture's right edge. Never clicked itself. */}
+                    <DropdownMenuTrigger
+                        tabIndex={-1}
+                        aria-hidden='true'
+                        className='pointer-events-none absolute right-3 top-0 h-12 w-0'
+                    />
+                    <DropdownMenuContent
+                        side='right'
+                        align='start'
+                        sideOffset={8}
+                        className='w-56'
+                        onCloseAutoFocus={(event) => {
+                            event.preventDefault()
+                            link.current?.focus()
+                        }}
+                    >
+                        <ServerMenuItems server={server} />
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            ) : null}
         </li>
     )
 }

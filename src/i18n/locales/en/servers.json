@@ -131,5 +131,45 @@
     "save": "Save",
     "createChannel": "Create channel",
     "createCategory": "Create category"
+  },
+  "settings": {
+    "lost": {
+      "section": "You no longer have access to this page",
+      "settings": "You no longer have access to server settings"
+    },
+    "overview": {
+      "icon": {
+        "label": "Server picture",
+        "hint": "JPG, PNG or WEBP, up to 8 MB.",
+        "change": "Change picture",
+        "upload": "Upload picture",
+        "remove": "Remove picture",
+        "uploading": "Uploading picture",
+        "pick": "Choose a server picture"
+      },
+      "name": {
+        "label": "Server name",
+        "invalid": "A server name needs 2–100 characters"
+      },
+      "welcome": {
+        "label": "Welcome channel",
+        "none": "Send none",
+        "noneDescription": "No message when someone joins",
+        "hidden": "A private channel you cannot see",
+        "hint": "\"X joined the server\" is posted in this channel.",
+        "hintNone": "Nothing is posted when someone joins the server.",
+        "hintPrivate": "#{{name}} is private: only those who see it see the greeting.",
+        "hintHidden": "Only those who see that channel see the greeting."
+      },
+      "saved": "Changes saved",
+      "failed": "Could not save the change",
+      "retry": "Try again",
+      "discard": {
+        "title": "Discard changes?",
+        "description": "The new server name is not saved.",
+        "stay": "Stay",
+        "confirm": "Discard changes"
+      }
+    }
   }
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { Users } from 'lucide-react'
@@ -19,7 +19,13 @@ const authState = {
 }
 const profile = { ...authState.user, avatarUrl: null, bio: 'Ôn Giải tích 2 mỗi tối 21:00' }
 
-const serversApi = { fetchServers: vi.fn(), createServer: vi.fn(), uploadServerIcon: vi.fn() }
+const serversApi = {
+    fetchServers: vi.fn(),
+    createServer: vi.fn(),
+    uploadServerIcon: vi.fn(),
+    updateServer: vi.fn(),
+    removeServerIcon: vi.fn()
+}
 vi.mock('@/features/auth/auth.store', () => mockAuthStore(authState))
 vi.mock('@/features/users/api/useProfile', () => ({ useProfile: () => ({ data: profile }) }))
 vi.mock('@/features/servers/api/servers.api', () => serversApi)
@@ -27,6 +33,7 @@ vi.mock('@/features/servers/api/servers.api', () => serversApi)
 const { default: AppShell } = await import('@/app/layout/app-shell/AppShell')
 const { default: ChannelPage } = await import('@/features/servers/pages/ChannelPage')
 const { default: Study } = await import('@/pages/Study')
+const { default: ServerSettingsPage } = await import('@/features/servers/pages/ServerSettingsPage')
 const { useCreateServerDialog } = await import('@/features/servers')
 
 /** VIEW_CHANNEL, SEND_MESSAGES, CONNECT; and the same without CONNECT. */
@@ -79,6 +86,8 @@ const OT: Server = {
     ]
 }
 const ND: Server = { ...OT, id: 'nd', name: 'Nhóm đồ án Mobile', iconUrl: 'https://cdn.test/nd.webp' }
+/** ÔT as someone with MANAGE_SERVER sees it. */
+const OT_MANAGED: Server = { ...OT, permissions: String(BigInt(MEMBER) | (1n << 1n)) }
 
 /** A page with the members panel, as channel pages will have from M2. */
 function PanelPage() {
@@ -111,6 +120,11 @@ function renderAt(path: string | { pathname: string; state: unknown }) {
                         path: '/channels/:serverId/:channelId?',
                         element: <ChannelPage />,
                         handle: { column: 'server' }
+                    },
+                    {
+                        path: '/servers/:serverId/settings/:section?',
+                        element: <ServerSettingsPage />,
+                        handle: { column: 'serverSettings' }
                     },
                     { path: '/panel', element: <PanelPage />, handle: { column: 'study' } },
                     { path: '/settings/account', element: <h1>Settings page</h1>, handle: { column: 'settings' } },
@@ -271,6 +285,56 @@ describe('AppShell (S-SHELL-01)', () => {
             renderAt('/channels/ot/hoi-dap')
             await screen.findByRole('heading', { level: 1, name: 'hoi-dap' })
             await expectNoA11yViolations()
+        })
+    })
+
+    describe('server settings (S-SET-01, C-27, C-05)', () => {
+        it('opens from the rail by right-click, keeps the server chosen, and lists the pages beside it', async () => {
+            serversApi.fetchServers.mockResolvedValue([OT_MANAGED, ND])
+            const router = renderAt('/channels/ot/hoi-dap')
+            const picture = await within(rail()).findByRole('link', { name: 'Ôn thi Giải tích 2' })
+            fireEvent.contextMenu(picture)
+            await userEvent.click(await screen.findByRole('menuitem', { name: 'Server settings' }))
+
+            await waitFor(() => expect(router.state.location.pathname).toBe('/servers/ot/settings/overview'))
+            expect(within(rail()).getByRole('link', { name: 'Ôn thi Giải tích 2' })).toHaveAttribute(
+                'aria-current',
+                'page'
+            )
+            const nav = screen.getByRole('navigation', { name: 'Server settings' })
+            expect(within(nav).getByRole('link', { name: 'Overview' })).toHaveAttribute('aria-current', 'page')
+            expect(within(nav).getAllByRole('link')).toHaveLength(1)
+            expect(screen.getByRole('heading', { level: 2, name: 'Ôn thi Giải tích 2' })).toBeInTheDocument()
+            expect(await screen.findByRole('heading', { level: 1, name: 'Overview' })).toBeInTheDocument()
+            await expectNoA11yViolations()
+        })
+
+        it('opens the same menu with Shift+F10, and from the server name', async () => {
+            serversApi.fetchServers.mockResolvedValue([OT_MANAGED])
+            renderAt('/channels/ot/hoi-dap')
+            const picture = await within(rail()).findByRole('link', { name: 'Ôn thi Giải tích 2' })
+            picture.focus()
+            await userEvent.keyboard('{Shift>}{F10}{/Shift}')
+            expect(await screen.findByRole('menuitem', { name: 'Server settings' })).toBeInTheDocument()
+            await userEvent.keyboard('{Escape}')
+            await waitFor(() => expect(picture).toHaveFocus())
+
+            await userEvent.click(screen.getByRole('button', { name: 'Ôn thi Giải tích 2' }))
+            const menu = await screen.findByRole('menu')
+            // Managing the server, not channels: settings is the only row.
+            expect(
+                within(menu)
+                    .getAllByRole('menuitem')
+                    .map((item) => item.textContent)
+            ).toEqual(['Server settings'])
+        })
+
+        it('offers no menu to someone with no row in it', async () => {
+            renderAt('/channels/ot/hoi-dap')
+            const picture = await within(rail()).findByRole('link', { name: 'Ôn thi Giải tích 2' })
+            fireEvent.contextMenu(picture)
+            expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+            expect(screen.queryByRole('button', { name: 'Ôn thi Giải tích 2' })).not.toBeInTheDocument()
         })
     })
 

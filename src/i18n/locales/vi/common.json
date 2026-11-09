@@ -113,7 +113,8 @@
     },
     "serverMenu": {
       "createChannel": "Tạo kênh",
-      "createCategory": "Tạo danh mục"
+      "createCategory": "Tạo danh mục",
+      "settings": "Cài đặt server"
     },
     "channelsExtra": {
       "settings": "Cài đặt kênh",
@@ -136,6 +137,15 @@
       "takenTop": "Trên cùng danh sách đã có kênh #{{name}}",
       "takenInRoom": "{{category}} đã có phòng {{name}}",
       "takenTopRoom": "Trên cùng danh sách đã có phòng {{name}}"
+    },
+    "serverSettings": {
+      "label": "Cài đặt server",
+      "group": "Cài đặt server",
+      "overview": "Tổng quan",
+      "roles": "Vai trò",
+      "members": "Thành viên",
+      "invites": "Lời mời",
+      "bans": "Danh sách cấm"
     }
   },
   "timeZone": {

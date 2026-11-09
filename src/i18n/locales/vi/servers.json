@@ -131,5 +131,45 @@
     "save": "Lưu",
     "createChannel": "Tạo kênh",
     "createCategory": "Tạo danh mục"
+  },
+  "settings": {
+    "lost": {
+      "section": "Bạn không còn quyền ở mục này",
+      "settings": "Bạn không còn quyền vào cài đặt server"
+    },
+    "overview": {
+      "icon": {
+        "label": "Ảnh server",
+        "hint": "JPG, PNG hoặc WEBP, tối đa 8 MB.",
+        "change": "Đổi ảnh",
+        "upload": "Tải ảnh lên",
+        "remove": "Xóa ảnh",
+        "uploading": "Đang tải ảnh lên",
+        "pick": "Chọn ảnh server"
+      },
+      "name": {
+        "label": "Tên server",
+        "invalid": "Tên server cần 2–100 ký tự"
+      },
+      "welcome": {
+        "label": "Kênh tin chào mừng",
+        "none": "Không gửi",
+        "noneDescription": "Không tạo tin khi có người vào",
+        "hidden": "Một kênh riêng tư bạn không xem được",
+        "hint": "Tin \"X đã tham gia server\" được gửi vào kênh này.",
+        "hintNone": "Không có tin nào khi có người vào server.",
+        "hintPrivate": "#{{name}} là kênh riêng tư: chỉ người thấy kênh mới thấy lời chào.",
+        "hintHidden": "Chỉ người thấy kênh đó mới thấy lời chào."
+      },
+      "saved": "Đã lưu thay đổi",
+      "failed": "Chưa lưu được thay đổi",
+      "retry": "Thử lại",
+      "discard": {
+        "title": "Bỏ thay đổi?",
+        "description": "Tên server mới chưa được lưu.",
+        "stay": "Ở lại",
+        "confirm": "Bỏ thay đổi"
+      }
+    }
   }
 }

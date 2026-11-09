@@ -23,6 +23,8 @@ export type CreateChannelRequest = ApiModel<'CreateChannelRequestDto'>
 
 export type UpdateChannelRequest = ApiModel<'UpdateChannelRequestDto'>
 
+export type UpdateServerRequest = ApiModel<'UpdateServerRequestDto'>
+
 /** One drop in the channel list (D-149): right after `afterId`, first when null. */
 export type LayoutMove =
     | { kind: 'channel'; id: string; categoryId: string | null; afterId: string | null }

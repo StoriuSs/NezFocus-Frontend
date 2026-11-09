@@ -1,6 +1,6 @@
 import api from '@/lib/api'
 import type { ApiEnvelope } from '@/lib/api-types'
-import type { CreateServerRequest, Server } from '../types'
+import type { CreateServerRequest, Server, UpdateServerRequest } from '../types'
 
 /** GET /servers: every server they are in, in the order they joined (C-05). */
 export async function fetchServers(): Promise<Server[]> {
@@ -25,4 +25,15 @@ export async function uploadServerIcon(serverId: string, icon: Blob, idempotency
         headers: { 'Idempotency-Key': idempotencyKey }
     })
     return response.data.data.iconUrl
+}
+
+/** PATCH /servers/{id} (S-SET-01): name and welcome channel (null: "Send none"). */
+export async function updateServer(serverId: string, body: UpdateServerRequest): Promise<Server> {
+    const response = await api.patch<ApiEnvelope<Server>>(`/servers/${serverId}`, body)
+    return response.data.data
+}
+
+/** DELETE /servers/{id}/icon: back to the initials. */
+export async function removeServerIcon(serverId: string): Promise<void> {
+    await api.delete(`/servers/${serverId}/icon`)
 }

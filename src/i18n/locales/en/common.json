@@ -113,7 +113,8 @@
     },
     "serverMenu": {
       "createChannel": "Create channel",
-      "createCategory": "Create category"
+      "createCategory": "Create category",
+      "settings": "Server settings"
     },
     "channelsExtra": {
       "settings": "Channel settings",
@@ -136,6 +137,15 @@
       "takenTop": "The top of the list already has a channel #{{name}}",
       "takenInRoom": "{{category}} already has a room {{name}}",
       "takenTopRoom": "The top of the list already has a room {{name}}"
+    },
+    "serverSettings": {
+      "label": "Server settings",
+      "group": "Server settings",
+      "overview": "Overview",
+      "roles": "Roles",
+      "members": "Members",
+      "invites": "Invites",
+      "bans": "Bans"
     }
   },
   "timeZone": {

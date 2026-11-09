@@ -1,28 +1,22 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ChevronDown, FolderPlus, PlusCircle } from 'lucide-react'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { ChevronDown } from 'lucide-react'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import { useServers } from '../../api/useServers'
-import { useChannelDialogs } from '../../channel-dialogs.store'
-import { can } from '../../lib/permissions'
 import type { Server } from '../../types'
+import { hasServerMenu, ServerMenuItems } from '../ServerMenuItems'
 import { ChannelList } from './ChannelList'
 
 /**
  * The server's name over its channels, 48 high, level with the page Header's
- * rule. With rows to offer it opens the server menu (S-SRV-04, C-15): a row
- * shows only to who may use it, never disabled. L4 brings "Create channel"
- * and "Create category" (MANAGE_CHANNELS); invite (L6), server settings (L5)
- * and leave (L9) join it with their slices. With no row, it is a plain title.
+ * rule. With rows to offer it opens the server menu (S-SRV-04, C-15; rows in
+ * ServerMenuItems). With no row, it is a plain title.
  */
 function ServerMenu({ server }: { server: Server }) {
-    const { t } = useTranslation()
-    const show = useChannelDialogs((state) => state.show)
     const [open, setOpen] = useState(false)
-    const managesChannels = can(server.permissions, 'MANAGE_CHANNELS')
 
-    if (!managesChannels) {
+    if (!hasServerMenu(server)) {
         return (
             <div className='flex h-12 shrink-0 items-center border-b px-4'>
                 <h2 className='min-w-0 flex-1 truncate text-headline text-text-primary'>{server.name}</h2>
@@ -46,18 +40,7 @@ function ServerMenu({ server }: { server: Server }) {
                     />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align='start' alignOffset={8} className='w-56'>
-                    <DropdownMenuItem
-                        onSelect={() =>
-                            show({ kind: 'createChannel', serverId: server.id, categoryId: null, type: 'text' })
-                        }
-                    >
-                        <PlusCircle aria-hidden='true' />
-                        {t('shell.serverMenu.createChannel')}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => show({ kind: 'createCategory', serverId: server.id })}>
-                        <FolderPlus aria-hidden='true' />
-                        {t('shell.serverMenu.createCategory')}
-                    </DropdownMenuItem>
+                    <ServerMenuItems server={server} />
                 </DropdownMenuContent>
             </DropdownMenu>
         </h2>

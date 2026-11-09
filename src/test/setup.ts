@@ -37,4 +37,6 @@ if (typeof window !== 'undefined') {
     Element.prototype.setPointerCapture ??= () => undefined
     Element.prototype.releasePointerCapture ??= () => undefined
     Element.prototype.hasPointerCapture ??= () => false
+    // Nor scrolling: an open Select (Radix) scrolls its chosen row into view.
+    Element.prototype.scrollIntoView ??= () => undefined
 }

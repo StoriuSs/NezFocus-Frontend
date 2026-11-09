@@ -1,19 +1,45 @@
 import type { ReactNode } from 'react'
 import { NavLink, useMatches } from 'react-router-dom'
-import { Bell, IdCard, LayoutGrid, Palette, Shield, Timer, UserRoundCog, type LucideIcon } from 'lucide-react'
+import {
+    Ban,
+    Bell,
+    IdCard,
+    Info,
+    LayoutGrid,
+    Link,
+    Palette,
+    Shield,
+    Timer,
+    UserRoundCog,
+    Users,
+    type LucideIcon
+} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { WithTooltip } from '@/components/ui/tooltip'
 import { AUTH_PATHS } from '@/features/auth'
-import { ServerChannelColumn } from '@/features/servers'
+import {
+    ServerChannelColumn,
+    serverSettingsPath,
+    settingsSections,
+    useServers,
+    type SettingsSection
+} from '@/features/servers'
 import { USERS_PATHS } from '@/features/users'
 import { cn } from '@/lib/utils'
 
 /** The column's 48-high title row, level with the page Header's bottom rule. */
 function ColumnTitle({ children }: { children: ReactNode }) {
+    const title = <h2 className='min-w-0 flex-1 truncate text-headline text-text-primary'>{children}</h2>
     return (
         <div className='flex h-12 shrink-0 items-center gap-1 border-b px-4'>
-            <h2 className='min-w-0 flex-1 truncate text-headline text-text-primary'>{children}</h2>
+            {typeof children === 'string' ? (
+                <WithTooltip label={children} side='bottom'>
+                    {title}
+                </WithTooltip>
+            ) : (
+                title
+            )}
         </div>
     )
 }
@@ -150,6 +176,44 @@ function SettingsColumn() {
     )
 }
 
+const SECTION_ICONS: Record<SettingsSection, LucideIcon> = {
+    overview: Info,
+    roles: Shield,
+    members: Users,
+    invites: Link,
+    bans: Ban
+}
+
+/**
+ * SettingsNav of a server (C-27, 04 › Khung): its name (Tooltip with the
+ * whole name), "SERVER SETTINGS", then the pages they may open (Q2).
+ */
+function ServerSettingsColumn({ serverId }: { serverId: string | undefined }) {
+    const { t } = useTranslation()
+    const server = useServers().data?.find((candidate) => candidate.id === serverId)
+    if (!server) return null
+    return (
+        <>
+            <ColumnTitle>{server.name}</ColumnTitle>
+            <nav aria-label={t('shell.serverSettings.label')} className='flex flex-col gap-0.5 p-2'>
+                <h3 className='px-2 pb-1 pt-3 text-label font-semibold uppercase text-text-tertiary'>
+                    {t('shell.serverSettings.group')}
+                </h3>
+                {settingsSections(server).map((section) => (
+                    <RowLink
+                        key={section}
+                        to={serverSettingsPath(server.id, section)}
+                        icon={SECTION_ICONS[section]}
+                        rounded='rounded-button'
+                    >
+                        {t(`shell.serverSettings.${section}`)}
+                    </RowLink>
+                ))}
+            </nav>
+        </>
+    )
+}
+
 /**
  * The 240-wide list column (`surface-1`) next to the rail. Which list it
  * shows is the route's choice, in its `handle` (ShellHandle).
@@ -167,6 +231,7 @@ export function ListColumn({ className, id }: { className?: string; id?: string 
             {column === 'study' && <StudyColumn />}
             {column === 'settings' && <SettingsColumn />}
             {column === 'server' && <ServerChannelColumn serverId={deepest?.params.serverId} />}
+            {column === 'serverSettings' && <ServerSettingsColumn serverId={deepest?.params.serverId} />}
         </div>
     )
 }
