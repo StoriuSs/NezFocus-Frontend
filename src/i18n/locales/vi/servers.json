@@ -171,5 +171,126 @@
         "confirm": "Bỏ thay đổi"
       }
     }
+  },
+  "invite": {
+    "title": "Mời bạn vào {{server}}",
+    "description": "Gửi link này qua Zalo, Messenger hoặc email. Người chưa có tài khoản sẽ được hướng dẫn tạo tài khoản rồi vào thẳng server.",
+    "link": "Link mời",
+    "copy": "Sao chép",
+    "copied": "Đã sao chép",
+    "copiedAnnounce": "Đã sao chép link mời",
+    "copyHint": "Nhấn Ctrl C để sao chép",
+    "editSettings": "Đổi thiết lập",
+    "done": "Xong",
+    "revoke": "Thu hồi link này",
+    "revoked": "Link đã bị thu hồi",
+    "newLink": "Tạo link mới",
+    "failed": "Không tạo được link mời.",
+    "offline": "Cần kết nối mạng để tạo link mời",
+    "retry": "Thử lại",
+    "revokeFailed": "Chưa thu hồi được link. Thử lại.",
+    "settings": {
+      "title": "Thiết lập link mời",
+      "back": "Quay lại",
+      "expiry": "Hết hạn sau",
+      "uses": "Số lượt dùng",
+      "note": "Link đang có vẫn dùng được tới khi hết hạn.",
+      "cancel": "Hủy",
+      "submit": "Tạo link mới",
+      "same": "Link đang hiện đã dùng thiết lập này"
+    },
+    "age": {
+      "1800": "30 phút",
+      "3600": "1 giờ",
+      "86400": "1 ngày",
+      "604800": "7 ngày",
+      "never": "Không hết hạn"
+    },
+    "usesOption": {
+      "unlimited": "Không giới hạn",
+      "count": "{{count}} lượt"
+    },
+    "line": {
+      "expires": "Hết hạn sau {{time}}",
+      "never": "Không hết hạn",
+      "unlimited": "không giới hạn lượt dùng",
+      "max": "tối đa {{count}} lượt dùng",
+      "left": "còn {{count}} lượt dùng"
+    },
+    "time": {
+      "days": "{{count}} ngày",
+      "hours": "{{count}} giờ",
+      "minutes": "{{count}} phút"
+    }
+  },
+  "join": {
+    "title": "{{name}} mời bạn vào",
+    "titleAnonymous": "Bạn được mời vào",
+    "members": "{{members}} thành viên",
+    "target": {
+      "studyRoom": "Mời vào học ở",
+      "voice": "Mời vào",
+      "text": "Mời vào kênh"
+    },
+    "register": "Tạo tài khoản để tham gia",
+    "signIn": "Đăng nhập",
+    "later": "Để sau",
+    "join": "Tham gia",
+    "close": "Đóng",
+    "expiredTitle": "Lời mời không còn hiệu lực",
+    "expiredBody": "Lời mời đã hết hạn, hết lượt dùng hoặc đã bị thu hồi. Xin bạn bè gửi lời mời mới.",
+    "expiredRegister": "Tạo tài khoản",
+    "banned": "Bạn không thể tham gia {{server}}.",
+    "offline": "Cần kết nối mạng để tham gia",
+    "failed": "Chưa tham gia được. Thử lại.",
+    "loadFailedTitle": "Không tải được lời mời",
+    "loadFailedBody": "Kiểm tra kết nối mạng rồi thử lại.",
+    "retry": "Thử lại",
+    "limitedTitle": "Tạm thời chưa mở được lời mời",
+    "limitedBody": "Có quá nhiều lần mở lời mời từ mạng này. Thử lại sau {{wait}}.",
+    "alreadyMember": "Bạn đã ở trong {{server}}",
+    "pending": "Lời mời vào <0>{{server}}</0> đang chờ bạn · tạo tài khoản hoặc đăng nhập để tham gia",
+    "pendingWelcome": "Lời mời vào <0>{{server}}</0> đang chờ bạn · hoàn tất tài khoản để tham gia",
+    "tab": "{{server}} · NezFocus",
+    "tabExpired": "Lời mời không còn hiệu lực · NezFocus"
+  },
+  "byCode": {
+    "open": "Nhập mã mời",
+    "title": "Nhập mã mời",
+    "description": "Dán mã hoặc cả link mời bạn bè gửi.",
+    "label": "Mã hoặc link mời",
+    "placeholder": "ví dụ: k7Qm2xPa hoặc nezfocus.app/invite/k7Qm2xPa",
+    "back": "Quay lại",
+    "next": "Tiếp tục",
+    "cancel": "Hủy",
+    "malformed": "Mã mời gồm 8–10 chữ và số, hoặc dán cả link mời.",
+    "invalid": "Lời mời không tồn tại hoặc đã hết hạn. Xin bạn bè gửi lời mời mới.",
+    "limited": "Bạn đã thử quá nhiều mã. Thử lại sau {{wait}}.",
+    "sharedNetwork": "Trên mạng dùng chung như phòng lab, yêu cầu của người khác cũng được tính.",
+    "offline": "Không kết nối được. Kiểm tra mạng rồi thử lại."
+  },
+  "invitesPage": {
+    "description": "Lời mời còn hiệu lực của server, mới nhất trên cùng. Lời mời hết hạn hoặc hết lượt tự biến mất.",
+    "code": "Mã",
+    "creator": "Người tạo",
+    "uses": "Lượt dùng",
+    "expires": "Hết hạn",
+    "expiresIn": "sau {{time}}",
+    "never": "không hết hạn",
+    "left": "Người dùng đã rời",
+    "deleted": "Tài khoản đã bị xóa",
+    "copy": "Sao chép link",
+    "copied": "Đã sao chép",
+    "revoke": "Thu hồi",
+    "confirmTitle": "Thu hồi lời mời {{code}}?",
+    "confirmBody": "Link này không dùng được nữa. Người đã vào bằng link vẫn ở lại server.",
+    "cancel": "Hủy",
+    "revoked": "Đã thu hồi lời mời",
+    "gone": "Lời mời này đã hết hiệu lực",
+    "failed": "Chưa thu hồi được. Thử lại.",
+    "emptyTitle": "Chưa có lời mời nào còn hiệu lực",
+    "emptyBody": "Lời mời tạo từ “Mời bạn” trong menu server sẽ hiện ở đây.",
+    "loadFailed": "Không tải được danh sách",
+    "retry": "Thử lại"
   }
 }

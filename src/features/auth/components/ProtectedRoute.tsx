@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { PageLoader } from '@/components/PageLoader'
 import { Button } from '@/components/ui/button'
 import { useAuthStore } from '@/features/auth/auth.store'
-import { afterSignIn, AUTH_PATHS, safeNext, signInPath, withFlow } from '@/features/auth/lib/paths'
+import { afterSignIn, AUTH_PATHS, flowNext, signInPath, withFlow } from '@/features/auth/lib/paths'
 import { AuthCard } from '@/features/auth/components/AuthCard'
 
 // Only for an account waiting to be deleted: its code and words load then.
@@ -56,7 +56,7 @@ export function IncompleteOnlyRoute({ children }: { children: React.ReactNode })
     if (isAuthenticated && !isComplete) return <>{children}</>
     // Incomplete accounts never wait to be deleted; a completed one goes on,
     // and ProtectedRoute sends one that waits to sign in.
-    if (isAuthenticated) return <Navigate to={safeNext(new URLSearchParams(search).get('next'))} replace />
+    if (isAuthenticated) return <Navigate to={flowNext(new URLSearchParams(search))} replace />
     if (isSigningOut) return <PageLoader />
     return <Navigate to={withFlow(AUTH_PATHS.signIn, search)} replace />
 }

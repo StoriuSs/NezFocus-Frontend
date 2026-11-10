@@ -93,7 +93,12 @@ test('creates, opens, makes private, renames and deletes a channel; creates a ca
     await openServer(page)
 
     await page.getByRole('button', { name: 'Ôn thi Giải tích 2' }).click()
-    await expect(page.getByRole('menuitem')).toHaveText(['Server settings', 'Create channel', 'Create category'])
+    await expect(page.getByRole('menuitem')).toHaveText([
+        'Invite people',
+        'Server settings',
+        'Create channel',
+        'Create category'
+    ])
     await shoot(page, 'server-menu')
     await page.getByRole('menuitem', { name: 'Create channel' }).click()
 

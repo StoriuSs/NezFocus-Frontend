@@ -14,12 +14,12 @@ const ALWAYS = '(min-width: 0px)'
  * is for, and "Create a Study Server". Right after the account is completed
  * (`first`), Runtime is happy and waves once, and the title welcomes them
  * (`no-server-first`).
- *
- * "Enter an invite code" arrives with invites (M1 plan, L6).
+ * "Join with an invite code" opens the same dialog on its second mode (D-82).
  */
 export function NoServers({ first = false, name }: { first?: boolean; name?: string }) {
     const { t } = useTranslation()
     const show = useCreateServerDialog((state) => state.show)
+    const showJoin = useCreateServerDialog((state) => state.showJoin)
 
     return (
         <div className='flex min-h-full items-start justify-center px-4 pt-[18vh]'>
@@ -32,7 +32,14 @@ export function NoServers({ first = false, name }: { first?: boolean; name?: str
                     )
                 }
                 title={first && name ? t('shell.noServer.firstTitle', { name }) : t('shell.noServer.title')}
-                actions={<Button onClick={() => show('study')}>{t('shell.noServer.create')}</Button>}
+                actions={
+                    <>
+                        <Button onClick={() => show('study')}>{t('shell.noServer.create')}</Button>
+                        <Button variant='text' onClick={showJoin}>
+                            {t('shell.noServer.joinByCode')}
+                        </Button>
+                    </>
+                }
             >
                 {t('shell.noServer.body')}
             </EmptyState>

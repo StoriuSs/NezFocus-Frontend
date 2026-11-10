@@ -29,3 +29,15 @@ export type UpdateServerRequest = ApiModel<'UpdateServerRequestDto'>
 export type LayoutMove =
     | { kind: 'channel'; id: string; categoryId: string | null; afterId: string | null }
     | { kind: 'category'; id: string; afterId: string | null }
+
+/** A link to send (S-SRV-02); the link is /invite/{code}. */
+export type Invite = ApiModel<'InviteResponseDto'>
+
+/** Lifetime (seconds, null: never) and uses (null: no limit) of a new link. */
+export type InviteSettings = ApiModel<'CreateInviteRequestDto'>
+
+/** A row of the invites page (S-SET-04), with who made it. */
+export type InviteListItem = ApiModel<'InviteListItemResponseDto'>
+
+/** The invite page (S-SRV-03): the server, who invites, and the `?channel=` target someone joining sees. */
+export type InvitePreview = ApiModel<'InvitePreviewResponseDto'>

@@ -41,3 +41,6 @@ export function serverInitials(name: string): string {
         .join('')
         .toLocaleUpperCase('vi')
 }
+
+/** The most servers one may be in (REQ-SRV-01): known ahead, so creating or joining says so before a request. */
+export const MAX_SERVERS = 100

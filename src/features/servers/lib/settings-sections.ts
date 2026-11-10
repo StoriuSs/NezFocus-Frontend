@@ -8,14 +8,14 @@ export type SettingsSection = 'overview' | 'roles' | 'members' | 'invites' | 'ba
 /**
  * Who sees which page (04 S-SET-01 › Mục nào cho ai, Q2): any one of the
  * bits. The owner and Toàn quyền hold every bit already (D-145).
- * `built` is false for a page of a later slice (L6–L8): until then it is
+ * `built` is false for a page of a later slice (L7–L8): until then it is
  * neither in the nav nor a reason to show "Server settings".
  */
 const SECTIONS: { id: SettingsSection; anyOf: PermissionName[]; built: boolean }[] = [
     { id: 'overview', anyOf: ['MANAGE_SERVER'], built: true },
     { id: 'roles', anyOf: ['MANAGE_ROLES'], built: false },
     { id: 'members', anyOf: ['KICK_MEMBERS', 'BAN_MEMBERS', 'MODERATE_MEMBERS', 'MANAGE_ROLES'], built: false },
-    { id: 'invites', anyOf: ['MANAGE_SERVER'], built: false },
+    { id: 'invites', anyOf: ['MANAGE_SERVER'], built: true },
     { id: 'bans', anyOf: ['BAN_MEMBERS'], built: false }
 ]
 

@@ -19,7 +19,7 @@ import { initialTimeZone, timeIn } from '@/lib/time-zones'
 import { displayNameIssue, USERNAME_PATTERN, useProfile, userKeys, useUsernameAvailability } from '@/features/users'
 import { authApi } from '@/features/auth/api/auth.api'
 import { useAuthStore } from '@/features/auth/auth.store'
-import { safeNext } from '@/features/auth/lib/paths'
+import { flowNext } from '@/features/auth/lib/paths'
 import { useAuthPageState } from '@/features/auth/lib/page-state'
 import { passwordFieldRule, type PasswordRule } from '@/features/auth/lib/password-rules'
 import { newPasswordIssue } from '@/features/auth/lib/schemas'
@@ -157,7 +157,7 @@ function WelcomeForm({ email, googleName }: { email: string | undefined; googleN
     function finish() {
         markComplete()
         // The Study page greets a new account once (02 S-SHELL-01 `no-server-first`).
-        void navigate(safeNext(params.get('next')), { replace: true, state: { firstVisit: true } })
+        void navigate(flowNext(params), { replace: true, state: { firstVisit: true } })
     }
 
     async function onSubmit(values: Values) {

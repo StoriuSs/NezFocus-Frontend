@@ -1,5 +1,5 @@
-import { Suspense, useEffect } from 'react'
-import { Link, Outlet, useLocation } from 'react-router-dom'
+import { lazy, Suspense, useEffect } from 'react'
+import { Link, Outlet, useLocation, useSearchParams } from 'react-router-dom'
 import { useQueryErrorResetBoundary } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 
@@ -10,6 +10,9 @@ import { PageLoader } from '@/components/PageLoader'
 import { Button } from '@/components/ui/button'
 import { AUTH_PATHS, useAuthStore } from '@/features/auth'
 import { BrandPanel } from './BrandPanel'
+
+// Only on a page reached from an invite: kept out of the first download.
+const PendingInviteBanner = lazy(() => import('@/features/servers/components/invites/PendingInviteBanner'))
 
 /**
  * The layout of every page outside the app (C-34): signing up, the code,
@@ -24,6 +27,9 @@ import { BrandPanel } from './BrandPanel'
 export default function AuthShell() {
     const { t } = useTranslation()
     const { pathname } = useLocation()
+    const [params] = useSearchParams()
+    // An invite waiting through signing up or in (01 › Lời mời đang chờ).
+    const invite = params.get('invite')
     const { reset: resetQueryErrors } = useQueryErrorResetBoundary()
     const logout = useAuthStore((state) => state.logout)
     // "Complete your account" may be for the wrong account: a way out (S-ONB-01).
@@ -61,6 +67,11 @@ export default function AuthShell() {
                 <main className='flex min-h-0 flex-1 flex-col overflow-y-auto px-4'>
                     <div className='mx-auto my-auto w-full max-w-[400px] py-6'>
                         <ErrorBoundary key={pathname} onReset={resetQueryErrors}>
+                            {invite ? (
+                                <Suspense fallback={null}>
+                                    <PendingInviteBanner code={invite} finishing={pathname === AUTH_PATHS.welcome} />
+                                </Suspense>
+                            ) : null}
                             <Suspense fallback={<PageLoader className='min-h-40' />}>
                                 <Outlet />
                             </Suspense>

@@ -105,7 +105,8 @@
       "title": "No servers yet",
       "firstTitle": "Welcome to NezFocus, {{name}}",
       "body": "Create a Study Server to study with friends, or enter an invite code a friend sent you.",
-      "create": "Create a Study Server"
+      "create": "Create a Study Server",
+      "joinByCode": "Join with an invite code"
     },
     "voiceSoon": {
       "title": "Voice rooms come in a later version",
@@ -114,7 +115,8 @@
     "serverMenu": {
       "createChannel": "Create channel",
       "createCategory": "Create category",
-      "settings": "Server settings"
+      "settings": "Server settings",
+      "invite": "Invite people"
     },
     "channelsExtra": {
       "settings": "Channel settings",

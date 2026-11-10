@@ -7,6 +7,7 @@ import { PageLoader } from '@/components/PageLoader'
 import { ShellPage } from '@/components/shell/ShellPage'
 import { useServers } from '../api/useServers'
 import { isSettingsSection, serverSettingsPath, settingsSections } from '../lib/settings-sections'
+import { InvitesSettings } from '../components/settings/InvitesSettings'
 import { ServerIconSetting } from '../components/settings/ServerIconSetting'
 import { ServerNameForm } from '../components/settings/ServerNameForm'
 import { WelcomeChannelSetting } from '../components/settings/WelcomeChannelSetting'
@@ -50,6 +51,7 @@ export default function ServerSettingsPage() {
     return (
         <ShellPage title={t(`shell.serverSettings.${section}`)} bodyClassName='flex flex-col'>
             {section === 'overview' ? <Overview server={server} /> : null}
+            {section === 'invites' ? <InvitesSettings server={server} /> : null}
         </ShellPage>
     )
 }

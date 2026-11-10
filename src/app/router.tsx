@@ -17,6 +17,7 @@ const AuthShell = lazy(() => import('@/app/layout/AuthShell'))
 const AppShell = lazy(() => import('@/app/layout/app-shell/AppShell'))
 const ChannelPage = lazy(() => import('@/features/servers/pages/ChannelPage'))
 const ServerSettingsPage = lazy(() => import('@/features/servers/pages/ServerSettingsPage'))
+const InvitePage = lazy(() => import('@/features/servers/pages/InvitePage'))
 const Study = lazy(() => import('@/pages/Study'))
 const Legal = lazy(() => import('@/pages/Legal'))
 const NotFound = lazy(() => import('@/pages/NotFound'))
@@ -61,7 +62,8 @@ export const router = createBrowserRouter([
             // The public text pages (S-PUB-02, D-127): for everyone, signed in or not.
             { path: '/terms', element: <Legal document='terms' /> },
             { path: '/privacy', element: <Legal document='privacy' /> },
-            { element: <AuthShell />, children: authRoutes },
+            // An invite (S-SRV-03): a visitor's page in the AuthShell; signed in, it opens the app.
+            { element: <AuthShell />, children: [...authRoutes, { path: '/invite/:code', element: <InvitePage /> }] },
             {
                 element: (
                     <ProtectedRoute>

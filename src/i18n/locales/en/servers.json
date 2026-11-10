@@ -171,5 +171,133 @@
         "confirm": "Discard changes"
       }
     }
+  },
+  "invite": {
+    "title": "Invite friends to {{server}}",
+    "description": "Send this link over Zalo, Messenger or email. Anyone without an account is shown how to make one, then goes straight into the server.",
+    "link": "Invite link",
+    "copy": "Copy",
+    "copied": "Copied",
+    "copiedAnnounce": "Invite link copied",
+    "copyHint": "Press Ctrl C to copy",
+    "editSettings": "Change settings",
+    "done": "Done",
+    "revoke": "Revoke this link",
+    "revoked": "This link has been revoked",
+    "newLink": "Create a new link",
+    "failed": "Could not create an invite link.",
+    "offline": "You need a connection to create an invite link",
+    "retry": "Try again",
+    "revokeFailed": "Could not revoke the link. Try again.",
+    "settings": {
+      "title": "Invite link settings",
+      "back": "Back",
+      "expiry": "Expire after",
+      "uses": "Max number of uses",
+      "note": "The link you have keeps working until it expires.",
+      "cancel": "Cancel",
+      "submit": "Create a new link",
+      "same": "The link shown already has these settings"
+    },
+    "age": {
+      "1800": "30 minutes",
+      "3600": "1 hour",
+      "86400": "1 day",
+      "604800": "7 days",
+      "never": "Never"
+    },
+    "usesOption": {
+      "unlimited": "No limit",
+      "count_one": "{{count}} use",
+      "count_other": "{{count}} uses"
+    },
+    "line": {
+      "expires": "Expires in {{time}}",
+      "never": "Never expires",
+      "unlimited": "no limit on uses",
+      "max_one": "up to {{count}} use",
+      "max_other": "up to {{count}} uses",
+      "left_one": "{{count}} use left",
+      "left_other": "{{count}} uses left"
+    },
+    "time": {
+      "days_one": "{{count}} day",
+      "days_other": "{{count}} days",
+      "hours_one": "{{count}} hour",
+      "hours_other": "{{count}} hours",
+      "minutes_one": "{{count}} minute",
+      "minutes_other": "{{count}} minutes"
+    }
+  },
+  "join": {
+    "title": "{{name}} invited you to",
+    "titleAnonymous": "You're invited to",
+    "members_one": "{{members}} member",
+    "members_other": "{{members}} members",
+    "target": {
+      "studyRoom": "Invited to study in",
+      "voice": "Invited to",
+      "text": "Invited to the channel"
+    },
+    "register": "Create an account to join",
+    "signIn": "Sign in",
+    "later": "Not now",
+    "join": "Join",
+    "close": "Close",
+    "expiredTitle": "This invite is no longer valid",
+    "expiredBody": "The invite has expired, run out of uses or been revoked. Ask your friend for a new one.",
+    "expiredRegister": "Create an account",
+    "banned": "You cannot join {{server}}.",
+    "offline": "You need a connection to join",
+    "failed": "Could not join. Try again.",
+    "loadFailedTitle": "Could not load the invite",
+    "loadFailedBody": "Check your connection and try again.",
+    "retry": "Try again",
+    "limitedTitle": "This invite cannot be opened right now",
+    "limitedBody": "Too many invites were opened from this network. Try again in {{wait}}.",
+    "alreadyMember": "You're already in {{server}}",
+    "pending": "Your invite to <0>{{server}}</0> is waiting · create an account or sign in to join",
+    "pendingWelcome": "Your invite to <0>{{server}}</0> is waiting · finish your account to join",
+    "tab": "{{server}} · NezFocus",
+    "tabExpired": "Invite no longer valid · NezFocus"
+  },
+  "byCode": {
+    "open": "Join with an invite code",
+    "title": "Join with an invite code",
+    "description": "Paste the code or the whole link a friend sent you.",
+    "label": "Invite code or link",
+    "placeholder": "e.g. k7Qm2xPa or nezfocus.app/invite/k7Qm2xPa",
+    "back": "Back",
+    "next": "Continue",
+    "cancel": "Cancel",
+    "malformed": "An invite code has 8–10 letters and digits, or paste the whole invite link.",
+    "invalid": "This invite does not exist or has expired. Ask your friend for a new one.",
+    "limited": "You have tried too many codes. Try again in {{wait}}.",
+    "sharedNetwork": "On a shared network such as a lab, other people’s requests count too.",
+    "offline": "Could not connect. Check your network and try again."
+  },
+  "invitesPage": {
+    "description": "The server’s invites that still work, newest first. Expired or used up invites disappear by themselves.",
+    "code": "Code",
+    "creator": "Created by",
+    "uses": "Uses",
+    "expires": "Expires",
+    "expiresIn": "in {{time}}",
+    "never": "never",
+    "left": "Left the server",
+    "deleted": "Deleted account",
+    "copy": "Copy link",
+    "copied": "Copied",
+    "revoke": "Revoke",
+    "confirmTitle": "Revoke invite {{code}}?",
+    "confirmBody": "This link stops working. People who joined with it stay in the server.",
+    "cancel": "Cancel",
+    "revoked": "Invite revoked",
+    "gone": "This invite had already expired",
+    "failed": "Could not revoke it. Try again.",
+    "emptyTitle": "No invites that still work",
+    "emptyBody": "Invites made from “Invite people” in the server menu show here.",
+    "loadFailed": "Could not load the list",
+    "retry": "Try again"
   }
 }

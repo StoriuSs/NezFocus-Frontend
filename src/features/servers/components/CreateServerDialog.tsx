@@ -28,18 +28,18 @@ import { uploadServerIcon } from '../api/servers.api'
 import { useCreateServer } from '../api/useCreateServer'
 import { rememberServer, useServers } from '../api/useServers'
 import { useCreateServerDialog } from '../create-server.store'
+import { useInviteDialogs } from '../invite-dialogs.store'
 import { firstTextChannel } from '../lib/channel-list'
 import {
     isServerName,
+    MAX_SERVERS,
     normaliseServerName,
     SERVER_NAME_MAX_LENGTH,
     serverInitials,
     serverNameLength
 } from '../lib/server-name'
 import type { Server, ServerTemplate } from '../types'
-
-/** The most servers one may be in (REQ-SRV-01): known ahead, so the button says so before a request. */
-const MAX_SERVERS = 100
+import { JoinByCode } from './invites/JoinByCode'
 
 type Problem = 'maxServers' | 'offline' | 'failed'
 
@@ -68,16 +68,18 @@ async function saveIcon(
  * "Create a server" (S-SRV-01): a template, an optional square picture, and
  * a name. Created, the server joins the end of the rail and its first text
  * channel opens. The picture is uploaded after the server exists, while the
- * button still spins.
+ * button still spins, then the invite panel opens (S-SRV-02 `created`, Q5).
  *
- * "Enter an invite code" and the invite panel that opens after creating
- * arrive with invites (M1 plan, L6).
+ * "Join with an invite code" is its second mode (D-82): the code, then the
+ * invite. Back from it keeps what was typed here.
  */
 export default function CreateServerDialog() {
     const { t } = useTranslation('servers')
     const navigate = useNavigate()
     const queryClient = useQueryClient()
-    const { template: initialTemplate, hide } = useCreateServerDialog()
+    const { template: initialTemplate, mode, hide } = useCreateServerDialog()
+    const showInvite = useInviteDialogs((state) => state.showInvite)
+    const [joining, setJoining] = useState(mode === 'join')
     const create = useCreateServer()
     const servers = useServers()
     const atMax = (servers.data?.length ?? 0) >= MAX_SERVERS
@@ -136,6 +138,7 @@ export default function CreateServerDialog() {
             }
             hide()
             void navigate(`/channels/${server.id}/${firstTextChannel(server)?.id ?? ''}`)
+            showInvite(server.id, true)
         } catch (error) {
             const type = getApiErrorType(error)
             if (type === 'MAX_SERVERS_REACHED') setProblem('maxServers')
@@ -169,13 +172,15 @@ export default function CreateServerDialog() {
                 // The name, not the first template card (C-14: the first field without a value).
                 onOpenAutoFocus={(event) => {
                     event.preventDefault()
-                    nameInput.current?.focus()
+                    // Opened on "Join with an invite code": its field takes the focus itself.
+                    if (!joining) nameInput.current?.focus()
                 }}
                 // A click on the scrim keeps what was typed or chosen (C-14).
-                onInteractOutside={(event) => (dirty || creating) && event.preventDefault()}
+                onInteractOutside={(event) => (dirty || creating || joining) && event.preventDefault()}
                 onEscapeKeyDown={(event) => creating && event.preventDefault()}
             >
-                <form onSubmit={(event) => void submit(event)} className='space-y-5' noValidate>
+                {joining ? <JoinByCode onBack={() => setJoining(false)} onClose={hide} /> : null}
+                <form hidden={joining} onSubmit={(event) => void submit(event)} className='space-y-5' noValidate>
                     <DialogHeader>
                         <DialogTitle>{t('create.title')}</DialogTitle>
                         <DialogDescription>{t('create.description')}</DialogDescription>
@@ -318,6 +323,15 @@ export default function CreateServerDialog() {
                     ) : null}
 
                     <DialogFooter>
+                        <Button
+                            type='button'
+                            variant='text'
+                            className='sm:mr-auto'
+                            disabled={creating}
+                            onClick={() => setJoining(true)}
+                        >
+                            {t('byCode.open')}
+                        </Button>
                         <Button type='button' variant='text' disabled={creating} onClick={hide}>
                             {t('create.cancel')}
                         </Button>

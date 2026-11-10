@@ -55,6 +55,20 @@ export function sameSitePath(value: string | null | undefined): string | undefin
     }
 }
 
+/** An invite code as the API takes it (8–10 letters and digits, REQ-SRV-03). */
+const INVITE_CODE = /^[A-Za-z0-9]{8,10}$/
+
+/**
+ * Where a finished sign-in flow goes: `?next=`, else the invite waiting in
+ * `?invite=` (01 › Lời mời đang chờ, UF-03), else home. The invite page puts
+ * a link's `?channel=` in `next`, since `invite` holds the code alone.
+ */
+export function flowNext(params: URLSearchParams): string {
+    const invite = params.get('invite')
+    const pending = invite && INVITE_CODE.test(invite) ? `/invite/${invite}` : undefined
+    return safeNext(params.get('next') ?? pending)
+}
+
 /**
  * The query the auth pages pass from step to step (01-auth.md): `next`, where
  * the visitor was heading, and `invite`, an invite link waiting for them. Any
@@ -108,5 +122,5 @@ export function afterSignIn(account: SignedInAccount, search: string | URLSearch
         return query.size ? `${AUTH_PATHS.signIn}?${query}` : AUTH_PATHS.signIn
     }
     if (!account.completed) return withFlow(AUTH_PATHS.welcome, params)
-    return safeNext(params.get('next'))
+    return flowNext(params)
 }

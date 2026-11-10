@@ -6,6 +6,8 @@
 export { useAuthStore } from './auth.store'
 export { ProtectedRoute } from './components/ProtectedRoute'
 export { RequireRole, useHasRole } from './components/RequireRole'
-export { AUTH_PATHS } from './lib/paths'
+export { AUTH_PATHS, withFlow } from './lib/paths'
+// The wait a limit asks for (C-22), for other features' forms.
+export { formatWait } from './lib/form-errors'
 // For main.tsx, which connects the API client to the session.
 export { apiSession } from './lib/api-session'

@@ -5,7 +5,10 @@ interface CreateServerDialogState {
     open: boolean
     /** The template chosen when it opens: Study Server unless told otherwise. */
     template: ServerTemplate
+    /** `join`: opens on "Join with an invite code" (02 `no-server`). */
+    mode: 'create' | 'join'
     show: (template?: ServerTemplate) => void
+    showJoin: () => void
     hide: () => void
 }
 
@@ -17,6 +20,8 @@ interface CreateServerDialogState {
 export const useCreateServerDialog = create<CreateServerDialogState>((set) => ({
     open: false,
     template: 'study',
-    show: (template = 'study') => set({ open: true, template }),
+    mode: 'create',
+    show: (template = 'study') => set({ open: true, template, mode: 'create' }),
+    showJoin: () => set({ open: true, template: 'study', mode: 'join' }),
     hide: () => set({ open: false })
 }))

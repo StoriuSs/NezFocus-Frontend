@@ -590,6 +590,72 @@ export interface paths {
         patch: operations['ChannelLayoutController_updateChannel_v1']
         trace?: never
     }
+    '/api/v1/servers/{serverId}/invites': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        /** The server's links that still open, newest first (MANAGE_SERVER, S-SET-04). */
+        get: operations['InvitesController_list_v1']
+        put?: never
+        /**
+         * A link to send (CREATE_INVITE): their own again when it has the same
+         *     lifetime, no limit on uses and half its time left; a new one otherwise
+         *     (D-151).
+         */
+        post: operations['InvitesController_create_v1']
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/invites/{code}': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        /**
+         * The invite page, open to anyone (S-SRV-03). INVITE_INVALID (410) for a
+         *     link that no longer opens; more than 30 wrong codes a minute from one
+         *     network: RATE_LIMIT_EXCEEDED.
+         */
+        get: operations['InvitesController_preview_v1']
+        put?: never
+        post?: never
+        /** Stop a link opening: its creator, or anyone with MANAGE_SERVER. */
+        delete: operations['InvitesController_revoke_v1']
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/invites/{code}/accept': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        /**
+         * Join the server (REQ-SRV-04). A member is answered with the server as
+         *     well, `joined: false`, and no use counted. The client opens the link's
+         *     `?channel=` when it is among the channels it now sees, else the first
+         *     text channel.
+         */
+        post: operations['InvitesController_accept_v1']
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
 }
 export type webhooks = Record<string, never>
 export interface components {
@@ -1025,6 +1091,88 @@ export interface components {
             is_private?: boolean
             /** @description Replaces the whole set. */
             view_role_ids?: string[]
+        }
+        InviteResponseDto: {
+            /** @description The link is /invite/{code}. */
+            code: string
+            /** @description The lifetime chosen; null: never expires. */
+            max_age_seconds: number | null
+            /** @description Null: no limit. */
+            max_uses: number | null
+            uses: number
+            /**
+             * Format: date-time
+             * @description Null: never expires.
+             */
+            expires_at: string | null
+            /** Format: date-time */
+            created_at: string
+        }
+        CreateInviteRequestDto: {
+            /**
+             * @description 30 minutes, 1 hour, 1 day or 7 days, in seconds; null: never expires.
+             * @example 604800
+             * @enum {number|null}
+             */
+            max_age_seconds: 1800 | 3600 | 86400 | 604800 | null
+            /**
+             * @description 1–100; null: no limit.
+             * @example null
+             */
+            max_uses: number | null
+        }
+        InviteCreatorResponseDto: {
+            /** @enum {string} */
+            state: 'member' | 'left' | 'deleted'
+            display_name?: string | null
+            username?: string | null
+        }
+        InviteListItemResponseDto: {
+            /** @description The link is /invite/{code}. */
+            code: string
+            /** @description The lifetime chosen; null: never expires. */
+            max_age_seconds: number | null
+            /** @description Null: no limit. */
+            max_uses: number | null
+            uses: number
+            /**
+             * Format: date-time
+             * @description Null: never expires.
+             */
+            expires_at: string | null
+            /** Format: date-time */
+            created_at: string
+            creator: components['schemas']['InviteCreatorResponseDto']
+        }
+        InviteListResponseDto: {
+            /** @description The links that still open, newest first. */
+            invites: components['schemas']['InviteListItemResponseDto'][]
+        }
+        InviteServerResponseDto: {
+            id: string
+            name: string
+            /** @description Null: show the initials. */
+            icon_url: string | null
+            member_count: number
+        }
+        InviteTargetResponseDto: {
+            id: string
+            name: string
+            /** @enum {string} */
+            type: 'text' | 'voice'
+            is_study_room: boolean
+        }
+        InvitePreviewResponseDto: {
+            code: string
+            server: components['schemas']['InviteServerResponseDto']
+            /** @description Null: the creator has left or the account is deleted ("You're invited to", D-81). */
+            inviter_name: string | null
+            channel: components['schemas']['InviteTargetResponseDto'] | null
+        }
+        AcceptInviteResponseDto: {
+            server: components['schemas']['ServerResponseDto']
+            /** @description False: already a member; nothing changed and no use was counted. */
+            joined: boolean
         }
     }
     responses: never
@@ -2202,6 +2350,139 @@ export interface operations {
                     'application/json': {
                         meta: components['schemas']['ApiResponseMetaDto']
                         data: components['schemas']['ServerResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    InvitesController_list_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                serverId: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['InviteListResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    InvitesController_create_v1: {
+        parameters: {
+            query?: never
+            header: {
+                /** @description UUID identifying one user intent */
+                'Idempotency-Key': string
+            }
+            path: {
+                serverId: string
+            }
+            cookie?: never
+        }
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['CreateInviteRequestDto']
+            }
+        }
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['InviteResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    InvitesController_preview_v1: {
+        parameters: {
+            query?: {
+                /** @description The `?channel=` of the link (D-150). Not one someone joining sees: ignored. */
+                channel?: string
+            }
+            header?: never
+            path: {
+                /** @description Checked against 8–10 letters and digits by the handler, so a bad one counts as a wrong code. */
+                code: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['InvitePreviewResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    InvitesController_revoke_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                /** @description Checked against 8–10 letters and digits by the handler, so a bad one counts as a wrong code. */
+                code: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: null
+                    }
+                }
+            }
+        }
+    }
+    InvitesController_accept_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                /** @description Checked against 8–10 letters and digits by the handler, so a bad one counts as a wrong code. */
+                code: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['AcceptInviteResponseDto']
                     }
                 }
             }

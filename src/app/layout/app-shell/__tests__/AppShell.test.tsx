@@ -303,7 +303,11 @@ describe('AppShell (S-SHELL-01)', () => {
             )
             const nav = screen.getByRole('navigation', { name: 'Server settings' })
             expect(within(nav).getByRole('link', { name: 'Overview' })).toHaveAttribute('aria-current', 'page')
-            expect(within(nav).getAllByRole('link')).toHaveLength(1)
+            expect(
+                within(nav)
+                    .getAllByRole('link')
+                    .map((link) => link.textContent)
+            ).toEqual(['Overview', 'Invites'])
             expect(screen.getByRole('heading', { level: 2, name: 'Ôn thi Giải tích 2' })).toBeInTheDocument()
             expect(await screen.findByRole('heading', { level: 1, name: 'Overview' })).toBeInTheDocument()
             await expectNoA11yViolations()

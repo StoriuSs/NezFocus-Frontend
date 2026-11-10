@@ -128,7 +128,8 @@ const refused = (status: number, data: object = {}) =>
 
 describe('Who sees which settings page (04 S-SET-01 Q2)', () => {
     it('lists the pages built so far that their bits open', () => {
-        expect(settingsSections({ permissions: MANAGER })).toEqual(['overview'])
+        // Overview and Invites both need MANAGE_SERVER (04 Q2).
+        expect(settingsSections({ permissions: MANAGER })).toEqual(['overview', 'invites'])
         expect(settingsSections({ permissions: MEMBER })).toEqual([])
         // Members (L8) is not built yet: KICK_MEMBERS alone opens nothing.
         expect(settingsSections({ permissions: bits(4) })).toEqual([])

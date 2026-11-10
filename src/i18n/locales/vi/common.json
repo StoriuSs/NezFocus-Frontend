@@ -105,7 +105,8 @@
       "title": "Chưa có server nào",
       "firstTitle": "Chào mừng {{name}} đến với NezFocus",
       "body": "Tạo Study Server để học cùng bạn bè, hoặc nhập mã mời bạn bè gửi.",
-      "create": "Tạo Study Server"
+      "create": "Tạo Study Server",
+      "joinByCode": "Nhập mã mời"
     },
     "voiceSoon": {
       "title": "Phòng voice có ở bản sau",
@@ -114,7 +115,8 @@
     "serverMenu": {
       "createChannel": "Tạo kênh",
       "createCategory": "Tạo danh mục",
-      "settings": "Cài đặt server"
+      "settings": "Cài đặt server",
+      "invite": "Mời bạn"
     },
     "channelsExtra": {
       "settings": "Cài đặt kênh",

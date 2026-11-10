@@ -92,6 +92,10 @@ test('from no server to a Study Server with a picture, opened at its welcome cha
     await expect(dialog.getByRole('button', { name: 'Change image' })).toBeVisible()
 
     await dialog.getByRole('button', { name: 'Create server' }).click()
+    // Created: the invite panel opens over the new server (S-SRV-02 `created`, Q5).
+    const invite = page.getByRole('dialog', { name: 'Invite friends to Ôn thi Giải tích 2' })
+    await expect(invite.getByRole('textbox', { name: 'Invite link' })).toHaveValue(/\/invite\/[A-Za-z0-9]{8}$/)
+    await invite.getByRole('button', { name: 'Done' }).click()
     await expect(page.getByRole('heading', { level: 1, name: 'chao-mung' })).toBeVisible()
     await expect(page).toHaveURL(/\/channels\/[^/]+\/[^/]+$/)
     const server = rail(page).getByRole('link', { name: 'Ôn thi Giải tích 2' })
@@ -123,6 +127,10 @@ test('a plain server from ＋ joins the end of the rail, opened at chung', async
     await dialog.getByRole('radio', { name: /Plain server/ }).click()
     await dialog.getByRole('textbox', { name: 'Server name' }).fill('Nhóm chơi')
     await dialog.getByRole('button', { name: 'Create server' }).click()
+    await page
+        .getByRole('dialog', { name: 'Invite friends to Nhóm chơi' })
+        .getByRole('button', { name: 'Done' })
+        .click()
 
     await expect(page.getByRole('heading', { level: 1, name: 'chung' })).toBeVisible()
     const names = await rail(page)
