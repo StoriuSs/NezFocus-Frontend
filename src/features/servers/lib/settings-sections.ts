@@ -14,9 +14,9 @@ export type SettingsSection = 'overview' | 'roles' | 'members' | 'invites' | 'ba
 const SECTIONS: { id: SettingsSection; anyOf: PermissionName[]; built: boolean }[] = [
     { id: 'overview', anyOf: ['MANAGE_SERVER'], built: true },
     { id: 'roles', anyOf: ['MANAGE_ROLES'], built: true },
-    { id: 'members', anyOf: ['KICK_MEMBERS', 'BAN_MEMBERS', 'MODERATE_MEMBERS', 'MANAGE_ROLES'], built: false },
+    { id: 'members', anyOf: ['KICK_MEMBERS', 'BAN_MEMBERS', 'MODERATE_MEMBERS', 'MANAGE_ROLES'], built: true },
     { id: 'invites', anyOf: ['MANAGE_SERVER'], built: true },
-    { id: 'bans', anyOf: ['BAN_MEMBERS'], built: false }
+    { id: 'bans', anyOf: ['BAN_MEMBERS'], built: true }
 ]
 
 /** The pages they may open, in order; none: no "Server settings" in the server menu. */

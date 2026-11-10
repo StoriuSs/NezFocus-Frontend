@@ -76,7 +76,9 @@ const member = (userId: string, displayName: string, roleIds: string[], isOwner 
     avatarUrl: null,
     isOwner,
     roleIds,
-    joinedAt: new Date('2026-11-01T00:00:00Z').toISOString() as never
+    joinedAt: new Date('2026-11-01T00:00:00Z').toISOString() as never,
+    timeoutUntil: null,
+    timeoutReason: null
 })
 const page = (items: ServerMember[]): MemberPage => ({
     items,

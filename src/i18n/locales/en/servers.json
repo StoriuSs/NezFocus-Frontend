@@ -479,5 +479,115 @@
       "noMatch": "No one matches “{{q}}”",
       "failed": "Couldn’t add them. The list was reloaded; try again."
     }
+  },
+  "members": {
+    "search": "Search by name or username",
+    "count_one": "{{count}} member",
+    "count_other": "{{count}} members",
+    "results_one": "{{count}} result",
+    "results_other": "{{count}} results",
+    "columns": {
+      "member": "Member",
+      "roles": "Roles",
+      "joined": "Joined"
+    },
+    "sortBy": {
+      "name": "Sort by name",
+      "role": "Sort by role",
+      "joined_at": "Sort by join date"
+    },
+    "owner": "Server owner",
+    "assign": "Assign roles",
+    "pickerTitle": "Roles of {{name}}",
+    "findRole": "Find a role",
+    "actions": "Actions for {{name}}",
+    "menu": {
+      "timeout": "Time out",
+      "changeTimeout": "Change timeout",
+      "endTimeout": "Remove timeout",
+      "kick": "Kick from server",
+      "ban": "Ban from server"
+    },
+    "timedOutUntil": "Timed out until {{time}}",
+    "timeoutReason": "Reason: {{reason}}",
+    "noMatch": "No member matches “{{q}}”",
+    "loadFailed": "Couldn’t load the members",
+    "retry": "Try again",
+    "saveFailed": "Couldn’t save the change",
+    "toast": {
+      "timedOut": "Timed out {{name}} for {{length}}",
+      "timeoutEnded": "Removed the timeout of {{name}}",
+      "kicked": "Kicked {{name}} from the server",
+      "banned": "Banned {{name}}"
+    },
+    "lengths": {
+      "60": "60 seconds",
+      "300": "5 minutes",
+      "600": "10 minutes",
+      "3600": "1 hour",
+      "86400": "1 day",
+      "604800": "1 week"
+    },
+    "dialog": {
+      "timeoutTitle": "Time out {{name}}",
+      "changeTitle": "Change the timeout of {{name}}",
+      "timeoutBody": "{{name}} can still read messages but can’t send any, react or join a room.",
+      "length": "Duration",
+      "endsToday": "Ends at {{time}} today",
+      "endsOn": "Ends at {{time}}, {{date}}",
+      "timeoutSubmit": "Time out",
+      "kickTitle": "Kick {{name}} from the server?",
+      "kickBody": "{{name}} can come back with a new invite.",
+      "kickSubmit": "Kick",
+      "banTitle": "Ban {{name}} from the server?",
+      "banBody": "{{name}} is removed from the server and can’t come back with any invite until unbanned.",
+      "banSubmit": "Ban",
+      "reason": "Reason (optional)",
+      "reasonHint": "{{name}} will see this reason.",
+      "cancel": "Cancel",
+      "failed": "Couldn’t do that. Check your connection and try again.",
+      "outranked": "{{name}} now has a role equal to or above yours, so you can’t do this.",
+      "gone": "{{name}} is no longer in the server.",
+      "admin": "{{name}} has Administrator, so they can’t be timed out. Remove that role first."
+    }
+  },
+  "pagination": {
+    "show": "Show",
+    "ofMembers_one": "of {{count}} member",
+    "ofMembers_other": "of {{count}} members",
+    "ofBans_one": "of {{count}} banned person",
+    "ofBans_other": "of {{count}} banned people",
+    "membersPerPage": "Members per page",
+    "bansPerPage": "People per page",
+    "previous": "Previous page",
+    "next": "Next page",
+    "page": "Page {{page}}"
+  },
+  "bans": {
+    "description": "Banned people can’t come back with any invite. Once unbanned, they can join again with a valid invite.",
+    "columns": {
+      "user": "Banned",
+      "reason": "Reason",
+      "date": "Date",
+      "by": "By"
+    },
+    "search": "Search banned people",
+    "noMatch": "No one matches “{{q}}”",
+    "deleted": "Deleted account",
+    "emptyTitle": "No one is banned",
+    "emptyBody": "People banned from the Members page will show here.",
+    "loadFailed": "Couldn’t load the list",
+    "retry": "Try again",
+    "unban": "Unban",
+    "reason": "Reason",
+    "noReason": "No reason given",
+    "bannedBy": "Banned on {{date}} by {{name}}",
+    "bannedOn": "Banned on {{date}}",
+    "close": "Close",
+    "confirmTitle": "Unban {{name}}?",
+    "confirmBody": "{{name}} can join the server again with a valid invite.",
+    "cancel": "Cancel",
+    "unbanned": "Unbanned {{name}}",
+    "failed": "Couldn’t do that. Check your connection and try again."
   }
 }

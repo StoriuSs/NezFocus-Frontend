@@ -757,6 +757,58 @@ export interface paths {
         patch?: never
         trace?: never
     }
+    '/api/v1/servers/{serverId}/members/{userId}': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        post?: never
+        /** Out of the server, back in with a new invite (KICK_MEMBERS). */
+        delete: operations['ModerationController_kick_v1']
+        options?: never
+        head?: never
+        /** Time out, give a running timeout a new length, or end it (MODERATE_MEMBERS). */
+        patch: operations['ModerationController_timeout_v1']
+        trace?: never
+    }
+    '/api/v1/servers/{serverId}/bans': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        /** One page of the bans, newest first (BAN_MEMBERS). */
+        get: operations['ModerationController_bans_v1']
+        put?: never
+        post?: never
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/servers/{serverId}/bans/{userId}': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        /** Out of the server and kept out (BAN_MEMBERS); only someone in it (D-155). */
+        put: operations['ModerationController_ban_v1']
+        post?: never
+        delete: operations['ModerationController_unban_v1']
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
 }
 export type webhooks = Record<string, never>
 export interface components {
@@ -1322,6 +1374,13 @@ export interface components {
             role_ids: string[]
             /** Format: date-time */
             joined_at: string
+            /**
+             * Format: date-time
+             * @description Set while a timeout runs; everyone sees it (D-154).
+             */
+            timeout_until: string | null
+            /** @description Only for those who may time people out, and for the one timed out (D-154). */
+            timeout_reason: string | null
         }
         PageMetaResponseDto: {
             current_page: number
@@ -1333,6 +1392,32 @@ export interface components {
         }
         MemberPageResponseDto: {
             items: components['schemas']['MemberResponseDto'][]
+            meta: components['schemas']['PageMetaResponseDto']
+        }
+        ModerationReasonRequestDto: {
+            reason?: string | null
+        }
+        TimeoutMemberRequestDto: {
+            reason?: string | null
+            /** @enum {number|null} */
+            timeout_seconds: 60 | 300 | 600 | 3600 | 86400 | 604800 | null
+        }
+        BanPersonResponseDto: {
+            user_id: string
+            username: string | null
+            display_name: string | null
+            avatar_url: string | null
+        }
+        BanResponseDto: {
+            /** @description Null when that account is gone for good. */
+            banned_by: components['schemas']['BanPersonResponseDto'] | null
+            user: components['schemas']['BanPersonResponseDto']
+            reason: string | null
+            /** Format: date-time */
+            created_at: string
+        }
+        BanPageResponseDto: {
+            items: components['schemas']['BanResponseDto'][]
             meta: components['schemas']['PageMetaResponseDto']
         }
     }
@@ -2844,6 +2929,10 @@ export interface operations {
     RolesController_members_v1: {
         parameters: {
             query?: {
+                /** @description name (default), role or joined_at (D-89). */
+                sort?: 'name' | 'role' | 'joined_at'
+                /** @description asc (default): A to Z, lowest role first, oldest first. */
+                order?: 'asc' | 'desc'
                 /** @description Display name or username, ignoring case and accents. */
                 q?: string
                 /** @description Only those holding this role. */
@@ -2868,6 +2957,146 @@ export interface operations {
                     'application/json': {
                         meta: components['schemas']['ApiResponseMetaDto']
                         data: components['schemas']['MemberPageResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    ModerationController_kick_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                serverId: string
+                userId: string
+            }
+            cookie?: never
+        }
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['ModerationReasonRequestDto']
+            }
+        }
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: null
+                    }
+                }
+            }
+        }
+    }
+    ModerationController_timeout_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                serverId: string
+                userId: string
+            }
+            cookie?: never
+        }
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['TimeoutMemberRequestDto']
+            }
+        }
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: null
+                    }
+                }
+            }
+        }
+    }
+    ModerationController_bans_v1: {
+        parameters: {
+            query?: {
+                page?: number
+                /** @description 10, 50 or 100 (D-90); 50 when left out. */
+                limit?: 10 | 50 | 100
+            }
+            header?: never
+            path: {
+                serverId: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['BanPageResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    ModerationController_ban_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                serverId: string
+                userId: string
+            }
+            cookie?: never
+        }
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['ModerationReasonRequestDto']
+            }
+        }
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: null
+                    }
+                }
+            }
+        }
+    }
+    ModerationController_unban_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                serverId: string
+                userId: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: null
                     }
                 }
             }

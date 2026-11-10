@@ -14,3 +14,6 @@ export function layoutRule(error: unknown): { rule: LayoutRule; names: string[] 
     const names = Array.isArray(data.names) ? data.names.filter((name): name is string => typeof name === 'string') : []
     return { rule: data.rule as LayoutRule, names }
 }
+
+/** The `data.rule` of any refused change (VALIDATION_ERROR), as sent: a kick, ban or timeout too. */
+export const refusedRule = (error: unknown): string | null => layoutRule(error)?.rule ?? null

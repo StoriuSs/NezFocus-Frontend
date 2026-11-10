@@ -30,7 +30,17 @@ export const memberName = (member: Pick<ServerMember, 'displayName' | 'username'
     member.displayName ?? member.username ?? ''
 
 /** MemberRow `username` (C-13): the picture, the name, @username under it, a crown for the owner. */
-export function MemberIdentity({ member, note }: { member: ServerMember; note?: string | null }) {
+export function MemberIdentity({
+    member,
+    note,
+    noteStrong
+}: {
+    member: ServerMember
+    /** In place of @username: "Đã có vai trò", "Tạm khóa tới 22:30". */
+    note?: string | null
+    /** The note in `text-secondary`, set apart from a username (04 › Đang bị tạm khóa). */
+    noteStrong?: boolean
+}) {
     const { t } = useTranslation('servers')
     const name = memberName(member)
     return (
@@ -49,7 +59,14 @@ export function MemberIdentity({ member, note }: { member: ServerMember; note?: 
                     ) : null}
                 </span>
                 {note || member.username ? (
-                    <span className='truncate text-label text-text-tertiary'>{note || member.username}</span>
+                    <span
+                        className={cn(
+                            'truncate text-label',
+                            note && noteStrong ? 'text-text-secondary' : 'text-text-tertiary'
+                        )}
+                    >
+                        {note || member.username}
+                    </span>
                 ) : null}
             </span>
         </span>

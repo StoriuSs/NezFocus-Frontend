@@ -479,5 +479,115 @@
       "noMatch": "Không có ai khớp “{{q}}”",
       "failed": "Chưa thêm được. Danh sách đã được tải lại, bạn thử lại nhé."
     }
+  },
+  "members": {
+    "search": "Tìm theo tên hoặc username",
+    "count_one": "{{count}} thành viên",
+    "count_other": "{{count}} thành viên",
+    "results_one": "{{count}} kết quả",
+    "results_other": "{{count}} kết quả",
+    "columns": {
+      "member": "Thành viên",
+      "roles": "Vai trò",
+      "joined": "Ngày vào"
+    },
+    "sortBy": {
+      "name": "Sắp xếp theo tên",
+      "role": "Sắp xếp theo vai trò",
+      "joined_at": "Sắp xếp theo ngày vào"
+    },
+    "owner": "Chủ server",
+    "assign": "Gán vai trò",
+    "pickerTitle": "Vai trò của {{name}}",
+    "findRole": "Tìm vai trò",
+    "actions": "Thao tác với {{name}}",
+    "menu": {
+      "timeout": "Tạm khóa",
+      "changeTimeout": "Đổi thời hạn tạm khóa",
+      "endTimeout": "Gỡ tạm khóa",
+      "kick": "Mời ra khỏi server",
+      "ban": "Cấm khỏi server"
+    },
+    "timedOutUntil": "Tạm khóa tới {{time}}",
+    "timeoutReason": "Lý do: {{reason}}",
+    "noMatch": "Không có thành viên nào khớp “{{q}}”",
+    "loadFailed": "Không tải được danh sách thành viên",
+    "retry": "Thử lại",
+    "saveFailed": "Chưa lưu được thay đổi",
+    "toast": {
+      "timedOut": "Đã tạm khóa {{name}} {{length}}",
+      "timeoutEnded": "Đã gỡ tạm khóa cho {{name}}",
+      "kicked": "Đã mời {{name}} ra khỏi server",
+      "banned": "Đã cấm {{name}}"
+    },
+    "lengths": {
+      "60": "60 giây",
+      "300": "5 phút",
+      "600": "10 phút",
+      "3600": "1 giờ",
+      "86400": "1 ngày",
+      "604800": "1 tuần"
+    },
+    "dialog": {
+      "timeoutTitle": "Tạm khóa {{name}}",
+      "changeTitle": "Đổi thời hạn tạm khóa {{name}}",
+      "timeoutBody": "{{name}} vẫn đọc được tin nhắn nhưng không gửi tin, không thả cảm xúc, không vào phòng được.",
+      "length": "Thời gian",
+      "endsToday": "Hết lúc {{time}} hôm nay",
+      "endsOn": "Hết lúc {{time}}, {{date}}",
+      "timeoutSubmit": "Tạm khóa",
+      "kickTitle": "Mời {{name}} ra khỏi server?",
+      "kickBody": "{{name}} quay lại được bằng lời mời mới.",
+      "kickSubmit": "Mời ra",
+      "banTitle": "Cấm {{name}} khỏi server?",
+      "banBody": "{{name}} bị đưa ra khỏi server và không vào lại được bằng lời mời nào cho tới khi được bỏ cấm.",
+      "banSubmit": "Cấm",
+      "reason": "Lý do (không bắt buộc)",
+      "reasonHint": "{{name}} sẽ thấy lý do này.",
+      "cancel": "Hủy",
+      "failed": "Chưa thực hiện được. Kiểm tra kết nối rồi thử lại.",
+      "outranked": "{{name}} vừa có vai trò ngang hoặc cao hơn bạn nên bạn không thể thực hiện.",
+      "gone": "{{name}} không còn ở trong server.",
+      "admin": "{{name}} đang có quyền Toàn quyền nên không tạm khóa được. Gỡ vai trò đó trước."
+    }
+  },
+  "pagination": {
+    "show": "Hiện",
+    "ofMembers_one": "trong số {{count}} thành viên",
+    "ofMembers_other": "trong số {{count}} thành viên",
+    "ofBans_one": "trong số {{count}} người bị cấm",
+    "ofBans_other": "trong số {{count}} người bị cấm",
+    "membersPerPage": "Số thành viên mỗi trang",
+    "bansPerPage": "Số người mỗi trang",
+    "previous": "Trang trước",
+    "next": "Trang sau",
+    "page": "Trang {{page}}"
+  },
+  "bans": {
+    "description": "Người bị cấm không vào lại được bằng lời mời nào. Bỏ cấm thì họ vào lại được bằng lời mời hợp lệ.",
+    "columns": {
+      "user": "Người bị cấm",
+      "reason": "Lý do",
+      "date": "Ngày",
+      "by": "Bởi"
+    },
+    "search": "Tìm người bị cấm",
+    "noMatch": "Không có ai khớp “{{q}}”",
+    "deleted": "Tài khoản đã bị xóa",
+    "emptyTitle": "Chưa cấm ai",
+    "emptyBody": "Người bị cấm từ trang Thành viên sẽ hiện ở đây.",
+    "loadFailed": "Không tải được danh sách",
+    "retry": "Thử lại",
+    "unban": "Bỏ cấm",
+    "reason": "Lý do",
+    "noReason": "Không có lý do",
+    "bannedBy": "Cấm ngày {{date}} bởi {{name}}",
+    "bannedOn": "Cấm ngày {{date}}",
+    "close": "Đóng",
+    "confirmTitle": "Bỏ cấm {{name}}?",
+    "confirmBody": "{{name}} vào lại được server bằng lời mời hợp lệ.",
+    "cancel": "Hủy",
+    "unbanned": "Đã bỏ cấm {{name}}",
+    "failed": "Chưa thực hiện được. Kiểm tra kết nối rồi thử lại."
   }
 }

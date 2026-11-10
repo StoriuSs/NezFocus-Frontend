@@ -1,0 +1,429 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { createMemoryRouter, RouterProvider } from 'react-router-dom'
+import { AxiosError, AxiosHeaders } from 'axios'
+import { Toaster } from 'sonner'
+import i18n from '@/i18n'
+import { TooltipProvider } from '@/components/ui/tooltip'
+import { useAuthStore } from '@/features/auth'
+import { expectNoA11yViolations } from '@/test/a11y'
+import { queryWrapper } from '@/test/helpers'
+import type { BanItem, BanPage, MemberPage, Role, Server, ServerMember } from '../types'
+
+const serversApi = { fetchServers: vi.fn() }
+vi.mock('@/features/servers/api/servers.api', () => serversApi)
+const rolesApi = {
+    fetchRoles: vi.fn(),
+    createRole: vi.fn(),
+    updateRole: vi.fn(),
+    deleteRole: vi.fn(),
+    reorderRoles: vi.fn(),
+    grantRole: vi.fn(),
+    revokeRole: vi.fn(),
+    fetchMembers: vi.fn()
+}
+vi.mock('@/features/servers/api/roles.api', () => rolesApi)
+const moderationApi = {
+    kickMember: vi.fn(),
+    timeoutMember: vi.fn(),
+    banMember: vi.fn(),
+    unbanMember: vi.fn(),
+    fetchBans: vi.fn()
+}
+vi.mock('@/features/servers/api/moderation.api', () => moderationApi)
+
+const { default: ServerSettingsPage } = await import('../pages/ServerSettingsPage')
+
+const bits = (...positions: number[]) => String(positions.reduce((all, bit) => all | (1n << BigInt(bit)), 0n))
+const MANAGE_ROLES = 2
+const KICK = 4
+const BAN = 5
+const MODERATE = 6
+const VIEW = 8
+
+/** ÔT (04 world A): Quản trị on top, Trưởng nhóm, Nhóm tài liệu. */
+const serverRoles: Server['roles'] = [
+    { id: 'admin', name: 'Quản trị', position: 3, administrator: true },
+    { id: 'lead', name: 'Trưởng nhóm', position: 2, administrator: false },
+    { id: 'docs', name: 'Nhóm tài liệu', position: 1, administrator: false }
+]
+
+/** Bình holds Trưởng nhóm: kicks and times out, no roles to hand out, no bans (S-SET-03 `moderator`). */
+const binh: Server = {
+    id: 'ot',
+    name: 'Ôn thi Giải tích 2',
+    iconUrl: null,
+    isOwner: false,
+    permissions: bits(KICK, MODERATE, VIEW),
+    topRolePosition: 2,
+    roleIds: ['lead'],
+    roles: serverRoles,
+    timeoutUntil: null,
+    welcomeChannelId: null,
+    categories: [],
+    channels: []
+}
+/** An owns it: every bit. */
+const an: Server = {
+    ...binh,
+    isOwner: true,
+    permissions: bits(0, MANAGE_ROLES, KICK, BAN, MODERATE, VIEW),
+    roleIds: []
+}
+
+const member = (userId: string, displayName: string, roleIds: string[], extra: Partial<ServerMember> = {}) =>
+    ({
+        userId,
+        username: displayName.toLowerCase(),
+        displayName,
+        avatarUrl: null,
+        isOwner: false,
+        roleIds,
+        joinedAt: '2026-10-02T03:00:00Z',
+        timeoutUntil: null,
+        timeoutReason: null,
+        ...extra
+    }) as ServerMember
+
+const MEMBERS = [
+    member('an', 'An', [], { isOwner: true }),
+    member('binh', 'Bình', ['lead']),
+    member('dung', 'Dũng', []),
+    member('phong', 'Phong', [], { timeoutUntil: '2999-01-01T15:30:00Z', timeoutReason: 'Gửi tin liên tục' })
+]
+
+const meta = (total: number, page = 1, limit = 50) => ({
+    currentPage: page,
+    itemsPerPage: limit,
+    totalItems: total,
+    totalPages: Math.max(1, Math.ceil(total / limit)),
+    hasNextPage: page * limit < total,
+    hasPreviousPage: page > 1
+})
+const page = (items: ServerMember[], total = items.length): MemberPage => ({ items, meta: meta(total) })
+
+const ROLES: Role[] = [
+    {
+        id: 'admin',
+        name: 'Quản trị',
+        position: 3,
+        permissions: bits(0),
+        mentionable: false,
+        isEveryone: false,
+        memberCount: 0
+    },
+    {
+        id: 'lead',
+        name: 'Trưởng nhóm',
+        position: 2,
+        permissions: bits(KICK),
+        mentionable: false,
+        isEveryone: false,
+        memberCount: 1
+    },
+    {
+        id: 'docs',
+        name: 'Nhóm tài liệu',
+        position: 1,
+        permissions: '0',
+        mentionable: false,
+        isEveryone: false,
+        memberCount: 0
+    },
+    {
+        id: 'everyone',
+        name: '@everyone',
+        position: 0,
+        permissions: bits(VIEW),
+        mentionable: false,
+        isEveryone: true,
+        memberCount: 4
+    }
+]
+
+const refused = (type: string, status: number, data: object | null = null) =>
+    new AxiosError('refused', String(status), undefined, undefined, {
+        status,
+        statusText: '',
+        headers: {},
+        config: { headers: new AxiosHeaders() },
+        data: { meta: { type, code: String(status) }, data }
+    })
+
+function renderPage(path: string, server: Server, me = 'binh') {
+    useAuthStore.setState({ user: { id: me } as never })
+    serversApi.fetchServers.mockResolvedValue([server])
+    const router = createMemoryRouter(
+        [{ path: '/servers/:serverId/settings/:section?', element: <ServerSettingsPage /> }],
+        { initialEntries: [path] }
+    )
+    const view = render(
+        <TooltipProvider>
+            <RouterProvider router={router} />
+            <Toaster />
+        </TooltipProvider>,
+        { wrapper: queryWrapper() }
+    )
+    return { router, ...view }
+}
+
+const rowOf = async (name: string) =>
+    (await screen.findAllByRole('row')).find((row) => within(row).queryByText(name, { exact: true }))!
+
+beforeEach(async () => {
+    await i18n.changeLanguage('en')
+    vi.clearAllMocks()
+    rolesApi.fetchMembers.mockResolvedValue(page(MEMBERS))
+    rolesApi.fetchRoles.mockResolvedValue(ROLES)
+})
+
+describe('Members (S-SET-03)', () => {
+    it('shows Bình a ⋯ only on those below, with what his bits allow, and no "+" (moderator)', async () => {
+        const user = userEvent.setup()
+        const { container } = renderPage('/servers/ot/settings/members', binh)
+        expect(await screen.findByText('4 members')).toBeInTheDocument()
+        expect(rolesApi.fetchMembers).toHaveBeenCalledWith(
+            'ot',
+            expect.objectContaining({ sort: 'name', order: 'asc', page: 1, limit: 50 })
+        )
+        expect(within(await rowOf('An')).getByText('Server owner')).toBeInTheDocument()
+        expect(within(await rowOf('An')).queryByRole('button', { name: /Actions for/ })).toBeNull()
+        expect(within(await rowOf('Bình')).queryByRole('button', { name: /Actions for/ })).toBeNull()
+        expect(screen.queryByRole('button', { name: 'Assign roles' })).toBeNull()
+        // Roles are read from the server, not from GET /roles, which needs MANAGE_ROLES.
+        expect(rolesApi.fetchRoles).not.toHaveBeenCalled()
+        expect(within(await rowOf('Bình')).getByText('Trưởng nhóm')).toBeInTheDocument()
+
+        await user.click(within(await rowOf('Dũng')).getByRole('button', { name: 'Actions for Dũng' }))
+        const items = (await screen.findAllByRole('menuitem')).map((item) => item.textContent)
+        expect(items).toEqual(['Time out', 'Kick from server'])
+        await user.keyboard('{Escape}')
+        await expectNoA11yViolations(container)
+    })
+
+    it('shows a running timeout under the name, and ends it at once from ⋯', async () => {
+        const user = userEvent.setup()
+        moderationApi.timeoutMember.mockResolvedValue(undefined)
+        renderPage('/servers/ot/settings/members', binh)
+        const row = await rowOf('Phong')
+        expect(within(row).getByText(/^Timed out until/)).toBeInTheDocument()
+        expect(within(row).getByText('Reason: Gửi tin liên tục')).toBeInTheDocument()
+
+        await user.click(within(row).getByRole('button', { name: 'Actions for Phong' }))
+        expect((await screen.findAllByRole('menuitem')).map((item) => item.textContent)).toEqual([
+            'Change timeout',
+            'Remove timeout',
+            'Kick from server'
+        ])
+        await user.click(screen.getByRole('menuitem', { name: 'Remove timeout' }))
+        await waitFor(() => expect(moderationApi.timeoutMember).toHaveBeenCalledWith('ot', 'phong', null, null))
+        expect(await screen.findByText('Removed the timeout of Phong')).toBeInTheDocument()
+    })
+
+    it('times out for 1 hour by default with the reason, then says so', async () => {
+        const user = userEvent.setup()
+        moderationApi.timeoutMember.mockResolvedValue(undefined)
+        renderPage('/servers/ot/settings/members', binh)
+        await user.click(within(await rowOf('Dũng')).getByRole('button', { name: 'Actions for Dũng' }))
+        await user.click(await screen.findByRole('menuitem', { name: 'Time out' }))
+
+        const dialog = await screen.findByRole('dialog', { name: 'Time out Dũng' })
+        expect(within(dialog).getByRole('radio', { name: '1 hour' })).toBeChecked()
+        expect(within(dialog).getByText(/^Ends at /)).toBeInTheDocument()
+        await user.click(within(dialog).getByRole('radio', { name: '1 day' }))
+        await user.type(within(dialog).getByLabelText('Reason (optional)'), '  Spam  ')
+        expect(within(dialog).getByText('4/512')).toBeInTheDocument()
+        await user.click(within(dialog).getByRole('button', { name: 'Time out' }))
+
+        await waitFor(() => expect(moderationApi.timeoutMember).toHaveBeenCalledWith('ot', 'dung', 86_400, 'Spam'))
+        expect(await screen.findByText('Timed out Dũng for 1 day')).toBeInTheDocument()
+        expect(screen.queryByRole('dialog')).toBeNull()
+    })
+
+    it('says when the person now outranks them, and keeps the action off', async () => {
+        const user = userEvent.setup()
+        moderationApi.kickMember.mockRejectedValue(refused('ROLE_HIERARCHY_VIOLATION', 403))
+        renderPage('/servers/ot/settings/members', binh)
+        await user.click(within(await rowOf('Dũng')).getByRole('button', { name: 'Actions for Dũng' }))
+        await user.click(await screen.findByRole('menuitem', { name: 'Kick from server' }))
+
+        const dialog = await screen.findByRole('dialog', { name: 'Kick Dũng from the server?' })
+        await user.type(within(dialog).getByLabelText('Reason (optional)'), 'Quảng cáo')
+        await user.click(within(dialog).getByRole('button', { name: 'Kick' }))
+        await waitFor(() => expect(moderationApi.kickMember).toHaveBeenCalledWith('ot', 'dung', 'Quảng cáo'))
+        expect(
+            await within(dialog).findByText('Dũng now has a role equal to or above yours, so you can’t do this.')
+        ).toBeInTheDocument()
+        expect(within(dialog).getByRole('button', { name: 'Kick' })).toBeDisabled()
+    })
+
+    it('lets a retry follow a dropped connection', async () => {
+        const user = userEvent.setup()
+        moderationApi.banMember.mockRejectedValueOnce(new AxiosError('offline')).mockResolvedValueOnce(undefined)
+        renderPage('/servers/ot/settings/members', an, 'an')
+        await user.click(within(await rowOf('Dũng')).getByRole('button', { name: 'Actions for Dũng' }))
+        await user.click(await screen.findByRole('menuitem', { name: 'Ban from server' }))
+        const dialog = await screen.findByRole('dialog', { name: 'Ban Dũng from the server?' })
+        await user.click(within(dialog).getByRole('button', { name: 'Ban' }))
+        expect(
+            await within(dialog).findByText('Couldn’t do that. Check your connection and try again.')
+        ).toBeInTheDocument()
+        await user.click(within(dialog).getByRole('button', { name: 'Ban' }))
+        expect(await screen.findByText('Banned Dũng')).toBeInTheDocument()
+        expect(moderationApi.banMember).toHaveBeenLastCalledWith('ot', 'dung', null)
+    })
+
+    it('refuses to time out someone holding Administrator, with the reason (D-147)', async () => {
+        const user = userEvent.setup()
+        moderationApi.timeoutMember.mockRejectedValue(refused('VALIDATION_ERROR', 422, { rule: 'target_admin' }))
+        renderPage('/servers/ot/settings/members', an, 'an')
+        await user.click(within(await rowOf('Dũng')).getByRole('button', { name: 'Actions for Dũng' }))
+        await user.click(await screen.findByRole('menuitem', { name: 'Time out' }))
+        const dialog = await screen.findByRole('dialog', { name: 'Time out Dũng' })
+        await user.click(within(dialog).getByRole('button', { name: 'Time out' }))
+        expect(
+            await within(dialog).findByText(/Dũng has Administrator, so they can’t be timed out/)
+        ).toBeInTheDocument()
+    })
+
+    it('hands out roles from "+", saved at each tick, for the owner', async () => {
+        const user = userEvent.setup()
+        rolesApi.grantRole.mockResolvedValue(undefined)
+        rolesApi.revokeRole.mockResolvedValue(undefined)
+        renderPage('/servers/ot/settings/members', an, 'an')
+        const row = await rowOf('Bình')
+        await user.click(await within(row).findByRole('button', { name: 'Assign roles' }))
+        const picker = await screen.findByRole('dialog', { name: 'Roles of Bình' })
+        expect(
+            within(picker)
+                .getAllByRole('listitem')
+                .map((item) => item.textContent)
+        ).toEqual(['Quản trị', 'Trưởng nhóm', 'Nhóm tài liệu'])
+        expect(within(picker).getByLabelText('Trưởng nhóm')).toBeChecked()
+        await user.click(within(picker).getByLabelText('Nhóm tài liệu'))
+        await waitFor(() => expect(rolesApi.grantRole).toHaveBeenCalledWith('ot', 'docs', ['binh']))
+        await user.click(within(picker).getByLabelText('Trưởng nhóm'))
+        await waitFor(() => expect(rolesApi.revokeRole).toHaveBeenCalledWith('ot', 'lead', 'binh'))
+    })
+
+    it('searches after typing stops and sorts by a column, from page 1, on the URL', async () => {
+        const user = userEvent.setup()
+        const { router } = renderPage('/servers/ot/settings/members?page=2', binh)
+        await screen.findByText('4 members')
+        await user.type(screen.getByRole('searchbox', { name: 'Search by name or username' }), ' dung ')
+        await waitFor(() =>
+            expect(rolesApi.fetchMembers).toHaveBeenLastCalledWith(
+                'ot',
+                expect.objectContaining({ q: 'dung', page: 1 })
+            )
+        )
+        expect(router.state.location.search).toBe('?q=dung')
+
+        await user.click(screen.getByRole('button', { name: 'Joined' }))
+        await waitFor(() =>
+            expect(rolesApi.fetchMembers).toHaveBeenLastCalledWith(
+                'ot',
+                expect.objectContaining({ sort: 'joined_at', order: 'desc', page: 1, q: 'dung' })
+            )
+        )
+        await user.click(screen.getByRole('button', { name: 'Joined' }))
+        await waitFor(() =>
+            expect(rolesApi.fetchMembers).toHaveBeenLastCalledWith(
+                'ot',
+                expect.objectContaining({ sort: 'joined_at', order: 'asc' })
+            )
+        )
+    })
+
+    it('pages past ten, and goes to the last page when the one asked is gone', async () => {
+        const user = userEvent.setup()
+        rolesApi.fetchMembers.mockImplementation(async (_id: string, query: { page: number; limit: number }) => ({
+            items: MEMBERS,
+            meta: meta(137, query.page, query.limit)
+        }))
+        const { router } = renderPage('/servers/ot/settings/members?page=9', binh)
+        await waitFor(() => expect(router.state.location.search).toBe('?page=3'))
+        expect(await screen.findByText('of 137 members')).toBeInTheDocument()
+        await waitFor(() =>
+            expect(screen.getByRole('button', { name: 'Page 3' })).toHaveAttribute('aria-current', 'page')
+        )
+        expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled()
+        await user.click(screen.getByRole('button', { name: 'Page 1' }))
+        await waitFor(() => expect(router.state.location.search).toBe(''))
+    })
+
+    it('says when no one matches', async () => {
+        rolesApi.fetchMembers.mockResolvedValue(page([]))
+        renderPage('/servers/ot/settings/members?q=xyz', binh)
+        expect(await screen.findByText('No member matches “xyz”')).toBeInTheDocument()
+    })
+})
+
+const ban = (userId: string, name: string, extra: Partial<BanItem> = {}): BanItem => ({
+    user: { userId, username: name.toLowerCase(), displayName: name, avatarUrl: null },
+    reason: 'Bán đề thi có đáp án',
+    createdAt: '2026-10-18T03:00:00Z',
+    bannedBy: { userId: 'an', username: 'an.nguyen', displayName: 'An', avatarUrl: null },
+    ...extra
+})
+const bans = (items: BanItem[], total = items.length): BanPage => ({ items, meta: meta(total) })
+
+describe('Bans (S-SET-04)', () => {
+    it('lists who was banned, why, when and by whom, and unbans after asking', async () => {
+        const user = userEvent.setup()
+        moderationApi.fetchBans.mockResolvedValue(bans([ban('khanh', 'Khánh')]))
+        moderationApi.unbanMember.mockResolvedValue(undefined)
+        const { container } = renderPage('/servers/ot/settings/bans', an, 'an')
+        const row = await rowOf('Khánh')
+        expect(within(row).getByText('Bán đề thi có đáp án')).toBeInTheDocument()
+        expect(within(row).getByText('an.nguyen')).toBeInTheDocument()
+        expect(moderationApi.fetchBans).toHaveBeenCalledWith('ot', 1, 50)
+        await expectNoA11yViolations(container)
+
+        await user.click(within(row).getByRole('button', { name: /Khánh/ }))
+        const detail = await screen.findByRole('dialog', { name: 'Khánh' })
+        expect(within(detail).getByText(/Banned on .* by An \(an\.nguyen\)/)).toBeInTheDocument()
+        await user.click(within(detail).getByRole('button', { name: 'Unban' }))
+
+        const confirm = await screen.findByRole('dialog', { name: 'Unban Khánh?' })
+        await user.click(within(confirm).getByRole('button', { name: 'Unban' }))
+        await waitFor(() => expect(moderationApi.unbanMember).toHaveBeenCalledWith('ot', 'khanh'))
+        expect(await screen.findByText('Unbanned Khánh')).toBeInTheDocument()
+        await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    })
+
+    it('shows a dash for no reason and names a deleted account', async () => {
+        moderationApi.fetchBans.mockResolvedValue(
+            bans([
+                ban('x', 'Xuân', {
+                    reason: null,
+                    bannedBy: { userId: 'gone', username: null, displayName: null, avatarUrl: null }
+                })
+            ])
+        )
+        renderPage('/servers/ot/settings/bans', an, 'an')
+        const row = await rowOf('Xuân')
+        expect(within(row).getByText('—')).toBeInTheDocument()
+        expect(within(row).getByText('Deleted account')).toBeInTheDocument()
+    })
+
+    it('filters the page shown past ten people, ignoring accents', async () => {
+        const user = userEvent.setup()
+        const many = ['Khánh', 'Lan', 'Mai', 'Minh', 'Nam', 'Ngân', 'Oanh', 'Phúc', 'Quân', 'Sơn', 'Tâm'].map((name) =>
+            ban(name, name)
+        )
+        moderationApi.fetchBans.mockResolvedValue(bans(many))
+        renderPage('/servers/ot/settings/bans', an, 'an')
+        await user.type(await screen.findByRole('searchbox', { name: 'Search banned people' }), 'khanh')
+        await waitFor(() => expect(screen.getAllByRole('row')).toHaveLength(2))
+        expect(await rowOf('Khánh')).toBeTruthy()
+    })
+
+    it('says when no one is banned', async () => {
+        moderationApi.fetchBans.mockResolvedValue(bans([]))
+        renderPage('/servers/ot/settings/bans', an, 'an')
+        expect(await screen.findByText('No one is banned')).toBeInTheDocument()
+        expect(screen.queryByRole('searchbox')).toBeNull()
+    })
+})

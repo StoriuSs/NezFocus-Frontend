@@ -9,5 +9,7 @@ export const serverKeys = {
     /** The Roles page of one server (S-SET-02). */
     roles: (serverId: string) => [...serverKeys.all, 'roles', serverId] as const,
     /** Members of one server, any search (D-152). */
-    members: (serverId: string) => [...serverKeys.all, 'members', serverId] as const
+    members: (serverId: string) => [...serverKeys.all, 'members', serverId] as const,
+    /** The ban list of one server, any page (S-SET-04). */
+    bans: (serverId: string) => [...serverKeys.all, 'bans', serverId] as const
 }

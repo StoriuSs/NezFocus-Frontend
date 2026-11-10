@@ -53,3 +53,9 @@ export type MemberPage = ApiModel<'MemberPageResponseDto'>
 
 /** What "Edit role" changes; bits as a decimal string. */
 export type UpdateRoleRequest = ApiModel<'UpdateRoleRequestDto'>
+
+/** A row of the ban list (S-SET-04 `bans`); names are null once an account is deleted. */
+export type BanItem = ApiModel<'BanResponseDto'>
+
+/** One page of bans, newest first. */
+export type BanPage = ApiModel<'BanPageResponseDto'>

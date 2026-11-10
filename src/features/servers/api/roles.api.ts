@@ -40,11 +40,18 @@ export async function revokeRole(serverId: string, roleId: string, userId: strin
     await api.delete(`/servers/${serverId}/members/${userId}/roles/${roleId}`)
 }
 
+export type MemberSort = 'name' | 'role' | 'joined_at'
+export type SortOrder = 'asc' | 'desc'
+export type PageSize = 10 | 50 | 100
+
 export interface MemberQuery {
     q?: string
     roleId?: string
+    /** D-89: `asc` is A to Z, lowest role first, oldest first. */
+    sort?: MemberSort
+    order?: SortOrder
     page?: number
-    limit?: 10 | 50 | 100
+    limit?: PageSize
 }
 
 /** GET /servers/{id}/members (D-152): anyone in the server. */

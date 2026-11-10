@@ -8,6 +8,8 @@ import { ShellPage } from '@/components/shell/ShellPage'
 import { useServers } from '../api/useServers'
 import { isSettingsSection, serverSettingsPath, settingsSections } from '../lib/settings-sections'
 import { InvitesSettings } from '../components/settings/InvitesSettings'
+import { BansSettings } from '../components/settings/members/BansSettings'
+import { MembersSettings } from '../components/settings/members/MembersSettings'
 import { RoleEditor } from '../components/settings/roles/RoleEditor'
 import { RolesSettings } from '../components/settings/roles/RolesSettings'
 import { ServerIconSetting } from '../components/settings/ServerIconSetting'
@@ -56,7 +58,9 @@ export default function ServerSettingsPage() {
             {section === 'overview' ? <Overview server={server} /> : null}
             {section === 'roles' && !roleId ? <RolesSettings server={server} /> : null}
             {section === 'roles' && roleId ? <RoleEditor key={roleId} server={server} roleId={roleId} /> : null}
+            {section === 'members' ? <MembersSettings server={server} /> : null}
             {section === 'invites' ? <InvitesSettings server={server} /> : null}
+            {section === 'bans' ? <BansSettings server={server} /> : null}
         </ShellPage>
     )
 }

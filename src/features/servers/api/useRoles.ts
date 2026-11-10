@@ -28,8 +28,8 @@ function reload(queryClient: QueryClient, serverId: string): Promise<unknown> {
 }
 
 /** The Roles page (S-SET-02): highest first, @everyone last. */
-export function useServerRoles(serverId: string) {
-    return useQuery({ queryKey: serverKeys.roles(serverId), queryFn: () => fetchRoles(serverId) })
+export function useServerRoles(serverId: string, enabled = true) {
+    return useQuery({ queryKey: serverKeys.roles(serverId), queryFn: () => fetchRoles(serverId), enabled })
 }
 
 export function useCreateRole(serverId: string) {
@@ -116,6 +116,20 @@ export function useRevokeRole(serverId: string, roleId: string) {
     return useMutation({
         mutationFn: (userId: string) => revokeRole(serverId, roleId, userId),
         onSuccess: () => reload(queryClient, serverId),
+        meta: { errorToast: false }
+    })
+}
+
+/**
+ * One tick in the "+" popover of the Members page (04 › "+"): gives or takes
+ * one role from one member, saved at once, no Toast (10 Q15).
+ */
+export function useSetMemberRole(serverId: string) {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationFn: ({ roleId, userId, held }: { roleId: string; userId: string; held: boolean }) =>
+            held ? grantRole(serverId, roleId, [userId]) : revokeRole(serverId, roleId, userId),
+        onSettled: () => reload(queryClient, serverId),
         meta: { errorToast: false }
     })
 }
