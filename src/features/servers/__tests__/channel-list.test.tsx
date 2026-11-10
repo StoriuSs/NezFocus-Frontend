@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { createMemoryRouter, RouterProvider } from 'react-router-dom'
+import { createMemoryRouter, RouterProvider, useParams } from 'react-router-dom'
 import { Toaster } from 'sonner'
 import { AxiosError, AxiosHeaders } from 'axios'
 import i18n from '@/i18n'
@@ -190,6 +190,24 @@ describe('The channel list for whoever manages channels (S-SRV-04, S-SRV-06)', (
         await waitFor(() => expect(serversApi.fetchServers).toHaveBeenCalledTimes(2))
     })
 
+    it('reads the list again when the moved channel was deleted meanwhile', async () => {
+        layoutApi.moveInLayout.mockRejectedValue(
+            new AxiosError('404', '404', undefined, undefined, {
+                status: 404,
+                statusText: '',
+                headers: {},
+                config: { headers: new AxiosHeaders() },
+                data: { meta: { type: 'NOT_FOUND_ERROR', code: '404000' }, data: {} }
+            })
+        )
+        renderColumn(server(MANAGER))
+        const row = await screen.findByRole('link', { name: 'tai-lieu' })
+        row.focus()
+        await userEvent.keyboard(' {ArrowDown} ')
+        expect(await screen.findByText('The channel order could not be saved')).toBeInTheDocument()
+        await waitFor(() => expect(serversApi.fetchServers).toHaveBeenCalledTimes(2))
+    })
+
     it('puts the list back when the move cannot reach the server, without reading it again', async () => {
         layoutApi.moveInLayout.mockRejectedValue(new AxiosError('offline', 'ERR_NETWORK'))
         renderColumn(server(MANAGER))
@@ -199,6 +217,39 @@ describe('The channel list for whoever manages channels (S-SRV-04, S-SRV-06)', (
         expect(await screen.findByText('The channel order could not be saved')).toBeInTheDocument()
         expect(names('info')).toEqual(['chao-mung', 'tai-lieu', 'hoi-dap'])
         expect(serversApi.fetchServers).toHaveBeenCalledTimes(1)
+    })
+
+    it('tries a refused move again on its own server, after another server was opened', async () => {
+        layoutApi.moveInLayout
+            .mockRejectedValueOnce(new AxiosError('offline', 'ERR_NETWORK'))
+            .mockResolvedValue(server(MANAGER))
+        serversApi.fetchServers.mockResolvedValue([server(MANAGER), { ...server(MANAGER), id: 'hk', name: 'Học kỳ 1' }])
+        function Column() {
+            return <ServerChannelColumn serverId={useParams().serverId} />
+        }
+        const router = createMemoryRouter([{ path: '/channels/:serverId/:channelId', element: <Column /> }], {
+            initialEntries: ['/channels/ot/chao-mung']
+        })
+        render(
+            <TooltipProvider>
+                <RouterProvider router={router} />
+                <Toaster />
+            </TooltipProvider>,
+            { wrapper: queryWrapper() }
+        )
+        const row = await screen.findByRole('link', { name: 'chao-mung' })
+        row.focus()
+        await userEvent.keyboard(' {ArrowDown} ')
+        const again = await screen.findByRole('button', { name: 'Try again' })
+
+        await act(() => router.navigate('/channels/hk/chao-mung'))
+        expect(await screen.findByRole('navigation', { name: /Học kỳ 1/ })).toBeInTheDocument()
+        await userEvent.click(again)
+
+        await waitFor(() => expect(layoutApi.moveInLayout).toHaveBeenCalledTimes(2))
+        const [first, second] = layoutApi.moveInLayout.mock.calls
+        expect(second).toEqual(first)
+        expect(second?.[0]).toBe('ot')
     })
 
     it('refuses a drop into a category that has the name, without asking the API (D-84)', async () => {

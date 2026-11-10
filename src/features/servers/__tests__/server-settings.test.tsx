@@ -246,14 +246,17 @@ describe('Server settings › Overview (S-SET-01)', () => {
     })
 
     it('saves a welcome channel at once, and puts the old one back when refused, offering to try again', async () => {
-        serversApi.updateServer.mockResolvedValueOnce(server(MANAGER, { welcomeChannelId: 'hoi-dap' }))
+        let answer!: (saved: Server) => void
+        serversApi.updateServer.mockReturnValueOnce(new Promise<Server>((resolve) => (answer = resolve)))
         renderSettings(server(MANAGER))
         const select = await screen.findByRole('combobox', { name: 'Welcome channel' })
 
         await userEvent.click(select)
         await userEvent.click(await screen.findByRole('option', { name: /hoi-dap/ }))
         expect(serversApi.updateServer).toHaveBeenCalledWith('ot', { welcomeChannelId: 'hoi-dap' })
+        // Shown before the answer comes.
         await waitFor(() => expect(select).toHaveTextContent('# hoi-dap'))
+        answer(server(MANAGER, { welcomeChannelId: 'hoi-dap' }))
 
         serversApi.updateServer.mockRejectedValueOnce(new Error('network'))
         await userEvent.click(select)

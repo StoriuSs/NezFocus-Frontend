@@ -1,11 +1,9 @@
 import { useId } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Lock } from 'lucide-react'
-import { toast } from 'sonner'
 import { Label } from '@/components/ui/label'
 import { Select, type SelectOption } from '@/components/ui/select'
-import { patchServer, useUpdateServer } from '../../api/useServerSettings'
+import { useChooseWelcomeChannel } from '../../api/useServerSettings'
 import { welcomeChoices, type WelcomeChoice } from '../../lib/settings-sections'
 import type { Server } from '../../types'
 
@@ -21,8 +19,7 @@ const lock = <Lock className='size-3 shrink-0 text-text-tertiary' aria-hidden='t
  */
 export function WelcomeChannelSetting({ server }: { server: Server }) {
     const { t } = useTranslation('servers')
-    const queryClient = useQueryClient()
-    const update = useUpdateServer(server.id)
+    const update = useChooseWelcomeChannel()
     const id = useId()
     const choices = welcomeChoices(server)
     const chosen = choices.find(
@@ -50,21 +47,9 @@ export function WelcomeChannelSetting({ server }: { server: Server }) {
         }
     }
 
-    function choose(value: string, previous: string | null) {
+    function choose(value: string) {
         const next = value === NONE ? null : value
-        if (next === previous) return
-        patchServer(queryClient, server.id, { welcomeChannelId: next })
-        update.mutate(
-            { welcomeChannelId: next },
-            {
-                onError: () => {
-                    patchServer(queryClient, server.id, { welcomeChannelId: previous })
-                    toast.error(t('settings.overview.failed'), {
-                        action: { label: t('settings.overview.retry'), onClick: () => choose(value, previous) }
-                    })
-                }
-            }
-        )
+        if (next !== (server.welcomeChannelId ?? null)) update.mutate({ serverId: server.id, welcomeChannelId: next })
     }
 
     const hint = !chosen
@@ -84,7 +69,7 @@ export function WelcomeChannelSetting({ server }: { server: Server }) {
                 id={id}
                 aria-describedby={`${id}-hint`}
                 value={chosen ? chosen.id : NONE}
-                onValueChange={(value) => choose(value, server.welcomeChannelId ?? null)}
+                onValueChange={choose}
                 options={choices.map(option)}
             />
             <p id={`${id}-hint`} className='text-label text-text-tertiary'>

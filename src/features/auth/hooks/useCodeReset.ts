@@ -2,11 +2,13 @@ import { createElement, useCallback, useRef, useState, type FormEvent } from 're
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
+import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Mail } from 'lucide-react'
 import { useCountdown } from '@/hooks/useCountdown'
 import { authApi } from '@/features/auth/api/auth.api'
+import { authKeys } from '@/features/auth/api/keys'
 import type { TokenResponse } from '@/features/auth/types'
 import { recordCodeSent, resendAllowedAt, RESEND_AFTER_SECONDS } from '@/features/auth/lib/code-sent'
 import type { RateLimitReason } from '@/features/auth/lib/form-errors'
@@ -50,6 +52,7 @@ interface Options {
  */
 export function useCodeReset({ email, onReset, initialFailure }: Options) {
     const { t } = useTranslation('auth')
+    const queryClient = useQueryClient()
     const codeInput = useRef<HTMLInputElement | null>(null)
     const attachCode = useCallback((node: HTMLInputElement | null) => {
         codeInput.current = node
@@ -83,6 +86,8 @@ export function useCodeReset({ email, onReset, initialFailure }: Options) {
         setServerRules([])
         try {
             await onReset(await authApi.resetPassword(email, code, newPassword))
+            // Every earlier session ended (D-62): the Sessions group, if shown, reads them again.
+            void queryClient.invalidateQueries({ queryKey: authKeys.sessions() })
         } catch (error) {
             const failure = requestFailure(error)
             if (failure.limit) {

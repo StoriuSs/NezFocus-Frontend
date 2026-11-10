@@ -1,5 +1,4 @@
 import { useRef, useState, type FormEvent } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Loader2, Trash2 } from 'lucide-react'
@@ -14,9 +13,7 @@ import {
     DialogTitle
 } from '@/components/ui/dialog'
 import { WithTooltip } from '@/components/ui/tooltip'
-import { deleteCategory, renameCategory } from '../../api/layout.api'
-import { useCreateCategory } from '../../api/useChannelLayout'
-import { rememberServer } from '../../api/useServers'
+import { useCreateCategory, useDeleteCategory, useRenameCategory } from '../../api/useChannelLayout'
 import { clashingChannel, groupChannels, MAX_CHANNELS_AND_CATEGORIES, storedName } from '../../lib/channel-layout'
 import { layoutRule } from '../../lib/layout-error'
 import type { Server, ServerCategory } from '../../types'
@@ -42,8 +39,8 @@ function CategoryForm({
     onDelete?: () => void
 }) {
     const { t } = useTranslation('servers')
-    const queryClient = useQueryClient()
     const create = useCreateCategory(server.id)
+    const rename = useRenameCategory(server.id)
     const nameInput = useRef<HTMLInputElement>(null)
     const [name, setName] = useState(category?.name ?? '')
     const [fieldError, setFieldError] = useState<string | null>(null)
@@ -67,7 +64,7 @@ function CategoryForm({
         setFailure(null)
         setSaving(true)
         try {
-            if (category) rememberServer(queryClient, await renameCategory(server.id, category.id, name))
+            if (category) await rename.mutateAsync({ categoryId: category.id, name })
             else await create.mutateAsync(name)
             onClose()
         } catch (error) {
@@ -212,7 +209,7 @@ function DeleteCategoryDialog({
     onDeleted: () => void
 }) {
     const { t } = useTranslation('servers')
-    const queryClient = useQueryClient()
+    const remove = useDeleteCategory(server.id)
     const [deleting, setDeleting] = useState(false)
     const [refused, setRefused] = useState<string[] | null>(null)
     const [failure, setFailure] = useState<LayoutFailure['form'] | null>(null)
@@ -225,7 +222,7 @@ function DeleteCategoryDialog({
         setDeleting(true)
         setFailure(null)
         try {
-            rememberServer(queryClient, await deleteCategory(server.id, category.id))
+            await remove.mutateAsync(category.id)
             onDeleted()
             toast.success(t('category.deleted', { name: upper(category.name) }))
         } catch (error) {

@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { formatWait } from '@/features/auth'
-import { fetchInvitePreview } from '../../api/invites.api'
+import { useLookUpInvite } from '../../api/useInvites'
 import { useServers } from '../../api/useServers'
 import { parseInviteInput } from '../../lib/invites'
 import type { InvitePreview } from '../../types'
@@ -41,6 +41,7 @@ export function JoinByCode({ onBack, onClose }: { onBack: () => void; onClose: (
     const { t } = useTranslation('servers')
     const navigate = useNavigate()
     const servers = useServers()
+    const lookUpInvite = useLookUpInvite()
     const [text, setText] = useState('')
     const [problem, setProblem] = useState<'malformed' | InviteProblem | null>(null)
     const [looking, setLooking] = useState(false)
@@ -59,7 +60,7 @@ export function JoinByCode({ onBack, onClose }: { onBack: () => void; onClose: (
         setProblem(null)
         setLooking(true)
         try {
-            const preview = await fetchInvitePreview(parsed.code, parsed.channel)
+            const preview = await lookUpInvite(parsed.code, parsed.channel)
             const mine = servers.data?.find((server) => server.id === preview.server.id)
             if (mine) {
                 toast(t('join.alreadyMember', { server: toastName(mine.name) }))

@@ -163,7 +163,7 @@ describe('the change password dialog (S-ME-03)', () => {
             expect(authApi.forgotPassword).toHaveBeenCalledOnce()
         })
 
-        it('sets the password with the code, takes up the session it started, and closes', async () => {
+        it('sets the password with the code, takes up the session it started, closes, and reads the list again', async () => {
             authApi.resetPassword.mockResolvedValue(TOKENS)
             const { user, dialog } = await openDialog()
             await user.click(dialog.getByRole('button', { name: 'Forgot password?' }))
@@ -177,6 +177,8 @@ describe('the change password dialog (S-ME-03)', () => {
             expect(authState.startSession).toHaveBeenCalledWith(TOKENS)
             await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
             expect(toast.success).toHaveBeenCalledWith('New password set. Your other devices were signed out.')
+            // Every earlier session ended (D-62): the Sessions group reads them again.
+            await waitFor(() => expect(authApi.sessions).toHaveBeenCalledTimes(2))
         })
 
         it('shows why the code could not be sent, in the dialog', async () => {

@@ -26,13 +26,30 @@ export function useCreateInvite(serverId: string) {
  */
 export function useInvitePreview(code: string | null, channel: string | null) {
     return useQuery({
-        queryKey: [...serverKeys.invite(code ?? ''), channel],
+        queryKey: serverKeys.invite(code ?? '', channel),
         queryFn: () => fetchInvitePreview(code!, channel),
         enabled: code !== null,
         retry: false,
         staleTime: 30_000,
         meta: { errorToast: false }
     })
+}
+
+/**
+ * "Continue" in "Join with an invite code" (S-SRV-01 `join-by-code`): the
+ * invite as the invite page reads it, under the same key, asked again on
+ * each click (a code is looked up when typed, not from the cache). Not
+ * retried, as above.
+ */
+export function useLookUpInvite() {
+    const queryClient = useQueryClient()
+    return (code: string, channel: string | null) =>
+        queryClient.fetchQuery({
+            queryKey: serverKeys.invite(code, channel),
+            queryFn: () => fetchInvitePreview(code, channel),
+            retry: false,
+            staleTime: 0
+        })
 }
 
 /** Join; the server goes to the end of the rail (C-05), or is updated in place for a member. */

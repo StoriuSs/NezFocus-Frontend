@@ -1,6 +1,5 @@
 import { useState, type FormEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
@@ -16,8 +15,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { deleteChannel } from '../../api/layout.api'
-import { rememberServer } from '../../api/useServers'
+import { useDeleteChannel } from '../../api/useChannelLayout'
 import { firstTextChannel } from '../../lib/channel-list'
 import type { Server, ServerChannel } from '../../types'
 import { describeFailure } from './layout-errors'
@@ -48,7 +46,7 @@ export function DeleteChannelDialog({
     const { t } = useTranslation('servers')
     const navigate = useNavigate()
     const { pathname } = useLocation()
-    const queryClient = useQueryClient()
+    const remove = useDeleteChannel(server.id)
     const [typed, setTyped] = useState('')
     const [deleting, setDeleting] = useState(false)
     const [failure, setFailure] = useState<{ text: string; icon?: 'wifi-off' } | null>(null)
@@ -62,8 +60,7 @@ export function DeleteChannelDialog({
         setDeleting(true)
         setFailure(null)
         try {
-            const updated = await deleteChannel(server.id, channel.id)
-            rememberServer(queryClient, updated)
+            const updated = await remove.mutateAsync(channel.id)
             onDeleted()
             if (pathname === `/channels/${server.id}/${channel.id}`) {
                 void navigate(`/channels/${server.id}/${firstTextChannel(updated)?.id ?? ''}`, { replace: true })

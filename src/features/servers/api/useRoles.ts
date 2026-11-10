@@ -137,7 +137,7 @@ export function useSetMemberRole(serverId: string) {
 /** One page of members (D-152); the last page stays shown while the next search loads. */
 export function useServerMembers(serverId: string, query: MemberQuery, enabled = true) {
     return useQuery({
-        queryKey: [...serverKeys.members(serverId), query],
+        queryKey: serverKeys.memberPage(serverId, query),
         queryFn: () => fetchMembers(serverId, query),
         placeholderData: keepPreviousData,
         enabled

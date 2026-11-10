@@ -1,6 +1,5 @@
 import { Fragment, useState, type KeyboardEvent } from 'react'
 import { useLocation } from 'react-router-dom'
-import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import {
@@ -13,22 +12,11 @@ import {
     useSensors,
     type DragMoveEvent
 } from '@dnd-kit/core'
-import { moveInLayout } from '../../api/layout.api'
-import { serverKeys } from '../../api/keys'
-import { rememberServer } from '../../api/useServers'
+import { useMoveInLayout } from '../../api/useChannelLayout'
 import { useChannelDialogs } from '../../channel-dialogs.store'
-import {
-    applyMove,
-    channelSlots,
-    dropClash,
-    groupChannels,
-    sameSlot,
-    slotOf,
-    type ChannelSlot
-} from '../../lib/channel-layout'
+import { channelSlots, dropClash, groupChannels, sameSlot, slotOf, type ChannelSlot } from '../../lib/channel-layout'
 import { channelGroups } from '../../lib/channel-list'
 import { categoryDropAfter, categorySlots, channelDropSlot, TOP_DROP_ID } from '../../lib/drop-target'
-import { layoutRule } from '../../lib/layout-error'
 import { can } from '../../lib/permissions'
 import type { LayoutMove, Server, ServerCategory } from '../../types'
 import { CategoryHeading, ChannelRow, channelIcon, DragPreview, DropLine } from './rows'
@@ -55,7 +43,7 @@ function TopZone({ enabled }: { enabled: boolean }) {
 export function ChannelList({ server }: { server: Server }) {
     const { t } = useTranslation()
     const { pathname } = useLocation()
-    const queryClient = useQueryClient()
+    const moveInLayout = useMoveInLayout()
     const showDialog = useChannelDialogs((state) => state.show)
     const { folded, setFolded } = useFoldedCategories(server.id)
     const [dragged, setDragged] = useState<Dragged | null>(null)
@@ -89,22 +77,8 @@ export function ChannelList({ server }: { server: Server }) {
         setByKeyboard(false)
     }
 
-    /** One drop: shown at once, sent, and put back if refused. */
-    async function commit(move: LayoutMove) {
-        const before = queryClient.getQueryData<Server[]>(serverKeys.list())?.find((s) => s.id === server.id) ?? server
-        rememberServer(queryClient, applyMove(before, move))
-        try {
-            rememberServer(queryClient, await moveInLayout(server.id, move))
-        } catch (error) {
-            rememberServer(queryClient, before)
-            // The list changed under them: read it again.
-            if (layoutRule(error)?.rule === 'stale_move')
-                void queryClient.invalidateQueries({ queryKey: serverKeys.list() })
-            toast.error(t('shell.drag.saveFailed'), {
-                action: { label: t('shell.drag.retry'), onClick: () => void commit(move) }
-            })
-        }
-    }
+    /** One drop: shown at once, sent, and put back if refused (useMoveInLayout). */
+    const commit = (move: LayoutMove) => moveInLayout.mutate({ serverId: server.id, change: move })
 
     function drop(item: Dragged, at: Target | null) {
         end()
@@ -122,11 +96,11 @@ export function ChannelList({ server }: { server: Server }) {
             }
             // Dropped into a folded category: it opens to show the channel.
             if (at.slot.categoryId) setFolded(at.slot.categoryId, false)
-            void commit({ kind: 'channel', id: item.id, ...at.slot })
+            commit({ kind: 'channel', id: item.id, ...at.slot })
         } else if (item.kind === 'category' && at.kind === 'category') {
             const index = categories.findIndex((c) => c.id === item.id)
             const current = index > 0 ? (categories[index - 1]?.id ?? null) : null
-            if (current !== at.afterId) void commit({ kind: 'category', id: item.id, afterId: at.afterId })
+            if (current !== at.afterId) commit({ kind: 'category', id: item.id, afterId: at.afterId })
         }
         setAnnouncement(t('shell.drag.dropped', { name: nameOf(item) }))
     }

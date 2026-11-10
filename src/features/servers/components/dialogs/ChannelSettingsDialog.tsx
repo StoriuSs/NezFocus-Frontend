@@ -1,5 +1,4 @@
 import { useRef, useState, type FormEvent } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { DoorOpen, Loader2, Trash2 } from 'lucide-react'
@@ -13,8 +12,7 @@ import {
     DialogHeader,
     DialogTitle
 } from '@/components/ui/dialog'
-import { updateChannel } from '../../api/layout.api'
-import { rememberServer } from '../../api/useServers'
+import { useUpdateChannel } from '../../api/useChannelLayout'
 import { storedName } from '../../lib/channel-layout'
 import type { Server, ServerChannel, UpdateChannelRequest } from '../../types'
 import { ChannelNameField } from './ChannelNameField'
@@ -44,7 +42,7 @@ export function ChannelSettingsDialog({
     onClose: () => void
 }) {
     const { t } = useTranslation('servers')
-    const queryClient = useQueryClient()
+    const update = useUpdateChannel(server.id)
     const nameInput = useRef<HTMLInputElement>(null)
 
     const startRoles = channel.viewRoleIds ?? []
@@ -86,7 +84,7 @@ export function ChannelSettingsDialog({
         setFailure(null)
         setSaving(true)
         try {
-            rememberServer(queryClient, await updateChannel(server.id, channel.id, changes))
+            await update.mutateAsync({ channelId: channel.id, changes })
             onClose()
         } catch (error) {
             const described = describeFailure(t, error, {

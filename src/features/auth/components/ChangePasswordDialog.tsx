@@ -3,7 +3,6 @@ import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { useTranslation } from 'react-i18next'
-import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -19,7 +18,6 @@ import {
 import { FormField } from '@/components/form/FormField'
 import { FormMessage } from '@/components/form/FormMessage'
 import { useCountdown } from '@/hooks/useCountdown'
-import { authKeys } from '@/features/auth/api/keys'
 import { useChangePassword } from '@/features/auth/api/useChangePassword'
 import { useAuthStore } from '@/features/auth/auth.store'
 import { formatWait } from '@/features/auth/lib/form-errors'
@@ -286,7 +284,6 @@ function CodeForm({
     onDone: () => void
 }) {
     const { t } = useTranslation('auth')
-    const queryClient = useQueryClient()
     const startSession = useAuthStore((state) => state.startSession)
     const reset = useCodeReset({
         email,
@@ -294,7 +291,6 @@ function CodeForm({
         onReset: async (tokens) => {
             // Every earlier session ended, this one too: take up the new one (D-62).
             await startSession(tokens)
-            await queryClient.invalidateQueries({ queryKey: authKeys.sessions() })
             toast.success(t('resetPassword.done'))
             onDone()
         }

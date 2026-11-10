@@ -1,9 +1,6 @@
 import { useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import axios from 'axios'
 import { Clock } from 'lucide-react'
-import { toast } from 'sonner'
 import '@/i18n/settings'
 import { SettingsGroup } from '@/components/settings/SettingsRow'
 import { TimeZoneCombobox } from '@/components/form/TimeZoneCombobox'
@@ -18,18 +15,10 @@ import {
 } from '@/components/ui/dialog'
 import { useMinuteClock } from '@/hooks/useMinuteClock'
 import { timeIn, timeZoneOption, wallClock } from '@/lib/time-zones'
-import { userKeys } from '@/features/users/api/keys'
-import { updateSettings } from '@/features/users/api/settings.api'
-import { tellOtherTabs } from '@/features/users/lib/settings-sync'
+import { useUpdateTimeZone } from '@/features/users/api/useUpdateTimeZone'
 import type { UserSettings } from '@/features/users/types'
 
 const pad = (n: number) => String(n).padStart(2, '0')
-
-/** The API refused because the zone changed under 24 hours ago, in this tab or another (REQ-AUTH-08). */
-function isZoneLocked(error: unknown): boolean {
-    if (!axios.isAxiosError(error) || error.response?.status !== 429) return false
-    return (error.response.data as { data?: { reason?: unknown } } | undefined)?.data?.reason === 'timezone'
-}
 
 /**
  * "Time zone" on S-ME-04: the picker, the time there now, and either what
@@ -41,7 +30,6 @@ function isZoneLocked(error: unknown): boolean {
 export function TimeZoneSetting({ settings }: { settings: UserSettings }) {
     const { t, i18n } = useTranslation('settings')
     const language = i18n.resolvedLanguage === 'vi' ? 'vi' : 'en'
-    const queryClient = useQueryClient()
     const now = useMinuteClock()
     const [picked, setPicked] = useState<string | null>(null)
 
@@ -49,27 +37,7 @@ export function TimeZoneSetting({ settings }: { settings: UserSettings }) {
     const changeableAt = settings.timezoneChangeableAt ? new Date(settings.timezoneChangeableAt) : null
     const locked = changeableAt !== null && changeableAt > now
 
-    const change = useMutation({
-        mutationFn: (timezone: string) => updateSettings({ timezone }),
-        // Says it itself: the lock on the page, or its own toast with "Try again".
-        meta: { errorToast: false },
-        onSuccess: (saved) => {
-            queryClient.setQueryData(userKeys.settings(), saved)
-            tellOtherTabs(saved)
-            setPicked(null)
-        },
-        onError: (error, timezone) => {
-            setPicked(null)
-            // Changed from another tab meanwhile: load the lock and show it (10-settings › Edge case).
-            if (isZoneLocked(error)) {
-                void queryClient.invalidateQueries({ queryKey: userKeys.settings() })
-                return
-            }
-            toast.error(t('toasts.notSaved'), {
-                action: { label: t('toasts.retry'), onClick: () => change.mutate(timezone) }
-            })
-        }
-    })
+    const change = useUpdateTimeZone()
 
     function lockedLine(until: Date): string {
         const clock = wallClock(until, zone)
@@ -117,7 +85,10 @@ export function TimeZoneSetting({ settings }: { settings: UserSettings }) {
                         <Button variant='outline' disabled={change.isPending} onClick={() => setPicked(null)}>
                             {t('appearance.confirm.cancel')}
                         </Button>
-                        <Button disabled={change.isPending} onClick={() => picked && change.mutate(picked)}>
+                        <Button
+                            disabled={change.isPending}
+                            onClick={() => picked && change.mutate(picked, { onSettled: () => setPicked(null) })}
+                        >
                             {t('appearance.confirm.change')}
                         </Button>
                     </DialogFooter>

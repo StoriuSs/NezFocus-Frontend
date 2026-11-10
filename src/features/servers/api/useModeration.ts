@@ -58,7 +58,7 @@ export function useTimeoutMember(serverId: string) {
 /** One page of the bans; the page shown stays while the next loads. */
 export function useServerBans(serverId: string, page: number, limit: PageSize) {
     return useQuery({
-        queryKey: [...serverKeys.bans(serverId), page, limit],
+        queryKey: serverKeys.banPage(serverId, page, limit),
         queryFn: () => fetchBans(serverId, page, limit),
         placeholderData: keepPreviousData
     })

@@ -436,6 +436,19 @@ describe('Join with an invite code (S-SRV-01 join-by-code)', () => {
         await userEvent.click(screen.getByRole('button', { name: 'Back' }))
         expect(await screen.findByRole('textbox', { name: 'Invite code or link' })).toBeInTheDocument()
     })
+
+    it('asks the API again on each Continue, even for the code it just showed', async () => {
+        invitesApi.fetchInvitePreview.mockResolvedValue(preview())
+        open()
+        const field = await screen.findByRole('textbox', { name: 'Invite code or link' })
+        await userEvent.type(field, 'B4tRw9Lz{Enter}')
+        await userEvent.click(await screen.findByRole('button', { name: 'Back' }))
+
+        await userEvent.click(await screen.findByRole('button', { name: 'Continue' }))
+
+        expect(await screen.findByRole('heading', { name: 'Bình invited you to' })).toBeInTheDocument()
+        expect(invitesApi.fetchInvitePreview).toHaveBeenCalledTimes(2)
+    })
 })
 
 describe('Invites settings (S-SET-04)', () => {

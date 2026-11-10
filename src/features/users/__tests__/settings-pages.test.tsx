@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ReactNode } from 'react'
 import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { AxiosError } from 'axios'
 import { MutationCache, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import { Toaster } from 'sonner'
@@ -228,6 +229,25 @@ describe('Appearance & language (S-ME-04)', () => {
             await act(() => vi.advanceTimersByTimeAsync(60_000))
 
             expect(screen.getByRole('button', { name: 'Time zone' })).toBeEnabled()
+        })
+
+        it('offers Try again when the change fails, which sends the same zone', async () => {
+            const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+            renderPage(<Appearance />)
+            api.patch.mockRejectedValueOnce(new AxiosError('offline', 'ERR_NETWORK')).mockResolvedValueOnce({
+                data: { data: { ...saved, timezone: 'Asia/Tokyo', timezoneChangeableAt: '2026-11-08T14:47:00.000Z' } }
+            })
+
+            await user.click(within(await pickTokyo(user)).getByRole('button', { name: 'Change time zone' }))
+            await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+            expect(screen.getByRole('button', { name: 'Time zone' })).toHaveTextContent('GMT+7 · Ho Chi Minh')
+            await user.click(await screen.findByRole('button', { name: 'Try again' }))
+
+            await waitFor(() =>
+                expect(screen.getByRole('button', { name: 'Time zone' })).toHaveTextContent('GMT+9 · Tokyo')
+            )
+            expect(api.patch).toHaveBeenCalledTimes(2)
+            expect(api.patch).toHaveBeenLastCalledWith('/users/me/settings', { timezone: 'Asia/Tokyo' })
         })
 
         it('shows the lock when another tab changed the zone meanwhile', async () => {

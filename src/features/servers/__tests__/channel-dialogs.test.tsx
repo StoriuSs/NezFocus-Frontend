@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import type { ReactNode } from 'react'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { Toaster } from 'sonner'
 import { AxiosError, AxiosHeaders } from 'axios'
@@ -8,6 +10,7 @@ import i18n from '@/i18n'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { expectNoA11yViolations } from '@/test/a11y'
 import { queryWrapper } from '@/test/helpers'
+import { serverKeys } from '../api/keys'
 import type { Server, ServerChannel } from '../types'
 
 const serversApi = { fetchServers: vi.fn(), createServer: vi.fn(), uploadServerIcon: vi.fn() }
@@ -72,7 +75,7 @@ const OT: Server = {
     ]
 }
 
-function renderDialogs(server: Server = OT) {
+function renderDialogs(server: Server = OT, client?: QueryClient) {
     serversApi.fetchServers.mockResolvedValue([server])
     const router = createMemoryRouter(
         [
@@ -86,7 +89,13 @@ function renderDialogs(server: Server = OT) {
             <RouterProvider router={router} />
             <Toaster />
         </TooltipProvider>,
-        { wrapper: queryWrapper() }
+        {
+            wrapper: client
+                ? ({ children }: { children: ReactNode }) => (
+                      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+                  )
+                : queryWrapper()
+        }
     )
     return router
 }
@@ -374,5 +383,118 @@ describe('Categories (S-SRV-05 `category`, S-SET-05 `category-edit`)', () => {
         useChannelDialogs.getState().show({ kind: 'categorySettings', serverId: 'ot', categoryId: 'gone' })
         renderDialogs()
         await waitFor(() => expect(useChannelDialogs.getState().open).toBeNull())
+    })
+})
+
+describe('A saved change reaches the rail and the channel list (the server list in the cache)', () => {
+    const client = () => new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+    const cached = (queries: QueryClient) => queries.getQueryData<Server[]>(serverKeys.list())?.[0]
+
+    beforeEach(async () => {
+        await i18n.changeLanguage('en')
+        vi.clearAllMocks()
+    })
+    afterEach(() => useChannelDialogs.getState().hide())
+
+    it('after a category is renamed', async () => {
+        const renamed = {
+            ...OT,
+            categories: OT.categories.map((c) => (c.id === 'info' ? { ...c, name: 'Tin tức' } : c))
+        }
+        layoutApi.renameCategory.mockResolvedValue(renamed)
+        const queries = client()
+        useChannelDialogs.getState().show({ kind: 'categorySettings', serverId: 'ot', categoryId: 'info' })
+        renderDialogs(OT, queries)
+        const name = await screen.findByRole('textbox', { name: 'Category name' })
+        await userEvent.clear(name)
+        await userEvent.type(name, 'Tin tức')
+        await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+        await waitFor(() => expect(cached(queries)?.categories[0]?.name).toBe('Tin tức'))
+    })
+
+    it('after a category is deleted', async () => {
+        const without = { ...OT, categories: OT.categories.filter((c) => c.id !== 'info') }
+        layoutApi.deleteCategory.mockResolvedValue(without)
+        const queries = client()
+        useChannelDialogs.getState().show({ kind: 'categorySettings', serverId: 'ot', categoryId: 'info' })
+        renderDialogs(OT, queries)
+        await userEvent.click(await screen.findByRole('button', { name: 'Delete category' }))
+        await userEvent.click((await screen.findAllByRole('button', { name: 'Delete category' })).at(-1)!)
+        await waitFor(() => expect(cached(queries)?.categories.map((c) => c.id)).toEqual(['rooms']))
+    })
+
+    it('after a channel’s settings are saved', async () => {
+        const managers = {
+            ...OT,
+            channels: OT.channels.map((c) => (c.id === 'hoi-dap' ? { ...c, sendMode: 'managers' as const } : c))
+        }
+        layoutApi.updateChannel.mockResolvedValue(managers)
+        const queries = client()
+        useChannelDialogs.getState().show({ kind: 'channelSettings', serverId: 'ot', channelId: 'hoi-dap' })
+        renderDialogs(OT, queries)
+        await userEvent.click(await screen.findByRole('radio', { name: /Only message managers/ }))
+        await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+        await waitFor(() =>
+            expect(cached(queries)?.channels.find((c) => c.id === 'hoi-dap')?.sendMode).toBe('managers')
+        )
+    })
+
+    it('after a channel is deleted', async () => {
+        layoutApi.deleteChannel.mockResolvedValue({ ...OT, channels: OT.channels.filter((c) => c.id !== 'hoi-dap') })
+        const queries = client()
+        useChannelDialogs.getState().show({ kind: 'channelSettings', serverId: 'ot', channelId: 'hoi-dap' })
+        renderDialogs(OT, queries)
+        await userEvent.click(await screen.findByRole('button', { name: 'Delete channel' }))
+        await userEvent.type(await screen.findByRole('textbox', { name: 'Type hoi-dap to confirm' }), 'hoi-dap')
+        await userEvent.click(screen.getAllByRole('button', { name: 'Delete channel' }).at(-1)!)
+        await waitFor(() => expect(cached(queries)?.channels.some((c) => c.id === 'hoi-dap')).toBe(false))
+    })
+})
+
+describe('A change to something deleted meanwhile reads the server list again (NOT_FOUND_ERROR)', () => {
+    beforeEach(async () => {
+        await i18n.changeLanguage('en')
+        vi.clearAllMocks()
+    })
+    afterEach(() => useChannelDialogs.getState().hide())
+
+    const renameCategory = async () => {
+        useChannelDialogs.getState().show({ kind: 'categorySettings', serverId: 'ot', categoryId: 'info' })
+        renderDialogs()
+        const name = await screen.findByRole('textbox', { name: 'Category name' })
+        await userEvent.clear(name)
+        await userEvent.type(name, 'Tin tức')
+        await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+    }
+    const deleteCategory = async () => {
+        useChannelDialogs.getState().show({ kind: 'categorySettings', serverId: 'ot', categoryId: 'info' })
+        renderDialogs()
+        await userEvent.click(await screen.findByRole('button', { name: 'Delete category' }))
+        await userEvent.click((await screen.findAllByRole('button', { name: 'Delete category' })).at(-1)!)
+    }
+    const updateChannel = async () => {
+        useChannelDialogs.getState().show({ kind: 'channelSettings', serverId: 'ot', channelId: 'hoi-dap' })
+        renderDialogs()
+        await userEvent.click(await screen.findByRole('radio', { name: /Only message managers/ }))
+        await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+    }
+    const deleteChannel = async () => {
+        useChannelDialogs.getState().show({ kind: 'channelSettings', serverId: 'ot', channelId: 'hoi-dap' })
+        renderDialogs()
+        await userEvent.click(await screen.findByRole('button', { name: 'Delete channel' }))
+        await userEvent.type(await screen.findByRole('textbox', { name: 'Type hoi-dap to confirm' }), 'hoi-dap')
+        await userEvent.click(screen.getAllByRole('button', { name: 'Delete channel' }).at(-1)!)
+    }
+
+    it.each([
+        ['renaming a category', 'renameCategory', renameCategory],
+        ['deleting a category', 'deleteCategory', deleteCategory],
+        ['saving a channel', 'updateChannel', updateChannel],
+        ['deleting a channel', 'deleteChannel', deleteChannel]
+    ] as const)('%s', async (_, call, run) => {
+        layoutApi[call].mockRejectedValue(refused(404, 'NOT_FOUND_ERROR'))
+        await run()
+        expect(await screen.findByText('This channel or category was just deleted')).toBeInTheDocument()
+        await waitFor(() => expect(serversApi.fetchServers).toHaveBeenCalledTimes(2))
     })
 })
