@@ -1,6 +1,10 @@
 import '@/i18n/servers'
-import { useRef, useState, type FormEvent } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Controller, useForm, useWatch } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import * as z from 'zod'
+import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Hash, Loader2, Volume2 } from 'lucide-react'
@@ -30,6 +34,28 @@ function startingRoles(server: Server): string[] {
     return top ? [top.id] : []
 }
 
+/** A category deleted meanwhile: back to none (SRV-EDGE). */
+const groupIn = (server: Server, categoryId: string | null) =>
+    server.categories.some((c) => c.id === categoryId) ? categoryId : null
+
+/** The name is checked against the server as it is now: a clash in the group before any request (D-84). */
+const createSchema = (t: TFunction<'servers'>, server: Server) =>
+    z
+        .object({
+            type: z.custom<ChannelType>(),
+            name: z.string(),
+            categoryId: z.string().nullable(),
+            isStudyRoom: z.boolean(),
+            isPrivate: z.boolean(),
+            viewRoleIds: z.array(z.string())
+        })
+        .superRefine((values, ctx) => {
+            const message = nameError(t, server, values.type, values.name, groupIn(server, values.categoryId))
+            if (message) ctx.addIssue({ code: 'custom', path: ['name'], message })
+        })
+
+type Values = z.infer<ReturnType<typeof createSchema>>
+
 /**
  * "Create a channel" (S-SRV-05): a text channel or a room (optionally a
  * study room), its name, its category, and whether it is private. Created, it
@@ -50,44 +76,49 @@ export function CreateChannelDialog({
     const { t } = useTranslation('servers')
     const navigate = useNavigate()
     const create = useCreateChannel(server.id)
-    const nameInput = useRef<HTMLInputElement>(null)
-
-    const [type, setType] = useState<ChannelType>(initialType)
-    const [name, setName] = useState('')
-    const [categoryId, setCategoryId] = useState<string | null>(initialCategory)
-    const [isStudyRoom, setIsStudyRoom] = useState(false)
-    const [isPrivate, setIsPrivate] = useState(false)
-    const [viewRoleIds, setViewRoleIds] = useState(() => startingRoles(server))
-    const [fieldError, setFieldError] = useState<string | null>(null)
+    const schema = useMemo(() => createSchema(t, server), [t, server])
+    const {
+        control,
+        handleSubmit,
+        setError,
+        clearErrors,
+        setFocus,
+        formState: { errors, isSubmitting: creating }
+    } = useForm<Values>({
+        resolver: zodResolver(schema),
+        // The error goes as they change the form and is checked again on the next click only.
+        reValidateMode: 'onSubmit',
+        defaultValues: {
+            type: initialType,
+            name: '',
+            categoryId: initialCategory,
+            isStudyRoom: false,
+            isPrivate: false,
+            viewRoleIds: startingRoles(server)
+        }
+    })
+    const [type, name, categoryId, isPrivate] = useWatch({
+        control,
+        name: ['type', 'name', 'categoryId', 'isPrivate']
+    })
     const [failure, setFailure] = useState<LayoutFailure['form'] | null>(null)
-    const [creating, setCreating] = useState(false)
 
     const atLimit = server.categories.length + server.channels.length >= MAX_CHANNELS_AND_CATEGORIES
-    // A category deleted meanwhile: back to none (SRV-EDGE).
-    const category = server.categories.find((c) => c.id === categoryId)
-    const group = category ? category.id : null
+    const group = groupIn(server, categoryId)
     const dirty = name.trim() !== ''
 
-    async function submit(event: FormEvent) {
-        event.preventDefault()
-        if (creating || atLimit) return
-        const problem = nameError(t, server, type, name, group)
-        if (problem) {
-            setFieldError(problem)
-            nameInput.current?.focus()
-            return
-        }
+    const send = handleSubmit(async (values) => {
         setFailure(null)
-        setCreating(true)
+        const chosenGroup = groupIn(server, values.categoryId)
         try {
             const created = await create.mutateAsync({
-                type,
-                name: storedName(type, name),
-                categoryId: group,
-                isStudyRoom: type === 'voice' && isStudyRoom,
-                isPrivate,
-                viewRoleIds: isPrivate
-                    ? viewRoleIds.filter((id) => server.roles.some((r) => r.id === id && !r.administrator))
+                type: values.type,
+                name: storedName(values.type, values.name),
+                categoryId: chosenGroup,
+                isStudyRoom: values.type === 'voice' && values.isStudyRoom,
+                isPrivate: values.isPrivate,
+                viewRoleIds: values.isPrivate
+                    ? values.viewRoleIds.filter((id) => server.roles.some((r) => r.id === id && !r.administrator))
                     : []
             })
             onClose()
@@ -95,22 +126,18 @@ export function CreateChannelDialog({
         } catch (error) {
             const described = describeFailure(t, error, {
                 server,
-                kind: type,
-                categoryId: group,
-                typed: name,
+                kind: values.type,
+                categoryId: chosenGroup,
+                typed: values.name,
                 creating: true
             })
             if (described.gone) {
                 onClose()
                 toast.error(t('layoutError.gone'))
-            } else if (described.field) {
-                setFieldError(described.field)
-                nameInput.current?.focus()
-            } else setFailure(described.form ?? null)
-        } finally {
-            setCreating(false)
+            } else if (described.field) setError('name', { message: described.field }, { shouldFocus: true })
+            else setFailure(described.form ?? null)
         }
-    }
+    })
 
     const submitButton = (
         <Button
@@ -131,12 +158,20 @@ export function CreateChannelDialog({
                 aria-describedby={undefined}
                 onOpenAutoFocus={(event) => {
                     event.preventDefault()
-                    nameInput.current?.focus()
+                    setFocus('name')
                 }}
                 onInteractOutside={(event) => (dirty || creating) && event.preventDefault()}
                 onEscapeKeyDown={(event) => creating && event.preventDefault()}
             >
-                <form onSubmit={(event) => void submit(event)} className='flex min-h-0 flex-col gap-5' noValidate>
+                <form
+                    onSubmit={(event) => {
+                        // At the limit nothing is checked or sent: the line above says why.
+                        if (atLimit) return event.preventDefault()
+                        void send(event)
+                    }}
+                    className='flex min-h-0 flex-col gap-5'
+                    noValidate
+                >
                     <DialogHeader>
                         <DialogTitle>{t('channel.createTitle')}</DialogTitle>
                     </DialogHeader>
@@ -144,92 +179,128 @@ export function CreateChannelDialog({
 
                     {/* The middle scrolls when it is taller than the window; the buttons stay in view (C-14). */}
                     <div className='-mx-6 min-h-0 flex-1 space-y-5 overflow-y-auto px-6'>
-                        <OptionCards
-                            label={t('channel.type.label')}
-                            value={type}
-                            onChange={(next) => {
-                                setType(next)
-                                setFieldError(null)
-                            }}
-                            disabled={creating}
-                            options={[
-                                {
-                                    value: 'text',
-                                    icon: Hash,
-                                    title: t('channel.type.text'),
-                                    description: t('channel.type.textDescription')
-                                },
-                                {
-                                    value: 'voice',
-                                    icon: Volume2,
-                                    title: t('channel.type.voice'),
-                                    description: t('channel.type.voiceDescription')
-                                }
-                            ]}
+                        <Controller
+                            control={control}
+                            name='type'
+                            render={({ field }) => (
+                                <OptionCards
+                                    label={t('channel.type.label')}
+                                    value={field.value}
+                                    onChange={(next) => {
+                                        field.onChange(next)
+                                        clearErrors('name')
+                                    }}
+                                    disabled={creating}
+                                    options={[
+                                        {
+                                            value: 'text',
+                                            icon: Hash,
+                                            title: t('channel.type.text'),
+                                            description: t('channel.type.textDescription')
+                                        },
+                                        {
+                                            value: 'voice',
+                                            icon: Volume2,
+                                            title: t('channel.type.voice'),
+                                            description: t('channel.type.voiceDescription')
+                                        }
+                                    ]}
+                                />
+                            )}
                         />
 
-                        <ChannelNameField
-                            kind={type}
-                            value={name}
-                            onChange={(next) => {
-                                setName(next)
-                                setFieldError(null)
-                            }}
-                            error={fieldError}
-                            readOnly={creating}
-                            inputRef={nameInput}
+                        <Controller
+                            control={control}
+                            name='name'
+                            render={({ field }) => (
+                                <ChannelNameField
+                                    kind={type}
+                                    value={field.value}
+                                    onChange={(next) => {
+                                        field.onChange(next)
+                                        clearErrors('name')
+                                    }}
+                                    error={errors.name?.message}
+                                    readOnly={creating}
+                                    inputRef={field.ref}
+                                />
+                            )}
                         />
 
                         <div className='grid gap-1'>
                             <Label htmlFor='create-channel-category' className='text-label text-text-secondary'>
                                 {t('channel.category.label')}
                             </Label>
-                            <Select
-                                id='create-channel-category'
-                                value={group ?? NO_CATEGORY}
-                                onValueChange={(value) => {
-                                    setCategoryId(value === NO_CATEGORY ? null : value)
-                                    setFieldError(null)
-                                }}
-                                disabled={creating}
-                                options={[
-                                    {
-                                        value: NO_CATEGORY,
-                                        label: t('channel.category.none'),
-                                        description: t('channel.category.noneDescription')
-                                    },
-                                    ...[...server.categories]
-                                        .sort((a, b) => a.position - b.position)
-                                        .map((c) => ({ value: c.id, label: c.name.toLocaleUpperCase('vi') }))
-                                ]}
+                            <Controller
+                                control={control}
+                                name='categoryId'
+                                render={({ field }) => (
+                                    <Select
+                                        id='create-channel-category'
+                                        value={group ?? NO_CATEGORY}
+                                        onValueChange={(value) => {
+                                            field.onChange(value === NO_CATEGORY ? null : value)
+                                            clearErrors('name')
+                                        }}
+                                        disabled={creating}
+                                        options={[
+                                            {
+                                                value: NO_CATEGORY,
+                                                label: t('channel.category.none'),
+                                                description: t('channel.category.noneDescription')
+                                            },
+                                            ...[...server.categories]
+                                                .sort((a, b) => a.position - b.position)
+                                                .map((c) => ({ value: c.id, label: c.name.toLocaleUpperCase('vi') }))
+                                        ]}
+                                    />
+                                )}
                             />
                         </div>
 
                         {type === 'voice' ? (
-                            <SwitchRow
-                                className='items-start p-0'
-                                label={t('channel.study.label')}
-                                description={t('channel.study.description')}
-                                checked={isStudyRoom}
-                                onCheckedChange={setIsStudyRoom}
-                                disabled={creating}
+                            <Controller
+                                control={control}
+                                name='isStudyRoom'
+                                render={({ field }) => (
+                                    <SwitchRow
+                                        className='items-start p-0'
+                                        label={t('channel.study.label')}
+                                        description={t('channel.study.description')}
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                        disabled={creating}
+                                    />
+                                )}
                             />
                         ) : null}
 
-                        <SwitchRow
-                            className='items-start p-0'
-                            label={t('channel.private.label')}
-                            description={t('channel.private.description')}
-                            checked={isPrivate}
-                            onCheckedChange={setIsPrivate}
-                            disabled={creating}
+                        <Controller
+                            control={control}
+                            name='isPrivate'
+                            render={({ field }) => (
+                                <SwitchRow
+                                    className='items-start p-0'
+                                    label={t('channel.private.label')}
+                                    description={t('channel.private.description')}
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                    disabled={creating}
+                                />
+                            )}
                         />
                         {isPrivate ? (
-                            <ViewRolesPicker
-                                server={server}
-                                selected={viewRoleIds}
-                                onChange={setViewRoleIds}
-                                disabled={creating}
+                            <Controller
+                                control={control}
+                                name='viewRoleIds'
+                                render={({ field }) => (
+                                    <ViewRolesPicker
+                                        server={server}
+                                        selected={field.value}
+                                        onChange={field.onChange}
+                                        disabled={creating}
+                                    />
+                                )}
                             />
                         ) : null}
                     </div>

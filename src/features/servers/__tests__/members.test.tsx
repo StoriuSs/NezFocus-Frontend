@@ -253,6 +253,37 @@ describe('Members (S-SET-03)', () => {
         expect(screen.queryByRole('dialog')).toBeNull()
     })
 
+    it('times out with Ctrl + Enter from the reason, a blank reason sent as none, and tries again after a failure', async () => {
+        const user = userEvent.setup()
+        moderationApi.timeoutMember.mockRejectedValueOnce(new AxiosError('offline')).mockResolvedValueOnce(undefined)
+        renderPage('/servers/ot/settings/members', binh)
+        await user.click(within(await rowOf('Dũng')).getByRole('button', { name: 'Actions for Dũng' }))
+        await user.click(await screen.findByRole('menuitem', { name: 'Time out' }))
+        const dialog = await screen.findByRole('dialog', { name: 'Time out Dũng' })
+        await user.click(within(dialog).getByRole('radio', { name: '1 week' }))
+        await user.type(within(dialog).getByLabelText('Reason (optional)'), '   {Control>}{Enter}{/Control}')
+        expect(
+            await within(dialog).findByText('Couldn’t do that. Check your connection and try again.')
+        ).toBeInTheDocument()
+        expect(moderationApi.timeoutMember).toHaveBeenLastCalledWith('ot', 'dung', 604_800, null)
+        await user.click(within(dialog).getByRole('button', { name: 'Time out' }))
+        expect(await screen.findByText('Timed out Dũng for 1 week')).toBeInTheDocument()
+        expect(moderationApi.timeoutMember).toHaveBeenCalledTimes(2)
+    })
+
+    it('sends one timeout while it is out, Ctrl + Enter again included', async () => {
+        const user = userEvent.setup()
+        moderationApi.timeoutMember.mockReturnValue(new Promise(() => {}))
+        renderPage('/servers/ot/settings/members', binh)
+        await user.click(within(await rowOf('Dũng')).getByRole('button', { name: 'Actions for Dũng' }))
+        await user.click(await screen.findByRole('menuitem', { name: 'Time out' }))
+        const dialog = await screen.findByRole('dialog', { name: 'Time out Dũng' })
+        await user.click(within(dialog).getByRole('button', { name: 'Time out' }))
+        await waitFor(() => expect(within(dialog).getByRole('button', { name: 'Time out' })).toBeDisabled())
+        await user.type(within(dialog).getByLabelText('Reason (optional)'), '{Control>}{Enter}{/Control}')
+        expect(moderationApi.timeoutMember).toHaveBeenCalledTimes(1)
+    })
+
     it('says when the person now outranks them, and keeps the action off', async () => {
         const user = userEvent.setup()
         moderationApi.kickMember.mockRejectedValue(refused('ROLE_HIERARCHY_VIOLATION', 403))
@@ -268,6 +299,32 @@ describe('Members (S-SET-03)', () => {
             await within(dialog).findByText('Dũng now has a role equal to or above yours, so you can’t do this.')
         ).toBeInTheDocument()
         expect(within(dialog).getByRole('button', { name: 'Kick' })).toBeDisabled()
+    })
+
+    it('keeps Ctrl + Enter off too once the person outranks them', async () => {
+        const user = userEvent.setup()
+        moderationApi.kickMember.mockRejectedValue(refused('ROLE_HIERARCHY_VIOLATION', 403))
+        renderPage('/servers/ot/settings/members', binh)
+        await user.click(within(await rowOf('Dũng')).getByRole('button', { name: 'Actions for Dũng' }))
+        await user.click(await screen.findByRole('menuitem', { name: 'Kick from server' }))
+        const dialog = await screen.findByRole('dialog', { name: 'Kick Dũng from the server?' })
+        await user.click(within(dialog).getByRole('button', { name: 'Kick' }))
+        await within(dialog).findByText('Dũng now has a role equal to or above yours, so you can’t do this.')
+        await user.type(within(dialog).getByLabelText('Reason (optional)'), '{Control>}{Enter}{/Control}')
+        expect(moderationApi.kickMember).toHaveBeenCalledTimes(1)
+    })
+
+    it('keeps Ctrl + Enter off in Time out too once the person outranks them', async () => {
+        const user = userEvent.setup()
+        moderationApi.timeoutMember.mockRejectedValue(refused('ROLE_HIERARCHY_VIOLATION', 403))
+        renderPage('/servers/ot/settings/members', binh)
+        await user.click(within(await rowOf('Dũng')).getByRole('button', { name: 'Actions for Dũng' }))
+        await user.click(await screen.findByRole('menuitem', { name: 'Time out' }))
+        const dialog = await screen.findByRole('dialog', { name: 'Time out Dũng' })
+        await user.click(within(dialog).getByRole('button', { name: 'Time out' }))
+        await within(dialog).findByText('Dũng now has a role equal to or above yours, so you can’t do this.')
+        await user.type(within(dialog).getByLabelText('Reason (optional)'), '{Control>}{Enter}{/Control}')
+        expect(moderationApi.timeoutMember).toHaveBeenCalledTimes(1)
     })
 
     it('lets a retry follow a dropped connection', async () => {

@@ -1,5 +1,8 @@
 import '@/i18n/servers'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { Controller, useForm, useWatch, type Control } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import * as z from 'zod'
 import { useTranslation } from 'react-i18next'
 import { ArrowLeft, Check, Loader2 } from 'lucide-react'
 import { FormMessage } from '@/components/form/FormMessage'
@@ -42,6 +45,12 @@ const AGE_LABELS = {
 } as const
 const usesValue = (uses: number | null) => (uses === null ? 'unlimited' : String(uses))
 
+/** Two lists with nothing invalid to pick: the schema only types them. */
+const settingsSchema = z.object({
+    maxAgeSeconds: z.custom<InviteSettings['maxAgeSeconds']>(),
+    maxUses: z.custom<InviteSettings['maxUses']>()
+})
+
 /**
  * "Invite friends" (S-SRV-02): a link to send, made or handed back again as
  * it opens (D-151), with "Copy" (no toast, Q6), its settings line (Q15),
@@ -58,7 +67,14 @@ export default function InviteDialog() {
     const revokeLink = useRevokeInvite(target?.serverId ?? '')
     const [invite, setInvite] = useState<Invite | null>(null)
     const [settings, setSettings] = useState<InviteSettings>(DEFAULT_INVITE_SETTINGS)
-    const [editing, setEditing] = useState<InviteSettings | null>(null)
+    const [editing, setEditing] = useState(false)
+    // "Change settings" (S-SRV-02 `edit-settings`), measured from the settings last asked for.
+    const {
+        control,
+        handleSubmit,
+        reset,
+        formState: { isDirty }
+    } = useForm<InviteSettings>({ resolver: zodResolver(settingsSchema), defaultValues: DEFAULT_INVITE_SETTINGS })
     const [revoked, setRevoked] = useState(false)
     const [revokeFailed, setRevokeFailed] = useState(false)
     const [copied, setCopied] = useState(false)
@@ -68,13 +84,19 @@ export default function InviteDialog() {
 
     function make(wanted: InviteSettings) {
         setSettings(wanted)
+        reset(wanted)
         setRevoked(false)
         create.mutate(wanted, {
             onSuccess: (made) => {
                 setInvite(made)
-                setEditing(null)
+                setEditing(false)
             }
         })
+    }
+
+    function editSettings() {
+        reset(settings)
+        setEditing(true)
     }
 
     // The link of the default settings, as it opens (a second call while the
@@ -143,21 +165,20 @@ export default function InviteDialog() {
                     copyButton.current?.focus()
                 }}
                 // Settings changed: a click outside keeps them (C-14).
-                onInteractOutside={(event) => editing && !sameAs(editing, settings) && event.preventDefault()}
+                onInteractOutside={(event) => editing && isDirty && event.preventDefault()}
                 onEscapeKeyDown={(event) => {
                     // Esc in the settings goes back to the link, not out (S-SRV-02 › Bàn phím).
                     if (!editing) return
                     event.preventDefault()
-                    setEditing(null)
+                    setEditing(false)
                 }}
             >
                 {editing ? (
                     <EditSettings
                         current={invite}
-                        value={editing}
-                        onChange={setEditing}
-                        onBack={() => setEditing(null)}
-                        onSubmit={() => make(editing)}
+                        control={control}
+                        onBack={() => setEditing(false)}
+                        onSubmit={handleSubmit(make)}
                         creating={create.isPending}
                     />
                 ) : (
@@ -237,12 +258,7 @@ export default function InviteDialog() {
                                         >
                                             {t('invite.revoke')}
                                         </Button>
-                                        <Button
-                                            type='button'
-                                            variant='text'
-                                            size='sm'
-                                            onClick={() => setEditing(settings)}
-                                        >
+                                        <Button type='button' variant='text' size='sm' onClick={editSettings}>
                                             {t('invite.editSettings')}
                                         </Button>
                                     </div>
@@ -262,32 +278,24 @@ export default function InviteDialog() {
     )
 }
 
-const sameAs = (a: InviteSettings, b: InviteSettings) => a.maxAgeSeconds === b.maxAgeSeconds && a.maxUses === b.maxUses
-
 /** S-SRV-02 `edit-settings`: lifetime and uses, then "Create a new link". */
 function EditSettings({
     current,
-    value,
-    onChange,
+    control,
     onBack,
     onSubmit,
     creating
 }: {
     current: Invite | null
-    value: InviteSettings
-    onChange: (value: InviteSettings) => void
+    control: Control<InviteSettings>
     onBack: () => void
-    onSubmit: () => void
+    onSubmit: (event: FormEvent) => Promise<void>
     creating: boolean
 }) {
     const { t } = useTranslation('servers')
+    const [maxAgeSeconds, maxUses] = useWatch({ control, name: ['maxAgeSeconds', 'maxUses'] })
     // The same as the link shown and no limit on uses: it would come back as it is (D-151).
-    const unchanged = current !== null && sameSettings(current, value)
-
-    function submit(event: FormEvent) {
-        event.preventDefault()
-        if (!unchanged && !creating) onSubmit()
-    }
+    const unchanged = current !== null && sameSettings(current, { maxAgeSeconds, maxUses })
 
     const submitButton = (
         <Button type='submit' disabled={unchanged || creating}>
@@ -297,7 +305,14 @@ function EditSettings({
     )
 
     return (
-        <form onSubmit={submit} className='grid gap-4' noValidate>
+        <form
+            onSubmit={(event) => {
+                if (unchanged || creating) return event.preventDefault()
+                void onSubmit(event)
+            }}
+            className='grid gap-4'
+            noValidate
+        >
             <div>
                 <Button type='button' variant='text' size='sm' className='-ml-3' onClick={onBack}>
                     <ArrowLeft aria-hidden='true' />
@@ -311,38 +326,45 @@ function EditSettings({
                 <Label htmlFor='invite-expiry' className='text-label text-text-secondary'>
                     {t('invite.settings.expiry')}
                 </Label>
-                <Select
-                    id='invite-expiry'
-                    value={ageValue(value.maxAgeSeconds)}
-                    onValueChange={(chosen) =>
-                        onChange({
-                            ...value,
-                            maxAgeSeconds: INVITE_MAX_AGES.find((age) => ageValue(age) === chosen) ?? null
-                        })
-                    }
-                    options={INVITE_MAX_AGES.map((age) => ({
-                        value: ageValue(age),
-                        label: age === null ? t('invite.age.never') : t(AGE_LABELS[age])
-                    }))}
+                <Controller
+                    control={control}
+                    name='maxAgeSeconds'
+                    render={({ field }) => (
+                        <Select
+                            id='invite-expiry'
+                            value={ageValue(field.value)}
+                            onValueChange={(chosen) =>
+                                field.onChange(INVITE_MAX_AGES.find((age) => ageValue(age) === chosen) ?? null)
+                            }
+                            options={INVITE_MAX_AGES.map((age) => ({
+                                value: ageValue(age),
+                                label: age === null ? t('invite.age.never') : t(AGE_LABELS[age])
+                            }))}
+                        />
+                    )}
                 />
             </div>
             <div className='grid gap-1'>
                 <Label htmlFor='invite-uses' className='text-label text-text-secondary'>
                     {t('invite.settings.uses')}
                 </Label>
-                <Select
-                    id='invite-uses'
-                    value={usesValue(value.maxUses)}
-                    onValueChange={(chosen) =>
-                        onChange({ ...value, maxUses: chosen === 'unlimited' ? null : Number(chosen) })
-                    }
-                    options={INVITE_MAX_USES.map((uses) => ({
-                        value: usesValue(uses),
-                        label:
-                            uses === null
-                                ? t('invite.usesOption.unlimited')
-                                : t('invite.usesOption.count', { count: uses })
-                    }))}
+                <Controller
+                    control={control}
+                    name='maxUses'
+                    render={({ field }) => (
+                        <Select
+                            id='invite-uses'
+                            value={usesValue(field.value)}
+                            onValueChange={(chosen) => field.onChange(chosen === 'unlimited' ? null : Number(chosen))}
+                            options={INVITE_MAX_USES.map((uses) => ({
+                                value: usesValue(uses),
+                                label:
+                                    uses === null
+                                        ? t('invite.usesOption.unlimited')
+                                        : t('invite.usesOption.count', { count: uses })
+                            }))}
+                        />
+                    )}
                 />
             </div>
             <p className='text-label text-text-tertiary'>{t('invite.settings.note')}</p>

@@ -1,5 +1,9 @@
 import '@/i18n/servers'
-import { useRef, useState, type FormEvent } from 'react'
+import { useMemo, useState } from 'react'
+import { Controller, useForm, useWatch } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import * as z from 'zod'
+import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { DoorOpen, Loader2, Trash2 } from 'lucide-react'
@@ -26,6 +30,34 @@ type SendMode = ServerChannel['sendMode']
 
 const sameSet = (a: string[], b: string[]) => a.length === b.length && a.every((id) => b.includes(id))
 
+/** A new name is checked against the server as it is now; the name kept is not checked again. */
+const createSchema = (t: TFunction<'servers'>, server: Server, channel: ServerChannel) =>
+    z
+        .object({
+            name: z.string(),
+            sendMode: z.custom<SendMode>(),
+            isPrivate: z.boolean(),
+            viewRoleIds: z.array(z.string())
+        })
+        .superRefine((values, ctx) => {
+            if (storedName(channel.type, values.name) === channel.name) return
+            const message = nameError(t, server, channel.type, values.name, channel.categoryId ?? null, channel.id)
+            if (message) ctx.addIssue({ code: 'custom', path: ['name'], message })
+        })
+
+type Values = z.infer<ReturnType<typeof createSchema>>
+
+/** Only what differs from the channel goes out. */
+function changesOf(server: Server, channel: ServerChannel, values: Values): UpdateChannelRequest {
+    const changes: UpdateChannelRequest = {}
+    if (storedName(channel.type, values.name) !== channel.name) changes.name = values.name
+    if (values.sendMode !== channel.sendMode) changes.sendMode = values.sendMode
+    if (values.isPrivate !== channel.isPrivate) changes.isPrivate = values.isPrivate
+    const rolesToSend = values.viewRoleIds.filter((id) => server.roles.some((r) => r.id === id && !r.administrator))
+    if (values.isPrivate && !sameSet(rolesToSend, channel.viewRoleIds ?? [])) changes.viewRoleIds = rolesToSend
+    return changes
+}
+
 /**
  * "Channel settings" (S-SET-05): name, who may post (text channels), and
  * whether it is private, saved together by one PATCH of what changed; and
@@ -44,16 +76,30 @@ export function ChannelSettingsDialog({
 }) {
     const { t } = useTranslation('servers')
     const update = useUpdateChannel(server.id)
-    const nameInput = useRef<HTMLInputElement>(null)
-
-    const startRoles = channel.viewRoleIds ?? []
-    const [name, setName] = useState(channel.name)
-    const [sendMode, setSendMode] = useState<SendMode>(channel.sendMode)
-    const [isPrivate, setIsPrivate] = useState(channel.isPrivate)
-    const [viewRoleIds, setViewRoleIds] = useState<string[]>(startRoles)
-    const [fieldError, setFieldError] = useState<string | null>(null)
+    const schema = useMemo(() => createSchema(t, server, channel), [t, server, channel])
+    const {
+        control,
+        handleSubmit,
+        setError,
+        clearErrors,
+        setFocus,
+        formState: { errors, isSubmitting: saving }
+    } = useForm<Values>({
+        resolver: zodResolver(schema),
+        // The error goes as they type and is checked again on the next click only.
+        reValidateMode: 'onSubmit',
+        defaultValues: {
+            name: channel.name,
+            sendMode: channel.sendMode,
+            isPrivate: channel.isPrivate,
+            viewRoleIds: channel.viewRoleIds ?? []
+        }
+    })
+    const [name, sendMode, isPrivate, viewRoleIds] = useWatch({
+        control,
+        name: ['name', 'sendMode', 'isPrivate', 'viewRoleIds']
+    })
     const [failure, setFailure] = useState<LayoutFailure['form'] | null>(null)
-    const [saving, setSaving] = useState(false)
     const [deleting, setDeleting] = useState(false)
 
     const categoryId = channel.categoryId ?? null
@@ -61,29 +107,12 @@ export function ChannelSettingsDialog({
     const room = channel.type === 'voice'
     const prefix = room ? '' : '#'
 
-    // Only what differs from the channel goes out.
-    const changes: UpdateChannelRequest = {}
-    if (storedName(channel.type, name) !== channel.name) changes.name = name
-    if (sendMode !== channel.sendMode) changes.sendMode = sendMode
-    if (isPrivate !== channel.isPrivate) changes.isPrivate = isPrivate
-    const rolesToSend = viewRoleIds.filter((id) => server.roles.some((r) => r.id === id && !r.administrator))
-    if (isPrivate && !sameSet(rolesToSend, startRoles)) changes.viewRoleIds = rolesToSend
-    const dirty = Object.keys(changes).length > 0
+    const dirty = Object.keys(changesOf(server, channel, { name, sendMode, isPrivate, viewRoleIds })).length > 0
 
-    async function submit(event: FormEvent) {
-        event.preventDefault()
-        if (saving) return
-        if (!dirty) return onClose()
-        if (changes.name !== undefined) {
-            const problem = nameError(t, server, channel.type, name, categoryId, channel.id)
-            if (problem) {
-                setFieldError(problem)
-                nameInput.current?.focus()
-                return
-            }
-        }
+    const send = handleSubmit(async (values) => {
+        const changes = changesOf(server, channel, values)
+        if (Object.keys(changes).length === 0) return onClose()
         setFailure(null)
-        setSaving(true)
         try {
             await update.mutateAsync({ channelId: channel.id, changes })
             onClose()
@@ -92,20 +121,16 @@ export function ChannelSettingsDialog({
                 server,
                 kind: channel.type,
                 categoryId,
-                typed: name,
+                typed: values.name,
                 creating: false
             })
             if (described.gone) {
                 onClose()
                 toast.error(t('layoutError.gone'))
-            } else if (described.field) {
-                setFieldError(described.field)
-                nameInput.current?.focus()
-            } else setFailure(described.form ?? null)
-        } finally {
-            setSaving(false)
+            } else if (described.field) setError('name', { message: described.field }, { shouldFocus: true })
+            else setFailure(described.form ?? null)
         }
-    }
+    })
 
     return (
         <Dialog open onOpenChange={(open) => !open && !saving && onClose()}>
@@ -113,13 +138,13 @@ export function ChannelSettingsDialog({
                 className='flex max-h-[min(820px,calc(100dvh-48px))] flex-col sm:max-w-[520px]'
                 onOpenAutoFocus={(event) => {
                     event.preventDefault()
-                    nameInput.current?.focus()
+                    setFocus('name')
                 }}
                 // Edited: a click outside keeps it open; Esc and Cancel still close at once (S-SET-05).
                 onInteractOutside={(event) => (dirty || saving) && event.preventDefault()}
                 onEscapeKeyDown={(event) => saving && event.preventDefault()}
             >
-                <form onSubmit={(event) => void submit(event)} className='flex min-h-0 flex-col gap-5' noValidate>
+                <form onSubmit={(event) => void send(event)} className='flex min-h-0 flex-col gap-5' noValidate>
                     <DialogHeader>
                         <DialogTitle>{t(room ? 'channel.roomSettingsTitle' : 'channel.settingsTitle')}</DialogTitle>
                         <DialogDescription className='text-label text-text-tertiary'>
@@ -137,64 +162,88 @@ export function ChannelSettingsDialog({
                             </p>
                         ) : null}
 
-                        <ChannelNameField
-                            kind={channel.type}
-                            value={name}
-                            onChange={(next) => {
-                                setName(next)
-                                setFieldError(null)
-                            }}
-                            error={fieldError}
-                            readOnly={saving}
-                            inputRef={nameInput}
+                        <Controller
+                            control={control}
+                            name='name'
+                            render={({ field }) => (
+                                <ChannelNameField
+                                    kind={channel.type}
+                                    value={field.value}
+                                    onChange={(next) => {
+                                        field.onChange(next)
+                                        clearErrors('name')
+                                    }}
+                                    error={errors.name?.message}
+                                    readOnly={saving}
+                                    inputRef={field.ref}
+                                />
+                            )}
                         />
 
                         {!room ? (
-                            <fieldset className='grid gap-2'>
-                                <legend className='mb-2 text-label text-text-secondary'>
-                                    {t('channel.sendMode.label')}
-                                </legend>
-                                {(['everyone', 'managers'] as const).map((mode) => (
-                                    <label key={mode} className='flex cursor-pointer items-start gap-3'>
-                                        <input
-                                            type='radio'
-                                            name='send-mode'
-                                            value={mode}
-                                            checked={sendMode === mode}
-                                            disabled={saving}
-                                            onChange={() => setSendMode(mode)}
-                                            className='mt-0.5 size-[18px] shrink-0 cursor-pointer appearance-none rounded-full border-2 border-border-input bg-bg transition-colors duration-micro checked:border-[6px] checked:border-primary'
-                                        />
-                                        <span className='grid'>
-                                            <span className='text-body-sm text-text-primary'>
-                                                {t(`channel.sendMode.${mode}`)}
-                                            </span>
-                                            {mode === 'managers' ? (
-                                                <span className='text-label text-text-tertiary'>
-                                                    {t('channel.sendMode.managersDescription')}
+                            <Controller
+                                control={control}
+                                name='sendMode'
+                                render={({ field }) => (
+                                    <fieldset className='grid gap-2'>
+                                        <legend className='mb-2 text-label text-text-secondary'>
+                                            {t('channel.sendMode.label')}
+                                        </legend>
+                                        {(['everyone', 'managers'] as const).map((mode) => (
+                                            <label key={mode} className='flex cursor-pointer items-start gap-3'>
+                                                <input
+                                                    type='radio'
+                                                    name='send-mode'
+                                                    value={mode}
+                                                    checked={field.value === mode}
+                                                    disabled={saving}
+                                                    onChange={() => field.onChange(mode)}
+                                                    className='mt-0.5 size-[18px] shrink-0 cursor-pointer appearance-none rounded-full border-2 border-border-input bg-bg transition-colors duration-micro checked:border-[6px] checked:border-primary'
+                                                />
+                                                <span className='grid'>
+                                                    <span className='text-body-sm text-text-primary'>
+                                                        {t(`channel.sendMode.${mode}`)}
+                                                    </span>
+                                                    {mode === 'managers' ? (
+                                                        <span className='text-label text-text-tertiary'>
+                                                            {t('channel.sendMode.managersDescription')}
+                                                        </span>
+                                                    ) : null}
                                                 </span>
-                                            ) : null}
-                                        </span>
-                                    </label>
-                                ))}
-                            </fieldset>
+                                            </label>
+                                        ))}
+                                    </fieldset>
+                                )}
+                            />
                         ) : null}
 
-                        <SwitchRow
-                            className='items-start p-0'
-                            label={t('channel.private.label')}
-                            description={t('channel.private.description')}
-                            checked={isPrivate}
-                            onCheckedChange={setIsPrivate}
-                            disabled={saving}
+                        <Controller
+                            control={control}
+                            name='isPrivate'
+                            render={({ field }) => (
+                                <SwitchRow
+                                    className='items-start p-0'
+                                    label={t('channel.private.label')}
+                                    description={t('channel.private.description')}
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                    disabled={saving}
+                                />
+                            )}
                         />
                         {isPrivate ? (
-                            <ViewRolesPicker
-                                server={server}
-                                selected={viewRoleIds}
-                                onChange={setViewRoleIds}
-                                editing
-                                disabled={saving}
+                            <Controller
+                                control={control}
+                                name='viewRoleIds'
+                                render={({ field }) => (
+                                    <ViewRolesPicker
+                                        server={server}
+                                        selected={field.value}
+                                        onChange={field.onChange}
+                                        editing
+                                        disabled={saving}
+                                    />
+                                )}
                             />
                         ) : null}
 

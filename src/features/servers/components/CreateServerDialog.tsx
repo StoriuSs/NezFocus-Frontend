@@ -1,7 +1,11 @@
 import '@/i18n/servers'
-import { useEffect, useRef, useState, type DragEvent, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
+import { Controller, useForm, useWatch } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import * as z from 'zod'
+import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import { Hash, ImagePlus, LampDesk, Loader2, OctagonX } from 'lucide-react'
 import { FormField } from '@/components/form/FormField'
@@ -41,6 +45,14 @@ import { JoinByCode } from './invites/JoinByCode'
 
 type Problem = 'maxServers' | 'offline' | 'failed'
 
+const createSchema = (t: TFunction<'servers'>) =>
+    z.object({
+        template: z.custom<ServerTemplate>(),
+        name: z.string().refine(isServerName, t('create.name.invalid'))
+    })
+
+type Values = z.infer<ReturnType<typeof createSchema>>
+
 /**
  * "Create a server" (S-SRV-01): a template, an optional square picture, and
  * a name. Created, the server joins the end of the rail and its first text
@@ -61,15 +73,25 @@ export default function CreateServerDialog() {
     const servers = useServers()
     const atMax = (servers.data?.length ?? 0) >= MAX_SERVERS
 
-    const [template, setTemplate] = useState<ServerTemplate>(initialTemplate)
-    const [name, setName] = useState('')
-    const [nameInvalid, setNameInvalid] = useState(false)
+    const schema = useMemo(() => createSchema(t), [t])
+    const {
+        control,
+        handleSubmit,
+        setError,
+        clearErrors,
+        setFocus,
+        formState: { errors, isSubmitting: creating }
+    } = useForm<Values>({
+        resolver: zodResolver(schema),
+        // The error goes as they type and is checked again on the next click only.
+        reValidateMode: 'onSubmit',
+        defaultValues: { template: initialTemplate, name: '' }
+    })
+    const name = useWatch({ control, name: 'name' })
     const [icon, setIcon] = useState<{ blob: Blob; url: string } | null>(null)
     const [chosen, setChosen] = useState<string | null>(null)
     const [iconRefused, setIconRefused] = useState<ImageProblem | null>(null)
     const [problem, setProblem] = useState<Problem | null>(atMax ? 'maxServers' : null)
-    const [creating, setCreating] = useState(false)
-    const nameInput = useRef<HTMLInputElement>(null)
     const fileInput = useRef<HTMLInputElement>(null)
     const chooseButton = useRef<HTMLButtonElement>(null)
 
@@ -95,18 +117,13 @@ export default function CreateServerDialog() {
         if (!creating) choose(event.dataTransfer.files[0])
     }
 
-    async function submit(event: FormEvent) {
-        event.preventDefault()
-        if (creating || atMax) return
-        if (!isServerName(name)) {
-            setNameInvalid(true)
-            nameInput.current?.focus()
-            return
-        }
+    const send = handleSubmit(async (values) => {
         setProblem(null)
-        setCreating(true)
         try {
-            const server = await create.mutateAsync({ name: normaliseServerName(name), template })
+            const server = await create.mutateAsync({
+                name: normaliseServerName(values.name),
+                template: values.template
+            })
             if (icon) {
                 await saveNewServerIcon(queryClient, server, icon.blob, {
                     failed: t('create.iconFailed', { name: server.name }),
@@ -119,14 +136,11 @@ export default function CreateServerDialog() {
         } catch (error) {
             const type = getApiErrorType(error)
             if (type === 'MAX_SERVERS_REACHED') setProblem('maxServers')
-            else if (type === 'VALIDATION_ERROR') {
-                setNameInvalid(true)
-                nameInput.current?.focus()
-            } else setProblem(type === NETWORK_ERROR ? 'offline' : 'failed')
-        } finally {
-            setCreating(false)
+            else if (type === 'VALIDATION_ERROR')
+                setError('name', { message: t('create.name.invalid') }, { shouldFocus: true })
+            else setProblem(type === NETWORK_ERROR ? 'offline' : 'failed')
         }
-    }
+    })
 
     const dirty = name.trim() !== '' || icon !== null
     const submitButton = (
@@ -150,14 +164,23 @@ export default function CreateServerDialog() {
                 onOpenAutoFocus={(event) => {
                     event.preventDefault()
                     // Opened on "Join with an invite code": its field takes the focus itself.
-                    if (!joining) nameInput.current?.focus()
+                    if (!joining) setFocus('name')
                 }}
                 // A click on the scrim keeps what was typed or chosen (C-14).
                 onInteractOutside={(event) => (dirty || creating || joining) && event.preventDefault()}
                 onEscapeKeyDown={(event) => creating && event.preventDefault()}
             >
                 {joining ? <JoinByCode onBack={() => setJoining(false)} onClose={hide} /> : null}
-                <form hidden={joining} onSubmit={(event) => void submit(event)} className='space-y-5' noValidate>
+                <form
+                    hidden={joining}
+                    onSubmit={(event) => {
+                        // At 100 servers the name has nothing to fix: no check, nothing sent.
+                        if (atMax) return event.preventDefault()
+                        void send(event)
+                    }}
+                    className='space-y-5'
+                    noValidate
+                >
                     <DialogHeader>
                         <DialogTitle>{t('create.title')}</DialogTitle>
                         <DialogDescription>{t('create.description')}</DialogDescription>
@@ -167,26 +190,32 @@ export default function CreateServerDialog() {
                     ) : null}
 
                     <div className='space-y-2'>
-                        <OptionCards
-                            label={t('create.templates')}
-                            value={template}
-                            onChange={setTemplate}
-                            disabled={creating}
-                            options={[
-                                {
-                                    value: 'study',
-                                    icon: LampDesk,
-                                    title: t('create.study.title'),
-                                    tag: t('create.study.tag'),
-                                    description: t('create.study.description')
-                                },
-                                {
-                                    value: 'standard',
-                                    icon: Hash,
-                                    title: t('create.standard.title'),
-                                    description: t('create.standard.description')
-                                }
-                            ]}
+                        <Controller
+                            control={control}
+                            name='template'
+                            render={({ field }) => (
+                                <OptionCards
+                                    label={t('create.templates')}
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                    disabled={creating}
+                                    options={[
+                                        {
+                                            value: 'study',
+                                            icon: LampDesk,
+                                            title: t('create.study.title'),
+                                            tag: t('create.study.tag'),
+                                            description: t('create.study.description')
+                                        },
+                                        {
+                                            value: 'standard',
+                                            icon: Hash,
+                                            title: t('create.standard.title'),
+                                            description: t('create.standard.description')
+                                        }
+                                    ]}
+                                />
+                            )}
                         />
                         <p className='text-label text-text-tertiary'>{t('create.note')}</p>
                     </div>
@@ -262,7 +291,8 @@ export default function CreateServerDialog() {
 
                     <FormField
                         label={t('create.name.label')}
-                        error={nameInvalid ? t('create.name.invalid') : undefined}
+                        // Put into words here, so a language changed meanwhile shows at once.
+                        error={errors.name ? t('create.name.invalid') : undefined}
                         action={
                             <span
                                 className={cn(
@@ -276,19 +306,28 @@ export default function CreateServerDialog() {
                             </span>
                         }
                     >
-                        {(field) => (
-                            <Input
-                                ref={nameInput}
-                                {...field}
-                                value={name}
-                                readOnly={creating}
-                                placeholder={t('create.name.placeholder')}
-                                autoComplete='off'
-                                onChange={(event) => {
-                                    // Typing stops at the limit, counted as the API counts.
-                                    setName([...event.target.value].slice(0, SERVER_NAME_MAX_LENGTH).join(''))
-                                    setNameInvalid(false)
-                                }}
+                        {(wiring) => (
+                            <Controller
+                                control={control}
+                                name='name'
+                                render={({ field }) => (
+                                    <Input
+                                        {...wiring}
+                                        ref={field.ref}
+                                        value={field.value}
+                                        onBlur={field.onBlur}
+                                        readOnly={creating}
+                                        placeholder={t('create.name.placeholder')}
+                                        autoComplete='off'
+                                        onChange={(event) => {
+                                            // Typing stops at the limit, counted as the API counts.
+                                            field.onChange(
+                                                [...event.target.value].slice(0, SERVER_NAME_MAX_LENGTH).join('')
+                                            )
+                                            clearErrors('name')
+                                        }}
+                                    />
+                                )}
                             />
                         )}
                     </FormField>

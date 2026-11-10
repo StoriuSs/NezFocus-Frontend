@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useEffect, useRef } from 'react'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { Toaster } from 'sonner'
@@ -206,5 +206,59 @@ describe('Create a server (S-SRV-01)', () => {
         await userEvent.type(nameField(), ' 2')
         await userEvent.click(submit())
         expect(await screen.findByText('You need a connection to create or join a server')).toBeVisible()
+    })
+
+    it('takes the name error away as soon as they type, and checks again only on the next click', async () => {
+        renderDialog()
+        await userEvent.click(await screen.findByRole('button', { name: 'Create server' }))
+        expect(screen.getByRole('alert')).toHaveTextContent('A server name needs 2–100 characters')
+        await userEvent.type(nameField(), 'Ô')
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+        await userEvent.click(submit())
+        expect(screen.getByRole('alert')).toHaveTextContent('A server name needs 2–100 characters')
+    })
+
+    it('says the name error in the language chosen while it is shown', async () => {
+        renderDialog()
+        await userEvent.click(await screen.findByRole('button', { name: 'Create server' }))
+        expect(screen.getByRole('alert')).toHaveTextContent('A server name needs 2–100 characters')
+        await act(() => i18n.changeLanguage('vi'))
+        expect(screen.getByRole('alert')).toHaveTextContent('Tên server cần 2–100 ký tự')
+    })
+
+    it('stops the name at 100 characters, a paste over it too', async () => {
+        renderDialog()
+        await userEvent.click(await screen.findByRole('textbox', { name: 'Server name' }))
+        await userEvent.paste('ô'.repeat(120))
+        expect(nameField()).toHaveValue('ô'.repeat(100))
+        expect(screen.getByText('100/100')).toBeVisible()
+    })
+
+    it('puts a name the API refuses under the field, with the focus back in it', async () => {
+        renderDialog()
+        await userEvent.type(await screen.findByRole('textbox', { name: 'Server name' }), 'Ôn thi')
+        serversApi.createServer.mockRejectedValueOnce(apiError(400, 'VALIDATION_ERROR'))
+        await userEvent.click(submit())
+        expect(await screen.findByRole('alert')).toHaveTextContent('A server name needs 2–100 characters')
+        expect(nameField()).toHaveFocus()
+    })
+
+    it('sends once while the server is being created, Enter in the name included', async () => {
+        serversApi.createServer.mockReturnValue(new Promise(() => {}))
+        renderDialog()
+        await userEvent.type(await screen.findByRole('textbox', { name: 'Server name' }), 'Ôn thi')
+        await userEvent.click(submit())
+        await waitFor(() => expect(nameField()).toHaveAttribute('readonly'))
+        expect(submit()).toBeDisabled()
+        await userEvent.type(nameField(), '{Enter}')
+        expect(serversApi.createServer).toHaveBeenCalledTimes(1)
+    })
+
+    it('at 100 servers, an empty name gets no error either: there is nothing to fix', async () => {
+        renderDialog(100)
+        await screen.findByText(/You are in 100 servers/)
+        await userEvent.click(submit())
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+        expect(serversApi.createServer).not.toHaveBeenCalled()
     })
 })

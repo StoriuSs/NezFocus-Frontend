@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
@@ -517,5 +517,86 @@ describe('A change to something deleted meanwhile reads the server list again (N
         await run()
         expect(await screen.findByText('This channel or category was just deleted')).toBeInTheDocument()
         await waitFor(() => expect(serversApi.fetchServers).toHaveBeenCalledTimes(2))
+    })
+})
+
+describe('The error under a channel name', () => {
+    beforeEach(async () => {
+        await i18n.changeLanguage('en')
+        vi.clearAllMocks()
+    })
+    afterEach(() => useChannelDialogs.getState().hide())
+
+    const create = () => screen.getByRole('button', { name: 'Create channel' })
+
+    it('goes as they type, change the type or the category, and is checked again on the next click only', async () => {
+        useChannelDialogs.getState().show({ kind: 'createChannel', serverId: 'ot', categoryId: 'info', type: 'text' })
+        renderDialogs()
+        const name = await screen.findByRole('textbox', { name: 'Channel name' })
+        await userEvent.type(name, 'Tai lieu')
+        await userEvent.click(create())
+        expect(screen.getByRole('alert')).toHaveTextContent('THÔNG TIN already has a channel #tai-lieu')
+        expect(name).toHaveFocus()
+
+        // Back to the clashing name: no error until the next click.
+        await userEvent.type(name, 'x{backspace}')
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+        await userEvent.click(create())
+        expect(screen.getByRole('alert')).toBeInTheDocument()
+
+        await userEvent.click(screen.getByRole('radio', { name: /Voice room/ }))
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+        await userEvent.click(screen.getByRole('radio', { name: /Text channel/ }))
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+        await userEvent.click(create())
+        expect(screen.getByRole('alert')).toBeInTheDocument()
+
+        fireEvent.change(document.querySelector('select')!, { target: { value: 'rooms' } })
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+        expect(layoutApi.createChannel).not.toHaveBeenCalled()
+    })
+
+    it('in the channel settings, goes as they type and puts the focus in the name', async () => {
+        useChannelDialogs.getState().show({ kind: 'channelSettings', serverId: 'ot', channelId: 'chao-mung' })
+        renderDialogs()
+        const name = await screen.findByRole('textbox', { name: 'Channel name' })
+        await userEvent.clear(name)
+        await userEvent.type(name, 'Hoi dap')
+        await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+        expect(screen.getByRole('alert')).toHaveTextContent('THÔNG TIN already has a channel #hoi-dap')
+        expect(name).toHaveFocus()
+        await userEvent.type(name, 'x{backspace}')
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+        expect(layoutApi.updateChannel).not.toHaveBeenCalled()
+    })
+
+    it('sends once while it is out, Enter in the name included', async () => {
+        layoutApi.createChannel.mockReturnValue(new Promise(() => {}))
+        layoutApi.updateChannel.mockReturnValue(new Promise(() => {}))
+        useChannelDialogs.getState().show({ kind: 'createChannel', serverId: 'ot', categoryId: null, type: 'text' })
+        renderDialogs()
+        const name = await screen.findByRole('textbox', { name: 'Channel name' })
+        await userEvent.type(name, 'moi')
+        await userEvent.click(create())
+        await waitFor(() => expect(name).toHaveAttribute('readonly'))
+        expect(create()).toBeDisabled()
+        await userEvent.type(name, '{Enter}')
+        expect(layoutApi.createChannel).toHaveBeenCalledTimes(1)
+
+        useChannelDialogs.getState().show({ kind: 'channelSettings', serverId: 'ot', channelId: 'hoi-dap' })
+        const settingsName = await screen.findByRole('textbox', { name: 'Channel name' })
+        await userEvent.type(settingsName, '-2')
+        await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+        await waitFor(() => expect(settingsName).toHaveAttribute('readonly'))
+        await userEvent.type(settingsName, '{Enter}')
+        expect(layoutApi.updateChannel).toHaveBeenCalledTimes(1)
+    })
+
+    it('stops the name at 100 characters', async () => {
+        useChannelDialogs.getState().show({ kind: 'createChannel', serverId: 'ot', categoryId: null, type: 'text' })
+        renderDialogs()
+        await userEvent.click(await screen.findByRole('textbox', { name: 'Channel name' }))
+        await userEvent.paste('a'.repeat(120))
+        expect(screen.getByRole('textbox', { name: 'Channel name' })).toHaveValue('a'.repeat(100))
     })
 })

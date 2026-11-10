@@ -1,5 +1,8 @@
 import '@/i18n/servers'
 import { useId, useState, type ReactNode } from 'react'
+import { Controller, useForm, useWatch } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import * as z from 'zod'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
@@ -46,6 +49,9 @@ function failureOf(error: unknown): Failure {
     if (refusedRule(error) === 'target_admin') return 'admin'
     return 'failed'
 }
+
+/** Only `failed` leaves something to retry: the button stays off, and Ctrl + Enter with it. */
+const stopsSending = (failure: Failure | null) => failure !== null && failure !== 'failed'
 
 /** "Lý do (không bắt buộc)" with 0/512, and "Khánh sẽ thấy lý do này." under it; Ctrl + Enter sends. */
 function ReasonField({
@@ -123,7 +129,7 @@ function ModerationDialog({
     onClose: () => void
 }) {
     const { t } = useTranslation('servers')
-    const blocked = failure !== null && failure !== 'failed'
+    const blocked = stopsSending(failure)
     return (
         <Dialog open onOpenChange={(open) => !open && !pending && onClose()}>
             {/* Tạm khóa is a `form` dialog, 520, for its six lengths; Mời ra and Cấm are `simple`, 440 (04 › Hộp thoại). */}
@@ -153,6 +159,11 @@ function ModerationDialog({
     )
 }
 
+/** A length from the list and a reason the field already stops at 512: nothing to refuse. */
+const timeoutSchema = z.object({ seconds: z.custom<TimeoutSeconds>(), reason: z.string() })
+
+type TimeoutValues = z.infer<typeof timeoutSchema>
+
 /**
  * Tạm khóa (S-SET-03 `timeout-dialog`, Q8): six lengths, 1 hour first, "Hết
  * lúc …" for the one chosen, an optional reason. On someone timed out it
@@ -164,26 +175,33 @@ function TimeoutDialog({ serverId, member, onClose }: { serverId: string; member
     // Read only: the AppShell loads the account's settings as the app opens.
     const timeZone = useQuery<UserSettings>({ queryKey: userKeys.settings(), enabled: false }).data?.timezone
     const timeout = useTimeoutMember(serverId)
-    const [seconds, setSeconds] = useState<TimeoutSeconds>(DEFAULT_TIMEOUT)
-    const [reason, setReason] = useState('')
+    const { control, handleSubmit } = useForm<TimeoutValues>({
+        resolver: zodResolver(timeoutSchema),
+        defaultValues: { seconds: DEFAULT_TIMEOUT, reason: '' }
+    })
+    const seconds = useWatch({ control, name: 'seconds' })
     const [failure, setFailure] = useState<Failure | null>(null)
     const name = memberName(member)
     const lengthId = useId()
     const ends = endsAt(new Date(now.getTime() + seconds * 1000), now, i18n.language, timeZone)
 
-    function submit() {
-        if (timeout.isPending) return
+    // The callbacks of mutate(), as Mời ra and Cấm: a dialog gone meanwhile says nothing.
+    const send = handleSubmit((values) => {
         setFailure(null)
         timeout.mutate(
-            { userId: member.userId, seconds, reason: reason.trim() || null },
+            { userId: member.userId, seconds: values.seconds, reason: values.reason.trim() || null },
             {
                 onSuccess: () => {
-                    toast(t('members.toast.timedOut', { name, length: t(`members.lengths.${seconds}`) }))
+                    toast(t('members.toast.timedOut', { name, length: t(`members.lengths.${values.seconds}`) }))
                     onClose()
                 },
                 onError: (error) => setFailure(failureOf(error))
             }
         )
+    })
+    // Ctrl + Enter in the reason sends too: not while one is out, nor what the button keeps off.
+    const submit = () => {
+        if (!timeout.isPending && !stopsSending(failure)) void send()
     }
 
     return (
@@ -200,14 +218,20 @@ function TimeoutDialog({ serverId, member, onClose }: { serverId: string; member
         >
             <div className='grid gap-2'>
                 <Label id={lengthId}>{t('members.dialog.length')}</Label>
-                <SegmentedControl
-                    aria-labelledby={lengthId}
-                    value={String(seconds)}
-                    onValueChange={(value) => setSeconds(Number(value) as TimeoutSeconds)}
-                    segments={TIMEOUT_SECONDS.map((length) => ({
-                        value: String(length),
-                        label: t(`members.lengths.${length}`)
-                    }))}
+                <Controller
+                    control={control}
+                    name='seconds'
+                    render={({ field }) => (
+                        <SegmentedControl
+                            aria-labelledby={lengthId}
+                            value={String(field.value)}
+                            onValueChange={(value) => field.onChange(Number(value) as TimeoutSeconds)}
+                            segments={TIMEOUT_SECONDS.map((length) => ({
+                                value: String(length),
+                                label: t(`members.lengths.${length}`)
+                            }))}
+                        />
+                    )}
                 />
                 <p className='text-label text-text-secondary'>
                     {ends.date
@@ -215,7 +239,13 @@ function TimeoutDialog({ serverId, member, onClose }: { serverId: string; member
                         : t('members.dialog.endsToday', { time: ends.time })}
                 </p>
             </div>
-            <ReasonField name={name} value={reason} onChange={setReason} onSubmit={submit} />
+            <Controller
+                control={control}
+                name='reason'
+                render={({ field }) => (
+                    <ReasonField name={name} value={field.value} onChange={field.onChange} onSubmit={submit} />
+                )}
+            />
         </ModerationDialog>
     )
 }
@@ -241,7 +271,7 @@ function RemoveDialog({
     const name = memberName(member)
 
     function submit() {
-        if (action.isPending) return
+        if (action.isPending || stopsSending(failure)) return
         setFailure(null)
         action.mutate(
             { userId: member.userId, reason: reason.trim() || null },

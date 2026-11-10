@@ -254,6 +254,51 @@ describe('Invite friends (S-SRV-02)', () => {
         expect(screen.getByText('Expires in 1 day · up to 10 uses')).toBeInTheDocument()
     })
 
+    it('starts the settings from the link shown each time, Esc going back to the link', async () => {
+        invitesApi.createInvite.mockResolvedValue(invite())
+        open()
+        await screen.findByRole('textbox', { name: 'Invite link' })
+
+        await userEvent.click(screen.getByRole('button', { name: 'Change settings' }))
+        fireEvent.change(document.querySelectorAll('select')[0]!, { target: { value: '86400' } })
+        expect(screen.getByRole('combobox', { name: 'Expire after' })).toHaveTextContent('1 day')
+        await userEvent.keyboard('{Escape}')
+        expect(await screen.findByRole('textbox', { name: 'Invite link' })).toBeInTheDocument()
+        expect(screen.getByRole('dialog')).toBeInTheDocument()
+
+        await userEvent.click(screen.getByRole('button', { name: 'Change settings' }))
+        expect(screen.getByRole('combobox', { name: 'Expire after' })).toHaveTextContent('7 days')
+        expect(invitesApi.createInvite).toHaveBeenCalledTimes(1)
+    })
+
+    it('keeps changed settings on a click outside, and closes on one when nothing changed', async () => {
+        invitesApi.createInvite.mockResolvedValue(invite())
+        open()
+        await screen.findByRole('textbox', { name: 'Invite link' })
+        await userEvent.click(screen.getByRole('button', { name: 'Change settings' }))
+        fireEvent.change(document.querySelectorAll('select')[1]!, { target: { value: '10' } })
+        fireEvent.pointerDown(document.body)
+        expect(screen.getByRole('dialog')).toBeInTheDocument()
+
+        fireEvent.change(document.querySelectorAll('select')[1]!, { target: { value: 'unlimited' } })
+        fireEvent.pointerDown(document.body)
+        await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    })
+
+    it('keeps the settings asked for when that link could not be made, and a click outside then closes', async () => {
+        invitesApi.createInvite.mockResolvedValueOnce(invite()).mockRejectedValueOnce(new AxiosError('offline'))
+        open()
+        await screen.findByRole('textbox', { name: 'Invite link' })
+        await userEvent.click(screen.getByRole('button', { name: 'Change settings' }))
+        fireEvent.change(document.querySelectorAll('select')[0]!, { target: { value: '86400' } })
+        await userEvent.click(screen.getByRole('button', { name: 'Create a new link' }))
+        await waitFor(() => expect(invitesApi.createInvite).toHaveBeenCalledTimes(2))
+        expect(await screen.findByRole('button', { name: 'Create a new link' })).toBeEnabled()
+        expect(screen.getByRole('combobox', { name: 'Expire after' })).toHaveTextContent('1 day')
+        fireEvent.pointerDown(document.body)
+        await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    })
+
     it('revokes its link at once, then offers a new one', async () => {
         invitesApi.createInvite.mockResolvedValueOnce(invite()).mockResolvedValueOnce(invite({ code: 'Zz9wQ2pe' }))
         invitesApi.revokeInvite.mockResolvedValue(undefined)
