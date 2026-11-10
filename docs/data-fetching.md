@@ -113,10 +113,31 @@ both right: a link revoked from the invite panel leaves the Invites page too,
 because both call `useRevokeInvite` (M1 › R1 found the panel calling
 `revokeInvite` directly). When adding a mutation, list the query keys whose
 answer it changes and update each one in the hook, including the error that
-means "already done" (`INVITE_INVALID` on a revoke). A test renders the two
-screens over one query client and checks the second. (Some servers
-components still call `layout.api.ts` and `rememberServer` themselves; M1 ›
-R3 moves them into hooks, after which a lint rule keeps it so.)
+means "already done" (`INVITE_INVALID` on a revoke, `NOT_FOUND_ERROR` on a
+change to a channel deleted meanwhile, which reads the list again). The test
+of an action reachable from two screens renders both over one query client
+and checks the second; the test of one reachable from one screen reads the
+cached list after the save, as the channel dialogs' tests do.
+
+A lint rule keeps it so: a feature's `components/` and `pages/` may not
+import a value from a `*.api.ts` file or the API client (`@/lib/api`), only
+types (`@typescript-eslint/no-restricted-imports` in `eslint.config.js`, M1 ›
+R3). It does not see a request function re-exported through a feature's
+`index.ts`, so keep those out of it. A look-up that runs on a click rather
+than on render is a hook too: `useLookUpInvite`
+(`src/features/servers/api/useInvites.ts`) returns a function around
+`queryClient.fetchQuery`, under the invite page's key. The sign-in pages are
+outside the rule, named one by one: they call `authApi` or the store
+themselves, since what follows is the session
+([auth/forms-and-errors.md](./auth/forms-and-errors.md#how-an-auth-form-is-built));
+the account settings page is held by it.
+
+One piece of work outlives any screen, and so is not a hook: removing an
+avatar waits out the toast's **Undo**, then still runs if the page closed,
+the tab was closed or the user signed out. `removeAvatarWithUndo`
+(`src/features/users/lib/avatar-removal.ts`) calls the API and updates the
+profile's cache itself, from the feature's `lib/`, which the rule does not
+hold.
 
 The auth store writes the profile into this same entry at sign-in
 (`queryClient.setQueryData(userKeys.profile(), profile)`), so your menu, the
@@ -219,9 +240,20 @@ switch or choice saves on its own and shows at once:
   same change. That toast replaces the app's generic one, so the mutation
   sets `meta: { errorToast: false }` (without it a failed save showed two).
 
+A drag in the channel list saves the same way: `useMoveInLayout`
+(`src/features/servers/api/useChannelLayout.ts`) shows the move, puts the
+list back and offers **Try again** if it is refused, and reads the list
+again when it was refused for being made on an old one (`stale_move`). So
+does the welcome channel (`useChooseWelcomeChannel` in
+`useServerSettings.ts`). Both take the server in the mutation's variables,
+not as the hook's argument: **Try again** resends the variables of the
+failed attempt, while the hook's options follow the screen, which may show
+another server by then.
+
 The time zone is not optimistic: it asks first and can be refused for 24
 hours, so `TimeZoneSetting` (`src/features/users/components/`) saves it
-with its own mutation. A `429` with `data.reason: "timezone"` (changed from
+with its own mutation, `useUpdateTimeZone`
+(`src/features/users/api/useUpdateTimeZone.ts`). A `429` with `data.reason: "timezone"` (changed from
 another tab or device meanwhile) reads the settings again, so the page shows
 the lock, with no toast (it also sets `meta: { errorToast: false }`).
 

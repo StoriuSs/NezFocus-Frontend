@@ -113,6 +113,46 @@ export default defineConfig([
             'no-restricted-imports': ['error', { patterns: [...otherFeatures(self), IDEMPOTENCY_KEY_BAN] }]
         }
     })),
+    // A component or page reads and writes through a hook in its feature's
+    // api/ folder, which keeps the cache right for every screen
+    // (docs/data-fetching.md › Query keys; M1 › R3 moved the last ones).
+    // Its own rule name, so the patterns above still hold here. Types may
+    // still come from a *.api.ts file or the API client. Outside it: the
+    // sign-in pages, which call authApi or the store themselves, since the
+    // store owns the session (docs/auth/forms-and-errors.md, step 4); the
+    // account settings page (Settings.tsx) is held.
+    {
+        files: ['src/features/*/components/**/*.{ts,tsx}', 'src/features/*/pages/**/*.{ts,tsx}'],
+        ignores: [
+            ...['SignIn', 'Register', 'Verify', 'Welcome', 'ForgotPassword', 'ResetPassword', 'OAuthCallback'].map(
+                (page) => `src/features/auth/pages/${page}.tsx`
+            ),
+            '**/__tests__/**'
+        ],
+        rules: {
+            '@typescript-eslint/no-restricted-imports': [
+                'error',
+                {
+                    paths: [
+                        {
+                            name: '@/lib/api',
+                            allowTypeImports: true,
+                            message:
+                                "Call the API through a hook in the feature's api/ folder, which updates the cache (docs/data-fetching.md › Query keys)."
+                        }
+                    ],
+                    patterns: [
+                        {
+                            regex: '/api/[^/]+\\.api$',
+                            allowTypeImports: true,
+                            message:
+                                "Call the API through a hook in the feature's api/ folder, which updates the cache (docs/data-fetching.md › Query keys)."
+                        }
+                    ]
+                }
+            ]
+        }
+    },
     // The one exception (CONSTRAINTS.md › Ngoại lệ E1): "Try again" on a new
     // server's picture runs from a toast after the dialog has closed, so the
     // key travels with the retry (useCreateServer.ts › saveNewServerIcon).

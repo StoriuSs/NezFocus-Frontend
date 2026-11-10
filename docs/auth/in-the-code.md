@@ -37,7 +37,7 @@ src/features/auth/
 │                          useDeleteAccount
 ├── hooks/
 │   ├── useOAuthProviders.ts   the providers both the API and this app know
-│   └── useCodeReset.ts    a new password with an emailed code (the reset page and the change-password dialog)
+│   └── useCodeReset.ts    a new password with an emailed code (the reset page and the change-password dialog); the Sessions list reads again after
 ├── lib/
 │   ├── paths.ts           the pages' paths; safeNext(), withFlow(), afterSignIn()
 │   ├── access-token.ts    the access token, in memory

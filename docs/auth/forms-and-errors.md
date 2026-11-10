@@ -57,7 +57,10 @@ Every auth form follows the same pattern:
    `api/` (`useChangePassword`, `useDeleteAccount`), as the users feature
    does, with `mutateAsync`; its code mode calls `authApi` like the reset
    page, through `useCodeReset`. The button is disabled while the request is
-   out.
+   out. These pages are why the lint rule that keeps components and pages
+   off `*.api.ts` names them in its `ignores`
+   ([../data-fetching.md](../data-fetching.md#query-keys)); the components
+   and the account settings page are held by it.
 5. **On a refusal**, the page calls `requestFailure(error)`
    ([form-problem.ts](../../src/features/auth/lib/form-problem.ts)), on the
    auth pages and in every dialog, and decides where to show what it returns
