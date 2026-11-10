@@ -154,6 +154,31 @@ describe('The channel list for whoever manages channels (S-SRV-04, S-SRV-06)', (
         expect(names('info')).toEqual(['chao-mung', 'tai-lieu', 'hoi-dap'])
     })
 
+    it('opens a server with the categories folded in this browser before', async () => {
+        localStorage.setItem('nezfocus:folded-categories:ot', JSON.stringify(['info']))
+        renderColumn(server(MANAGER))
+        expect(await screen.findByRole('button', { name: 'Thông tin' })).toHaveAttribute('aria-expanded', 'false')
+        expect(names('info')).toEqual(['chao-mung'])
+    })
+
+    it('still folds a category when the browser refuses storage', async () => {
+        const denied = () => {
+            throw new DOMException('Storage is blocked', 'SecurityError')
+        }
+        const getItem = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(denied)
+        const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(denied)
+        try {
+            renderColumn(server(MANAGER))
+            const heading = await screen.findByRole('button', { name: 'Thông tin' })
+            await userEvent.click(heading)
+            expect(heading).toHaveAttribute('aria-expanded', 'false')
+            expect(names('info')).toEqual(['chao-mung'])
+        } finally {
+            getItem.mockRestore()
+            setItem.mockRestore()
+        }
+    })
+
     it('moves a channel from the keyboard: Space lifts, arrows move, Space drops; the list changes at once', async () => {
         let resolve!: (value: Server) => void
         layoutApi.moveInLayout.mockReturnValue(new Promise<Server>((r) => (resolve = r)))

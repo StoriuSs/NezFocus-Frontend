@@ -1,3 +1,4 @@
+import { timeIn, wallClock } from '@/lib/time-zones'
 import { can } from './permissions'
 import { holdsAllOf, roleLock } from './roles'
 import type { Role, Server, ServerMember } from '../types'
@@ -115,8 +116,10 @@ export function endsAt(
     language: string,
     timeZone?: string
 ): { time: string; date: string | null } {
-    const day = (at: Date) => new Intl.DateTimeFormat('en-CA', { timeZone, dateStyle: 'short' }).format(at)
-    const time = new Intl.DateTimeFormat(language, { timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+    const dayOf = (at: Date) => {
+        const { year, month, day } = wallClock(at, timeZone)
+        return `${year}-${month}-${day}`
+    }
     const date = new Intl.DateTimeFormat(language, { timeZone, day: '2-digit', month: '2-digit' })
     // Day and month in the language's order, always joined by "/" (ICU writes "11-11" in Vietnamese).
     const dayMonth = date
@@ -124,7 +127,7 @@ export function endsAt(
         .filter((part) => part.type !== 'literal')
         .map((part) => part.value)
         .join('/')
-    return { time: time.format(end), date: day(end) === day(now) ? null : dayMonth }
+    return { time: timeIn(timeZone, end), date: dayOf(end) === dayOf(now) ? null : dayMonth }
 }
 
 /** A day as the tables show it: "01/10/2026". */

@@ -8,8 +8,8 @@ import { AUTH_PATHS, useAuthStore } from '@/features/auth'
 import { useInvitePreview } from '../api/useInvites'
 import { InviteCard } from '../components/invites/InviteCard'
 import { InviteNotice } from '../components/invites/InviteNotice'
-import { inviteProblem } from '../components/invites/invite-problem'
 import { useInviteDialogs } from '../invite-dialogs.store'
+import { inviteProblem } from '../lib/invite-problem'
 import { invitePath } from '../lib/paths'
 
 /**

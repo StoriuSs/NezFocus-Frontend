@@ -74,8 +74,11 @@ export function offsetMinutes(id: string, at: Date): number {
     return match[1] === '-' ? -minutes : minutes
 }
 
-/** The clock in zone `id` at `at`: "21:47", 24-hour in both languages (01-auth.md › S-ONB-01). */
-export function timeIn(id: string, at: Date): string {
+/**
+ * The clock in zone `id` at `at`: "21:47", 24-hour in both languages
+ * (01-auth.md › S-ONB-01); in the browser's own zone when `id` is not given.
+ */
+export function timeIn(id: string | undefined, at: Date): string {
     return new Intl.DateTimeFormat('en-GB', {
         timeZone: id,
         hour: '2-digit',

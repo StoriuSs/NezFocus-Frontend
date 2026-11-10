@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Clock, CloudOff, Link2Off } from 'lucide-react'
 import { formatWait } from '@/features/auth'
-import type { InviteProblem } from './invite-problem'
+import type { InviteProblem } from '../../lib/invite-problem'
 
 /** Seconds left of a wait, counting down to 0. */
 export function useSecondsLeft(seconds: number): number {

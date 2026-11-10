@@ -1,12 +1,14 @@
 import { useCallback, useState } from 'react'
+import { safeLocalStorage } from '@/lib/safe-storage'
 
 const key = (serverId: string) => `nezfocus:folded-categories:${serverId}`
 
 function read(serverId: string): Set<string> {
     try {
-        const stored: unknown = JSON.parse(localStorage.getItem(key(serverId)) ?? '[]')
+        const stored: unknown = JSON.parse(safeLocalStorage.get(key(serverId)) ?? '[]')
         return new Set(Array.isArray(stored) ? stored.filter((id): id is string => typeof id === 'string') : [])
     } catch {
+        // Not JSON (written by hand, or by an older build): nothing folded.
         return new Set()
     }
 }
@@ -27,11 +29,7 @@ export function useFoldedCategories(serverId: string) {
                 const next = new Set(previous.folded)
                 if (folded) next.add(categoryId)
                 else next.delete(categoryId)
-                try {
-                    localStorage.setItem(key(previous.serverId), JSON.stringify([...next]))
-                } catch {
-                    // Storage refused (private window, quota): folded until reload.
-                }
+                safeLocalStorage.set(key(previous.serverId), JSON.stringify([...next]))
                 return { ...previous, folded: next }
             }),
         []

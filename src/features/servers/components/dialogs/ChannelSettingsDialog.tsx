@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { DoorOpen, Loader2, Trash2 } from 'lucide-react'
 import { FormMessage } from '@/components/form/FormMessage'
+import { SwitchRow } from '@/components/settings/SwitchRow'
 import { Button } from '@/components/ui/button'
 import {
     Dialog,
@@ -14,11 +15,10 @@ import {
 } from '@/components/ui/dialog'
 import { useUpdateChannel } from '../../api/useChannelLayout'
 import { storedName } from '../../lib/channel-layout'
+import { describeFailure, nameError, type LayoutFailure } from '../../lib/layout-messages'
 import type { Server, ServerChannel, UpdateChannelRequest } from '../../types'
 import { ChannelNameField } from './ChannelNameField'
-import { SwitchRow } from './CreateChannelDialog'
 import { DeleteChannelDialog } from './DeleteChannelDialog'
-import { describeFailure, nameError, type LayoutFailure } from './layout-errors'
 import { ViewRolesPicker } from './ViewRolesPicker'
 
 type SendMode = ServerChannel['sendMode']
@@ -180,11 +180,11 @@ export function ChannelSettingsDialog({
                         ) : null}
 
                         <SwitchRow
-                            id='channel-settings-private'
+                            className='items-start p-0'
                             label={t('channel.private.label')}
                             description={t('channel.private.description')}
                             checked={isPrivate}
-                            onChange={setIsPrivate}
+                            onCheckedChange={setIsPrivate}
                             disabled={saving}
                         />
                         {isPrivate ? (

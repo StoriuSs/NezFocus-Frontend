@@ -5,7 +5,7 @@ import { FormField } from '@/components/form/FormField'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { CHANNEL_NAME_MAX_LENGTH, nameLength, storedName } from '../../lib/channel-layout'
-import type { NameKind } from './layout-errors'
+import type { NameKind } from '../../lib/layout-messages'
 
 /**
  * The name of a channel, room or category (S-SRV-05, S-SET-05): a counter,

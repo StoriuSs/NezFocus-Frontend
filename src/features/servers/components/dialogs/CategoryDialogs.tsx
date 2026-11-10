@@ -16,9 +16,9 @@ import { WithTooltip } from '@/components/ui/tooltip'
 import { useCreateCategory, useDeleteCategory, useRenameCategory } from '../../api/useChannelLayout'
 import { clashingChannel, groupChannels, MAX_CHANNELS_AND_CATEGORIES, storedName } from '../../lib/channel-layout'
 import { layoutRule } from '../../lib/layout-error'
+import { describeFailure, nameError, type LayoutFailure } from '../../lib/layout-messages'
 import type { Server, ServerCategory } from '../../types'
 import { ChannelNameField } from './ChannelNameField'
-import { describeFailure, nameError, type LayoutFailure } from './layout-errors'
 
 const upper = (name: string) => name.toLocaleUpperCase('vi')
 

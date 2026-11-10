@@ -12,6 +12,7 @@ import { IconButton } from '@/components/ui/icon-button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { WithTooltip } from '@/components/ui/tooltip'
+import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { useMinuteClock } from '@/hooks/useMinuteClock'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/features/auth'
@@ -94,11 +95,10 @@ export function MembersSettings({ server }: { server: Server }) {
     const endTimeout = useTimeoutMember(server.id)
     const [acting, setActing] = useState<{ kind: Moderation; member: ServerMember } | null>(null)
 
+    const searched = useDebouncedValue(typed.trim(), TYPING_PAUSE_MS)
     useEffect(() => {
-        if (typed.trim() === list.q) return
-        const timer = setTimeout(() => list.change({ q: typed.trim() }), TYPING_PAUSE_MS)
-        return () => clearTimeout(timer)
-    }, [typed, list])
+        if (searched !== list.q) list.change({ q: searched })
+    }, [searched, list])
 
     // A page past the last (someone left meanwhile) goes to the last one.
     const totalPages = members.data?.meta.totalPages ?? 1

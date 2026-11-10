@@ -190,6 +190,17 @@ describe('Create a channel (S-SRV-05)', () => {
         })
     })
 
+    it('locks the switches while the room is being created', async () => {
+        layoutApi.createChannel.mockReturnValue(new Promise(() => {}))
+        useChannelDialogs.getState().show({ kind: 'createChannel', serverId: 'ot', categoryId: 'rooms', type: 'voice' })
+        renderDialogs()
+        await userEvent.type(await screen.findByRole('textbox', { name: 'Room name' }), 'Phòng ôn chương 3')
+        expect(screen.getByRole('switch', { name: 'Make it a study room' })).toBeEnabled()
+        await userEvent.click(screen.getByRole('button', { name: 'Create channel' }))
+        await waitFor(() => expect(screen.getByRole('switch', { name: 'Make it a study room' })).toBeDisabled())
+        expect(screen.getByRole('switch', { name: 'Private channel' })).toBeDisabled()
+    })
+
     it('ticks their highest role for a private channel, locks the all-powerful one, and warns when they would lose it', async () => {
         layoutApi.createChannel.mockResolvedValue({ id: 'new', server: OT })
         useChannelDialogs.getState().show({ kind: 'createChannel', serverId: 'ot', categoryId: 'info', type: 'text' })
@@ -279,6 +290,16 @@ describe('Channel settings (S-SET-05)', () => {
         await waitFor(() =>
             expect(layoutApi.updateChannel).toHaveBeenCalledWith('ot', 'hoi-dap', { sendMode: 'managers' })
         )
+    })
+
+    it('locks the private switch while the settings are being saved', async () => {
+        layoutApi.updateChannel.mockReturnValue(new Promise(() => {}))
+        useChannelDialogs.getState().show({ kind: 'channelSettings', serverId: 'ot', channelId: 'hoi-dap' })
+        renderDialogs()
+        await userEvent.click(await screen.findByRole('radio', { name: /Only message managers/ }))
+        expect(screen.getByRole('switch', { name: 'Private channel' })).toBeEnabled()
+        await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+        await waitFor(() => expect(screen.getByRole('switch', { name: 'Private channel' })).toBeDisabled())
     })
 
     it('marks the welcome channel, and refuses a rename onto another channel of the category', async () => {

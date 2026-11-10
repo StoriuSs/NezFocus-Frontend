@@ -149,4 +149,18 @@ describe('endsAt (04 Q8)', () => {
         // 23:30 in Hồ Chí Minh is already tomorrow.
         expect(endsAt(new Date('2026-11-10T17:30:00Z'), NOW, 'vi', zone).date).toBe('11/11')
     })
+
+    it('reads the clock and the day in the account’s zone, not the browser’s', () => {
+        // 03:30 UTC on the 11th is still the evening of the 10th in New York.
+        expect(endsAt(new Date('2026-11-11T03:30:00Z'), NOW, 'vi', 'America/New_York')).toEqual({
+            time: '22:30',
+            date: null
+        })
+    })
+
+    it('keeps a 24-hour clock in English, with the day and month in its order', () => {
+        const zone = 'Asia/Ho_Chi_Minh'
+        expect(endsAt(new Date('2026-11-12T14:05:00Z'), NOW, 'en', zone)).toEqual({ time: '21:05', date: '11/12' })
+        expect(endsAt(new Date('2026-11-12T14:05:00Z'), NOW, 'vi', zone).date).toBe('12/11')
+    })
 })

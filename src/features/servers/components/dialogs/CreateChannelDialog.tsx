@@ -4,19 +4,19 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Hash, Loader2, Volume2 } from 'lucide-react'
 import { FormMessage } from '@/components/form/FormMessage'
+import { SwitchRow } from '@/components/settings/SwitchRow'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { OptionCards } from '@/components/ui/option-cards'
 import { Select } from '@/components/ui/select'
-import { Switch } from '@/components/ui/switch'
 import { WithTooltip } from '@/components/ui/tooltip'
 import { useCreateChannel } from '../../api/useChannelLayout'
 import { MAX_CHANNELS_AND_CATEGORIES, storedName, type ChannelType } from '../../lib/channel-layout'
+import { describeFailure, nameError, type LayoutFailure } from '../../lib/layout-messages'
 import { channelPath } from '../../lib/paths'
 import { can } from '../../lib/permissions'
 import type { Server } from '../../types'
-import { describeFailure, nameError, type LayoutFailure } from './layout-errors'
 import { ChannelNameField } from './ChannelNameField'
 import { ViewRolesPicker } from './ViewRolesPicker'
 
@@ -206,21 +206,21 @@ export function CreateChannelDialog({
 
                         {type === 'voice' ? (
                             <SwitchRow
-                                id='create-channel-study'
+                                className='items-start p-0'
                                 label={t('channel.study.label')}
                                 description={t('channel.study.description')}
                                 checked={isStudyRoom}
-                                onChange={setIsStudyRoom}
+                                onCheckedChange={setIsStudyRoom}
                                 disabled={creating}
                             />
                         ) : null}
 
                         <SwitchRow
-                            id='create-channel-private'
+                            className='items-start p-0'
                             label={t('channel.private.label')}
                             description={t('channel.private.description')}
                             checked={isPrivate}
-                            onChange={setIsPrivate}
+                            onCheckedChange={setIsPrivate}
                             disabled={creating}
                         />
                         {isPrivate ? (
@@ -251,43 +251,5 @@ export function CreateChannelDialog({
                 </form>
             </DialogContent>
         </Dialog>
-    )
-}
-
-/** A Switch with its words (C-24): clicking the words flips it too. */
-export function SwitchRow({
-    id,
-    label,
-    description,
-    checked,
-    onChange,
-    disabled
-}: {
-    id: string
-    label: string
-    description: string
-    checked: boolean
-    onChange: (checked: boolean) => void
-    disabled?: boolean
-}) {
-    return (
-        <div className='flex items-start gap-4'>
-            <div className='min-w-0 flex-1'>
-                <label htmlFor={id} id={`${id}-label`} className='block text-body-sm font-medium text-text-primary'>
-                    {label}
-                </label>
-                <p id={`${id}-description`} className='text-label text-text-tertiary'>
-                    {description}
-                </p>
-            </div>
-            <Switch
-                id={id}
-                checked={checked}
-                onCheckedChange={onChange}
-                disabled={disabled}
-                aria-labelledby={`${id}-label`}
-                aria-describedby={`${id}-description`}
-            />
-        </div>
     )
 }

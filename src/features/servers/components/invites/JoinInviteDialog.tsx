@@ -9,9 +9,9 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useInvitePreview } from '../../api/useInvites'
 import { useServers } from '../../api/useServers'
 import { useInviteDialogs } from '../../invite-dialogs.store'
+import { inviteProblem, toastName } from '../../lib/invite-problem'
 import { channelAfterJoin, InviteJoin } from './InviteJoin'
 import { InviteNotice } from './InviteNotice'
-import { inviteProblem, toastName } from './invite-problem'
 
 /**
  * An invite opened while signed in (S-SRV-03 `signed-in`, D-81): a dialog

@@ -11,10 +11,10 @@ import { Input } from '@/components/ui/input'
 import { formatWait } from '@/features/auth'
 import { useLookUpInvite } from '../../api/useInvites'
 import { useServers } from '../../api/useServers'
+import { inviteProblem, toastName, type InviteProblem } from '../../lib/invite-problem'
 import { parseInviteInput } from '../../lib/invites'
 import type { InvitePreview } from '../../types'
 import { channelAfterJoin, InviteJoin } from './InviteJoin'
-import { inviteProblem, toastName, type InviteProblem } from './invite-problem'
 
 /** "← Back", the first row of a sub-step (C-34). */
 function Back({ onClick, label }: { onClick: () => void; label: string }) {

@@ -319,6 +319,9 @@ describe('Members (S-SET-03)', () => {
             )
         )
         expect(router.state.location.search).toBe('?q=dung')
+        // Only once typing stopped: no request for the letters on the way.
+        for (const partial of ['d', 'du', 'dun'])
+            expect(rolesApi.fetchMembers).not.toHaveBeenCalledWith('ot', expect.objectContaining({ q: partial }))
 
         await user.click(screen.getByRole('button', { name: 'Joined' }))
         await waitFor(() =>

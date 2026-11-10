@@ -17,9 +17,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useDeleteChannel } from '../../api/useChannelLayout'
 import { firstTextChannel } from '../../lib/channel-list'
+import { describeFailure } from '../../lib/layout-messages'
 import { channelPath } from '../../lib/paths'
 import type { Server, ServerChannel } from '../../types'
-import { describeFailure } from './layout-errors'
 
 /** Case and accents left out (C-14 `type-name`): "Viec-Nhom" confirms "việc-nhóm". */
 export const sameTyped = (typed: string, name: string) => {

@@ -1,8 +1,8 @@
 import type { TFunction } from 'i18next'
 import { getApiErrorType, NETWORK_ERROR } from '@/lib/api-error'
-import { clashingChannel, nameProblem, storedName, type ChannelType } from '../../lib/channel-layout'
-import { layoutRule } from '../../lib/layout-error'
-import type { Server } from '../../types'
+import { clashingChannel, nameProblem, storedName, type ChannelType } from './channel-layout'
+import { layoutRule } from './layout-error'
+import type { Server } from '../types'
 
 /** What the name is of: a text channel, a room, or a category. */
 export type NameKind = ChannelType | 'category'

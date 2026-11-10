@@ -264,11 +264,15 @@ field, never over it. "You have unsaved changes", **Discard changes** (calls
 ```
 
 **`SwitchRow`** (`src/components/settings/SwitchRow.tsx`; `label`,
-`description?`, `checked`, `onCheckedChange`): a settings row whose control
-is a [`Switch`](#switch). The label is a `<label>` for the switch, so
-clicking the words flips it too; the description is tied to it with
-`aria-describedby`. The switch saves on its own, with no save bar
-(Notifications, Privacy).
+`description?`, `checked`, `onCheckedChange`, `disabled?`, `className?`): a
+settings row whose control is a [`Switch`](#switch). The label is a
+`<label>` for the switch, so clicking the words flips it too; the
+description is tied to it with `aria-describedby`. On a settings page the
+switch saves on its own, with no save bar (Notifications, Privacy). Inside a
+dialog's form it is one field of the form (the channel dialogs, S-SRV-05):
+`disabled` while the form is sending, and `className='items-start p-0'`,
+because the form spaces its fields itself and the switch lines up with the
+label.
 
 ```tsx
 <SwitchRow
