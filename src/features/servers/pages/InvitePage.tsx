@@ -10,6 +10,7 @@ import { InviteCard } from '../components/invites/InviteCard'
 import { InviteNotice } from '../components/invites/InviteNotice'
 import { inviteProblem } from '../components/invites/invite-problem'
 import { useInviteDialogs } from '../invite-dialogs.store'
+import { invitePath } from '../lib/paths'
 
 /**
  * The query that carries an invite through signing up or in (01 › Lời mời
@@ -18,7 +19,7 @@ import { useInviteDialogs } from '../invite-dialogs.store'
  */
 function inviteFlow(code: string, channel: string | null): string {
     const query = new URLSearchParams({ invite: code })
-    if (channel) query.set('next', `/invite/${code}?${new URLSearchParams({ channel })}`)
+    if (channel) query.set('next', `${invitePath(code)}?${new URLSearchParams({ channel })}`)
     return query.toString()
 }
 

@@ -9,6 +9,7 @@ import { DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { WithTooltip } from '@/components/ui/tooltip'
 import { useAcceptInvite } from '../../api/useInvites'
 import { useServers } from '../../api/useServers'
+import { channelPath } from '../../lib/paths'
 import { MAX_SERVERS } from '../../lib/server-name'
 import type { InvitePreview, Server } from '../../types'
 import { InviteCard } from './InviteCard'
@@ -16,8 +17,8 @@ import { inviteProblem, toastName, type InviteProblem } from './invite-problem'
 
 /** Where joining lands: the link's channel when they now see it, else the server (its first text channel, 02). */
 export function channelAfterJoin(server: Server, channel: string | null): string {
-    const target = channel && server.channels.some((candidate) => candidate.id === channel) ? channel : null
-    return target ? `/channels/${server.id}/${target}` : `/channels/${server.id}`
+    const target = channel && server.channels.some((candidate) => candidate.id === channel) ? channel : undefined
+    return channelPath(server.id, target)
 }
 
 /**

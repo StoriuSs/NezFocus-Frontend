@@ -6,7 +6,8 @@ import '@/i18n/servers'
 import { PageLoader } from '@/components/PageLoader'
 import { ShellPage } from '@/components/shell/ShellPage'
 import { useServers } from '../api/useServers'
-import { isSettingsSection, serverSettingsPath, settingsSections } from '../lib/settings-sections'
+import { channelPath, serverSettingsPath } from '../lib/paths'
+import { isSettingsSection, settingsSections } from '../lib/settings-sections'
 import { InvitesSettings } from '../components/settings/InvitesSettings'
 import { BansSettings } from '../components/settings/members/BansSettings'
 import { MembersSettings } from '../components/settings/members/MembersSettings'
@@ -47,7 +48,7 @@ export default function ServerSettingsPage() {
 
     const sections = settingsSections(server)
     const first = sections[0]
-    if (!first) return <Lost to={`/channels/${server.id}`} message={t('servers:settings.lost.settings')} />
+    if (!first) return <Lost to={channelPath(server.id)} message={t('servers:settings.lost.settings')} />
     if (!section) return <Navigate to={serverSettingsPath(server.id, first)} replace />
     if (!isSettingsSection(section) || !sections.includes(section)) {
         return <Lost to={serverSettingsPath(server.id, first)} message={t('servers:settings.lost.section')} />

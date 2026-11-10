@@ -6,6 +6,7 @@ import { ShellPage } from '@/components/shell/ShellPage'
 import { EmptyState } from '@/components/ui/empty-state'
 import { useServers } from '../api/useServers'
 import { firstTextChannel } from '../lib/channel-list'
+import { channelPath } from '../lib/paths'
 
 /**
  * A channel of one of their servers. Opening a server without a channel, or a
@@ -30,7 +31,7 @@ export default function ChannelPage() {
     const channel = server.channels.find((candidate) => candidate.id === channelId)
     if (!channel) {
         const first = firstTextChannel(server)
-        if (first) return <Navigate to={`/channels/${server.id}/${first.id}`} replace />
+        if (first) return <Navigate to={channelPath(server.id, first.id)} replace />
         return <ShellPage title={server.name} />
     }
 

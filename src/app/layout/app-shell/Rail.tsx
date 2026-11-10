@@ -6,9 +6,11 @@ import { useTranslation } from 'react-i18next'
 import { WithTooltip } from '@/components/ui/tooltip'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import {
+    channelPath,
     hasServerMenu,
     ServerIcon,
     ServerMenuItems,
+    serverSettingsPath,
     useCreateServerDialog,
     useServers,
     type Server
@@ -41,7 +43,7 @@ const SQUIRCLE =
  */
 function ServerItem({ server }: { server: Server }) {
     const { pathname } = useLocation()
-    const isActive = pathname.startsWith(`/channels/${server.id}`) || pathname.startsWith(`/servers/${server.id}/`)
+    const isActive = pathname.startsWith(channelPath(server.id)) || pathname.startsWith(serverSettingsPath(server.id))
     const [menuOpen, setMenuOpen] = useState(false)
     const link = useRef<HTMLAnchorElement>(null)
     const withMenu = hasServerMenu(server)
@@ -52,7 +54,7 @@ function ServerItem({ server }: { server: Server }) {
             <WithTooltip label={server.name} side='right'>
                 <Link
                     ref={link}
-                    to={`/channels/${server.id}`}
+                    to={channelPath(server.id)}
                     aria-label={server.name}
                     aria-current={isActive ? 'page' : undefined}
                     aria-haspopup={withMenu ? 'menu' : undefined}

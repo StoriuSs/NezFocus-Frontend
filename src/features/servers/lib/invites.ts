@@ -1,4 +1,5 @@
 import type { Invite, InviteSettings } from '../types'
+import { invitePath } from './paths'
 
 /** What the API takes as a code (REQ-SRV-03). */
 export const INVITE_CODE = /^[A-Za-z0-9]{8,10}$/
@@ -29,7 +30,7 @@ export function parseInviteInput(text: string): { code: string; channel: string 
 
 /** The link to send: /invite/{code}, with `?channel=` for a room or a channel (D-150). */
 export function inviteLink(code: string, channel?: string | null): string {
-    const url = new URL(`/invite/${code}`, window.location.origin)
+    const url = new URL(invitePath(code), window.location.origin)
     if (channel) url.searchParams.set('channel', channel)
     return url.toString()
 }

@@ -65,6 +65,8 @@ const INVITE_CODE = /^[A-Za-z0-9]{8,10}$/
  */
 export function flowNext(params: URLSearchParams): string {
     const invite = params.get('invite')
+    // The servers feature's invitePath (SERVERS_PATHS.invite), written out:
+    // auth does not import servers, and this file is in the first download.
     const pending = invite && INVITE_CODE.test(invite) ? `/invite/${invite}` : undefined
     return safeNext(params.get('next') ?? pending)
 }

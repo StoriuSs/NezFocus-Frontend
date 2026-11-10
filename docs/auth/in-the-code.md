@@ -183,10 +183,12 @@ AppRoot           NavigationProgress, then the page
 ├── /             redirect: /study when signed in, /login otherwise
 ├── /terms, /privacy   the legal pages, for everyone   (src/pages/Legal.tsx)
 ├── AuthShell     logo, an error boundary, the page, the language toggle (and Sign out on /welcome)
-│   └── authRoutes     the sign-in pages and /welcome  (src/features/auth/routes.tsx)
+│   ├── authRoutes     the sign-in pages and /welcome  (src/features/auth/routes.tsx)
+│   └── serversInviteRoutes   /invite/:code         (src/features/servers/routes.tsx)
 ├── ProtectedRoute + AppShell   rail, list column, an error boundary, the page
 │   ├── /study                                      (src/pages/Study.tsx)
-│   ├── /channels/:serverId/:channelId?             (mock, until channels exist)
+│   ├── serversChannelRoutes  /channels/:serverId/:channelId?   (src/features/servers/routes.tsx)
+│   ├── serversSettingsRoutes /servers/:serverId/settings/:section?, and /:roleId after it
 │   ├── authAppRoutes  /settings/account (/settings redirects)   (src/features/auth/routes.tsx)
 │   └── usersRoutes    /settings/profile, /settings/appearance, /settings/notifications,
 │                      /settings/privacy            (src/features/users/routes.tsx)

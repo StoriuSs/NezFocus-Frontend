@@ -30,10 +30,6 @@ export function isSettingsSection(value: string | undefined): value is SettingsS
     return SECTIONS.some((section) => section.id === value)
 }
 
-/** `/servers/{id}/settings[/{section}]` (04 › URL); without a section, the first one they see. */
-export const serverSettingsPath = (serverId: string, section?: SettingsSection) =>
-    `/servers/${serverId}/settings${section ? `/${section}` : ''}`
-
 /** A choice of "Welcome channel" (S-SET-01, Q14). */
 export type WelcomeChoice =
     | { kind: 'none' }

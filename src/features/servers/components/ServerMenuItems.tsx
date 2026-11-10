@@ -4,8 +4,9 @@ import { FolderPlus, PlusCircle, Settings, UserPlus } from 'lucide-react'
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { useChannelDialogs } from '../channel-dialogs.store'
 import { useInviteDialogs } from '../invite-dialogs.store'
+import { serverSettingsPath } from '../lib/paths'
 import { can } from '../lib/permissions'
-import { serverSettingsPath, settingsSections } from '../lib/settings-sections'
+import { settingsSections } from '../lib/settings-sections'
 import type { Server } from '../types'
 
 /**

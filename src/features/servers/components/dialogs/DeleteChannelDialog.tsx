@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useDeleteChannel } from '../../api/useChannelLayout'
 import { firstTextChannel } from '../../lib/channel-list'
+import { channelPath } from '../../lib/paths'
 import type { Server, ServerChannel } from '../../types'
 import { describeFailure } from './layout-errors'
 
@@ -62,8 +63,8 @@ export function DeleteChannelDialog({
         try {
             const updated = await remove.mutateAsync(channel.id)
             onDeleted()
-            if (pathname === `/channels/${server.id}/${channel.id}`) {
-                void navigate(`/channels/${server.id}/${firstTextChannel(updated)?.id ?? ''}`, { replace: true })
+            if (pathname === channelPath(server.id, channel.id)) {
+                void navigate(channelPath(server.id, firstTextChannel(updated)?.id), { replace: true })
             }
             toast.success(t(room ? 'channel.roomDeleted' : 'channel.deleted', { name: channel.name }))
         } catch (error) {

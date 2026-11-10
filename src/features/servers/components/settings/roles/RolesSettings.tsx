@@ -22,13 +22,11 @@ import { WithTooltip } from '@/components/ui/tooltip'
 import { getApiErrorType } from '@/lib/api-error'
 import { cn } from '@/lib/utils'
 import { useReorderRoles, useServerRoles } from '../../../api/useRoles'
+import { roleEditPath } from '../../../lib/paths'
 import { fixedAtTop, MAX_ROLES, moved, reordered, roleLock, rolesHighestFirst } from '../../../lib/roles'
-import { serverSettingsPath } from '../../../lib/settings-sections'
 import type { Role, Server } from '../../../types'
 import { DragPreview, DropLine } from '../../channel-list/rows'
 import { CreateRoleDialog } from './CreateRoleDialog'
-
-export const roleEditPath = (serverId: string, roleId: string) => `${serverSettingsPath(serverId, 'roles')}/${roleId}`
 
 /**
  * Roles (S-SET-02 `list`, MANAGE_ROLES): every role, highest first, with how

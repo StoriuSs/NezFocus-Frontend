@@ -27,6 +27,7 @@ import { useServers } from '../api/useServers'
 import { useCreateServerDialog } from '../create-server.store'
 import { useInviteDialogs } from '../invite-dialogs.store'
 import { firstTextChannel } from '../lib/channel-list'
+import { channelPath } from '../lib/paths'
 import {
     isServerName,
     MAX_SERVERS,
@@ -113,7 +114,7 @@ export default function CreateServerDialog() {
                 })
             }
             hide()
-            void navigate(`/channels/${server.id}/${firstTextChannel(server)?.id ?? ''}`)
+            void navigate(channelPath(server.id, firstTextChannel(server)?.id))
             showInvite(server.id, true)
         } catch (error) {
             const type = getApiErrorType(error)

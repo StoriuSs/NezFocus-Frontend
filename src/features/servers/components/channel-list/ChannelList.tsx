@@ -17,6 +17,7 @@ import { useChannelDialogs } from '../../channel-dialogs.store'
 import { channelSlots, dropClash, groupChannels, sameSlot, slotOf, type ChannelSlot } from '../../lib/channel-layout'
 import { channelGroups } from '../../lib/channel-list'
 import { categoryDropAfter, categorySlots, channelDropSlot, TOP_DROP_ID } from '../../lib/drop-target'
+import { channelPath } from '../../lib/paths'
 import { can } from '../../lib/permissions'
 import type { LayoutMove, Server, ServerCategory } from '../../types'
 import { CategoryHeading, ChannelRow, channelIcon, DragPreview, DropLine } from './rows'
@@ -269,7 +270,7 @@ export function ChannelList({ server }: { server: Server }) {
                     const isFolded = folded.has(category.id)
                     // Folded, it still shows the open channel.
                     const shown = isFolded
-                        ? channels.filter((channel) => pathname === `/channels/${server.id}/${channel.id}`)
+                        ? channels.filter((channel) => pathname === channelPath(server.id, channel.id))
                         : channels
                     const listId = `category-${server.id}-${category.id}`
                     const into =

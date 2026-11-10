@@ -13,6 +13,7 @@ import { Switch } from '@/components/ui/switch'
 import { WithTooltip } from '@/components/ui/tooltip'
 import { useCreateChannel } from '../../api/useChannelLayout'
 import { MAX_CHANNELS_AND_CATEGORIES, storedName, type ChannelType } from '../../lib/channel-layout'
+import { channelPath } from '../../lib/paths'
 import { can } from '../../lib/permissions'
 import type { Server } from '../../types'
 import { describeFailure, nameError, type LayoutFailure } from './layout-errors'
@@ -89,7 +90,7 @@ export function CreateChannelDialog({
                     : []
             })
             onClose()
-            void navigate(`/channels/${server.id}/${created.id}`)
+            void navigate(channelPath(server.id, created.id))
         } catch (error) {
             const described = describeFailure(t, error, {
                 server,

@@ -17,6 +17,7 @@ import { useTranslation } from 'react-i18next'
 import { WithTooltip } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { categoryDropId, channelDropId } from '../../lib/drop-target'
+import { channelPath } from '../../lib/paths'
 import { can } from '../../lib/permissions'
 import type { Server, ServerCategory, ServerChannel } from '../../types'
 
@@ -104,7 +105,7 @@ export function ChannelRow({
     const row = (
         <NavLink
             ref={dragRef}
-            to={`/channels/${server.id}/${channel.id}`}
+            to={channelPath(server.id, channel.id)}
             draggable={false}
             {...listeners}
             onKeyDown={onKeyDown}
