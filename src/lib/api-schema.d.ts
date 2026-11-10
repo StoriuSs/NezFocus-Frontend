@@ -836,7 +836,7 @@ export interface components {
              */
             email: string
         }
-        SignedInAccountDto: {
+        SignedInAccountResponseDto: {
             /** @description Made by this sign-in: the address had no account (D-59). */
             created: boolean
             /**
@@ -847,7 +847,7 @@ export interface components {
             completed: boolean
         }
         EmailCodeSignInResponseDto: {
-            account: components['schemas']['SignedInAccountDto']
+            account: components['schemas']['SignedInAccountResponseDto']
             /** @description Send as `Authorization: Bearer <access_token>`. Keep it in memory only. */
             access_token: string
             /** @enum {string} */
