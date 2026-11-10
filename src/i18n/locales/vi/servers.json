@@ -208,25 +208,32 @@
     },
     "usesOption": {
       "unlimited": "Không giới hạn",
-      "count": "{{count}} lượt"
+      "count_one": "{{count}} lượt",
+      "count_other": "{{count}} lượt"
     },
     "line": {
       "expires": "Hết hạn sau {{time}}",
       "never": "Không hết hạn",
       "unlimited": "không giới hạn lượt dùng",
-      "max": "tối đa {{count}} lượt dùng",
-      "left": "còn {{count}} lượt dùng"
+      "max_one": "tối đa {{count}} lượt dùng",
+      "max_other": "tối đa {{count}} lượt dùng",
+      "left_one": "còn {{count}} lượt dùng",
+      "left_other": "còn {{count}} lượt dùng"
     },
     "time": {
-      "days": "{{count}} ngày",
-      "hours": "{{count}} giờ",
-      "minutes": "{{count}} phút"
+      "days_one": "{{count}} ngày",
+      "days_other": "{{count}} ngày",
+      "hours_one": "{{count}} giờ",
+      "hours_other": "{{count}} giờ",
+      "minutes_one": "{{count}} phút",
+      "minutes_other": "{{count}} phút"
     }
   },
   "join": {
     "title": "{{name}} mời bạn vào",
     "titleAnonymous": "Bạn được mời vào",
-    "members": "{{members}} thành viên",
+    "members_one": "{{members}} thành viên",
+    "members_other": "{{members}} thành viên",
     "target": {
       "studyRoom": "Mời vào học ở",
       "voice": "Mời vào",
