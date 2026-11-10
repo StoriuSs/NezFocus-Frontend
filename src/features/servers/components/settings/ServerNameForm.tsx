@@ -1,3 +1,4 @@
+import '@/i18n/servers'
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { useBlocker } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'

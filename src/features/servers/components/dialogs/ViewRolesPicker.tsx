@@ -1,3 +1,4 @@
+import '@/i18n/servers'
 import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Search } from 'lucide-react'

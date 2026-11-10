@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { AxiosError, AxiosHeaders } from 'axios'
@@ -221,6 +221,18 @@ describe('Members (S-SET-03)', () => {
         expect(await screen.findByText('Removed the timeout of Phong')).toBeInTheDocument()
     })
 
+    it('offers Try again when ending a timeout is refused (04 › Toast)', async () => {
+        const user = userEvent.setup()
+        moderationApi.timeoutMember.mockRejectedValueOnce(new Error('offline')).mockResolvedValue(undefined)
+        renderPage('/servers/ot/settings/members', binh)
+        await user.click(within(await rowOf('Phong')).getByRole('button', { name: 'Actions for Phong' }))
+        await user.click(await screen.findByRole('menuitem', { name: 'Remove timeout' }))
+        expect(await screen.findByText('Couldn’t save the change')).toBeInTheDocument()
+        await user.click(screen.getByRole('button', { name: 'Try again' }))
+        expect(await screen.findByText('Removed the timeout of Phong')).toBeInTheDocument()
+        expect(moderationApi.timeoutMember).toHaveBeenCalledTimes(2)
+    })
+
     it('times out for 1 hour by default with the reason, then says so', async () => {
         const user = userEvent.setup()
         moderationApi.timeoutMember.mockResolvedValue(undefined)
@@ -337,6 +349,97 @@ describe('Members (S-SET-03)', () => {
                 expect.objectContaining({ sort: 'joined_at', order: 'asc' })
             )
         )
+    })
+
+    it('says the timeout ended when Try again works after leaving the page', async () => {
+        const user = userEvent.setup()
+        moderationApi.timeoutMember.mockRejectedValueOnce(new Error('offline')).mockResolvedValue(undefined)
+        const { router } = renderPage('/servers/ot/settings/members', binh)
+        await user.click(within(await rowOf('Phong')).getByRole('button', { name: 'Actions for Phong' }))
+        await user.click(await screen.findByRole('menuitem', { name: 'Remove timeout' }))
+        const again = await screen.findByRole('button', { name: 'Try again' })
+        await act(() => router.navigate('/servers/ot/settings/roles'))
+        await user.click(again)
+        expect(await screen.findByText('Removed the timeout of Phong')).toBeInTheDocument()
+    })
+
+    it('still says so when a role tick is refused again after leaving the page', async () => {
+        const user = userEvent.setup()
+        rolesApi.grantRole.mockRejectedValue(new Error('offline'))
+        const { router } = renderPage('/servers/ot/settings/members', an, 'an')
+        await user.click(await within(await rowOf('Bình')).findByRole('button', { name: 'Assign roles' }))
+        const picker = await screen.findByRole('dialog', { name: 'Roles of Bình' })
+        await user.click(within(picker).getByLabelText('Nhóm tài liệu'))
+        const again = await screen.findByRole('button', { name: 'Try again' })
+        await act(() => router.navigate('/servers/ot/settings/roles'))
+        await user.click(again)
+        await waitFor(() => expect(rolesApi.grantRole).toHaveBeenCalledTimes(2))
+        // A new toast, not the one clicked (still fading out).
+        await waitFor(() =>
+            expect(screen.getAllByRole('button', { name: 'Try again' }).some((button) => button !== again)).toBe(true)
+        )
+    })
+
+    describe('the search words on the URL (D-90)', () => {
+        beforeEach(() => vi.useFakeTimers({ shouldAdvanceTime: true }))
+        afterEach(() => vi.useRealTimers())
+        const pause = () => act(() => vi.advanceTimersByTimeAsync(TYPING_PAUSE_MS))
+        const TYPING_PAUSE_MS = 300
+
+        async function searched(words: string) {
+            const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+            const view = renderPage('/servers/ot/settings/members', binh)
+            await screen.findByText('4 members')
+            await user.click(screen.getByRole('button', { name: 'Joined' }))
+            const box = screen.getByRole('searchbox', { name: 'Search by name or username' })
+            await user.type(box, words)
+            await pause()
+            return { user, box, ...view }
+        }
+
+        it('goes back to the words on the URL after Back, and leaves them there', async () => {
+            const { router, box } = await searched('dung')
+            expect(router.state.location.search).toBe('?sort=joined_at&order=desc&q=dung')
+
+            await act(() => router.navigate(-1))
+            expect(box).toHaveValue('')
+            await pause()
+            expect(router.state.location.search).toBe('')
+            expect(rolesApi.fetchMembers).toHaveBeenLastCalledWith('ot', expect.objectContaining({ q: undefined }))
+        })
+
+        it('shows the words again after Back then Forward', async () => {
+            const { router, box } = await searched('dung')
+            await act(() => router.navigate(-1))
+            await act(() => router.navigate(1))
+            expect(box).toHaveValue('dung')
+            await pause()
+            expect(router.state.location.search).toBe('?sort=joined_at&order=desc&q=dung')
+        })
+
+        it('searches the same words again when they are typed again after Back', async () => {
+            const { router, box, user } = await searched('dung')
+            await act(() => router.navigate(-1))
+            await user.type(box, 'dung')
+            await pause()
+            expect(router.state.location.search).toBe('?q=dung')
+        })
+
+        it('drops words still waiting for the pause when Back is pressed', async () => {
+            const { router, box, user } = await searched('dung')
+            await user.type(box, ' an')
+            await act(() => router.navigate(-1))
+            await pause()
+            expect(router.state.location.search).toBe('')
+            expect(box).toHaveValue('')
+        })
+
+        it('keeps the space typed after a word while the search for that word runs', async () => {
+            const { router, box, user } = await searched('dung ')
+            expect(router.state.location.search).toBe('?sort=joined_at&order=desc&q=dung')
+            await user.type(box, 'an')
+            expect(box).toHaveValue('dung an')
+        })
     })
 
     it('pages past ten, and goes to the last page when the one asked is gone', async () => {

@@ -1,3 +1,4 @@
+import '@/i18n/servers'
 import type { Ref } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Hash, Volume2 } from 'lucide-react'

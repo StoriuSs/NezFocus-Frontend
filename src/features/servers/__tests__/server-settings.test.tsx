@@ -293,6 +293,17 @@ describe('Server settings › Overview (S-SET-01)', () => {
         expect(await screen.findByRole('button', { name: 'Upload picture' })).toBeInTheDocument()
     })
 
+    it('keeps the picture when removing it is refused, with Try again (04 › Toast)', async () => {
+        serversApi.removeServerIcon.mockRejectedValueOnce(new Error('network')).mockResolvedValue(undefined)
+        renderSettings(server(MANAGER, { iconUrl: 'https://cdn.test/ot.webp' }))
+        await userEvent.click(await screen.findByRole('button', { name: 'Remove picture' }))
+        expect(await screen.findByText('Could not save the change')).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Remove picture' })).toBeInTheDocument()
+        await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
+        expect(await screen.findByRole('button', { name: 'Upload picture' })).toBeInTheDocument()
+        expect(serversApi.removeServerIcon).toHaveBeenCalledTimes(2)
+    })
+
     it('uploads a cropped picture from the crop dialog, which closes once it is stored', async () => {
         serversApi.uploadServerIcon.mockResolvedValue('https://cdn.test/ot.webp')
         renderSettings(server(MANAGER))

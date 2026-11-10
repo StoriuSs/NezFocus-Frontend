@@ -28,13 +28,25 @@ export function useUploadServerIcon(serverId: string) {
     })
 }
 
-/** Back to the initials, at once and without asking (S-SET-01 › Tương tác). */
+/**
+ * Back to the initials, at once and without asking (S-SET-01 › Tương tác).
+ * Refused: the picture stays, with "Could not save" and "Try again" (04 ›
+ * Toast), the hook's own toast so it still answers once the page is left.
+ */
 export function useRemoveServerIcon(serverId: string) {
     const queryClient = useQueryClient()
-    return useMutation({
+    const { t } = useTranslation('servers')
+    const remove = useMutation({
         mutationFn: () => removeServerIcon(serverId),
-        onSuccess: () => patchServer(queryClient, serverId, { iconUrl: null })
+        onSuccess: () => patchServer(queryClient, serverId, { iconUrl: null }),
+        onError: () =>
+            toast.error(t('settings.overview.failed'), {
+                action: { label: t('settings.overview.retry'), onClick: () => remove.mutate() }
+            }),
+        // Its own toast above, with "Try again".
+        meta: { errorToast: false }
     })
+    return remove
 }
 
 /**

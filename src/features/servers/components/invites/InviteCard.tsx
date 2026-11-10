@@ -1,3 +1,4 @@
+import '@/i18n/servers'
 import { useTranslation } from 'react-i18next'
 import { Hash, LampDesk, Volume2 } from 'lucide-react'
 import { cn } from '@/lib/utils'

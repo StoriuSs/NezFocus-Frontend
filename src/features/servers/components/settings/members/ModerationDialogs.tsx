@@ -1,3 +1,4 @@
+import '@/i18n/servers'
 import { useId, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'

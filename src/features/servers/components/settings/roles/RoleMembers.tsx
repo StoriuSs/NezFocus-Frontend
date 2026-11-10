@@ -1,6 +1,6 @@
+import '@/i18n/servers'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { toast } from 'sonner'
 import { Crown, UserPlus, X } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -17,7 +17,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { WithTooltip } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/features/auth'
-import { useGrantRole, useRevokeRole, useServerMembers } from '../../../api/useRoles'
+import { useServerMembers, useTakeRole } from '../../../api/useRoles'
 import { can } from '../../../lib/permissions'
 import { holdsAllOf, mayChangeMember } from '../../../lib/roles'
 import type { Role, Server, ServerMember } from '../../../types'
@@ -92,27 +92,15 @@ export function RoleMembers({
     const { t } = useTranslation('servers')
     const myId = useAuthStore((state) => state.user?.id) ?? ''
     const members = useServerMembers(server.id, { roleId: role.id, limit: SHOWN })
-    const revoke = useRevokeRole(server.id, role.id)
-    const grant = useGrantRole(server.id, role.id)
+    // "Removed … from …" with Undo, or "Try again": the hook's toasts.
+    const takeRole = useTakeRole(server.id, role.id)
     const [adding, setAdding] = useState(false)
     const [confirming, setConfirming] = useState<ServerMember | null>(null)
     const handsOut = holdsAllOf(server.permissions, role)
     const editable = !readOnly && handsOut
 
     function take(member: ServerMember) {
-        const name = memberName(member)
-        revoke.mutate(member.userId, {
-            onSuccess: () =>
-                toast(t('roles.members.removed', { role: role.name, name }), {
-                    duration: 5000,
-                    action: {
-                        label: t('roles.members.undo'),
-                        onClick: () =>
-                            grant.mutate([member.userId], { onError: () => toast.error(t('roles.saveFailed')) })
-                    }
-                }),
-            onError: () => toast.error(t('roles.saveFailed'))
-        })
+        takeRole.mutate({ userId: member.userId, name: memberName(member), role: role.name })
     }
 
     /** Their own Manage roles may come from this role: ask before it goes (S-SET-02 › Gỡ người). */
@@ -171,7 +159,7 @@ export function RoleMembers({
                                         <IconButton
                                             label={label}
                                             onClick={() => remove(member)}
-                                            disabled={revoke.isPending}
+                                            disabled={takeRole.isPending}
                                         >
                                             <X />
                                         </IconButton>

@@ -1,3 +1,4 @@
+import '@/i18n/servers'
 import { useState, type FormEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'

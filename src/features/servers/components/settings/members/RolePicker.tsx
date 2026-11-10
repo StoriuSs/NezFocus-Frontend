@@ -1,7 +1,7 @@
+import '@/i18n/servers'
 import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Plus } from 'lucide-react'
-import { toast } from 'sonner'
 import { Checkbox } from '@/components/ui/checkbox'
 import { IconButton } from '@/components/ui/icon-button'
 import { Input } from '@/components/ui/input'
@@ -16,8 +16,8 @@ const SEARCH_FROM = 10
 
 /**
  * "+" on a row (S-SET-03 `role-picker`): a Checkbox for each role they may
- * hand out, saved at once on each tick; a failure unticks it and says so
- * with "Try again" (04 › Toast).
+ * hand out, saved at once on each tick; a failure unticks it and the hook
+ * says so with "Try again" (04 › Toast).
  */
 export function RolePicker({ serverId, member, roles }: { serverId: string; member: ServerMember; roles: Role[] }) {
     const { t } = useTranslation('servers')
@@ -29,13 +29,7 @@ export function RolePicker({ serverId, member, roles }: { serverId: string; memb
     const shown = roles.filter((role) => role.name.toLowerCase().includes(query.trim().toLowerCase()))
 
     function tick(role: Role, on: boolean) {
-        const change = { roleId: role.id, userId: member.userId, held: on }
-        const save = () =>
-            setRole.mutate(change, {
-                onError: () =>
-                    toast.error(t('members.saveFailed'), { action: { label: t('members.retry'), onClick: save } })
-            })
-        save()
+        setRole.mutate({ roleId: role.id, userId: member.userId, held: on })
     }
 
     return (

@@ -1,3 +1,4 @@
+import '@/i18n/servers'
 import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Clock, CloudOff, Link2Off } from 'lucide-react'

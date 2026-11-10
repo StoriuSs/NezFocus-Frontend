@@ -1,3 +1,4 @@
+import '@/i18n/servers'
 import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Lock } from 'lucide-react'

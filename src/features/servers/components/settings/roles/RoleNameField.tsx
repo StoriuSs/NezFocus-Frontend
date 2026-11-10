@@ -1,3 +1,4 @@
+import '@/i18n/servers'
 import { forwardRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { FormField } from '@/components/form/FormField'

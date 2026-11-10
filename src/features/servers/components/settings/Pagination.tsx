@@ -1,3 +1,4 @@
+import '@/i18n/servers'
 import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { IconButton } from '@/components/ui/icon-button'

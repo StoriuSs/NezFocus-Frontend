@@ -1,3 +1,4 @@
+import '@/i18n/servers'
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { Link, Navigate, useBlocker, useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -19,7 +20,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { WithTooltip } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
-import { useDeleteRole, useServerRoles, useUpdateRole } from '../../../api/useRoles'
+import { useDeleteRole, useSaveRoleSwitch, useServerRoles, useUpdateRole } from '../../../api/useRoles'
 import { serverSettingsPath } from '../../../lib/paths'
 import { can, type PermissionName } from '../../../lib/permissions'
 import { holdsAllOf, PERMISSION_GROUPS, roleLock, withPermission } from '../../../lib/roles'
@@ -139,7 +140,8 @@ function Permissions({
     lock: 'mine' | 'above' | null
 }) {
     const { t } = useTranslation('servers')
-    const update = useUpdateRole(server.id, role.id)
+    // Refused: the hook says so, with "Try again".
+    const save = useSaveRoleSwitch(server.id, role.id)
     /** The set as last flipped here, until every save of it is answered (Q3: switches save at once). */
     const [shown, setShown] = useState<string | null>(null)
     const pending = useRef(0)
@@ -148,20 +150,17 @@ function Permissions({
     const adminOn = can(bits, 'ADMINISTRATOR')
 
     function flip(name: PermissionName, on: boolean) {
-        const next = withPermission(bits, name, on)
-        setShown(next)
+        setShown(withPermission(bits, name, on))
         pending.current += 1
-        update
-            .mutateAsync({ permissions: next })
-            .catch(() => toast.error(t('roles.saveFailed')))
-            .finally(() => {
-                pending.current -= 1
-                if (pending.current === 0) setShown(null)
-            })
+        const answered = () => {
+            pending.current -= 1
+            if (pending.current === 0) setShown(null)
+        }
+        save.mutateAsync({ permission: name, on }).then(answered, answered)
     }
 
     function mention(on: boolean) {
-        update.mutateAsync({ mentionable: on }).catch(() => toast.error(t('roles.saveFailed')))
+        save.mutate({ mentionable: on })
     }
 
     return (

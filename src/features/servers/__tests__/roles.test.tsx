@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, Outlet, RouterProvider, useLocation } from 'react-router-dom'
 import { Toaster } from 'sonner'
@@ -184,6 +184,24 @@ describe('Roles list (S-SET-02)', () => {
         )
     })
 
+    it('still says so when the order is refused again after leaving the list', async () => {
+        rolesApi.reorderRoles.mockRejectedValue(new Error('offline'))
+        const user = userEvent.setup()
+        const { router } = renderRoles()
+        const docs = await screen.findByRole('link', { name: /Nhóm tài liệu/ })
+        fireEvent.keyDown(docs, { key: ' ' })
+        fireEvent.keyDown(docs, { key: 'ArrowUp' })
+        fireEvent.keyDown(docs, { key: ' ' })
+        const again = await screen.findByRole('button', { name: 'Try again' })
+        await act(() => router.navigate('/servers/ot/settings/roles/docs'))
+        await user.click(again)
+        await waitFor(() => expect(rolesApi.reorderRoles).toHaveBeenCalledTimes(2))
+        // A new toast, not the one clicked (still fading out).
+        await waitFor(() =>
+            expect(screen.getAllByRole('button', { name: 'Try again' }).some((button) => button !== again)).toBe(true)
+        )
+    })
+
     it('checks a new name before asking, then opens the new role', async () => {
         rolesApi.createRole.mockResolvedValue('new-role')
         const user = userEvent.setup()
@@ -216,6 +234,82 @@ describe('Edit role (S-SET-02 edit-role)', () => {
         expect(ban).toHaveAttribute('aria-disabled', 'true')
         await user.click(ban)
         expect(rolesApi.updateRole).toHaveBeenCalledTimes(1)
+    })
+
+    it('offers Try again for a refused permission, on top of what was saved since (04 › Lưu thay đổi)', async () => {
+        let saved = '0'
+        const user = userEvent.setup()
+        renderRoles('/servers/ot/settings/roles/docs')
+        rolesApi.fetchRoles.mockImplementation(async () =>
+            ROLES.map((one) => (one.id === 'docs' ? { ...one, permissions: saved } : one))
+        )
+        rolesApi.updateRole
+            .mockRejectedValueOnce(new Error('offline'))
+            .mockImplementation(async (_server: string, _role: string, body: { permissions: string }) => {
+                saved = body.permissions
+            })
+        await user.click(await screen.findByRole('switch', { name: 'Kick members' }))
+        const again = await screen.findByRole('button', { name: 'Try again' })
+        await waitFor(() => expect(screen.getByRole('switch', { name: 'Kick members' })).not.toBeChecked())
+
+        await user.click(screen.getByRole('switch', { name: 'Time out members' }))
+        await waitFor(() => expect(screen.getByRole('switch', { name: 'Time out members' })).toBeChecked())
+        await user.click(again)
+        await waitFor(() =>
+            expect(rolesApi.updateRole).toHaveBeenLastCalledWith('ot', 'docs', { permissions: bits(KICK, MODERATE) })
+        )
+    })
+
+    it('tries a refused permission again after the tab was left, on top of what was saved since', async () => {
+        let saved = '0'
+        const user = userEvent.setup()
+        renderRoles('/servers/ot/settings/roles/docs')
+        rolesApi.fetchRoles.mockImplementation(async () =>
+            ROLES.map((one) => (one.id === 'docs' ? { ...one, permissions: saved } : one))
+        )
+        rolesApi.fetchMembers.mockResolvedValue(page([]))
+        rolesApi.updateRole
+            .mockRejectedValueOnce(new Error('offline'))
+            .mockImplementation(async (_server: string, _role: string, body: { permissions: string }) => {
+                saved = body.permissions
+            })
+        await user.click(await screen.findByRole('switch', { name: 'Kick members' }))
+        const again = await screen.findByRole('button', { name: 'Try again' })
+        await user.click(screen.getByRole('tab', { name: /Members/ }))
+        await user.click(await screen.findByRole('tab', { name: /Permissions/ }))
+        await user.click(await screen.findByRole('switch', { name: 'Time out members' }))
+        await waitFor(() => expect(saved).toBe(bits(MODERATE)))
+        await user.click(again)
+        await waitFor(() =>
+            expect(rolesApi.updateRole).toHaveBeenLastCalledWith('ot', 'docs', { permissions: bits(KICK, MODERATE) })
+        )
+    })
+
+    it('still says so when "mention" is refused again after the tab was left', async () => {
+        rolesApi.updateRole.mockRejectedValue(new Error('offline'))
+        rolesApi.fetchMembers.mockResolvedValue(page([]))
+        const user = userEvent.setup()
+        renderRoles('/servers/ot/settings/roles/docs')
+        await user.click(await screen.findByRole('switch', { name: 'Let anyone mention @Nhóm tài liệu' }))
+        const again = await screen.findByRole('button', { name: 'Try again' })
+        await user.click(screen.getByRole('tab', { name: /Members/ }))
+        await user.click(again)
+        await waitFor(() => expect(rolesApi.updateRole).toHaveBeenCalledTimes(2))
+        // A new toast, not the one clicked (still fading out).
+        await waitFor(() =>
+            expect(screen.getAllByRole('button', { name: 'Try again' }).some((button) => button !== again)).toBe(true)
+        )
+    })
+
+    it('offers Try again when "mention" is refused', async () => {
+        rolesApi.updateRole.mockRejectedValueOnce(new Error('offline')).mockResolvedValue(undefined)
+        const user = userEvent.setup()
+        renderRoles('/servers/ot/settings/roles/docs')
+        await user.click(await screen.findByRole('switch', { name: 'Let anyone mention @Nhóm tài liệu' }))
+        expect(await screen.findByText('Couldn’t save the change')).toBeInTheDocument()
+        await user.click(screen.getByRole('button', { name: 'Try again' }))
+        await waitFor(() => expect(rolesApi.updateRole).toHaveBeenCalledTimes(2))
+        expect(rolesApi.updateRole).toHaveBeenLastCalledWith('ot', 'docs', { mentionable: true })
     })
 
     it('greys out the other switches while Administrator is on', async () => {
@@ -275,6 +369,56 @@ describe('Role members (S-SET-02 role-members, members-add)', () => {
         expect(rolesApi.revokeRole).toHaveBeenCalledWith('ot', 'docs', 'chi')
         await user.click(await screen.findByRole('button', { name: 'Undo' }))
         await waitFor(() => expect(rolesApi.grantRole).toHaveBeenCalledWith('ot', 'docs', ['chi']))
+    })
+
+    it('offers Try again when taking the role back is refused (04 › Toast)', async () => {
+        rolesApi.fetchMembers.mockResolvedValue(page([member('chi', 'Chi', ['docs'])]))
+        rolesApi.revokeRole.mockRejectedValueOnce(new Error('offline')).mockResolvedValue(undefined)
+        const user = userEvent.setup()
+        renderRoles('/servers/ot/settings/roles/docs?tab=members')
+        await user.click(await screen.findByRole('button', { name: 'Remove Nhóm tài liệu from Chi' }))
+        expect(await screen.findByText('Couldn’t save the change')).toBeInTheDocument()
+        await user.click(screen.getByRole('button', { name: 'Try again' }))
+        await waitFor(() => expect(rolesApi.revokeRole).toHaveBeenCalledTimes(2))
+        expect(rolesApi.revokeRole).toHaveBeenLastCalledWith('ot', 'docs', 'chi')
+    })
+
+    it('offers Try again when Undo is refused', async () => {
+        rolesApi.fetchMembers.mockResolvedValue(page([member('chi', 'Chi', ['docs'])]))
+        rolesApi.revokeRole.mockResolvedValue(undefined)
+        rolesApi.grantRole.mockRejectedValueOnce(new Error('offline')).mockResolvedValue(undefined)
+        const user = userEvent.setup()
+        renderRoles('/servers/ot/settings/roles/docs?tab=members')
+        await user.click(await screen.findByRole('button', { name: 'Remove Nhóm tài liệu from Chi' }))
+        await user.click(await screen.findByRole('button', { name: 'Undo' }))
+        await user.click(await screen.findByRole('button', { name: 'Try again' }))
+        await waitFor(() => expect(rolesApi.grantRole).toHaveBeenCalledTimes(2))
+        expect(rolesApi.grantRole).toHaveBeenLastCalledWith('ot', 'docs', ['chi'])
+    })
+
+    it('says the role was taken back when Try again works after the tab was left', async () => {
+        rolesApi.fetchMembers.mockResolvedValue(page([member('chi', 'Chi', ['docs'])]))
+        rolesApi.revokeRole.mockRejectedValueOnce(new Error('offline')).mockResolvedValue(undefined)
+        const user = userEvent.setup()
+        renderRoles('/servers/ot/settings/roles/docs?tab=members')
+        await user.click(await screen.findByRole('button', { name: 'Remove Nhóm tài liệu from Chi' }))
+        const again = await screen.findByRole('button', { name: 'Try again' })
+        await user.click(screen.getByRole('tab', { name: /Permissions/ }))
+        await user.click(again)
+        expect(await screen.findByText('Removed Nhóm tài liệu from Chi')).toBeInTheDocument()
+    })
+
+    it('still offers Try again when Undo is refused after the tab was left', async () => {
+        rolesApi.fetchMembers.mockResolvedValue(page([member('chi', 'Chi', ['docs'])]))
+        rolesApi.revokeRole.mockResolvedValue(undefined)
+        rolesApi.grantRole.mockRejectedValue(new Error('offline'))
+        const user = userEvent.setup()
+        renderRoles('/servers/ot/settings/roles/docs?tab=members')
+        await user.click(await screen.findByRole('button', { name: 'Remove Nhóm tài liệu from Chi' }))
+        const undo = await screen.findByRole('button', { name: 'Undo' })
+        await user.click(screen.getByRole('tab', { name: /Permissions/ }))
+        await user.click(undo)
+        expect(await screen.findByRole('button', { name: 'Try again' })).toBeInTheDocument()
     })
 
     it('asks before Bình takes a role giving him Manage roles off himself', async () => {

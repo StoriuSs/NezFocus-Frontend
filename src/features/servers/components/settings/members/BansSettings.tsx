@@ -1,3 +1,4 @@
+import '@/i18n/servers'
 import { useId, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'

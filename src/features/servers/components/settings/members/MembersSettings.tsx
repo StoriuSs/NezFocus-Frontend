@@ -1,9 +1,9 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import '@/i18n/servers'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowDown, ArrowUp, MoreHorizontal, Search } from 'lucide-react'
-import { toast } from 'sonner'
 import { Tag } from '@/components/settings/SettingsRow'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -12,12 +12,11 @@ import { IconButton } from '@/components/ui/icon-button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { WithTooltip } from '@/components/ui/tooltip'
-import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { useMinuteClock } from '@/hooks/useMinuteClock'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/features/auth'
 import { userKeys, type UserSettings } from '@/features/users'
-import { useTimeoutMember } from '../../../api/useModeration'
+import { useEndTimeout } from '../../../api/useModeration'
 import { useServerMembers, useServerRoles } from '../../../api/useRoles'
 import type { MemberSort, PageSize, SortOrder } from '../../../api/roles.api'
 import {
@@ -82,7 +81,6 @@ export function MembersSettings({ server }: { server: Server }) {
     // Read only: the AppShell loads the account's settings as the app opens.
     const timeZone = useQuery<UserSettings>({ queryKey: userKeys.settings(), enabled: false }).data?.timezone
     const list = useListState()
-    const [typed, setTyped] = useState(list.q)
     const members = useServerMembers(server.id, {
         q: list.q || undefined,
         sort: list.sort,
@@ -92,13 +90,43 @@ export function MembersSettings({ server }: { server: Server }) {
     })
     const managesRoles = can(server.permissions, 'MANAGE_ROLES')
     const roles = useServerRoles(server.id, managesRoles)
-    const endTimeout = useTimeoutMember(server.id)
+    // Refused: the hook says so, with "Try again".
+    const endTimeout = useEndTimeout(server.id)
     const [acting, setActing] = useState<{ kind: Moderation; member: ServerMember } | null>(null)
 
-    const searched = useDebouncedValue(typed.trim(), TYPING_PAUSE_MS)
+    // The box and the words on the URL (D-90). Typing waits for a pause, then
+    // puts the words on the URL; `ownQ` keeps them, so the URL catching up
+    // (React Router renders it as non-urgent, maybe after more keys) leaves the box alone, while
+    // Back or a link, bringing other words, puts theirs in it.
+    const [typed, setTyped] = useState(list.q)
+    const [ownQ, setOwnQ] = useState(list.q)
+    const [shownQ, setShownQ] = useState(list.q)
+    if (shownQ !== list.q) {
+        setShownQ(list.q)
+        if (list.q !== ownQ) {
+            setTyped(list.q)
+            setOwnQ(list.q)
+        }
+    }
+    const latest = useRef(list)
     useEffect(() => {
-        if (searched !== list.q) list.change({ q: searched })
-    }, [searched, list])
+        latest.current = list
+    })
+    const pause = useRef<ReturnType<typeof setTimeout>>(undefined)
+    useEffect(() => () => clearTimeout(pause.current), [])
+
+    function type(value: string) {
+        setTyped(value)
+        clearTimeout(pause.current)
+        const from = list.q
+        pause.current = setTimeout(() => {
+            // Back or a link during the pause: their words stay.
+            if (latest.current.q !== from) return
+            const q = value.trim()
+            setOwnQ(q)
+            if (q !== from) latest.current.change({ q })
+        }, TYPING_PAUSE_MS)
+    }
 
     // A page past the last (someone left meanwhile) goes to the last one.
     const totalPages = members.data?.meta.totalPages ?? 1
@@ -107,14 +135,7 @@ export function MembersSettings({ server }: { server: Server }) {
     }, [members.data, list, totalPages])
 
     function end(member: ServerMember) {
-        const name = memberName(member)
-        endTimeout.mutate(
-            { userId: member.userId, seconds: null, reason: null },
-            {
-                onSuccess: () => toast(t('members.toast.timeoutEnded', { name })),
-                onError: () => toast.error(t('members.saveFailed'))
-            }
-        )
+        endTimeout.mutate({ userId: member.userId, name: memberName(member) })
     }
 
     const total = members.data?.meta.totalItems ?? 0
@@ -134,7 +155,7 @@ export function MembersSettings({ server }: { server: Server }) {
                         placeholder={t('members.search')}
                         disabled={members.isPending}
                         value={typed}
-                        onChange={(event) => setTyped(event.target.value)}
+                        onChange={(event) => type(event.target.value)}
                     />
                 </div>
                 {members.data ? (

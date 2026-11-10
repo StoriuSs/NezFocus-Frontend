@@ -1,3 +1,4 @@
+import '@/i18n/servers'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Copy, Loader2 } from 'lucide-react'

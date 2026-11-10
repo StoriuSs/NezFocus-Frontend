@@ -1,7 +1,7 @@
+import '@/i18n/servers'
 import { Fragment, useState, type KeyboardEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { toast } from 'sonner'
 import { ChevronRight, GripVertical, Lock, Plus, Shield, Users } from 'lucide-react'
 import {
     closestCenter,
@@ -19,7 +19,6 @@ import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
 import { WithTooltip } from '@/components/ui/tooltip'
-import { getApiErrorType } from '@/lib/api-error'
 import { cn } from '@/lib/utils'
 import { useReorderRoles, useServerRoles } from '../../../api/useRoles'
 import { roleEditPath } from '../../../lib/paths'
@@ -97,20 +96,8 @@ export function RolesSettings({ server }: { server: Server }) {
         setAnnouncement(t('roles.drag.dropped', { name: nameOf(id), position: at + 1, count: ids.length }))
         if (at === from) return
         const order = moved(ids, id, at)
-        const save = () =>
-            reorder.mutate(
-                { order, seenOrder: ids, shown: reordered(roles.data ?? [], order) },
-                {
-                    onError: (error) => {
-                        // A list changed meanwhile is reloaded; trying the same order again would fail again.
-                        const stale = getApiErrorType(error) === 'CONFLICT_ERROR'
-                        toast.error(t('roles.saveFailed'), {
-                            action: stale ? undefined : { label: t('roles.retry'), onClick: save }
-                        })
-                    }
-                }
-            )
-        save()
+        // Refused: the list goes back and the hook says so, with "Try again".
+        reorder.mutate({ order, seenOrder: ids, shown: reordered(roles.data ?? [], order) })
     }
 
     function onMove({ active, over }: DragMoveEvent) {

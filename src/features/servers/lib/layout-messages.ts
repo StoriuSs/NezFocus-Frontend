@@ -1,3 +1,4 @@
+import '@/i18n/servers'
 import type { TFunction } from 'i18next'
 import { getApiErrorType, NETWORK_ERROR } from '@/lib/api-error'
 import { clashingChannel, nameProblem, storedName, type ChannelType } from './channel-layout'

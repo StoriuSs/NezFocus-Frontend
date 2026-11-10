@@ -1,4 +1,7 @@
+import '@/i18n/servers'
 import { keepPreviousData, useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import { banMember, fetchBans, kickMember, timeoutMember, unbanMember } from './moderation.api'
 import type { PageSize } from './roles.api'
 import { serverKeys } from './keys'
@@ -12,7 +15,7 @@ function reload(queryClient: QueryClient, serverId: string): Promise<unknown> {
     ])
 }
 
-/** Each dialog says what went wrong itself (04 › Lỗi gửi hộp thoại), so no default toast. */
+/** Each dialog says what went wrong itself (04 › Lỗi gửi hộp thoại), and useEndTimeout has its own toast. */
 const QUIET = { errorToast: false }
 
 export function useKickMember(serverId: string) {
@@ -53,6 +56,29 @@ export function useTimeoutMember(serverId: string) {
         onSuccess: () => reload(queryClient, serverId),
         meta: QUIET
     })
+}
+
+/**
+ * "Remove timeout" in a row's ⋯ (S-SET-03), saved at once: "Removed the
+ * timeout of …", or "Couldn't save" with "Try again" (04 › Toast). The toasts
+ * are the hook's, so Try again still answers once the page is left.
+ */
+export function useEndTimeout(serverId: string) {
+    const queryClient = useQueryClient()
+    const { t } = useTranslation('servers')
+    const end = useMutation({
+        mutationFn: ({ userId }: { userId: string; name: string }) => timeoutMember(serverId, userId, null, null),
+        onSuccess: async (_answer, sent) => {
+            await reload(queryClient, serverId)
+            toast(t('members.toast.timeoutEnded', { name: sent.name }))
+        },
+        onError: (_error, sent) =>
+            toast.error(t('members.saveFailed'), {
+                action: { label: t('members.retry'), onClick: () => end.mutate(sent) }
+            }),
+        meta: QUIET
+    })
+    return end
 }
 
 /** One page of the bans; the page shown stays while the next loads. */

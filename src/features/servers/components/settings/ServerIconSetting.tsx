@@ -1,3 +1,4 @@
+import '@/i18n/servers'
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { OctagonX } from 'lucide-react'

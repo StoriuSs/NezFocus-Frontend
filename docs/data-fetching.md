@@ -250,6 +250,23 @@ not as the hook's argument: **Try again** resends the variables of the
 failed attempt, while the hook's options follow the screen, which may show
 another server by then.
 
+**Try again belongs to the hook**, in its `onError`, never in the callbacks
+of `mutate()`: those are skipped once the component has unmounted, so a
+Try again clicked after leaving the tab would send the change and then say
+nothing, whether it worked or failed. Every save-at-once of the server
+settings does this (M1 › R3d1): the role switches (`useSaveRoleSwitch`),
+taking a role from someone and its Undo (`useTakeRole`), a tick in "+"
+(`useSetMemberRole`), the role order (`useReorderRoles`), "Remove timeout"
+(`useEndTimeout`) and "Remove picture" (`useRemoveServerIcon`). Their hooks
+take the server and role as arguments: the page showing them is keyed by
+its path and role, so it never shows another one with the same hook. A
+success toast that has to follow the change, "Removed … from …" with Undo
+say, is the hook's too, with the names it shows passed in the variables.
+A role switch sends a whole permission set, so `useSaveRoleSwitch` takes
+one flip (`{ permission, on }`) and sets it on the role as saved when its
+turn comes (the role's changes run one after another, `scope`): Try again
+then never undoes a switch saved since.
+
 The time zone is not optimistic: it asks first and can be refused for 24
 hours, so `TimeZoneSetting` (`src/features/users/components/`) saves it
 with its own mutation, `useUpdateTimeZone`
