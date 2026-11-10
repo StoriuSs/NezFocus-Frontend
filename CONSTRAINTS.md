@@ -32,7 +32,7 @@ Kiểm bởi `node scripts/constraints/floor-guard.mjs` (cùng script với back
 - Không làm test dễ đi: không thêm `.skip`, `.only`, `.todo`, `xit`, `xdescribe`.
 - Không xóa test hay assertion mà không có lý do: xóa file test (`*.test.ts(x)`, `e2e/*.spec.ts`) hay bỏ một `expect` thì commit message phải có dòng `Tests-removed: <vì sao>`. `check:task` liệt kê những chỗ này để AI đưa lý do vào commit message gợi ý; hook `commit-msg` và CI chặn khi thiếu.
 - Không có secret trong code: xem dòng "Secret" ở bảng dưới.
-- File này không bị nới để một thay đổi qua được: hạ một ngưỡng, xóa một luật hay thêm một dòng ngoại lệ đều bị floor-guard báo. Đổi hay xóa một ngưỡng chỉ qua được khi commit message có dòng `Constraints-approved: <lý do>`, tức chủ dự án đã duyệt (thêm 06/11/2026); floor-guard vẫn in ra để thay đổi không lặng lẽ.
+- File này không bị nới để một thay đổi qua được: hạ một ngưỡng, xóa một luật hay thêm một dòng ngoại lệ đều bị floor-guard báo. Đổi hay xóa một ngưỡng, hay thêm một dòng ngoại lệ (từ 10/11/2026), chỉ qua được khi commit message có dòng `Constraints-approved: <lý do>`, tức chủ dự án đã duyệt (thêm 06/11/2026); floor-guard vẫn in ra để thay đổi không lặng lẽ.
 
 ## Luật có số
 
@@ -41,7 +41,7 @@ Kiểm bởi `node scripts/constraints/floor-guard.mjs` (cùng script với back
 | Kiểu | 0 lỗi kiểu | `tsc -b` (trong `check:task` và `pnpm build`) | `check:task`, `check:full`, CI | Lỗi kiểu là lỗi; kiểu API sinh từ OpenAPI biến một thay đổi ở backend thành lỗi biên dịch |
 | Lint | 0 lỗi ESLint theo `eslint.config.js` (cảnh báo không chặn) | `node scripts/constraints/lint-changed.mjs`; toàn bộ: `pnpm lint` | `check:fast`, commit (lint-staged), `check:full`, CI | Cấu hình của base đã cấm `any`, promise bị bỏ quên, và có jsx-a11y |
 | Format | 0 file lệch Prettier | `pnpm format:check` | commit (lint-staged), `check:full`, CI | Như base |
-| Kiến trúc | 0 vi phạm: code dùng chung (`lib`, `components`, `hooks`) không import feature; trang ngoài feature và feature khác chỉ dùng một feature qua `index.ts` | Luật `no-restricted-imports` trong `eslint.config.js`, chạy cùng lint | như Lint | Có sẵn từ base (docs/project-structure.md). Từ 05/11/2026 danh sách feature đọc từ thư mục `src/features`, nên feature mới bị giữ ngay từ file đầu tiên |
+| Kiến trúc | 0 vi phạm: code dùng chung (`lib`, `components`, `hooks`) không import feature; trang ngoài feature và feature khác chỉ dùng một feature qua `index.ts`; feature không import `@/lib/idempotency` | Luật `no-restricted-imports` trong `eslint.config.js`, chạy cùng lint | như Lint | Có sẵn từ base (docs/project-structure.md). Từ 05/11/2026 danh sách feature đọc từ thư mục `src/features`, nên feature mới bị giữ ngay từ file đầu tiên. Từ 10/11/2026 (M1 › R1) feature không import `@/lib/idempotency`: khóa đến từ hook dựng trên `useIdempotentMutation`; một ngoại lệ, E1 ở bảng Ngoại lệ |
 | Test liên quan | Mọi test liên quan đến file đã đổi phải xanh | `vitest related` trong `coverage-changed.mjs` | `check:task` | Bắt lỗi trước khi chạy cả suite |
 | Coverage dòng đổi | Dòng đổi chạy được trong file logic (`src/lib`, `src/hooks`, `api/`, `hooks/`, `lib/` của feature, `*.store.ts`): ≥ 80% được test chạy qua | `node scripts/constraints/coverage-changed.mjs` (CI: đọc lcov của `pnpm test --coverage.enabled`, không chạy lại) | `check:task`, CI | 80% đủ để bắt phải có test. Chỉ đo chỗ có luật xử lý dữ liệu; component và trang được kiểm bằng thử tay ở A3, test hành vi khi đáng viết, và dòng Accessibility |
 | Suite đầy đủ | Toàn bộ vitest xanh | `pnpm test` | push, `check:full`, CI | Như base |
@@ -70,5 +70,6 @@ Kiểm bởi `node scripts/constraints/floor-guard.mjs` (cùng script với back
 
 | ID | Luật | Đường dẫn | Lý do | Người chịu trách nhiệm | Hết hạn |
 |---|---|---|---|---|---|
+| E1 | Kiến trúc: feature không import `@/lib/idempotency` | `src/features/servers/api/useCreateServer.ts` (`saveNewServerIcon`) | "Thử lại" ảnh của server vừa tạo chạy từ toast, sau khi dialog và hook của nó đã đóng; khóa tạo một lần rồi đi theo closure (chủ dự án chọn 10/11/2026, M1 › R1) | Chủ dự án | 08/02/2027: xem lại; còn đúng thì gia hạn |
 
-Chưa có. Một ngoại lệ mới cần chủ dự án duyệt, có người chịu trách nhiệm và ngày hết hạn (mặc định 90 ngày).
+Một ngoại lệ mới cần chủ dự án duyệt, có người chịu trách nhiệm và ngày hết hạn (mặc định 90 ngày).

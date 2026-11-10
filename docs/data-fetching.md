@@ -106,6 +106,18 @@ Two `useQuery` calls with the same key share one cache entry — whichever
 fetching a resource through one hook, like `useProfile`) keeps that from
 happening by accident, and makes invalidation hit the right entries.
 
+**Every place that changes a cached list goes through the same hook.** The
+cache update (`setQueryData` or `invalidateQueries`) lives in the mutation
+hook, never in a component, so an action reachable from two screens keeps
+both right: a link revoked from the invite panel leaves the Invites page too,
+because both call `useRevokeInvite` (M1 › R1 found the panel calling
+`revokeInvite` directly). When adding a mutation, list the query keys whose
+answer it changes and update each one in the hook, including the error that
+means "already done" (`INVITE_INVALID` on a revoke). A test renders the two
+screens over one query client and checks the second. (Some servers
+components still call `layout.api.ts` and `rememberServer` themselves; M1 ›
+R3 moves them into hooks, after which a lint rule keeps it so.)
+
 The auth store writes the profile into this same entry at sign-in
 (`queryClient.setQueryData(userKeys.profile(), profile)`), so your menu, the
 profile page and "complete your account" need no second request. Signing out
@@ -175,6 +187,20 @@ repeat. `src/lib/api.ts` deliberately leaves the header alone.
 Keys come from `generateIdempotencyKey()` (`src/lib/idempotency.ts`), which
 falls back to `crypto.getRandomValues` because `crypto.randomUUID` does not
 exist on plain-HTTP origins (a deployment opened by LAN IP, say).
+
+Never call `generateIdempotencyKey()` inside a submit handler next to a
+`*.api.ts` call: each click then sends a new key, and "Create" again after a
+lost answer makes the thing twice (M1 › R1 found three such dialogs). Put
+the call in a hook in the feature's `api/` folder built on
+`useIdempotentMutation`, as `useCreateChannel` does
+(`src/features/servers/api/useChannelLayout.ts`); the test of a dialog that
+creates something sends twice after a network error and expects the same key.
+
+One exception: an attempt that runs after its component has closed, like the
+"Try again" in the toast left by a server picture that failed to save
+(`useCreateServer.ts` › `saveNewServerIcon`). There the key is made once and
+handed to each retry in the closure, since the hook went with the dialog
+(`CONSTRAINTS.md` › Ngoại lệ E1).
 
 ### Optimistic saves
 

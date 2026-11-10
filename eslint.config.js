@@ -13,6 +13,22 @@ const FEATURES = readdirSync(new URL('./src/features', import.meta.url), { withF
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
 
+/** Another feature only through its index.ts (docs/project-structure.md). */
+const otherFeatures = (self) =>
+    FEATURES.filter((other) => other !== self).map((other) => ({
+        group: [`@/features/${other}/*`],
+        message: `Import from '@/features/${other}' (its index.ts), or add what you need there.`
+    }))
+
+// A key made next to the request is a new key on every click, so "Create"
+// again after a lost answer makes the thing twice (M1 › R1). Features get
+// theirs from a hook built on useIdempotentMutation.
+const IDEMPOTENCY_KEY_BAN = {
+    group: ['@/lib/idempotency'],
+    message:
+        'Send the request from a hook built on useIdempotentMutation, which keeps one key per intent (docs/data-fetching.md › Mutations and idempotency).'
+}
+
 export default defineConfig([
     globalIgnores(['dist', 'coverage', '.agents', 'playwright-report', 'test-results', 'src/lib/api-schema.d.ts']),
     {
@@ -89,21 +105,21 @@ export default defineConfig([
     // A feature uses another only through its index.ts (`@/features/users`),
     // so its insides stay free to move (docs/project-structure.md). The
     // features are FEATURES, read from src/features at the top of this file.
+    // Nor does a feature make Idempotency-Key values itself (IDEMPOTENCY_KEY_BAN).
     ...FEATURES.map((self) => ({
         files: [`src/features/${self}/**/*.{ts,tsx}`],
         ignores: [`src/features/${self}/**/__tests__/**`],
         rules: {
-            'no-restricted-imports': [
-                'error',
-                {
-                    patterns: FEATURES.filter((other) => other !== self).map((other) => ({
-                        group: [`@/features/${other}/*`],
-                        message: `Import from '@/features/${other}' (its index.ts), or add what you need there.`
-                    }))
-                }
-            ]
+            'no-restricted-imports': ['error', { patterns: [...otherFeatures(self), IDEMPOTENCY_KEY_BAN] }]
         }
     })),
+    // The one exception (CONSTRAINTS.md › Ngoại lệ E1): "Try again" on a new
+    // server's picture runs from a toast after the dialog has closed, so the
+    // key travels with the retry (useCreateServer.ts › saveNewServerIcon).
+    {
+        files: ['src/features/servers/api/useCreateServer.ts'],
+        rules: { 'no-restricted-imports': ['error', { patterns: otherFeatures('servers') }] }
+    },
     {
         files: ['**/__tests__/**', '**/*.test.{ts,tsx}'],
         rules: { '@typescript-eslint/no-misused-promises': 'off' }
