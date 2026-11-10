@@ -7,6 +7,7 @@ import { AxiosError, AxiosHeaders } from 'axios'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { useAuthStore } from '@/features/auth'
 import { flowNext } from '@/features/auth/lib/paths'
+import { expectNoA11yViolations } from '@/test/a11y'
 import { queryWrapper } from '@/test/helpers'
 import type { Invite, InviteListItem, InvitePreview, Server } from '../types'
 
@@ -298,6 +299,7 @@ describe('The invite page (S-SRV-03)', () => {
         const query = new URLSearchParams(register.getAttribute('href')!.split('?')[1])
         expect(query.get('invite')).toBe('B4tRw9Lz')
         expect(query.get('next')).toBe('/invite/B4tRw9Lz?channel=hoi-dap')
+        await expectNoA11yViolations()
         expect(screen.getByRole('link', { name: 'Sign in' }).getAttribute('href')).toMatch(/^\/login\?invite=B4tRw9Lz/)
     })
 
@@ -485,6 +487,32 @@ describe('Invites settings (S-SET-04)', () => {
         await userEvent.click(await screen.findByRole('button', { name: 'Revoke' }))
         await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Revoke' }))
         expect(await screen.findByText('This invite had already expired')).toBeInTheDocument()
+        await waitFor(() => expect(screen.queryByText('k7Qm2xPa')).not.toBeInTheDocument())
+    })
+
+    it('follows the invite panel: a link made there is listed, one revoked there leaves', async () => {
+        invitesApi.fetchInvites.mockResolvedValueOnce([]).mockResolvedValue([row({})])
+        invitesApi.createInvite.mockResolvedValue(invite())
+        invitesApi.revokeInvite.mockResolvedValue(undefined)
+        renderAt('/servers/ot/settings/invites', [
+            {
+                path: '/servers/:serverId/settings/:section',
+                element: (
+                    <>
+                        <InvitesSettings server={OT} />
+                        <InviteDialog />
+                    </>
+                )
+            }
+        ])
+        expect(await screen.findByRole('heading', { name: 'No invites that still work' })).toBeInTheDocument()
+        useInviteDialogs.setState({ invite: { serverId: 'ot', created: false } })
+
+        await screen.findByRole('textbox', { name: 'Invite link' })
+        expect(await screen.findByText('k7Qm2xPa')).toBeInTheDocument()
+        await userEvent.click(screen.getByRole('button', { name: 'Revoke this link' }))
+        await screen.findByDisplayValue('This link has been revoked')
+        await waitFor(() => expect(screen.queryByText('k7Qm2xPa')).not.toBeInTheDocument())
     })
 
     it('says when there is no link that still works', async () => {

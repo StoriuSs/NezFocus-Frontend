@@ -231,6 +231,21 @@ describe('Create a channel (S-SRV-05)', () => {
         await userEvent.click(screen.getByRole('button', { name: 'Create channel' }))
         expect(await screen.findByText('You can no longer change channels in this server')).toBeInTheDocument()
     })
+
+    it('tries again with the same Idempotency-Key after a lost answer, so one channel is made', async () => {
+        useChannelDialogs.getState().show({ kind: 'createChannel', serverId: 'ot', categoryId: null, type: 'text' })
+        renderDialogs()
+        await userEvent.type(await screen.findByRole('textbox', { name: 'Channel name' }), 'x')
+        layoutApi.createChannel
+            .mockRejectedValueOnce(new AxiosError('offline', 'ERR_NETWORK'))
+            .mockResolvedValueOnce({ id: 'new', server: OT })
+        await userEvent.click(screen.getByRole('button', { name: 'Create channel' }))
+        await screen.findByText('You need a connection to create a channel')
+        await userEvent.click(screen.getByRole('button', { name: 'Create channel' }))
+        await waitFor(() => expect(layoutApi.createChannel).toHaveBeenCalledTimes(2))
+        const [first, again] = layoutApi.createChannel.mock.calls
+        expect(again![2]).toBe(first![2])
+    })
 })
 
 describe('Channel settings (S-SET-05)', () => {
@@ -306,6 +321,22 @@ describe('Categories (S-SRV-05 `category`, S-SET-05 `category-edit`)', () => {
         await waitFor(() =>
             expect(layoutApi.createCategory).toHaveBeenCalledWith('ot', 'Ôn tập cuối kỳ', expect.any(String))
         )
+    })
+
+    it('tries again with the same Idempotency-Key after a lost answer, so one category is made', async () => {
+        layoutApi.createCategory
+            .mockRejectedValueOnce(new AxiosError('offline', 'ERR_NETWORK'))
+            .mockResolvedValueOnce({ id: 'new', server: OT })
+        useChannelDialogs.getState().show({ kind: 'createCategory', serverId: 'ot' })
+        renderDialogs()
+        await userEvent.type(await screen.findByRole('textbox', { name: 'Category name' }), 'Ôn tập')
+        await userEvent.click(screen.getByRole('button', { name: 'Create category' }))
+        await waitFor(() => expect(layoutApi.createCategory).toHaveBeenCalledTimes(1))
+        await waitFor(() => expect(screen.getByRole('button', { name: 'Create category' })).toBeEnabled())
+        await userEvent.click(screen.getByRole('button', { name: 'Create category' }))
+        await waitFor(() => expect(layoutApi.createCategory).toHaveBeenCalledTimes(2))
+        const [first, again] = layoutApi.createCategory.mock.calls
+        expect(again![2]).toBe(first![2])
     })
 
     it('renames, and deletes one whose channels move to the top', async () => {

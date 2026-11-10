@@ -14,8 +14,8 @@ import {
     DialogTitle
 } from '@/components/ui/dialog'
 import { WithTooltip } from '@/components/ui/tooltip'
-import { generateIdempotencyKey } from '@/lib/idempotency'
-import { createCategory, deleteCategory, renameCategory } from '../../api/layout.api'
+import { deleteCategory, renameCategory } from '../../api/layout.api'
+import { useCreateCategory } from '../../api/useChannelLayout'
 import { rememberServer } from '../../api/useServers'
 import { clashingChannel, groupChannels, MAX_CHANNELS_AND_CATEGORIES, storedName } from '../../lib/channel-layout'
 import { layoutRule } from '../../lib/layout-error'
@@ -43,6 +43,7 @@ function CategoryForm({
 }) {
     const { t } = useTranslation('servers')
     const queryClient = useQueryClient()
+    const create = useCreateCategory(server.id)
     const nameInput = useRef<HTMLInputElement>(null)
     const [name, setName] = useState(category?.name ?? '')
     const [fieldError, setFieldError] = useState<string | null>(null)
@@ -66,10 +67,8 @@ function CategoryForm({
         setFailure(null)
         setSaving(true)
         try {
-            const updated = category
-                ? await renameCategory(server.id, category.id, name)
-                : (await createCategory(server.id, name, generateIdempotencyKey())).server
-            rememberServer(queryClient, updated)
+            if (category) rememberServer(queryClient, await renameCategory(server.id, category.id, name))
+            else await create.mutateAsync(name)
             onClose()
         } catch (error) {
             const described = describeFailure(t, error, {

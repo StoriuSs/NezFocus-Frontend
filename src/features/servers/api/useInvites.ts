@@ -1,14 +1,21 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation'
+import { getApiErrorType } from '@/lib/api-error'
 import { acceptInvite, createInvite, fetchInvitePreview, fetchInvites, revokeInvite } from './invites.api'
 import { serverKeys } from './keys'
 import { rememberServer } from './useServers'
 import type { InviteListItem, InviteSettings } from '../types'
 
-/** A link to hand out (S-SRV-02). Errors are the dialog's to show, in place of the link. */
+/**
+ * A link to hand out (S-SRV-02); the Invites page fetches its list again.
+ * Errors are the dialog's to show, in place of the link.
+ */
 export function useCreateInvite(serverId: string) {
+    const queryClient = useQueryClient()
     return useIdempotentMutation({
         mutationFn: (settings: InviteSettings, idempotencyKey) => createInvite(serverId, settings, idempotencyKey),
+        // Not awaited: the link shows at once, the list catches up.
+        onSuccess: () => void queryClient.invalidateQueries({ queryKey: serverKeys.invites(serverId) }),
         meta: { errorToast: false }
     })
 }
@@ -43,7 +50,10 @@ export function useServerInvites(serverId: string) {
     return useQuery({ queryKey: serverKeys.invites(serverId), queryFn: () => fetchInvites(serverId) })
 }
 
-/** Revoke a link; the row leaves the invites page at once. */
+/**
+ * Revoke a link, from the invite panel or the Invites page; the row leaves
+ * the page at once, and so does one that had already run out (INVITE_INVALID).
+ */
 export function useRevokeInvite(serverId: string) {
     const queryClient = useQueryClient()
     const drop = (code: string) =>
@@ -53,6 +63,9 @@ export function useRevokeInvite(serverId: string) {
     return useMutation({
         mutationFn: (code: string) => revokeInvite(code),
         onSuccess: (_, code) => drop(code),
+        onError: (error, code) => {
+            if (getApiErrorType(error) === 'INVITE_INVALID') drop(code)
+        },
         meta: { errorToast: false }
     })
 }

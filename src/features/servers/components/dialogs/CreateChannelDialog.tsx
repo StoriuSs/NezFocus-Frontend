@@ -1,6 +1,5 @@
 import { useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Hash, Loader2, Volume2 } from 'lucide-react'
@@ -12,9 +11,7 @@ import { OptionCards } from '@/components/ui/option-cards'
 import { Select } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { WithTooltip } from '@/components/ui/tooltip'
-import { generateIdempotencyKey } from '@/lib/idempotency'
-import { createChannel } from '../../api/layout.api'
-import { rememberServer } from '../../api/useServers'
+import { useCreateChannel } from '../../api/useChannelLayout'
 import { MAX_CHANNELS_AND_CATEGORIES, storedName, type ChannelType } from '../../lib/channel-layout'
 import { can } from '../../lib/permissions'
 import type { Server } from '../../types'
@@ -50,7 +47,7 @@ export function CreateChannelDialog({
 }) {
     const { t } = useTranslation('servers')
     const navigate = useNavigate()
-    const queryClient = useQueryClient()
+    const create = useCreateChannel(server.id)
     const nameInput = useRef<HTMLInputElement>(null)
 
     const [type, setType] = useState<ChannelType>(initialType)
@@ -81,21 +78,16 @@ export function CreateChannelDialog({
         setFailure(null)
         setCreating(true)
         try {
-            const created = await createChannel(
-                server.id,
-                {
-                    type,
-                    name: storedName(type, name),
-                    categoryId: group,
-                    isStudyRoom: type === 'voice' && isStudyRoom,
-                    isPrivate,
-                    viewRoleIds: isPrivate
-                        ? viewRoleIds.filter((id) => server.roles.some((r) => r.id === id && !r.administrator))
-                        : []
-                },
-                generateIdempotencyKey()
-            )
-            rememberServer(queryClient, created.server)
+            const created = await create.mutateAsync({
+                type,
+                name: storedName(type, name),
+                categoryId: group,
+                isStudyRoom: type === 'voice' && isStudyRoom,
+                isPrivate,
+                viewRoleIds: isPrivate
+                    ? viewRoleIds.filter((id) => server.roles.some((r) => r.id === id && !r.administrator))
+                    : []
+            })
             onClose()
             void navigate(`/channels/${server.id}/${created.id}`)
         } catch (error) {

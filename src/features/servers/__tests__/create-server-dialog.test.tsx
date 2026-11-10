@@ -176,6 +176,9 @@ describe('Create a server (S-SRV-01)', () => {
         expect(await screen.findByText('Ôn thi Giải tích 2 was created, but its picture was not saved.')).toBeVisible()
         await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
         await waitFor(() => expect(serversApi.uploadServerIcon).toHaveBeenCalledTimes(2))
+        // The same upload tried again: if the first was stored, the API answers with it.
+        const [first, again] = serversApi.uploadServerIcon.mock.calls
+        expect(again![2]).toBe(first![2])
     })
 
     it('says so ahead at 100 servers: the button explains and sends nothing', async () => {

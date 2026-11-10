@@ -8,7 +8,7 @@ import type { CreateChannelRequest, LayoutMove, Server, UpdateChannelRequest } f
  * rememberServer, no second request.
  */
 
-interface Created {
+export interface Created {
     id: string
     server: Server
 }

@@ -17,8 +17,7 @@ import { Select } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { WithTooltip } from '@/components/ui/tooltip'
 import { getApiErrorType, NETWORK_ERROR } from '@/lib/api-error'
-import { useCreateInvite } from '../../api/useInvites'
-import { revokeInvite } from '../../api/invites.api'
+import { useCreateInvite, useRevokeInvite } from '../../api/useInvites'
 import { useServers } from '../../api/useServers'
 import { useInviteDialogs } from '../../invite-dialogs.store'
 import {
@@ -56,6 +55,7 @@ export default function InviteDialog() {
     const servers = useServers()
     const server = servers.data?.find((candidate) => candidate.id === target?.serverId)
     const create = useCreateInvite(target?.serverId ?? '')
+    const revokeLink = useRevokeInvite(target?.serverId ?? '')
     const [invite, setInvite] = useState<Invite | null>(null)
     const [settings, setSettings] = useState<InviteSettings>(DEFAULT_INVITE_SETTINGS)
     const [editing, setEditing] = useState<InviteSettings | null>(null)
@@ -110,7 +110,7 @@ export default function InviteDialog() {
         if (!invite) return
         setRevokeFailed(false)
         try {
-            await revokeInvite(invite.code)
+            await revokeLink.mutateAsync(invite.code)
             setRevoked(true)
         } catch (error) {
             // Already gone: the same as revoked, for this panel.

@@ -1,9 +1,8 @@
 import '@/i18n/servers'
 import { useEffect, useRef, useState, type DragEvent, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useQueryClient, type QueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { toast } from 'sonner'
 import { Hash, ImagePlus, LampDesk, Loader2, OctagonX } from 'lucide-react'
 import { FormField } from '@/components/form/FormField'
 import { FormMessage } from '@/components/form/FormMessage'
@@ -21,12 +20,10 @@ import { Input } from '@/components/ui/input'
 import { OptionCards } from '@/components/ui/option-cards'
 import { WithTooltip } from '@/components/ui/tooltip'
 import { getApiErrorType, NETWORK_ERROR } from '@/lib/api-error'
-import { generateIdempotencyKey } from '@/lib/idempotency'
 import { IMAGE_TYPES, imageProblem, type ImageProblem } from '@/lib/image-file'
 import { cn } from '@/lib/utils'
-import { uploadServerIcon } from '../api/servers.api'
-import { useCreateServer } from '../api/useCreateServer'
-import { rememberServer, useServers } from '../api/useServers'
+import { saveNewServerIcon, useCreateServer } from '../api/useCreateServer'
+import { useServers } from '../api/useServers'
 import { useCreateServerDialog } from '../create-server.store'
 import { useInviteDialogs } from '../invite-dialogs.store'
 import { firstTextChannel } from '../lib/channel-list'
@@ -38,31 +35,10 @@ import {
     serverInitials,
     serverNameLength
 } from '../lib/server-name'
-import type { Server, ServerTemplate } from '../types'
+import type { ServerTemplate } from '../types'
 import { JoinByCode } from './invites/JoinByCode'
 
 type Problem = 'maxServers' | 'offline' | 'failed'
-
-/**
- * Store the icon of a server just made (the second request, M1 plan › rules).
- * A failure leaves the server without one: a toast says so and offers to try
- * again with the same picture.
- */
-async function saveIcon(
-    queryClient: QueryClient,
-    server: Server,
-    icon: Blob,
-    messages: { failed: string; retry: string }
-): Promise<void> {
-    try {
-        const iconUrl = await uploadServerIcon(server.id, icon, generateIdempotencyKey())
-        rememberServer(queryClient, { ...server, iconUrl })
-    } catch {
-        toast.error(messages.failed, {
-            action: { label: messages.retry, onClick: () => void saveIcon(queryClient, server, icon, messages) }
-        })
-    }
-}
 
 /**
  * "Create a server" (S-SRV-01): a template, an optional square picture, and
@@ -131,7 +107,7 @@ export default function CreateServerDialog() {
         try {
             const server = await create.mutateAsync({ name: normaliseServerName(name), template })
             if (icon) {
-                await saveIcon(queryClient, server, icon.blob, {
+                await saveNewServerIcon(queryClient, server, icon.blob, {
                     failed: t('create.iconFailed', { name: server.name }),
                     retry: t('create.retry')
                 })
