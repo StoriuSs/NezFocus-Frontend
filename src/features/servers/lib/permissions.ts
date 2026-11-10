@@ -35,3 +35,6 @@ export function can(bits: string, permission: PermissionName): boolean {
     if (!/^\d{1,20}$/.test(bits)) return false
     return ((BigInt(bits) >> BigInt(BITS[permission])) & 1n) === 1n
 }
+
+/** The bit of one permission, to turn it on or off in a role's set. */
+export const permissionBit = (permission: PermissionName): bigint => 1n << BigInt(BITS[permission])

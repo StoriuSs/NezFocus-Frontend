@@ -299,5 +299,185 @@
     "emptyBody": "Invites made from “Invite people” in the server menu show here.",
     "loadFailed": "Could not load the list",
     "retry": "Try again"
+  },
+  "roles": {
+    "description": "Higher roles manage lower ones. Drag to change the order. A person’s permissions are those of all their roles together.",
+    "group": "Roles — {{count}}",
+    "create": "Create role",
+    "memberCount_one": "{{count}} member",
+    "memberCount_other": "{{count}} members",
+    "nobody": "No one yet",
+    "everyoneValue": "Every member",
+    "lockedMine": "Your highest role",
+    "lockedAbove": "Above you",
+    "lockedTooltip": "You can only manage roles below {{role}}",
+    "blockedLine": "You can only manage roles below {{role}}.",
+    "empty": "No roles yet. Create a role to share running the server with friends.",
+    "limit": "This server has 50 roles, the most it can have. Delete one to create another.",
+    "loadFailed": "Couldn’t load the roles",
+    "retry": "Try again",
+    "drag": {
+      "instructions": "Press Space to pick up a role, the arrow keys to move it, Space to drop it and Escape to cancel.",
+      "lifted": "{{name}} picked up, position {{position}} of {{count}}",
+      "at": "{{name}}, position {{position}} of {{count}}",
+      "dropped": "{{name}} dropped at position {{position}} of {{count}}",
+      "cancelled": "{{name}} put back",
+      "blocked": "Only roles below {{role}} can go here"
+    },
+    "saveFailed": "Couldn’t save the change",
+    "saved": "Changes saved",
+    "createDialog": {
+      "title": "Create role",
+      "description": "A new role has no permissions yet. You choose them next.",
+      "cancel": "Cancel",
+      "submit": "Create role"
+    },
+    "name": {
+      "label": "Role name",
+      "length": "A role name needs 1–100 characters",
+      "taken": "This server already has a role {{name}}",
+      "reserved": "This name is reserved for the system"
+    },
+    "edit": {
+      "back": "Roles",
+      "tabPermissions": "Permissions",
+      "tabMembers": "Members · {{count}}",
+      "mention": "Let anyone mention @{{name}}",
+      "mentionDescription": "Anyone in the server can type @{{name}} to notify everyone with this role.",
+      "adminOn": "Administrator already includes every permission below.",
+      "lockedSwitch": "You need this permission to give it to or take it from a role",
+      "readonlyMine": "This is your highest role, so you can only view it.",
+      "readonlyAbove": "This role is above your highest role, so you can only view it.",
+      "everyoneIntro": "Permissions of everyone in the server. Other roles add to these.",
+      "everyoneWarning": "Turning it off here turns it off for everyone who has no other role turning it on, in every channel.",
+      "gone": "This role no longer exists",
+      "groups": {
+        "general": "General",
+        "members": "Members",
+        "messages": "Messages",
+        "rooms": "Rooms",
+        "tasks": "Group tasks"
+      },
+      "delete": "Delete role",
+      "deleteDescription_one": "{{count}} member will lose this role’s permissions.",
+      "deleteDescription_other": "{{count}} members will lose this role’s permissions.",
+      "deleteLocked": "You need every permission of this role to delete it",
+      "deleteTitle": "Delete role {{name}}?",
+      "deleteBody_one": "{{count}} member will lose this role’s permissions. This can’t be undone.",
+      "deleteBody_other": "{{count}} members will lose this role’s permissions. This can’t be undone.",
+      "deleteSubmit": "Delete role",
+      "cancel": "Cancel",
+      "deleted": "Deleted role {{name}}"
+    },
+    "permissions": {
+      "ADMINISTRATOR": {
+        "label": "Administrator",
+        "description": "Has every permission and always sees every channel. Still can’t manage higher roles."
+      },
+      "MANAGE_SERVER": {
+        "label": "Manage server",
+        "description": "Change the name, picture and welcome channel; see and revoke invites."
+      },
+      "MANAGE_ROLES": {
+        "label": "Manage roles",
+        "description": "Create, edit, delete and give the roles below one’s own highest role."
+      },
+      "MANAGE_CHANNELS": {
+        "label": "Manage channels",
+        "description": "Create, edit, delete and arrange channels and categories; turn on the Task Board; set up rooms."
+      },
+      "CREATE_INVITE": {
+        "label": "Create invites",
+        "description": "Make links to invite friends to the server."
+      },
+      "MODERATE_MEMBERS": {
+        "label": "Time out members",
+        "description": "Someone timed out can only look and read: no messages, no reactions, no rooms."
+      },
+      "KICK_MEMBERS": {
+        "label": "Kick members",
+        "description": "Someone kicked can come back with a new invite."
+      },
+      "BAN_MEMBERS": {
+        "label": "Ban members",
+        "description": "Ban, unban and see the ban list."
+      },
+      "VIEW_CHANNEL": {
+        "label": "View channels",
+        "description": "See channels and read every message, old ones included."
+      },
+      "SEND_MESSAGES": {
+        "label": "Send messages"
+      },
+      "ATTACH_FILES": {
+        "label": "Attach files"
+      },
+      "ADD_REACTIONS": {
+        "label": "Add reactions",
+        "description": "Add a new reaction to a message. Clicking one already there doesn’t need this."
+      },
+      "MENTION_EVERYONE": {
+        "label": "Mention @everyone, @here and all roles"
+      },
+      "MANAGE_MESSAGES": {
+        "label": "Manage messages",
+        "description": "Delete others’ messages, pin messages, post in channels where only message managers may post."
+      },
+      "CONNECT": {
+        "label": "Join rooms"
+      },
+      "SPEAK": {
+        "label": "Speak"
+      },
+      "VIDEO": {
+        "label": "Camera and screen sharing"
+      },
+      "MUTE_MEMBERS": {
+        "label": "Mute others"
+      },
+      "MOVE_MEMBERS": {
+        "label": "Disconnect others from rooms"
+      },
+      "MANAGE_STUDY_ROOMS": {
+        "label": "Manage study rooms",
+        "description": "Control every shared study session; change study room settings."
+      },
+      "CREATE_TASKS": {
+        "label": "Create tasks"
+      },
+      "MANAGE_TASKS": {
+        "label": "Manage tasks",
+        "description": "Edit, delete and change the status of every task."
+      }
+    },
+    "members": {
+      "add": "Add members",
+      "remove": "Remove {{role}} from {{name}}",
+      "empty": "No one has this role yet.",
+      "removed": "Removed {{role}} from {{name}}",
+      "undo": "Undo",
+      "added_one": "Added {{count}} person to {{role}}",
+      "added_other": "Added {{count}} people to {{role}}",
+      "handoutLocked": "You need every permission of this role to add or remove people",
+      "owner": "Server owner",
+      "more": "And {{count}} more",
+      "removeSelfTitle": "Remove {{role}} from yourself?",
+      "removeSelfBody": "You have Manage roles through this role. Once it’s removed, you can’t open the Roles page any more.",
+      "removeSelfSubmit": "Remove",
+      "cancel": "Cancel",
+      "count_one": "{{count}} member has this role",
+      "count_other": "{{count}} members have this role"
+    },
+    "addDialog": {
+      "title": "Add to {{role}}",
+      "search": "Search by name or username",
+      "hasRole": "Already has this role",
+      "above": "Above you",
+      "submit": "Add",
+      "submitCount": "Add ({{count}})",
+      "cancel": "Cancel",
+      "noMatch": "No one matches “{{q}}”",
+      "failed": "Couldn’t add them. The list was reloaded; try again."
+    }
   }
 }

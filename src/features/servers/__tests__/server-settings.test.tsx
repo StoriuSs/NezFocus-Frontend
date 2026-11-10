@@ -131,6 +131,9 @@ describe('Who sees which settings page (04 S-SET-01 Q2)', () => {
         // Overview and Invites both need MANAGE_SERVER (04 Q2).
         expect(settingsSections({ permissions: MANAGER })).toEqual(['overview', 'invites'])
         expect(settingsSections({ permissions: MEMBER })).toEqual([])
+        // Roles needs MANAGE_ROLES (L7); with MANAGE_SERVER too, in SettingsNav order.
+        expect(settingsSections({ permissions: bits(2) })).toEqual(['roles'])
+        expect(settingsSections({ permissions: bits(1, 2) })).toEqual(['overview', 'roles', 'invites'])
         // Members (L8) is not built yet: KICK_MEMBERS alone opens nothing.
         expect(settingsSections({ permissions: bits(4) })).toEqual([])
         expect(settingsSections({ permissions: 'garbage' })).toEqual([])

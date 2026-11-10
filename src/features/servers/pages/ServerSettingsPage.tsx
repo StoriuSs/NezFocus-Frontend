@@ -8,6 +8,8 @@ import { ShellPage } from '@/components/shell/ShellPage'
 import { useServers } from '../api/useServers'
 import { isSettingsSection, serverSettingsPath, settingsSections } from '../lib/settings-sections'
 import { InvitesSettings } from '../components/settings/InvitesSettings'
+import { RoleEditor } from '../components/settings/roles/RoleEditor'
+import { RolesSettings } from '../components/settings/roles/RolesSettings'
 import { ServerIconSetting } from '../components/settings/ServerIconSetting'
 import { ServerNameForm } from '../components/settings/ServerNameForm'
 import { WelcomeChannelSetting } from '../components/settings/WelcomeChannelSetting'
@@ -22,7 +24,8 @@ function Lost({ to, message }: { to: string; message: string }) {
 }
 
 /**
- * The server settings (04 › Khung, S-SET-01 → S-SET-04): `/servers/{id}/settings/{section}`
+ * The server settings (04 › Khung, S-SET-01 → S-SET-04): `/servers/{id}/settings/{section}`,
+ * and one role at `/settings/roles/{roleId}` (S-SET-02 `edit-role`),
  * beside SettingsNav. Without a section, the first page they may open (Q2).
  * A page they may not open (any more) goes to the first one they may, with
  * "You no longer have access to this page"; with none left, back to the
@@ -30,7 +33,7 @@ function Lost({ to, message }: { to: string; message: string }) {
  */
 export default function ServerSettingsPage() {
     const { t } = useTranslation()
-    const { serverId, section } = useParams()
+    const { serverId, section, roleId } = useParams()
     const servers = useServers()
 
     if (servers.isPending) return <PageLoader className='min-h-0 flex-1' />
@@ -51,6 +54,8 @@ export default function ServerSettingsPage() {
     return (
         <ShellPage title={t(`shell.serverSettings.${section}`)} bodyClassName='flex flex-col'>
             {section === 'overview' ? <Overview server={server} /> : null}
+            {section === 'roles' && !roleId ? <RolesSettings server={server} /> : null}
+            {section === 'roles' && roleId ? <RoleEditor key={roleId} server={server} roleId={roleId} /> : null}
             {section === 'invites' ? <InvitesSettings server={server} /> : null}
         </ShellPage>
     )

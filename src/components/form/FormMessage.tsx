@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react'
-import { Clock, EyeOff, Info, Mail, OctagonX, WifiOff, type LucideIcon } from 'lucide-react'
+import { Clock, EyeOff, Info, Lock, Mail, OctagonX, WifiOff, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const ICONS = {
     info: Info,
     clock: Clock,
+    lock: Lock,
     mail: Mail,
     'wifi-off': WifiOff,
     'octagon-x': OctagonX,

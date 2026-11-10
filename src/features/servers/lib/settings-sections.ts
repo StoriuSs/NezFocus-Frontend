@@ -13,7 +13,7 @@ export type SettingsSection = 'overview' | 'roles' | 'members' | 'invites' | 'ba
  */
 const SECTIONS: { id: SettingsSection; anyOf: PermissionName[]; built: boolean }[] = [
     { id: 'overview', anyOf: ['MANAGE_SERVER'], built: true },
-    { id: 'roles', anyOf: ['MANAGE_ROLES'], built: false },
+    { id: 'roles', anyOf: ['MANAGE_ROLES'], built: true },
     { id: 'members', anyOf: ['KICK_MEMBERS', 'BAN_MEMBERS', 'MODERATE_MEMBERS', 'MANAGE_ROLES'], built: false },
     { id: 'invites', anyOf: ['MANAGE_SERVER'], built: true },
     { id: 'bans', anyOf: ['BAN_MEMBERS'], built: false }

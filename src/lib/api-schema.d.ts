@@ -656,6 +656,107 @@ export interface paths {
         patch?: never
         trace?: never
     }
+    '/api/v1/servers/{serverId}/roles': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        /** Every role, highest first, @everyone last, with how many hold each (MANAGE_ROLES). */
+        get: operations['RolesController_list_v1']
+        put?: never
+        /** A role with no permissions, right below the creator's highest (D-87). */
+        post: operations['RolesController_create_v1']
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/servers/{serverId}/roles/order': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        post?: never
+        delete?: never
+        options?: never
+        head?: never
+        /** One drop on the Roles page. Declared before roles/:roleId, which would take "order" for an id. */
+        patch: operations['RolesController_reorder_v1']
+        trace?: never
+    }
+    '/api/v1/servers/{serverId}/roles/{roleId}': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        post?: never
+        delete: operations['RolesController_delete_v1']
+        options?: never
+        head?: never
+        patch: operations['RolesController_update_v1']
+        trace?: never
+    }
+    '/api/v1/servers/{serverId}/roles/{roleId}/members': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        /** Give the role to everyone listed, or to no one (D-153). Those who have it already stay as they are. */
+        put: operations['RolesController_grant_v1']
+        post?: never
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/servers/{serverId}/members/{userId}/roles/{roleId}': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        post?: never
+        delete: operations['RolesController_revoke_v1']
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/servers/{serverId}/members': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        /** One page of the members, by name (D-89, D-90, D-152). Anyone in the server. */
+        get: operations['RolesController_members_v1']
+        put?: never
+        post?: never
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
 }
 export type webhooks = Record<string, never>
 export interface components {
@@ -1173,6 +1274,66 @@ export interface components {
             server: components['schemas']['ServerResponseDto']
             /** @description False: already a member; nothing changed and no use was counted. */
             joined: boolean
+        }
+        RoleResponseDto: {
+            id: string
+            name: string
+            /** @description Higher is more senior; @everyone is 0. */
+            position: number
+            permissions: string
+            mentionable: boolean
+            is_everyone: boolean
+            /** @description For @everyone, every member. */
+            member_count: number
+        }
+        RoleListResponseDto: {
+            roles: components['schemas']['RoleResponseDto'][]
+        }
+        CreatedRoleResponseDto: {
+            role_id: string
+        }
+        CreateRoleRequestDto: {
+            name: string
+        }
+        ReorderRolesRequestDto: {
+            order: string[]
+            seen_order: string[]
+        }
+        UpdateRoleRequestDto: {
+            name?: string
+            /**
+             * @description The whole set after the change, as a decimal string.
+             * @example 1280
+             */
+            permissions?: string
+            /** @description "Allow anyone to @mention this role". */
+            mentionable?: boolean
+        }
+        GrantRoleRequestDto: {
+            user_ids: string[]
+        }
+        MemberResponseDto: {
+            user_id: string
+            username: string | null
+            display_name: string | null
+            avatar_url: string | null
+            is_owner: boolean
+            /** @description Not @everyone. */
+            role_ids: string[]
+            /** Format: date-time */
+            joined_at: string
+        }
+        PageMetaResponseDto: {
+            current_page: number
+            items_per_page: number
+            total_items: number
+            total_pages: number
+            has_next_page: boolean
+            has_previous_page: boolean
+        }
+        MemberPageResponseDto: {
+            items: components['schemas']['MemberResponseDto'][]
+            meta: components['schemas']['PageMetaResponseDto']
         }
     }
     responses: never
@@ -2483,6 +2644,230 @@ export interface operations {
                     'application/json': {
                         meta: components['schemas']['ApiResponseMetaDto']
                         data: components['schemas']['AcceptInviteResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    RolesController_list_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                serverId: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['RoleListResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    RolesController_create_v1: {
+        parameters: {
+            query?: never
+            header: {
+                /** @description UUID identifying one user intent */
+                'Idempotency-Key': string
+            }
+            path: {
+                serverId: string
+            }
+            cookie?: never
+        }
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['CreateRoleRequestDto']
+            }
+        }
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['CreatedRoleResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    RolesController_reorder_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                serverId: string
+            }
+            cookie?: never
+        }
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['ReorderRolesRequestDto']
+            }
+        }
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: null
+                    }
+                }
+            }
+        }
+    }
+    RolesController_delete_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                serverId: string
+                roleId: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: null
+                    }
+                }
+            }
+        }
+    }
+    RolesController_update_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                serverId: string
+                roleId: string
+            }
+            cookie?: never
+        }
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['UpdateRoleRequestDto']
+            }
+        }
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: null
+                    }
+                }
+            }
+        }
+    }
+    RolesController_grant_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                serverId: string
+                roleId: string
+            }
+            cookie?: never
+        }
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['GrantRoleRequestDto']
+            }
+        }
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: null
+                    }
+                }
+            }
+        }
+    }
+    RolesController_revoke_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                serverId: string
+                roleId: string
+                userId: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: null
+                    }
+                }
+            }
+        }
+    }
+    RolesController_members_v1: {
+        parameters: {
+            query?: {
+                /** @description Display name or username, ignoring case and accents. */
+                q?: string
+                /** @description Only those holding this role. */
+                roleId?: string
+                page?: number
+                /** @description 10, 50 or 100 (D-90); 50 when left out. */
+                limit?: 10 | 50 | 100
+            }
+            header?: never
+            path: {
+                serverId: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['MemberPageResponseDto']
                     }
                 }
             }

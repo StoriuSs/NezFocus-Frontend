@@ -299,5 +299,185 @@
     "emptyBody": "Lời mời tạo từ “Mời bạn” trong menu server sẽ hiện ở đây.",
     "loadFailed": "Không tải được danh sách",
     "retry": "Thử lại"
+  },
+  "roles": {
+    "description": "Vai trò cao hơn quản lý được vai trò thấp hơn. Kéo để đổi thứ tự. Quyền của một người là tổng quyền của mọi vai trò họ có.",
+    "group": "Vai trò — {{count}}",
+    "create": "Tạo vai trò",
+    "memberCount_one": "{{count}} thành viên",
+    "memberCount_other": "{{count}} thành viên",
+    "nobody": "Chưa có ai",
+    "everyoneValue": "Mọi thành viên",
+    "lockedMine": "Vai trò cao nhất của bạn",
+    "lockedAbove": "Cao hơn bạn",
+    "lockedTooltip": "Bạn chỉ quản lý được vai trò thấp hơn {{role}}",
+    "blockedLine": "Bạn chỉ quản lý được vai trò thấp hơn {{role}}.",
+    "empty": "Chưa có vai trò nào. Tạo vai trò để giao việc quản lý cho bạn bè.",
+    "limit": "Server đã có 50 vai trò, mức tối đa. Xóa bớt để tạo vai trò mới.",
+    "loadFailed": "Chưa tải được danh sách vai trò",
+    "retry": "Thử lại",
+    "drag": {
+      "instructions": "Nhấn Space để nhấc vai trò, phím mũi tên để di chuyển, Space để thả, Esc để hủy.",
+      "lifted": "Đã nhấc {{name}}, vị trí {{position}} trên {{count}}",
+      "at": "{{name}}, vị trí {{position}} trên {{count}}",
+      "dropped": "Đã thả {{name}} ở vị trí {{position}} trên {{count}}",
+      "cancelled": "Đã đặt {{name}} về chỗ cũ",
+      "blocked": "Chỉ vai trò thấp hơn {{role}} mới đặt được ở đây"
+    },
+    "saveFailed": "Chưa lưu được thay đổi",
+    "saved": "Đã lưu thay đổi",
+    "createDialog": {
+      "title": "Tạo vai trò",
+      "description": "Vai trò mới chưa có quyền nào. Bạn chọn quyền ở bước sau.",
+      "cancel": "Hủy",
+      "submit": "Tạo vai trò"
+    },
+    "name": {
+      "label": "Tên vai trò",
+      "length": "Tên vai trò cần 1–100 ký tự",
+      "taken": "Server đã có vai trò {{name}}",
+      "reserved": "Tên này dành cho hệ thống"
+    },
+    "edit": {
+      "back": "Vai trò",
+      "tabPermissions": "Quyền",
+      "tabMembers": "Thành viên · {{count}}",
+      "mention": "Cho phép mọi người nhắc @{{name}}",
+      "mentionDescription": "Ai trong server cũng gõ được @{{name}} để báo cho mọi người có vai trò này.",
+      "adminOn": "Toàn quyền đã gồm mọi quyền bên dưới.",
+      "lockedSwitch": "Bạn cần có quyền này để cấp hoặc gỡ cho vai trò khác",
+      "readonlyMine": "Đây là vai trò cao nhất của bạn nên bạn chỉ xem được.",
+      "readonlyAbove": "Vai trò này cao hơn vai trò cao nhất của bạn nên bạn chỉ xem được.",
+      "everyoneIntro": "Quyền của mọi người trong server. Vai trò khác cộng thêm quyền vào đây.",
+      "everyoneWarning": "Tắt ở đây là tắt cho mọi người chưa có vai trò khác bật quyền này, ở mọi kênh.",
+      "gone": "Vai trò này không còn nữa",
+      "groups": {
+        "general": "Chung",
+        "members": "Thành viên",
+        "messages": "Tin nhắn",
+        "rooms": "Phòng",
+        "tasks": "Việc nhóm"
+      },
+      "delete": "Xóa vai trò",
+      "deleteDescription_one": "{{count}} thành viên sẽ mất các quyền của vai trò này.",
+      "deleteDescription_other": "{{count}} thành viên sẽ mất các quyền của vai trò này.",
+      "deleteLocked": "Bạn cần có mọi quyền của vai trò này để xóa nó",
+      "deleteTitle": "Xóa vai trò {{name}}?",
+      "deleteBody_one": "{{count}} thành viên sẽ mất các quyền của vai trò này. Không hoàn tác được.",
+      "deleteBody_other": "{{count}} thành viên sẽ mất các quyền của vai trò này. Không hoàn tác được.",
+      "deleteSubmit": "Xóa vai trò",
+      "cancel": "Hủy",
+      "deleted": "Đã xóa vai trò {{name}}"
+    },
+    "permissions": {
+      "ADMINISTRATOR": {
+        "label": "Toàn quyền",
+        "description": "Có mọi quyền và luôn thấy mọi kênh. Vẫn không quản lý được vai trò cao hơn."
+      },
+      "MANAGE_SERVER": {
+        "label": "Quản lý server",
+        "description": "Đổi tên, ảnh, kênh tin chào mừng; xem và thu hồi lời mời."
+      },
+      "MANAGE_ROLES": {
+        "label": "Quản lý vai trò",
+        "description": "Tạo, sửa, xóa và gán các vai trò thấp hơn vai trò cao nhất của mình."
+      },
+      "MANAGE_CHANNELS": {
+        "label": "Quản lý kênh",
+        "description": "Tạo, sửa, xóa, sắp xếp kênh và danh mục; bật Task Board; cài đặt phòng."
+      },
+      "CREATE_INVITE": {
+        "label": "Tạo lời mời",
+        "description": "Tạo link mời bạn bè vào server."
+      },
+      "MODERATE_MEMBERS": {
+        "label": "Tạm khóa thành viên",
+        "description": "Người bị tạm khóa chỉ còn xem và đọc: không gửi tin, không thả cảm xúc, không vào phòng."
+      },
+      "KICK_MEMBERS": {
+        "label": "Mời ra khỏi server",
+        "description": "Người bị mời ra quay lại được bằng lời mời mới."
+      },
+      "BAN_MEMBERS": {
+        "label": "Cấm khỏi server",
+        "description": "Cấm, bỏ cấm và xem danh sách cấm."
+      },
+      "VIEW_CHANNEL": {
+        "label": "Xem kênh",
+        "description": "Thấy kênh và đọc mọi tin, kể cả tin cũ."
+      },
+      "SEND_MESSAGES": {
+        "label": "Gửi tin nhắn"
+      },
+      "ATTACH_FILES": {
+        "label": "Đính kèm tệp"
+      },
+      "ADD_REACTIONS": {
+        "label": "Thả cảm xúc",
+        "description": "Thêm cảm xúc mới vào tin. Bấm vào cảm xúc đã có thì không cần quyền này."
+      },
+      "MENTION_EVERYONE": {
+        "label": "Nhắc @everyone, @here và mọi vai trò"
+      },
+      "MANAGE_MESSAGES": {
+        "label": "Quản lý tin nhắn",
+        "description": "Xóa tin của người khác, ghim tin, gửi vào kênh chỉ người quản lý tin nhắn được gửi."
+      },
+      "CONNECT": {
+        "label": "Vào phòng"
+      },
+      "SPEAK": {
+        "label": "Nói"
+      },
+      "VIDEO": {
+        "label": "Bật camera và chia sẻ màn hình"
+      },
+      "MUTE_MEMBERS": {
+        "label": "Tắt mic người khác"
+      },
+      "MOVE_MEMBERS": {
+        "label": "Ngắt người khác khỏi phòng"
+      },
+      "MANAGE_STUDY_ROOMS": {
+        "label": "Quản lý phòng học",
+        "description": "Điều khiển mọi phiên học chung; sửa cài đặt phòng học."
+      },
+      "CREATE_TASKS": {
+        "label": "Tạo việc"
+      },
+      "MANAGE_TASKS": {
+        "label": "Quản lý việc",
+        "description": "Sửa, xóa, đổi trạng thái mọi việc."
+      }
+    },
+    "members": {
+      "add": "Thêm thành viên",
+      "remove": "Gỡ {{role}} khỏi {{name}}",
+      "empty": "Chưa có ai có vai trò này.",
+      "removed": "Đã gỡ {{role}} khỏi {{name}}",
+      "undo": "Hoàn tác",
+      "added_one": "Đã thêm {{count}} người vào {{role}}",
+      "added_other": "Đã thêm {{count}} người vào {{role}}",
+      "handoutLocked": "Bạn cần có mọi quyền của vai trò này để thêm hoặc gỡ người",
+      "owner": "Chủ server",
+      "more": "Và {{count}} người nữa",
+      "removeSelfTitle": "Gỡ {{role}} khỏi bạn?",
+      "removeSelfBody": "Bạn đang có quyền Quản lý vai trò nhờ vai trò này. Gỡ xong bạn không mở được trang Vai trò nữa.",
+      "removeSelfSubmit": "Gỡ",
+      "cancel": "Hủy",
+      "count_one": "{{count}} thành viên có vai trò này",
+      "count_other": "{{count}} thành viên có vai trò này"
+    },
+    "addDialog": {
+      "title": "Thêm vào {{role}}",
+      "search": "Tìm theo tên hoặc username",
+      "hasRole": "Đã có vai trò",
+      "above": "Cao hơn bạn",
+      "submit": "Thêm",
+      "submitCount": "Thêm ({{count}})",
+      "cancel": "Hủy",
+      "noMatch": "Không có ai khớp “{{q}}”",
+      "failed": "Chưa thêm được. Danh sách đã được tải lại, bạn thử lại nhé."
+    }
   }
 }

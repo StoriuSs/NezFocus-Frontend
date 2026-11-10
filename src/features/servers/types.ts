@@ -41,3 +41,15 @@ export type InviteListItem = ApiModel<'InviteListItemResponseDto'>
 
 /** The invite page (S-SRV-03): the server, who invites, and the `?channel=` target someone joining sees. */
 export type InvitePreview = ApiModel<'InvitePreviewResponseDto'>
+
+/** A role on the Roles page (S-SET-02), @everyone included, with how many hold it. */
+export type Role = ApiModel<'RoleResponseDto'>
+
+/** A member as the server's lists show them (D-152). */
+export type ServerMember = ApiModel<'MemberResponseDto'>
+
+/** One page of members, with how many match in all. */
+export type MemberPage = ApiModel<'MemberPageResponseDto'>
+
+/** What "Edit role" changes; bits as a decimal string. */
+export type UpdateRoleRequest = ApiModel<'UpdateRoleRequestDto'>

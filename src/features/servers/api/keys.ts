@@ -5,5 +5,9 @@ export const serverKeys = {
     /** The links of one server (S-SET-04). */
     invites: (serverId: string) => [...serverKeys.all, 'invites', serverId] as const,
     /** One invite page (S-SRV-03). */
-    invite: (code: string) => [...serverKeys.all, 'invite', code] as const
+    invite: (code: string) => [...serverKeys.all, 'invite', code] as const,
+    /** The Roles page of one server (S-SET-02). */
+    roles: (serverId: string) => [...serverKeys.all, 'roles', serverId] as const,
+    /** Members of one server, any search (D-152). */
+    members: (serverId: string) => [...serverKeys.all, 'members', serverId] as const
 }

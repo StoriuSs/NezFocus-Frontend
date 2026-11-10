@@ -74,7 +74,8 @@ export const router = createBrowserRouter([
                     ...column('study')([{ path: '/study', element: <Study /> }]),
                     ...column('server')([{ path: '/channels/:serverId/:channelId?', element: <ChannelPage /> }]),
                     ...column('serverSettings')([
-                        { path: '/servers/:serverId/settings/:section?', element: <ServerSettingsPage /> }
+                        { path: '/servers/:serverId/settings/:section?', element: <ServerSettingsPage /> },
+                        { path: '/servers/:serverId/settings/:section/:roleId', element: <ServerSettingsPage /> }
                     ]),
                     ...column('settings')([...authAppRoutes, ...usersRoutes])
                 ]
