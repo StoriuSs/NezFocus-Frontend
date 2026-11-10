@@ -21,7 +21,8 @@ a few small Zustand stores, or in a component.**
 | The theme on screen | The theme store, `src/hooks/useTheme.ts`, set from the settings once signed in | `useTheme()` |
 | A removed avatar waiting out its "Undo" | `useAvatarRemoval`, `src/features/users/lib/avatar-removal-state.ts` | read by `useProfile` |
 | A form's values and errors | React Hook Form | [shadcn-forms.md](./shadcn-forms.md) |
-| Whether a dialog is open, a tab, a hover | `useState` in the component | — |
+| Which servers dialog is open, and on what (create a server, a channel or category dialog, invite friends, join from an invite) | `useCreateServerDialog`, `useChannelDialogs`, `useInviteDialogs` (`src/features/servers/*.store.ts`); the AppShell draws the dialogs | `useCreateServerDialog((s) => s.show)` |
+| Whether a dialog its own component opens is open, a tab, a hover | `useState` in the component | — |
 
 **Don't copy server data into a store.** The copy is what goes stale: a
 mutation updates the query cache, and the store keeps showing the old value.
@@ -39,13 +40,17 @@ sign-in so your menu (`MeMenu`) does not ask twice.
 | Field / action | What it is |
 | --- | --- |
 | `isAuthenticated` | A session is in hand |
+| `isComplete` | The account has done "complete your account" (D-61); while false the app's pages send to `/welcome`. True when signed out |
 | `isSigningOut` | A sign-out is under way: guards wait instead of sending anyone to sign in |
+| `isLoadingAccount` | Signed in, the profile on the way: the sign-in pages stay as they are until it is known whether the account is complete or waits to be deleted |
 | `user` | `{ id, email, username, displayName, roles }`, or `null` |
 | `deletesAt` | When the account goes, if its owner asked to delete it (D-141), or `null`. While set, the guards keep the person on sign-in under the restore dialog |
 | `initAuth()` | On page load: restore the session from the refresh cookie, if this browser has one |
 | `signIn()`, `startSession()`, `resumeFromCookie()` | Start a session: with a password, from tokens the API returned (confirming the address, resetting the password), or after Google |
 | `getToken()`, `refreshToken()` | The access token for a request, refreshed when it is about to expire |
 | `logout(reason?, to?, deletesAt?)` | End the session here, on the API and in the other tabs, then reload the app |
+| `markIncomplete()`, `markComplete()`, `markPendingDeletion(deletesAt)` | What the API said about the account: `ACCOUNT_INCOMPLETE` and `ACCOUNT_PENDING_DELETION` (from `api-session.ts`), or "complete your account" done here or in another tab |
+| `takeSignOutReason()`, `peekSignOutReason()`, `peekDeletesAt()` | Why the last session ended, and the day the account goes, for the sign-in page's banner and the toasts; `take` reads it once |
 | `restoreAccount()`, `setRestoreAside()` | The restore dialog's two choices: restore the account, or end the session without a reload ([auth/session.md](./auth/session.md#an-account-waiting-to-be-deleted)) |
 
 **Tokens are not in the store.** The access token sits in
@@ -72,6 +77,25 @@ auth store runs it while the token is still in hand). It is not server data copi
 person did and the API has not heard yet. It sits in a file of its own
 because `useProfile` reads it and is in the first download; the removal logic
 stays in the profile page's chunk.
+
+**The servers dialog stores** (`useCreateServerDialog`, `useChannelDialogs`,
+`useInviteDialogs`, in `src/features/servers/`): which of the servers
+feature's dialogs is open, and on what. They are stores rather than
+`useState` because the dialogs live in the AppShell (each loaded with
+`lazy()` the first time it opens), while what opens them is elsewhere: the
+rail's ＋, the no-server page, the server menu, the channel list's buttons,
+an invite link opened while signed in.
+
+- `useCreateServerDialog`: `open`, `template`, `mode` (`create` or `join`);
+  `show(template?)`, `showJoin()`, `hide()`.
+- `useChannelDialogs`: `open`, the dialog and the ids it is about, or `null`;
+  `show(dialog)`, `hide()`.
+- `useInviteDialogs`: `invite` (`{ serverId, created }`) and `join`
+  (`{ code, channel }`); `showInvite()`, `hideInvite()`, `showJoin()`,
+  `hideJoin()`.
+
+They hold ids, never server data: the dialog reads the server from the
+servers query (`useServers`).
 
 ## Using a store
 
@@ -137,5 +161,6 @@ More of the Vue-to-React mapping: [react-concepts.md](./react-concepts.md).
   a context-based store cannot offer.
 - **Small** (about 1 kB), with no boilerplate.
 - **Little to hold.** With server data in TanStack Query, the app's own state
-  is the session and the theme. Redux's structure would be paid for and not
+  is the session, the theme, a pending avatar removal and which dialog the
+  AppShell shows. Redux's structure would be paid for and not
   used.

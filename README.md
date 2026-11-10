@@ -38,6 +38,10 @@ languages, dark mode, tests, and a production image with CI and deploys.
   reload and stays in step across tabs, a list of the signed-in devices
   (sign out one, or all but this one), and deleting the account, which waits
   14 days and can be restored by signing in again
+- **Servers** — create one from a template with a cropped picture, a channel
+  list with categories and drag to reorder, channel and category dialogs,
+  invite links and codes, and server settings: overview, roles, members
+  (timeout, kick, ban), invites and bans
 - **Internationalization** — i18next, English and Vietnamese
 - **Dark mode** — light, dark or the system's setting, remembered, with no
   flash of the wrong one on load
@@ -47,8 +51,9 @@ languages, dark mode, tests, and a production image with CI and deploys.
 - **API integration** — axios with `snake_case` ⇄ `camelCase` conversion,
   types generated from the API's OpenAPI document, idempotency keys per user
   intent
-- **State** — TanStack Query for server data, a small Zustand store for the
-  session
+- **State** — TanStack Query for server data, small Zustand stores for the
+  session, the theme, a removed avatar waiting out its Undo and the dialogs
+  the AppShell shows
 - **Tests** — Vitest + React Testing Library, and Playwright in real browsers
 - **One image, every environment** — the settings are read when the container
   starts, not built into the bundle
@@ -87,6 +92,9 @@ trades the cookie for a new one. The pages:
 | `/login` | Email and password, or "Continue with Google"; for an account waiting to be deleted, the dialog that restores it |
 | `/forgot-password`, `/reset-password` | An emailed code, then a new password; that also signs you in |
 | `/auth/callback` | Where the API sends the browser back after Google |
+| `/channels/:serverId/:channelId?` | A server's channel; without a channel, its first text channel |
+| `/servers/:serverId/settings/:section?` | Server settings: overview, roles (one role at `/roles/:roleId`), members, invites, bans |
+| `/invite/:code` | An invite: a page for a visitor, the join dialog when signed in |
 | `/settings/account` | "Account": change the password, see the signed-in devices and sign them out, delete the account (it goes 14 days later) (`/settings` redirects here) |
 | `/settings/profile` | The profile: the avatar (cropped, removed with Undo), the display name and the bio |
 | `/settings/appearance` | Appearance & language: the theme, the language and the time zone (once every 24 hours), kept by the account and followed by every tab and browser |
@@ -158,6 +166,10 @@ The short version, with the API already running on `http://localhost:8888`:
 | `pnpm test:watch` | Unit tests, re-run on change |
 | `pnpm test:coverage` | Unit tests with a coverage report |
 | `pnpm test:e2e` | Playwright, in real Chromium and Firefox ([e2e-testing.md](./docs/e2e-testing.md)) |
+| `pnpm size` | The bundle against its budgets (size-limit; run after `pnpm build`) |
+| `pnpm check:fast` | Lint of the changed files, the floor guard, the secret scan |
+| `pnpm check:task` | `check:fast`, then `tsc -b` and the coverage of the changed lines |
+| `pnpm check:full` | Everything before handing over: lint, format, the floor guard, the secret scan, tests, build, size, API types against `../NezFocus-Backend/openapi.json`, audit (CI runs its own set, [ci.md](./docs/ci.md)) |
 | `pnpm api:types` | Regenerate the API types from the API's OpenAPI document |
 | `pnpm api:types:check` | Fail if the committed API types are out of date |
 | `pnpm load:spa` | Load-test a running production build ([load-testing.md](./docs/load-testing.md)) |
@@ -178,12 +190,13 @@ src/
 │   └── form/         # FormField: label, control and error
 ├── config/           # Settings and their schema
 ├── features/         # One folder per feature
-│   ├── auth/         # Session store, the seven auth pages, Google, route and role guards
-│   └── users/        # Profile: api/ (queries), components/, pages/, routes.tsx, types.ts
+│   ├── auth/         # Session store, the seven sign-in pages and Settings, Google, route and role guards
+│   ├── servers/      # Servers, channels, invites, server settings
+│   └── users/        # Profile and the settings pages: api/, components/, hooks/, lib/, pages/, routes.tsx
 ├── hooks/            # Shared React hooks
 ├── i18n/             # Translations (en, vi)
 ├── lib/              # The API client, query client, error tracking, helpers
-├── pages/            # Pages outside any feature (study, not found)
+├── pages/            # Pages outside any feature (study, legal, not found)
 └── test/             # Test setup
 ```
 
@@ -220,6 +233,7 @@ More: [docs/project-structure.md](./docs/project-structure.md).
 | Git hooks | [git-hooks.md](./docs/git-hooks.md) |
 | Dependency updates | [renovate.md](./docs/renovate.md) |
 | What is not here | [extensions.md](./docs/extensions.md) |
+| Lessons from the first deploy | [LESSONS.md](./docs/LESSONS.md) |
 
 ## Key concepts
 
@@ -228,6 +242,8 @@ More: [docs/project-structure.md](./docs/project-structure.md).
 - **Server data** → TanStack Query (cached, retried, invalidated after changes)
 - **The session** → a small Zustand store (`features/auth/auth.store.ts`); the
   access token itself sits in a module of its own, in memory
+- **Which servers dialog is open** → three small Zustand stores in
+  `features/servers/` (the AppShell draws the dialogs)
 - **Form state** → React Hook Form
 
 More: [docs/state-management.md](./docs/state-management.md).

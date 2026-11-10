@@ -95,8 +95,9 @@ flowchart TB
     Root --> Auth["AuthShell<br/>logo · ErrorBoundary · language toggle"]
     Auth --> Guest["visitor-only routes<br/>GuestOnlyRoute → Sign in, Create account, Enter the code, …"]
     Auth --> Welcome["/welcome<br/>IncompleteOnlyRoute → Complete your account"]
+    Auth --> Invite["/invite/:code<br/>an invite, for a visitor"]
     Root --> Shell["ProtectedRoute → AppShell<br/>rail · list column · ErrorBoundary"]
-    Shell --> Guarded["signed-in routes<br/>Study, Settings, Profile, …"]
+    Shell --> Guarded["signed-in routes<br/>Study, a server's channels, server settings, Settings, Profile, …"]
     Root --> NF["NotFound"]
 ```
 
@@ -228,7 +229,8 @@ src/
 ├── config/         # Settings, validated with zod
 ├── features/       # ← most new code goes here
 │   ├── auth/       # Session store, the auth pages, Google, route and role guards
-│   └── users/      # api/ · components/ · pages/ · routes.tsx · types.ts
+│   ├── servers/    # Servers, channels, invites, server settings: api/ · components/ · hooks/ · lib/ · pages/ · routes.tsx
+│   └── users/      # api/ · components/ · hooks/ · lib/ · pages/ · routes.tsx · types.ts
 ├── hooks/          # Shared hooks
 ├── i18n/           # Translations
 ├── lib/            # The API client and friends
@@ -315,7 +317,8 @@ it describes the files that build produced.
 ├── k6/                 # Load test for the built site
 ├── nginx/              # The start-up script (config.js, the CSP), the security headers,
 │                       #   and the host's nginx template and bootstrap script
-├── scripts/            # API types, the CSP generator, CI's image check and pull retries
+├── scripts/            # API types, the CSP generator, CI's image check and pull retries;
+│                       #   constraints/: the checks behind check:fast, check:task, check:full and CI (CONSTRAINTS.md)
 ├── nginx.conf          # The container's nginx: cache headers, deep links, /config.js
 ├── deploy.sh           # Releases, rollback, history
 └── docker-compose.{dev,prod}.yaml
@@ -354,9 +357,10 @@ it describes the files that build produced.
 **Settings at runtime, not build time.** Explained above; it is the difference
 between one image and one image per environment.
 
-**TanStack Query owns server state; Zustand owns almost nothing.** Two small
+**TanStack Query owns server state; Zustand owns almost nothing.** A few small
 stores: the auth session (who is signed in; the token itself sits in a module
-of its own) and the theme. Two sources of truth for the
+of its own), the theme, a removed avatar waiting out its Undo, and which of
+the servers dialogs the AppShell shows. Two sources of truth for the
 same data is the bug you spend a week on.
 
 **Errors are matched on `type`, not on message text.** The backend sends

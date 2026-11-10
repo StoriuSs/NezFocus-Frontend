@@ -11,8 +11,10 @@ every page shows. Components used by one feature only live in that feature's
 - [Language toggle](#language-toggle)
 - [Banner](#banner)
 - [Settings rows](#settings-rows)
+- [Empty states and tables](#empty-states-and-tables)
 - [Forms](#forms)
 - [Modals](#modals)
+- [The tab's title](#the-tabs-title)
 - [shadcn/ui components](#shadcnui-components)
 
 ## Where they are
@@ -20,9 +22,10 @@ every page shows. Components used by one feature only live in that feature's
 ```
 src/components/
 ├── ui/                    # shadcn/ui primitives (button, dialog, input, tooltip…)
-│                          # and icon-button, presence-dot, count-badge
+│                          # and icon-button, presence-dot, count-badge, select, option-cards, empty-state
 ├── shell/                 # ShellPage, RightPanel + usePanel, shell-context
 ├── brand/Logo.tsx         # The NezFocus mark and the logo lockup
+├── brand/mascot/          # Mascot (the still picture, then Rive), RiveMascot
 ├── form/FormField.tsx     # Label, control and the line under it, wired for screen readers
 ├── form/FormMessage.tsx   # The message for a whole form, above its main button (C-22)
 ├── form/TimeZoneCombobox.tsx  # The time zone picker (C-25)
@@ -31,6 +34,7 @@ src/components/
 ├── PageLoader.tsx         # The spinner while a page's chunk loads
 ├── NavigationProgress.tsx # The bar at the top during navigation
 ├── Banner.tsx             # One line of news about the page (C-16), e.g. why a session ended
+├── ImageCropDialog.tsx    # Crop a chosen picture to a square (an avatar, a server icon)
 ├── settings/SettingsRow.tsx  # SettingsGroup, SettingsRow (C-27) and Tag (C-36) for the settings pages
 ├── settings/SaveBar.tsx   # The save bar of a settings form with text fields (C-27)
 ├── settings/SwitchRow.tsx # A settings row with a switch (C-27 + C-24a)
@@ -43,6 +47,9 @@ src/features/users/components/ProfileSkeleton.tsx  # The profile page's placehol
 src/features/users/components/                     # The profile page's pieces: AvatarSection, AvatarCropDialog, ProfileForm;
                                                    # the settings pages': SettingsLoader, TimeZoneSetting
 src/features/auth/components/                      # The auth pages' pieces (CodeInput among them)
+src/features/servers/components/                   # The servers dialogs, the channel list, invites, server settings
+src/features/servers/components/settings/Pagination.tsx  # The page bar under the members and bans tables
+src/hooks/useDocumentTitle.ts                      # The browser tab's title
 src/pages/Legal.tsx                                # /terms and /privacy, with their own bar
 ```
 
@@ -151,8 +158,8 @@ if (isPending) return <ProfileSkeleton />
 lazily, and both wrap the page outlet in the error boundary and the Suspense
 boundary above.
 
-**`AuthShell`** (`src/app/layout/AuthShell.tsx`) holds the sign-in pages and
-"complete your account":
+**`AuthShell`** (`src/app/layout/AuthShell.tsx`) holds the sign-in pages,
+"complete your account", and an invite (`/invite/:code`) opened by a visitor:
 
 - **The logo** (`LogoLockup`), linking to `/`.
 - **The form block**, 400 wide, centred.
@@ -189,13 +196,19 @@ after sign-in, behind `ProtectedRoute`:
   the `useProfile` query, the same one the profile page uses, so a change
   there shows here at once.
 - **The list column** (`ListColumn.tsx`), 240 wide. Which list it shows is
-  the route's choice, in its `handle: { column }` (`study`, `server` or
-  `settings`). The `settings` column lists the settings pages: **Account**
-  and **Profile** for now, the others marked as coming later.
+  the route's choice, in its `handle: { column }` (`study`, `server`,
+  `serverSettings` or `settings`). `server` is the server's channel list;
+  `serverSettings` lists the server's settings pages the person may open
+  (`settingsSections`); `settings` lists the five settings pages (Account,
+  Profile, Appearance, Notifications, Privacy).
 - **The page area.** A page draws its own header with `ShellPage`
   (`src/components/shell/ShellPage.tsx`): the 48-high header with the
   title and the page's actions, a scrolling body, and an optional right
   panel (`RightPanel` + `usePanel`).
+- **The servers dialogs** (`CreateServerDialog`, `ChannelDialogs`,
+  `InviteDialog`, `JoinInviteDialog`), drawn here because many places open
+  them; each is loaded with `lazy()` the first time its store opens it
+  ([state-management.md](./state-management.md)).
 
 Below 1024 the list column becomes a sheet opened by ☰ in the page header;
 below 768 the rail joins it.
@@ -281,6 +294,29 @@ label.
     onCheckedChange={(showStudyActivity) => update.mutate({ showStudyActivity })}
 />
 ```
+
+## Empty states and tables
+
+### `EmptyState`
+
+`src/components/ui/empty-state.tsx` (C-17): what a page or a list shows when
+there is nothing in it. An optional `mascot`, a `title` (an `<h2>`),
+`children` (at most two lines of text), optional `actions` (buttons) and
+`className`; centred in what holds it. Used on the no-server page, a voice
+room not built yet, and the server settings lists (roles, members, invites,
+bans) when they are empty, match nothing, or could not load.
+
+### `Pagination`
+
+`src/features/servers/components/settings/Pagination.tsx` (C-40, D-90): the
+bar under a table, "Show [50 ▾] of 137 members", then ‹ 1 2 … 9 ›. It lives
+in the servers feature because only Members and Bans use it; a second
+feature that needs it moves it to `src/components/` first.
+
+Props: `page`, `limit` (`PageSize`: 10, 50 or 100), `total`, `of` (the "of 137
+members" text, also the `<nav>`'s name), `perPage` (the size field's name),
+`onPage`, `onLimit`. It renders nothing while ten or fewer match. Which page
+buttons show is `pageButtons()` in `servers/lib/moderation.ts`.
 
 ## Forms
 
@@ -385,6 +421,42 @@ can carry `lang` when its label is in another language ("English" on a
 Vietnamese page). Used for the theme and the language on Appearance &
 language.
 
+### `Select`
+
+`src/components/ui/select.tsx` (C-25 `select`): a 40-high field with
+`chevron-down` that opens a list without a search box, for ten choices or
+fewer; more, or a search, wants a combobox like `TimeZoneCombobox`. It is
+Radix Select behind a props API rather than shadcn's parts.
+
+Props: `value`, `onValueChange`, `options`, named by `id` and a
+`<Label htmlFor>` or by `aria-label`, plus `aria-describedby`, `disabled`,
+`labelClassName` (e.g. `uppercase` for category names) and `className`. An
+option (`SelectOption`) has `value`, `label`, and optionally `description` (a
+second line; the row grows to 48), `icon` (before the label, in the field
+too: a lock for a private channel) and `trailing` (at the row's right: a
+channel's category).
+
+The chosen row has a 16 `check`. Keyboard as Radix Select: Enter, Space or ↓
+open; ↑ ↓ move; Enter chooses; Esc closes keeping the value; a letter jumps.
+Used for a new channel's category, an invite's expiry and uses, the welcome
+channel, and the page size in `Pagination`. In tests it needs the
+`scrollIntoView` stub in `src/test/setup.ts`, and is changed through its
+hidden native `<select>`.
+
+### `OptionCards`
+
+`src/components/ui/option-cards.tsx` (C-37): two or three choices that each
+need more than a line, as cards. A radio group with one tab stop; the arrow
+keys move and choose.
+
+Props: `label` (the group's name for assistive tech), `value`, `onChange`,
+`options`, `disabled`, `className`. An option (`OptionCardItem`) has `value`,
+`icon` (a Lucide icon), `title`, `tag` (optional, a Tag on its own line under the
+title, e.g. "Suggested") and `description`. Selected reads without colour: a filled radio
+and a 2 border. Used for the template on "Create a server" and the channel
+type on "Create a channel". When one line per choice is enough, use
+`SegmentedControl` or `Select`.
+
 ### `CodeInput`
 
 `src/features/auth/components/CodeInput.tsx` (C-23), in the auth feature
@@ -429,23 +501,62 @@ sign out and leave the page as it was; **Restore account** restores it and
 goes on. `GuestOnlyRoute` loads it with `lazy()`
 ([auth/session.md](./auth/session.md#an-account-waiting-to-be-deleted)).
 
+### `ImageCropDialog`
+
+`src/components/ImageCropDialog.tsx` (S-ME-02 `avatar-crop`, S-SRV-01
+`icon-crop`): crops a chosen picture to a square before it is uploaded. A
+mask of 280 over it (react-easy-crop), dragged to place it, zoomed 100–300%
+with the `Slider`, the zoom buttons or the wheel.
+
+Props:
+
+- `src`: an object URL of the chosen file, the caller's to release
+- `title`, `description`, `confirmLabel`
+- `mask`: `round` for an avatar, `squircle` for a server icon (a third of the
+  side, as the rail rounds it)
+- `busy`: the caller is saving; the buttons wait, Esc and Cancel do nothing
+- `onConfirm(blob)`: the crop as a JPEG; the caller closes the dialog when
+  done
+- `onClose`
+
+The crop itself is `src/lib/crop-image.ts`. Confirming the same area again
+gives the same Blob, so the idempotency key, which follows the payload, stays
+the same. Its own words are `common:imageCrop.*`. Check the file first with
+`imageProblem()` (`src/lib/image-file.ts`: JPG, PNG or WEBP up to 8 MB), so
+a wrong file never opens it. Used by `AvatarCropDialog`, "Create a server"
+and the server picture setting.
+
 ### `AvatarCropDialog`
 
 The profile page's "Crop your profile picture"
-(`src/features/users/components/AvatarCropDialog.tsx`, S-ME-02): a round
-mask of 280 over the chosen image (react-easy-crop), dragged to place it,
-zoomed 100-300% with the `Slider` or the zoom buttons. **Save photo** uploads
-at once; while it does, the dialog stays (Esc and Cancel wait), and it closes
-once saved. A refused upload is toasted and the dialog stays to try again.
+(`src/features/users/components/AvatarCropDialog.tsx`, S-ME-02):
+`ImageCropDialog` with `mask='round'` and the words in `users:crop.*`.
+**Save photo** uploads at once (`useUpdateAvatar`); while it does, the dialog
+stays (Esc and Cancel wait), and it closes once saved. A refused upload is
+toasted and the dialog stays to try again.
 
 The username dialog that used to open after a first sign-in
 (`UsernamePromptModal`) is gone: the username is chosen on "complete your
 account" ([auth/pages-and-flows.md](./auth/pages-and-flows.md#complete-your-account)).
 
+## The tab's title
+
+### `useDocumentTitle`
+
+`src/hooks/useDocumentTitle.ts` (X-01): `useDocumentTitle(title)` shows
+"<title> · NezFocus" in the browser tab while the page is open (the name is
+`siteConfig.name`, `src/config/site.ts`), and the product's name again when
+it closes. Call it once at the top of a page with its translated title. Used
+by the six sign-in pages (SignIn, Register, Verify, Welcome, ForgotPassword,
+ResetPassword) and the legal pages. The invite page sets its title by hand
+for now (`InvitePage.tsx`: the server's name once known, then the title it
+had before), with "· NezFocus" in its words rather than `siteConfig.name`.
+
 ## shadcn/ui components
 
 `src/components/ui/` holds Radix UI primitives styled with Tailwind, copied
-into the repository by the shadcn CLI, so you can edit them:
+into the repository by the shadcn CLI, so you can edit them, and a few
+components written for this project in the same style (the rows that say so):
 
 | Component | What it is |
 |-----------|-------------|
@@ -456,18 +567,20 @@ into the repository by the shadcn CLI, so you can edit them:
 | `DropdownMenu` | Menus, like your menu (`MeMenu`) |
 | `Input` | Text inputs, drawn to C-22 ([above](#formfield)) |
 | `Label` | Form labels |
+| `OptionCards` | Two or three choices as cards (C-37), written for this project ([above](#optioncards)) |
 | `Popover` | A floating panel anchored to the control that opened it (C-15; `@radix-ui/react-popover`). The time zone picker's panel |
 | `SegmentedControl` | A few choices side by side (C-26a), written for this project ([above](#segmentedcontrol)) |
+| `Select` | A short list to choose from (C-25), Radix Select behind a props API ([above](#select)) |
 | `Skeleton` | Loading placeholders |
-| `Slider` | A range input, drawn to C-35: a 4-high track, `primary` up to the value; a 16 knob in `text-primary` (the avatar crop's zoom) |
+| `Slider` | A range input, drawn to C-35: a 4-high track, `primary` up to the value; a 16 knob in `text-primary` (the zoom of `ImageCropDialog`) |
 | `Sonner` | The toaster, following the theme |
 | `Switch` | An on/off switch (C-24a), a plain button rather than a Radix primitive ([above](#switch)) |
 | `Textarea` | Multi-line text, drawn to C-22 `multiline`: the `Input`'s edge, colours and states; three lines high, growing with its text to six where the browser can (`field-sizing`), then scrolling |
 | `Tooltip` | Tooltips; `WithTooltip` is the common case. `TooltipProvider` wraps the app in `App.tsx` |
 
-Next to them, written for this project rather than copied: `IconButton` (a
-32 × 32 icon button with a screen-reader label), `PresenceDot` and
-`CountBadge`.
+Next to them, also written for this project and not in the table: `IconButton` (a
+32 × 32 icon button with a screen-reader label), `PresenceDot`, `CountBadge`
+and `EmptyState` ([above](#emptystate)).
 
 ### Adding one
 
