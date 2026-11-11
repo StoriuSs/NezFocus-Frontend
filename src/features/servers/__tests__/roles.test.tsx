@@ -59,6 +59,7 @@ const binh: Server = {
     name: 'Ôn thi Giải tích 2',
     iconUrl: null,
     isOwner: false,
+    memberCount: 13,
     permissions: bits(MANAGE_ROLES, KICK, MODERATE, VIEW),
     topRolePosition: 3,
     roleIds: ['lead'],

@@ -478,18 +478,59 @@ it is a disabled button instead.
 
 ## Modals
 
+### `ConfirmPasswordDialog`
+
+The password step before something that cannot be taken back
+(`src/features/auth/components/ConfirmPasswordDialog.tsx`, C-14 `password`):
+a title, the words, the field (focused on open) with **Forgot password?**,
+and a `destructive` button off until something is typed. A wrong password is
+said under the field, which empties; five in 15 minutes and the button waits
+it out. `onConfirm(password)` sends it and throws when refused;
+`describeError(error)` gives words for a refusal only the caller knows (a
+handover refused for an account waiting to be deleted). **Forgot password?**
+puts the change-password dialog on an emailed code (`PasswordDialog`) in its
+place, which hands back, empty. Mounted while open; a click outside does not
+close it.
+
+Used by `DeleteAccountDialog` (by file, inside auth) and by the servers
+feature's handover step, through `ConfirmPasswordDialog` in
+`src/features/auth/index.ts`: a `lazy()` component, so the index, which is
+in the first download, does not bring the dialog with it. Render it inside a
+`Suspense` ([code-splitting.md](./code-splitting.md#what-lands-in-the-first-download)).
+
 ### `DeleteAccountDialog`
 
 "Delete your account?" (`src/features/auth/components/DeleteAccountDialog.tsx`,
 S-ME-03 `delete-confirm`), opened by the **Delete account** group at the foot
-of the account page (`DeleteAccountSection.tsx`), which controls it: the day
-the account goes, then its password, focused on open. "Forgot password?"
-hands over to the change-password dialog on an emailed code
-(`PasswordDialog`), which hands back
+of the account page (`DeleteAccountSection.tsx`), which mounts it while open:
+the day the account goes, then `ConfirmPasswordDialog`
 ([auth/account-settings.md](./auth/account-settings.md#delete-the-account)).
 It is not exported from `src/features/auth/index.ts`: the entry imports that
 index, so an export would put the dialog in the first download
 ([code-splitting.md](./code-splitting.md#what-lands-in-the-first-download)).
+
+### Leave, hand over, delete a server
+
+`src/features/servers/components/membership/` (03 S-SRV-04, 04 S-SET-07),
+drawn by the AppShell from `useMembershipDialogs` (`MembershipDialogs`, loaded
+with `lazy()` the first time one opens):
+
+- `LeaveServerDialog`: a member is asked once (`leave-confirm`, the focus on
+  **Cancel**); the owner is told to hand it over first (`owner-cannot-leave`)
+  or, alone in it, to delete it (`owner-alone`), without a request.
+- `TransferOwnershipDialog`: choose who (`transfer-picker`: the first 50 by
+  name and a search, `?transferable=true`; someone timed out shown, not
+  chosen; ↑ ↓ between the rows), then `ConfirmPasswordDialog` in its place,
+  whose **Cancel** comes back to the choice. With a recipient (the members'
+  ⋯ menu) it starts on the password; from the leave flow, **Leave server?**
+  follows.
+- `DeleteServerDialog`: C-14 `type-name`, as `DeleteChannelDialog`, with
+  `sameTyped` from `lib/typed-name.ts`.
+
+Left or deleted, `useMoveAwayFrom` moves a page of that server to the next
+on the rail (below, else above), or to /study, and only then does the hook
+take the server out of the cache
+([data-fetching.md](./data-fetching.md#a-server-one-is-no-longer-in)).
 
 ### `PendingDeletionDialog`
 

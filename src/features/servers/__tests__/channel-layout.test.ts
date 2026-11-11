@@ -48,6 +48,7 @@ const OT: Server = {
     name: 'ÔT',
     iconUrl: null,
     isOwner: true,
+    memberCount: 13,
     permissions: '0',
     topRolePosition: 0,
     roleIds: [],

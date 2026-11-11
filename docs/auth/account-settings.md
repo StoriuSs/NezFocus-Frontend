@@ -209,7 +209,10 @@ empty every time.
 
 **The dialog** ("Delete your account?", 440 wide at most;
 [DeleteAccountDialog.tsx](../../src/features/auth/components/DeleteAccountDialog.tsx),
-S-ME-03 `delete-confirm`) says what deleting means and names the day: "Your
+S-ME-03 `delete-confirm`) is the shared password step,
+[ConfirmPasswordDialog.tsx](../../src/features/auth/components/ConfirmPasswordDialog.tsx)
+(C-14 `password`, also used to hand a server over), given the title, the
+words and what to send. It says what deleting means and names the day: "Your
 account will be deleted for good on dd/mm/yyyy. Until then, sign in again to
 restore it. ...". The day is 14 days from when the dialog opened, in the
 account's time zone, read from the settings query the AppShell already loaded
@@ -217,7 +220,7 @@ account's time zone, read from the settings query the AppShell already loaded
 [deletion-date.ts](../../src/features/auth/lib/deletion-date.ts)). The password
 field takes the focus (not **Forgot password?**, which comes first in the
 markup). A hidden field carries the email for password managers. The dialog
-cannot be closed while a request runs.
+cannot be closed while a request runs, nor by a click outside (C-14).
 
 **Why proof is needed.** A signed-in session alone (an unlocked laptop, a
 borrowed phone) must not be enough to delete an account. The API refuses
@@ -237,16 +240,16 @@ Other devices get the same banner at their next request.
 
 | Refusal | The dialog |
 |---|---|
-| `400 AUTH_CURRENT_PASSWORD_INVALID` | "That password isn't right", under the password, which takes the focus |
+| `400 AUTH_CURRENT_PASSWORD_INVALID` | "That password isn't right", under the password, which empties and takes the focus (C-14) |
 | `429`, reason `wrong_password` | five wrong passwords in 15 minutes (D-121): a neutral message, "You entered a wrong password too many times. Try again in ...", counting down; **Delete account** stays disabled until then |
 | no answer, or anything else | "You're offline..." or the API's message, in red above the buttons |
 
-**Forgot password?** sends a reset code with `sendResetCode(email)`, closes
-this dialog, and opens the change-password dialog on the code
+**Forgot password?** sends a reset code with `sendResetCode(email)`, and the
+password step puts the change-password dialog on the code in its place
 (`PasswordDialog` with `startWith`, exported from
 [ChangePasswordDialog.tsx](../../src/features/auth/components/ChangePasswordDialog.tsx)).
-**Back** there, or a new password set, closes it and opens the delete dialog
-again, empty (`onBack`, `onDone`). A send that fails still opens the code
+**Back** there, or a new password set, brings the password step back, empty
+(`onBack`, `onDone`). A send that fails still opens the code
 mode, which says why, as in [Change the password](#change-the-password).
 
 **An Owner of servers.** The API refuses an Owner of servers with other

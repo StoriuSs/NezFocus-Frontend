@@ -29,7 +29,3 @@ export function inviteProblem(error: unknown): InviteProblem {
             return { kind: 'failed' }
     }
 }
-
-/** A server name in a toast: at most 24 characters, then "…" (C-16). */
-export const toastName = (name: string) =>
-    Array.from(name).length > 24 ? `${Array.from(name).slice(0, 24).join('')}…` : name

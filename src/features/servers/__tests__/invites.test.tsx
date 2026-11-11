@@ -45,6 +45,7 @@ const server = (id: string, name: string, extra: Partial<Server> = {}): Server =
     name,
     iconUrl: null,
     isOwner: true,
+    memberCount: 13,
     permissions: '2147483647',
     topRolePosition: 1,
     roleIds: [],

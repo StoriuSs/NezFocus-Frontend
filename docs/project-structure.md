@@ -56,7 +56,7 @@ react-starter/
     │   │   ├── pages/         # SignIn, Register, Verify, Welcome, ForgotPassword,
     │   │   │                  #   ResetPassword, OAuthCallback, Settings
     │   │   ├── components/    # AuthCard, PasswordInput, PasswordRules, CodeInput, OAuthButtons,
-    │   │   │                  #   CodeReset, ChangePasswordDialog, SessionsSection,
+    │   │   │                  #   CodeReset, ChangePasswordDialog, ConfirmPasswordDialog, SessionsSection,
     │   │   │                  #   DeleteAccountSection, DeleteAccountDialog, PendingDeletionDialog,
     │   │   │                  #   ProtectedRoute, RequireRole
     │   │   ├── api/           # auth.api.ts (every call to /auth), keys.ts, the query hooks
@@ -72,18 +72,21 @@ react-starter/
     │   ├── servers/           # Servers: the rail's list, channels, invites, server settings
     │   │   ├── api/           # servers.api.ts, layout.api.ts, invites.api.ts, roles.api.ts, moderation.api.ts,
     │   │   │                  #   keys.ts; the hooks: useServers, useCreateServer, useChannelLayout, useInvites,
-    │   │   │                  #   useRoles, useModeration, useServerSettings
+    │   │   │                  #   useRoles, useModeration, useServerSettings, useMembership
     │   │   ├── components/    # CreateServerDialog, NoServers, ServerIcon, ServerMenuItems; channel-list/,
-    │   │   │                  #   dialogs/ (channels, categories), invites/, settings/ (ServerNameForm, ServerIconSetting,
-    │   │                  #   WelcomeChannelSetting, InvitesSettings, Pagination; members/, roles/)
-    │   │   ├── hooks/         # useFoldedCategories (the categories folded, kept in this browser)
+    │   │   │                  #   dialogs/ (channels, categories), invites/, membership/ (leave, hand over, delete),
+    │   │   │                  #   settings/ (ServerNameForm, ServerIconSetting, WelcomeChannelSetting, OwnerSettings,
+    │   │   │                  #   InvitesSettings, Pagination; members/, roles/)
+    │   │   ├── hooks/         # useFoldedCategories (the categories folded, kept in this browser), useMoveAwayFrom,
+    │   │   │                  #   useServerGoneWatch (D-143, run by the AppShell)
     │   │   ├── lib/           # paths (SERVERS_PATHS and channelPath, invitePath, serverSettingsPath, roleEditPath),
     │   │   │                  #   layout-messages (the words for a refused name or move), invite-problem,
     │   │   │                  #   channel-layout, channel-list, drop-target, layout-error, invites, moderation,
-    │   │   │                  #   permissions, roles, server-name, settings-sections
+    │   │   │                  #   membership, permissions, roles, server-name, settings-sections, typed-name
     │   │   ├── pages/         # ChannelPage (/channels/:serverId/:channelId?), ServerSettingsPage
     │   │   │                  #   (/servers/:serverId/settings/…), InvitePage (/invite/:code)
-    │   │   ├── *.store.ts     # create-server, channel-dialogs, invite-dialogs: which dialog the AppShell shows
+    │   │   ├── *.store.ts     # create-server, channel-dialogs, invite-dialogs, membership-dialogs: which dialog
+    │   │   │                  #   the AppShell shows
     │   │   ├── routes.tsx     # serversInviteRoutes (AuthShell), serversChannelRoutes, serversSettingsRoutes (AppShell)
     │   │   ├── types.ts
     │   │   └── index.ts       # What other features may import

@@ -169,6 +169,13 @@
         "description": "The new server name is not saved.",
         "stay": "Stay",
         "confirm": "Discard changes"
+      },
+      "owner": {
+        "title": "Owner",
+        "transfer": "Transfer ownership",
+        "transferHint": "They get every permission; you keep the roles you have.",
+        "delete": "Delete server",
+        "deleteHint": "Deleted for every member. This can’t be undone."
       }
     }
   },
@@ -506,7 +513,8 @@
       "changeTimeout": "Change timeout",
       "endTimeout": "Remove timeout",
       "kick": "Kick from server",
-      "ban": "Ban from server"
+      "ban": "Ban from server",
+      "transfer": "Transfer ownership"
     },
     "timedOutUntil": "Timed out until {{time}}",
     "timeoutReason": "Reason: {{reason}}",
@@ -589,5 +597,54 @@
     "cancel": "Cancel",
     "unbanned": "Unbanned {{name}}",
     "failed": "Couldn’t do that. Check your connection and try again."
+  },
+  "membership": {
+    "cancel": "Cancel",
+    "later": "Not now",
+    "leave": {
+      "title": "Leave {{name}}?",
+      "body": "You will need a new invite to come back.",
+      "submit": "Leave server",
+      "done": "Left {{name}}",
+      "offline": "Couldn’t leave the server · Check your connection and try again"
+    },
+    "ownerLeave": {
+      "title": "Transfer ownership before leaving",
+      "body": "You own {{name}}. Transfer ownership to another member before you leave."
+    },
+    "alone": {
+      "title": "You are the only member",
+      "body": "Nobody else is in {{name}}, so there is no one to transfer it to. If you no longer use it, delete it."
+    },
+    "transfer": {
+      "title": "Transfer ownership",
+      "description": "Choose who will own {{name}}. You keep the roles you have.",
+      "search": "Search by name or username",
+      "noMatch": "No member matches “{{q}}”",
+      "aloneTitle": "No other members yet",
+      "aloneBody": "Invite friends first, or delete the server if you no longer use it.",
+      "timedOut": "Timed out until {{time}} · Remove the timeout to choose them",
+      "loadFailed": "Couldn’t load the members.",
+      "confirmTitle": "Transfer ownership to {{name}}?",
+      "confirmBody": "{{name}} will have every permission, deleting the server included. You keep your roles, but can’t take ownership back unless {{name}} transfers it again.",
+      "password": "Your password",
+      "submit": "Transfer ownership",
+      "done": "{{name}} now owns the server",
+      "refused": {
+        "pending_deletion": "{{name}}’s account is waiting to be deleted, so it can’t take ownership.",
+        "timed_out": "{{name}} is timed out. Remove the timeout, then try again.",
+        "gone": "{{name}} is no longer in the server."
+      }
+    },
+    "delete": {
+      "title": "Delete {{name}}?",
+      "body_one": "The server goes for its {{count}} member, with every channel, message and task. This can’t be undone.",
+      "body_other": "The server goes for all {{count}} members, with every channel, message and task. This can’t be undone.",
+      "typeToConfirm": "Type {{name}} to confirm",
+      "submit": "Delete server",
+      "done": "Deleted {{name}}",
+      "offline": "You need a connection to delete the server. Check your connection and try again.",
+      "renamed": "The server was renamed meanwhile. Type its new name to confirm."
+    }
   }
 }

@@ -97,7 +97,8 @@ test('creates, opens, makes private, renames and deletes a channel; creates a ca
         'Invite people',
         'Server settings',
         'Create channel',
-        'Create category'
+        'Create category',
+        'Leave server'
     ])
     await shoot(page, 'server-menu')
     await page.getByRole('menuitem', { name: 'Create channel' }).click()

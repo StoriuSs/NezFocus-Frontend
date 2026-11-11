@@ -35,6 +35,12 @@ export interface RowActions {
     endTimeout: boolean
     kick: boolean
     ban: boolean
+    /**
+     * "Transfer ownership", the owner's, set apart at the end (Q15): not to
+     * someone timed out (D-91). An account waiting to be deleted is not known
+     * here (D-161): the API refuses it, and the password step says so.
+     */
+    transfer: boolean
 }
 
 /**
@@ -58,12 +64,14 @@ export function rowActions(
         timeout: moderates && !admin,
         endTimeout: moderates && timedOut,
         kick: below && can(server.permissions, 'KICK_MEMBERS'),
-        ban: below && can(server.permissions, 'BAN_MEMBERS')
+        ban: below && can(server.permissions, 'BAN_MEMBERS'),
+        transfer: server.isOwner && !member.isOwner && !timedOut
     }
 }
 
 /** Whether the row has a ⋯ at all (04: only with at least one action). */
-export const hasActions = (actions: RowActions) => actions.timeout || actions.endTimeout || actions.kick || actions.ban
+export const hasActions = (actions: RowActions) =>
+    actions.timeout || actions.endTimeout || actions.kick || actions.ban || actions.transfer
 
 /**
  * The roles "+" lists for a member (04 › "+"): below their own highest and

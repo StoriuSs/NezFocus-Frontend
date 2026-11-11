@@ -7,9 +7,6 @@
   "confirm": {
     "title": "Delete your account?",
     "description": "Your account will be deleted for good on {{date}}. Until then, sign in again to restore it. After that your profile, study streak and friends are deleted; your messages show \"Deleted account\".",
-    "wrongPassword": "That password isn't right",
-    "tooManyWrong": "You entered a wrong password too many times. Try again in {{wait}}.",
-    "cancel": "Cancel",
     "submit": "Delete account"
   },
   "banner": "Your account will be deleted for good on {{date}} · sign in before then to restore it",

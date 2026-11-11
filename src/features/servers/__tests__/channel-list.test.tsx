@@ -42,6 +42,7 @@ const server = (permissions: string, channels?: ServerChannel[]): Server => ({
     name: 'Ôn thi Giải tích 2',
     iconUrl: null,
     isOwner: false,
+    memberCount: 13,
     permissions,
     topRolePosition: 1,
     roleIds: [],
@@ -113,7 +114,7 @@ describe('The channel list for whoever manages channels (S-SRV-04, S-SRV-06)', (
             within(menu)
                 .getAllByRole('menuitem')
                 .map((item) => item.textContent)
-        ).toEqual(['Create channel', 'Create category'])
+        ).toEqual(['Create channel', 'Create category', 'Leave server'])
         await userEvent.click(within(menu).getByRole('menuitem', { name: 'Create category' }))
         expect(useChannelDialogs.getState().open).toEqual({ kind: 'createCategory', serverId: 'ot' })
 
@@ -316,10 +317,17 @@ describe('The channel list for a member', () => {
         vi.clearAllMocks()
     })
 
-    it('has a plain title, no buttons on rows, and Space does not lift anything', async () => {
+    it('has a menu with Leave only, no buttons on rows, and Space does not lift anything', async () => {
         renderColumn(server(MEMBER))
         expect(await screen.findByRole('heading', { name: 'Ôn thi Giải tích 2' })).toBeInTheDocument()
-        expect(screen.queryByRole('button', { name: 'Ôn thi Giải tích 2' })).not.toBeInTheDocument()
+        await userEvent.click(screen.getByRole('button', { name: 'Ôn thi Giải tích 2' }))
+        const menu = await screen.findByRole('menu')
+        expect(
+            within(menu)
+                .getAllByRole('menuitem')
+                .map((item) => item.textContent)
+        ).toEqual(['Leave server'])
+        await userEvent.keyboard('{Escape}')
         expect(screen.queryByRole('button', { name: 'Channel settings' })).not.toBeInTheDocument()
         expect(screen.queryByRole('button', { name: /Create a channel in/ })).not.toBeInTheDocument()
         screen.getByRole('link', { name: 'hoi-dap' }).focus()

@@ -36,6 +36,7 @@ const created: Server = {
     name: 'Ôn thi Giải tích 2',
     iconUrl: null,
     isOwner: true,
+    memberCount: 13,
     permissions: '8388607',
     topRolePosition: 1,
     roleIds: [],

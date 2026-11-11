@@ -52,6 +52,8 @@ export interface MemberQuery {
     order?: SortOrder
     page?: number
     limit?: PageSize
+    /** The owner's "who may take it" (S-SET-07, D-161): without themselves and accounts waiting to be deleted. */
+    transferable?: boolean
 }
 
 /** GET /servers/{id}/members (D-152): anyone in the server. */

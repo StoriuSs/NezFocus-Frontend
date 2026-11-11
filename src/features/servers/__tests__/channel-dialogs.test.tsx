@@ -53,6 +53,7 @@ const OT: Server = {
     name: 'Ôn thi Giải tích 2',
     iconUrl: null,
     isOwner: false,
+    memberCount: 13,
     permissions: CHI_BITS,
     topRolePosition: 2,
     roleIds: ['coord', 'lead'],

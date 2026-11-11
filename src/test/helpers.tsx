@@ -21,7 +21,7 @@ export function httpError(
 export function apiError(
     status: number,
     type: string,
-    extra: { headers?: Record<string, string>; data?: unknown } = {}
+    extra: { headers?: Record<string, string>; data?: unknown; config?: InternalAxiosRequestConfig } = {}
 ): AxiosError {
     return httpError(status, { meta: { code: String(status), type, message: '' }, data: extra.data ?? {} }, extra)
 }
@@ -38,9 +38,14 @@ export function mockAuthStore<T>(state: T) {
     return { useAuthStore }
 }
 
-/** A wrapper giving each render its own QueryClient, with no retries. */
-export function queryWrapper() {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+/**
+ * A wrapper giving each render its own QueryClient, with no retries. `staleTime`:
+ * the app's own, for a test about what is (not) read again.
+ */
+export function queryWrapper({ staleTime = 0 }: { staleTime?: number } = {}) {
+    const client = new QueryClient({
+        defaultOptions: { queries: { retry: false, staleTime }, mutations: { retry: false } }
+    })
     return function QueryWrapper({ children }: { children: ReactNode }) {
         return <QueryClientProvider client={client}>{children}</QueryClientProvider>
     }

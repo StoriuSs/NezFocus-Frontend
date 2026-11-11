@@ -61,6 +61,7 @@ const OT: Server = {
     name: 'Ôn thi Giải tích 2',
     iconUrl: null,
     isOwner: false,
+    memberCount: 13,
     permissions: MEMBER,
     topRolePosition: 0,
     roleIds: [],
@@ -325,20 +326,25 @@ describe('AppShell (S-SHELL-01)', () => {
 
             await userEvent.click(screen.getByRole('button', { name: 'Ôn thi Giải tích 2' }))
             const menu = await screen.findByRole('menu')
-            // Managing the server, not channels: settings is the only row.
+            // Managing the server, not channels: settings, then Leave, always there.
             expect(
                 within(menu)
                     .getAllByRole('menuitem')
                     .map((item) => item.textContent)
-            ).toEqual(['Server settings'])
+            ).toEqual(['Server settings', 'Leave server'])
         })
 
-        it('offers no menu to someone with no row in it', async () => {
+        it('offers only Leave, with no rule above it, to someone with no other row (S-SRV-04)', async () => {
             renderAt('/channels/ot/hoi-dap')
             const picture = await within(rail()).findByRole('link', { name: 'Ôn thi Giải tích 2' })
             fireEvent.contextMenu(picture)
-            expect(screen.queryByRole('menu')).not.toBeInTheDocument()
-            expect(screen.queryByRole('button', { name: 'Ôn thi Giải tích 2' })).not.toBeInTheDocument()
+            const menu = await screen.findByRole('menu')
+            expect(
+                within(menu)
+                    .getAllByRole('menuitem')
+                    .map((item) => item.textContent)
+            ).toEqual(['Leave server'])
+            expect(within(menu).queryByRole('separator')).not.toBeInTheDocument()
         })
     })
 

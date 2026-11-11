@@ -16,6 +16,7 @@ import { RolesSettings } from '../components/settings/roles/RolesSettings'
 import { ServerIconSetting } from '../components/settings/ServerIconSetting'
 import { ServerNameForm } from '../components/settings/ServerNameForm'
 import { WelcomeChannelSetting } from '../components/settings/WelcomeChannelSetting'
+import { OwnerSettings } from '../components/settings/OwnerSettings'
 import type { Server } from '../types'
 
 /** Says why the page moved, once (an id: StrictMode runs effects twice). */
@@ -66,7 +67,7 @@ export default function ServerSettingsPage() {
     )
 }
 
-/** S-SET-01: picture, name (save bar), welcome channel. */
+/** S-SET-01: picture, name (save bar), welcome channel; for the owner, handing over and deleting (Q15). */
 function Overview({ server }: { server: Server }) {
     return (
         <div className='flex w-full max-w-settings flex-1 flex-col gap-8 p-6 pb-6 lg:p-8 lg:pb-6'>
@@ -74,6 +75,7 @@ function Overview({ server }: { server: Server }) {
             <ServerNameForm server={server}>
                 <WelcomeChannelSetting server={server} />
             </ServerNameForm>
+            {server.isOwner ? <OwnerSettings server={server} /> : null}
         </div>
     )
 }

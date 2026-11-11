@@ -3,10 +3,16 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowDown, ArrowUp, MoreHorizontal, Search } from 'lucide-react'
+import { ArrowDown, ArrowUp, Crown, MoreHorizontal, Search } from 'lucide-react'
 import { Tag } from '@/components/settings/SettingsRow'
 import { Button } from '@/components/ui/button'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu'
 import { EmptyState } from '@/components/ui/empty-state'
 import { IconButton } from '@/components/ui/icon-button'
 import { Input } from '@/components/ui/input'
@@ -17,6 +23,7 @@ import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/features/auth'
 import { userKeys, type UserSettings } from '@/features/users'
 import { useEndTimeout } from '../../../api/useModeration'
+import { useMembershipDialogs } from '../../../membership-dialogs.store'
 import { useServerMembers, useServerRoles } from '../../../api/useRoles'
 import type { MemberSort, PageSize, SortOrder } from '../../../api/roles.api'
 import {
@@ -93,6 +100,7 @@ export function MembersSettings({ server }: { server: Server }) {
     // Refused: the hook says so, with "Try again".
     const endTimeout = useEndTimeout(server.id)
     const [acting, setActing] = useState<{ kind: Moderation; member: ServerMember } | null>(null)
+    const showMembership = useMembershipDialogs((state) => state.show)
 
     // The box and the words on the URL (D-90). Typing waits for a pause, then
     // puts the words on the URL; `ownQ` keeps them, so the URL catching up
@@ -259,6 +267,28 @@ export function MembersSettings({ server }: { server: Server }) {
                                                     >
                                                         {t('members.menu.ban')}
                                                     </DropdownMenuItem>
+                                                ) : null}
+                                                {actions.transfer ? (
+                                                    <>
+                                                        {actions.timeout || actions.kick || actions.ban ? (
+                                                            <DropdownMenuSeparator />
+                                                        ) : null}
+                                                        <DropdownMenuItem
+                                                            onSelect={() =>
+                                                                showMembership({
+                                                                    kind: 'transfer',
+                                                                    serverId: server.id,
+                                                                    recipient: {
+                                                                        userId: member.userId,
+                                                                        name: memberName(member)
+                                                                    }
+                                                                })
+                                                            }
+                                                        >
+                                                            <Crown aria-hidden='true' />
+                                                            {t('members.menu.transfer')}
+                                                        </DropdownMenuItem>
+                                                    </>
                                                 ) : null}
                                             </DropdownMenuContent>
                                         </DropdownMenu>

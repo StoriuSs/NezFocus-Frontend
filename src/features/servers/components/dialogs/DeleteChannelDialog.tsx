@@ -20,14 +20,8 @@ import { useDeleteChannel } from '../../api/useChannelLayout'
 import { firstTextChannel } from '../../lib/channel-list'
 import { describeFailure } from '../../lib/layout-messages'
 import { channelPath } from '../../lib/paths'
+import { sameTyped } from '../../lib/typed-name'
 import type { Server, ServerChannel } from '../../types'
-
-/** Case and accents left out (C-14 `type-name`): "Viec-Nhom" confirms "việc-nhóm". */
-export const sameTyped = (typed: string, name: string) => {
-    const fold = (text: string) =>
-        text.normalize('NFD').replace(/\p{M}/gu, '').replace(/[đĐ]/g, 'd').toLowerCase().trim()
-    return fold(typed) === fold(name)
-}
 
 /**
  * "Delete #viec-nhom?" (S-SET-05 `delete-confirm`), over the settings

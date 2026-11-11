@@ -62,6 +62,7 @@ const server = (permissions: string, extra: Partial<Server> = {}): Server => ({
     name: 'Ôn thi Giải tích 2',
     iconUrl: null,
     isOwner: false,
+    memberCount: 13,
     permissions,
     topRolePosition: 1,
     roleIds: [],
@@ -173,6 +174,25 @@ describe('Server settings › Overview (S-SET-01)', () => {
         expect(screen.getByRole('combobox', { name: 'Welcome channel' })).toHaveTextContent('# chao-mung')
         expect(screen.getByText('"X joined the server" is posted in this channel.')).toBeInTheDocument()
         await expectNoA11yViolations(document.body)
+    })
+
+    it('ends with the owner group for the owner only, whose buttons open their dialogs (Q15)', async () => {
+        const { useMembershipDialogs } = await import('../membership-dialogs.store')
+        renderSettings(server(MANAGER, { isOwner: true }), '/servers/ot/settings/overview')
+        expect(await screen.findByText('Owner')).toBeInTheDocument()
+        await userEvent.click(screen.getByRole('button', { name: 'Transfer ownership' }))
+        expect(useMembershipDialogs.getState().open).toEqual({ kind: 'transfer', serverId: 'ot' })
+        await userEvent.click(screen.getByRole('button', { name: 'Delete server' }))
+        expect(useMembershipDialogs.getState().open).toEqual({ kind: 'delete', serverId: 'ot' })
+        useMembershipDialogs.getState().hide()
+        await expectNoA11yViolations(document.body)
+    })
+
+    it('has no owner group for a manager who does not own it', async () => {
+        renderSettings(server(MANAGER), '/servers/ot/settings/overview')
+        expect(await screen.findByLabelText('Server name')).toBeInTheDocument()
+        expect(screen.queryByText('Owner')).not.toBeInTheDocument()
+        expect(screen.queryByRole('button', { name: 'Delete server' })).not.toBeInTheDocument()
     })
 
     it('sends someone without the page back to the server, saying why', async () => {

@@ -10,6 +10,8 @@ import { useAccountSettings } from '@/features/users/hooks/useAccountSettings'
 import { useCreateServerDialog } from '@/features/servers/create-server.store'
 import { useChannelDialogs } from '@/features/servers/channel-dialogs.store'
 import { useInviteDialogs } from '@/features/servers/invite-dialogs.store'
+import { useMembershipDialogs } from '@/features/servers/membership-dialogs.store'
+import { useServerGoneWatch } from '@/features/servers/hooks/useServerGoneWatch'
 import { cn } from '@/lib/utils'
 import { ListColumn } from './ListColumn'
 import { Rail } from './Rail'
@@ -27,6 +29,8 @@ const CreateServerDialog = lazy(() => import('@/features/servers/components/Crea
 const ChannelDialogs = lazy(() => import('@/features/servers/components/dialogs/ChannelDialogs'))
 const InviteDialog = lazy(() => import('@/features/servers/components/invites/InviteDialog'))
 const JoinInviteDialog = lazy(() => import('@/features/servers/components/invites/JoinInviteDialog'))
+// Leave, hand over, delete (S-SRV-04, S-SET-07); the password step inside loads on its own.
+const MembershipDialogs = lazy(() => import('@/features/servers/components/membership/MembershipDialogs'))
 
 /**
  * The frame of every page after sign-in (02 S-SHELL-01): rail 72, list
@@ -49,8 +53,11 @@ export default function AppShell() {
     const channelDialog = useChannelDialogs((state) => state.open)
     const inviting = useInviteDialogs((state) => state.invite !== null)
     const joiningByInvite = useInviteDialogs((state) => state.join !== null)
+    const membershipDialog = useMembershipDialogs((state) => state.open !== null)
     // The account's theme and language, here and in this browser's other tabs (REQ-AUTH-08).
     useAccountSettings()
+    // A server one is no longer in leaves the rail with a Toast (D-143).
+    useServerGoneWatch()
 
     const toggleNav = useCallback(() => setNavOpen((open) => !open), [])
     const shell = useMemo<ShellContextValue>(() => ({ navOpen, toggleNav }), [navOpen, toggleNav])
@@ -133,6 +140,11 @@ export default function AppShell() {
             {joiningByInvite ? (
                 <Suspense fallback={null}>
                     <JoinInviteDialog />
+                </Suspense>
+            ) : null}
+            {membershipDialog ? (
+                <Suspense fallback={null}>
+                    <MembershipDialogs />
                 </Suspense>
             ) : null}
         </ShellContext.Provider>

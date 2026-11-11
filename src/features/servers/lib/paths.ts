@@ -32,3 +32,10 @@ export const roleEditPath = (serverId: string, roleId: string) => `${serverSetti
 
 /** `/invite/{code}`. */
 export const invitePath = (code: string) => `/invite/${code}`
+
+/** Whether a page is one of this server's: a channel of it or its settings. */
+export const isServerPath = (pathname: string, serverId: string) =>
+    pathname === channelPath(serverId) ||
+    pathname.startsWith(`${channelPath(serverId)}/`) ||
+    pathname === serverSettingsPath(serverId) ||
+    pathname.startsWith(`${serverSettingsPath(serverId)}/`)

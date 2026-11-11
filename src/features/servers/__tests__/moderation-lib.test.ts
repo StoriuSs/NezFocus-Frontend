@@ -56,9 +56,19 @@ describe('rowActions (04 › Menu ⋯)', () => {
             timeout: true,
             endTimeout: false,
             kick: true,
-            ban: false
+            ban: false,
+            transfer: false
         })
         expect(rowActions(viewer(bits(BAN), 2), member('dung'), NOW).ban).toBe(true)
+    })
+
+    it('offers the owner a handover to anyone but themselves and someone timed out (Q15, D-91)', () => {
+        const owner = viewer(bits(KICK, BAN, MODERATE), 0, true)
+        expect(rowActions(owner, member('dung'), NOW).transfer).toBe(true)
+        expect(rowActions(owner, member('an', [], { isOwner: true }), NOW).transfer).toBe(false)
+        const later = new Date(NOW.getTime() + 60_000).toISOString()
+        expect(rowActions(owner, member('phong', [], { timeoutUntil: later }), NOW).transfer).toBe(false)
+        expect(rowActions(binh, member('dung'), NOW).transfer).toBe(false)
     })
 
     it('offers nothing on themselves, an equal, a higher one or the owner', () => {

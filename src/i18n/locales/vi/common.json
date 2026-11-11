@@ -116,7 +116,8 @@
       "createChannel": "Tạo kênh",
       "createCategory": "Tạo danh mục",
       "settings": "Cài đặt server",
-      "invite": "Mời bạn"
+      "invite": "Mời bạn",
+      "leave": "Rời server"
     },
     "channelsExtra": {
       "settings": "Cài đặt kênh",
@@ -148,7 +149,8 @@
       "members": "Thành viên",
       "invites": "Lời mời",
       "bans": "Danh sách cấm"
-    }
+    },
+    "serverGone": "Bạn không còn ở {{name}}"
   },
   "timeZone": {
     "search": "Tìm thành phố hoặc GMT",

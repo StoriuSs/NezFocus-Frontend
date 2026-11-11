@@ -116,7 +116,8 @@
       "createChannel": "Create channel",
       "createCategory": "Create category",
       "settings": "Server settings",
-      "invite": "Invite people"
+      "invite": "Invite people",
+      "leave": "Leave server"
     },
     "channelsExtra": {
       "settings": "Channel settings",
@@ -148,7 +149,8 @@
       "members": "Members",
       "invites": "Invites",
       "bans": "Bans"
-    }
+    },
+    "serverGone": "You are no longer in {{name}}"
   },
   "timeZone": {
     "search": "Search a city or GMT",

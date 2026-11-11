@@ -21,7 +21,7 @@ a few small Zustand stores, or in a component.**
 | The theme on screen | The theme store, `src/hooks/useTheme.ts`, set from the settings once signed in | `useTheme()` |
 | A removed avatar waiting out its "Undo" | `useAvatarRemoval`, `src/features/users/lib/avatar-removal-state.ts` | read by `useProfile` |
 | A form's values and errors | React Hook Form | [shadcn-forms.md](./shadcn-forms.md) |
-| Which servers dialog is open, and on what (create a server, a channel or category dialog, invite friends, join from an invite) | `useCreateServerDialog`, `useChannelDialogs`, `useInviteDialogs` (`src/features/servers/*.store.ts`); the AppShell draws the dialogs | `useCreateServerDialog((s) => s.show)` |
+| Which servers dialog is open, and on what (create a server, a channel or category dialog, invite friends, join from an invite, leave, hand over or delete a server) | `useCreateServerDialog`, `useChannelDialogs`, `useInviteDialogs`, `useMembershipDialogs` (`src/features/servers/*.store.ts`); the AppShell draws the dialogs | `useCreateServerDialog((s) => s.show)` |
 | Whether a dialog its own component opens is open, a tab, a hover | `useState` in the component | — |
 
 **Don't copy server data into a store.** The copy is what goes stale: a
@@ -79,12 +79,13 @@ because `useProfile` reads it and is in the first download; the removal logic
 stays in the profile page's chunk.
 
 **The servers dialog stores** (`useCreateServerDialog`, `useChannelDialogs`,
-`useInviteDialogs`, in `src/features/servers/`): which of the servers
-feature's dialogs is open, and on what. They are stores rather than
-`useState` because the dialogs live in the AppShell (each loaded with
-`lazy()` the first time it opens), while what opens them is elsewhere: the
-rail's ＋, the no-server page, the server menu, the channel list's buttons,
-an invite link opened while signed in.
+`useInviteDialogs`, `useMembershipDialogs`, in `src/features/servers/`):
+which of the servers feature's dialogs is open, and on what. They are stores
+rather than `useState` because the dialogs live in the AppShell (each loaded
+with `lazy()` the first time it opens), while what opens them is elsewhere:
+the rail's ＋, the no-server page, the server menu, the channel list's
+buttons, an invite link opened while signed in, the Overview's owner group,
+the members' ⋯ menu.
 
 - `useCreateServerDialog`: `open`, `template`, `mode` (`create` or `join`);
   `show(template?)`, `showJoin()`, `hide()`.
@@ -93,6 +94,10 @@ an invite link opened while signed in.
 - `useInviteDialogs`: `invite` (`{ serverId, created }`) and `join`
   (`{ code, channel }`); `showInvite()`, `hideInvite()`, `showJoin()`,
   `hideJoin()`.
+- `useMembershipDialogs`: `open`, `leave`, `transfer` (with a chosen
+  `recipient`, and `thenLeave` from the leave flow) or `delete` on a server,
+  or `null`; `show(dialog)`, `hide()`. A server gone from the list takes its
+  dialog with it.
 
 They hold ids, never server data: the dialog reads the server from the
 servers query (`useServers`).

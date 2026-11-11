@@ -5,24 +5,16 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/compon
 import { cn } from '@/lib/utils'
 import { useServers } from '../../api/useServers'
 import type { Server } from '../../types'
-import { hasServerMenu, ServerMenuItems } from '../ServerMenuItems'
+import { ServerMenuItems } from '../ServerMenuItems'
 import { ChannelList } from './ChannelList'
 
 /**
  * The server's name over its channels, 48 high, level with the page Header's
- * rule. With rows to offer it opens the server menu (S-SRV-04, C-15; rows in
- * ServerMenuItems). With no row, it is a plain title.
+ * rule. It opens the server menu (S-SRV-04, C-15; rows in ServerMenuItems),
+ * which everyone has: "Leave server" is always in it.
  */
 function ServerMenu({ server }: { server: Server }) {
     const [open, setOpen] = useState(false)
-
-    if (!hasServerMenu(server)) {
-        return (
-            <div className='flex h-12 shrink-0 items-center border-b px-4'>
-                <h2 className='min-w-0 flex-1 truncate text-headline text-text-primary'>{server.name}</h2>
-            </div>
-        )
-    }
 
     return (
         <h2 className='flex h-12 shrink-0 border-b'>

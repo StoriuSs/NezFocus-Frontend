@@ -138,6 +138,14 @@ imports in with it, and Rollup does not split a feature's `index.ts`
   waiting to be deleted sees, is a `lazy()` import in `GuestOnlyRoute`, and
   the `deletion` words come with the chunks that use them.
 
+When another feature does need a heavy component, the index exports it
+lazily: `src/features/auth/index.ts` has
+`export const ConfirmPasswordDialog = lazy(() => import('./components/ConfirmPasswordDialog'))`.
+The first download carries only that `lazy()` wrapper; the dialog, its form
+and the emailed-code reset are a chunk of their own, fetched the first time
+the servers feature's handover step opens it (inside a `Suspense`). A type
+export (`export type { ConfirmPasswordDialogProps }`) costs nothing.
+
 Check after adding to an index, or importing one from somewhere new: run
 `pnpm build` and look at the entry chunk (`index-*.js`) in the list it prints.
 

@@ -37,3 +37,21 @@ export async function updateServer(serverId: string, body: UpdateServerRequest):
 export async function removeServerIcon(serverId: string): Promise<void> {
     await api.delete(`/servers/${serverId}/icon`)
 }
+
+/** DELETE /servers/{id}/members/me (S-SRV-04): the owner is refused (OWNER_CANNOT_LEAVE), and hands it over first. */
+export async function leaveServer(serverId: string): Promise<void> {
+    await api.delete(`/servers/${serverId}/members/me`)
+}
+
+/** DELETE /servers/{id} (S-SET-07, owner): the name typed again, compared without case or accents. */
+export async function deleteServer(serverId: string, name: string): Promise<void> {
+    await api.delete(`/servers/${serverId}`, { data: { name } })
+}
+
+/**
+ * POST /servers/{id}/transfer (S-SET-07, owner): the new owner and one's own
+ * password (wrong: AUTH_CURRENT_PASSWORD_INVALID, counted as when changing it).
+ */
+export async function transferOwnership(serverId: string, userId: string, password: string): Promise<void> {
+    await api.post(`/servers/${serverId}/transfer`, { userId, password })
+}

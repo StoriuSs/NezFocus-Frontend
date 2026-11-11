@@ -7,9 +7,6 @@
   "confirm": {
     "title": "Xóa tài khoản?",
     "description": "Tài khoản sẽ bị xóa vĩnh viễn vào {{date}}. Trước ngày đó, đăng nhập lại để khôi phục. Sau đó hồ sơ, chuỗi ngày học và bạn bè bị xóa; tin nhắn hiện \"Tài khoản đã bị xóa\".",
-    "wrongPassword": "Mật khẩu không đúng",
-    "tooManyWrong": "Bạn đã nhập sai mật khẩu nhiều lần. Thử lại sau {{wait}}.",
-    "cancel": "Hủy",
     "submit": "Xóa tài khoản"
   },
   "banner": "Tài khoản sẽ bị xóa vĩnh viễn vào {{date}} · đăng nhập trước ngày đó để khôi phục",

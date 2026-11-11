@@ -169,6 +169,13 @@
         "description": "Tên server mới chưa được lưu.",
         "stay": "Ở lại",
         "confirm": "Bỏ thay đổi"
+      },
+      "owner": {
+        "title": "Chủ server",
+        "transfer": "Chuyển quyền chủ server",
+        "transferHint": "Người nhận có mọi quyền; bạn vẫn giữ các vai trò hiện có.",
+        "delete": "Xóa server",
+        "deleteHint": "Xóa với mọi thành viên, không hoàn tác được."
       }
     }
   },
@@ -506,7 +513,8 @@
       "changeTimeout": "Đổi thời hạn tạm khóa",
       "endTimeout": "Gỡ tạm khóa",
       "kick": "Mời ra khỏi server",
-      "ban": "Cấm khỏi server"
+      "ban": "Cấm khỏi server",
+      "transfer": "Chuyển quyền chủ server"
     },
     "timedOutUntil": "Tạm khóa tới {{time}}",
     "timeoutReason": "Lý do: {{reason}}",
@@ -589,5 +597,54 @@
     "cancel": "Hủy",
     "unbanned": "Đã bỏ cấm {{name}}",
     "failed": "Chưa thực hiện được. Kiểm tra kết nối rồi thử lại."
+  },
+  "membership": {
+    "cancel": "Hủy",
+    "later": "Để sau",
+    "leave": {
+      "title": "Rời {{name}}?",
+      "body": "Bạn sẽ cần một lời mời mới để quay lại.",
+      "submit": "Rời server",
+      "done": "Đã rời {{name}}",
+      "offline": "Chưa rời được server · Kiểm tra mạng rồi thử lại"
+    },
+    "ownerLeave": {
+      "title": "Chuyển quyền trước khi rời",
+      "body": "Bạn là chủ server {{name}}. Hãy chuyển quyền chủ server cho một thành viên khác rồi mới rời được."
+    },
+    "alone": {
+      "title": "Bạn là thành viên duy nhất",
+      "body": "{{name}} chỉ có mình bạn. Không chuyển quyền được cho ai, nên nếu không dùng nữa thì xóa server."
+    },
+    "transfer": {
+      "title": "Chuyển quyền chủ server",
+      "description": "Chọn người sẽ là chủ server {{name}}. Bạn vẫn giữ các vai trò hiện có.",
+      "search": "Tìm theo tên hoặc username",
+      "noMatch": "Không có thành viên nào khớp “{{q}}”",
+      "aloneTitle": "Server chưa có thành viên khác",
+      "aloneBody": "Mời bạn bè vào trước, hoặc xóa server nếu không dùng nữa.",
+      "timedOut": "Đang bị tạm khóa tới {{time}} · Gỡ tạm khóa để chọn",
+      "loadFailed": "Không tải được danh sách thành viên.",
+      "confirmTitle": "Chuyển quyền chủ server cho {{name}}?",
+      "confirmBody": "{{name}} sẽ có mọi quyền, kể cả xóa server. Bạn vẫn giữ các vai trò hiện có nhưng không lấy lại quyền được nếu {{name}} không chuyển lại.",
+      "password": "Mật khẩu của bạn",
+      "submit": "Chuyển quyền",
+      "done": "{{name}} đã là chủ server",
+      "refused": {
+        "pending_deletion": "Tài khoản của {{name}} đang chờ xóa nên không nhận quyền chủ được.",
+        "timed_out": "{{name}} đang bị tạm khóa. Gỡ tạm khóa rồi chuyển lại.",
+        "gone": "{{name}} không còn ở trong server."
+      }
+    },
+    "delete": {
+      "title": "Xóa {{name}}?",
+      "body_one": "Server biến mất với {{count}} thành viên, kèm mọi kênh, tin nhắn và việc. Không hoàn tác được.",
+      "body_other": "Server biến mất với {{count}} thành viên, kèm mọi kênh, tin nhắn và việc. Không hoàn tác được.",
+      "typeToConfirm": "Gõ {{name}} để xác nhận",
+      "submit": "Xóa server",
+      "done": "Đã xóa {{name}}",
+      "offline": "Cần kết nối mạng để xóa server. Kiểm tra mạng rồi thử lại.",
+      "renamed": "Tên server vừa được đổi. Gõ tên mới để xác nhận."
+    }
   }
 }

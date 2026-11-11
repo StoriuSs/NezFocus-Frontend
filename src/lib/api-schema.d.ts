@@ -478,7 +478,11 @@ export interface paths {
         get?: never
         put?: never
         post?: never
-        delete?: never
+        /**
+         * Delete the server for every member (owner only, S-SET-07), its name
+         *     typed again. Its invites answer 410 INVITE_INVALID from now.
+         */
+        delete: operations['ServersController_remove_v1']
         options?: never
         head?: never
         /**
@@ -501,6 +505,49 @@ export interface paths {
         post: operations['ServersController_uploadIcon_v1']
         /** Back to the initials (MANAGE_SERVER). */
         delete: operations['ServersController_removeIcon_v1']
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/servers/{serverId}/members/me': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        post?: never
+        /**
+         * Leave the server (S-SRV-04): any member but the owner, who hands it
+         *     over first (403 OWNER_CANNOT_LEAVE). Declared in this controller,
+         *     which ServersModule lists before ModerationController, so `me` is
+         *     never taken for a member id by DELETE …/members/:userId (kick).
+         */
+        delete: operations['ServersController_leave_v1']
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/servers/{serverId}/transfer': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        /**
+         * Hand the server to another member (owner only, S-SET-07), with the
+         *     owner's password. The old owner keeps their roles. The client reads the
+         *     server list again: what they may do has changed.
+         */
+        post: operations['ServersController_transfer_v1']
+        delete?: never
         options?: never
         head?: never
         patch?: never
@@ -1154,6 +1201,11 @@ export interface components {
             icon_url: string | null
             /** @description The owner outranks every role and may do everything. */
             is_owner: boolean
+            /**
+             * @description Everyone in it, themselves included (D-161): "gone for N members" when
+             *     deleting it, and the servers that block deleting the account (D-76).
+             */
+            member_count: number
             /** @description Their highest role's position, 0 with none. Roles at or above it are locked for them, unless they are the owner. */
             top_role_position: number
             /** @description The roles they hold, not @everyone. */
@@ -1194,6 +1246,23 @@ export interface components {
         }
         ServerIconResponseDto: {
             icon_url: string
+        }
+        DeleteServerRequestDto: {
+            /**
+             * @description The server's name typed again to confirm, compared without case or
+             *     accents (REQ-SRV-05). Another name: VALIDATION_ERROR, `data.rule`
+             *     `name_mismatch`.
+             */
+            name: string
+        }
+        TransferOwnershipRequestDto: {
+            /**
+             * Format: uuid
+             * @description The member who becomes the owner: not one waiting to be deleted, nor timed out (D-91).
+             */
+            user_id: string
+            /** @description The owner's password (wrong: 400 AUTH_CURRENT_PASSWORD_INVALID, counted as when changing it). */
+            password: string
         }
         CreatedInServerResponseDto: {
             /** @description The new category's or channel's id. */
@@ -2317,6 +2386,34 @@ export interface operations {
             }
         }
     }
+    ServersController_remove_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                serverId: string
+            }
+            cookie?: never
+        }
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['DeleteServerRequestDto']
+            }
+        }
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: null
+                    }
+                }
+            }
+        }
+    }
     ServersController_update_v1: {
         parameters: {
             query?: never
@@ -2389,6 +2486,58 @@ export interface operations {
             cookie?: never
         }
         requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: null
+                    }
+                }
+            }
+        }
+    }
+    ServersController_leave_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                serverId: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: null
+                    }
+                }
+            }
+        }
+    }
+    ServersController_transfer_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                serverId: string
+            }
+            cookie?: never
+        }
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['TransferOwnershipRequestDto']
+            }
+        }
         responses: {
             200: {
                 headers: {
@@ -2929,6 +3078,11 @@ export interface operations {
     RolesController_members_v1: {
         parameters: {
             query?: {
+                /**
+                 * @description true: only those the owner may hand the server to (S-SET-07, D-161): not
+                 *     themselves, not an account waiting to be deleted. Owner only.
+                 */
+                transferable?: boolean
                 /** @description name (default), role or joined_at (D-89). */
                 sort?: 'name' | 'role' | 'joined_at'
                 /** @description asc (default): A to Z, lowest role first, oldest first. */

@@ -333,7 +333,35 @@ Queries retry once, and only for failures a retry can fix: no answer at all,
 `408`, `429` and `5xx` (`shouldRetryQuery` in `src/lib/query-client.ts`). A
 `401`, `403`, `404` or `422` fails the same way every time, so retrying only
 delays the error. Mutations don't retry by themselves. Queries are not
-refetched when the window regains focus (`refetchOnWindowFocus: false`).
+refetched when the window regains focus (`refetchOnWindowFocus: false`), but
+the server list is, every time (`'always'` in `useServers`: `true` only
+reads a list older than the 5-minute stale time; see below).
+
+## A server one is no longer in
+
+Until M2 brings live updates, the app learns that someone was kicked, banned,
+or saw their server deleted from requests (D-143).
+`src/features/servers/hooks/useServerGoneWatch.ts`, run once by the AppShell,
+listens to the query cache and the mutation cache (`getQueryCache().subscribe`,
+`getMutationCache().subscribe`):
+
+- a request under `/servers/{id}` refused with `NOT_FOUND_ERROR` reads the
+  server list again (`notFoundServerId` in `lib/membership.ts`). The error
+  alone cannot say the server is gone: the API answers the same for a gone
+  channel, role or member (NFR-SEC-05). The list decides;
+- a list read from the API that no longer has a server the last one had
+  gets a Toast "You are no longer in {server}"; the page on it already goes
+  to /study when its server is not in the list.
+
+Leaving or deleting one oneself takes it out with `setQueryData`, which React
+Query marks `manual`: the watch moves on without that Toast. The order there
+matters: the hook awaits the page's move first
+(`useMoveAwayFrom`, `navigate(..., { flushSync: true })`), then changes the
+cache. The router otherwise hands the move to React as a transition, still
+pending when its promise settles, and the cache change, drawn first, has the
+page of the server just gone send everyone to /study. Handing a server over
+does the same before the new list goes in, so a settings page no longer
+theirs moves without "You no longer have access".
 
 ## What the API client does
 

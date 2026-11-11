@@ -55,6 +55,7 @@ const binh: Server = {
     name: 'Ôn thi Giải tích 2',
     iconUrl: null,
     isOwner: false,
+    memberCount: 13,
     permissions: bits(KICK, MODERATE, VIEW),
     topRolePosition: 2,
     roleIds: ['lead'],
@@ -200,6 +201,32 @@ describe('Members (S-SET-03)', () => {
         expect(items).toEqual(['Time out', 'Kick from server'])
         await user.keyboard('{Escape}')
         await expectNoA11yViolations(container)
+    })
+
+    it('offers the owner a handover at the end of ⋯, set apart, but not to someone timed out (Q15, D-91)', async () => {
+        const { useMembershipDialogs } = await import('../membership-dialogs.store')
+        const user = userEvent.setup()
+        renderPage('/servers/ot/settings/members', an, 'an')
+
+        await user.click(within(await rowOf('Dũng')).getByRole('button', { name: 'Actions for Dũng' }))
+        const menu = await screen.findByRole('menu')
+        expect(
+            within(menu)
+                .getAllByRole('menuitem')
+                .map((item) => item.textContent)
+        ).toEqual(['Time out', 'Kick from server', 'Ban from server', 'Transfer ownership'])
+        expect(within(menu).getByRole('separator')).toBeInTheDocument()
+        await user.click(within(menu).getByRole('menuitem', { name: 'Transfer ownership' }))
+        expect(useMembershipDialogs.getState().open).toEqual({
+            kind: 'transfer',
+            serverId: 'ot',
+            recipient: { userId: 'dung', name: 'Dũng' }
+        })
+        useMembershipDialogs.getState().hide()
+
+        await user.click(within(await rowOf('Phong')).getByRole('button', { name: 'Actions for Phong' }))
+        expect(await screen.findByRole('menuitem', { name: 'Remove timeout' })).toBeInTheDocument()
+        expect(screen.queryByRole('menuitem', { name: 'Transfer ownership' })).not.toBeInTheDocument()
     })
 
     it('shows a running timeout under the name, and ends it at once from ⋯', async () => {
