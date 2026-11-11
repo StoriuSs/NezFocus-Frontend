@@ -117,6 +117,9 @@ function renderAt(path: string, servers: Server[] = [OT, ND, CG]) {
         { wrapper: queryWrapper({ staleTime: 5 * 60 * 1000 }) }
     )
 }
+/** As OWNERSHIP_TRANSFER_REQUIRED names them (`data.servers`). */
+const BLOCKING_ONE = [{ id: 'ot', name: 'Ôn thi Giải tích 2', memberCount: 13 }]
+
 // By its text: an open dialog hides the rest of the page from the accessibility tree.
 const where = () => screen.getByText((_, element) => element?.tagName === 'OUTPUT')
 
@@ -444,6 +447,112 @@ describe('leaving, handing over and deleting a server (03 S-SRV-04, 04 S-SET-07)
             await userEvent.type(within(dialog).getByLabelText('Your password'), 'Correct-Horse-1')
             await userEvent.click(within(dialog).getByRole('button', { name: 'Transfer ownership' }))
             expect(await screen.findByRole('dialog', { name: 'Leave Ôn thi Giải tích 2?' })).toBeInTheDocument()
+        })
+    })
+
+    describe('deleting the account (10 S-ME-03 `delete-blocked-owner`)', () => {
+        const BLOCKING = [
+            { id: 'ot', name: 'Ôn thi Giải tích 2', memberCount: 13 },
+            { id: 'nd', name: 'Nhóm Đề cương', memberCount: 6 }
+        ]
+
+        it('lists the servers to hand over first, each with its members, the focus on the first', async () => {
+            renderAt('/study')
+            useMembershipDialogs.getState().show({ kind: 'deletionBlocked', servers: BLOCKING })
+
+            const dialog = await screen.findByRole('dialog', { name: 'Hand over your servers first' })
+            expect(dialog).toHaveTextContent('You own 2 servers that have other members.')
+            const ot = within(dialog).getByRole('button', { name: /Ôn thi Giải tích 2/ })
+            expect(ot).toHaveTextContent('13 members')
+            expect(within(dialog).getByRole('button', { name: /Nhóm Đề cương/ })).toHaveTextContent('6 members')
+            await waitFor(() => expect(ot).toHaveFocus())
+            await expectNoA11yViolations()
+        })
+
+        it('opens the handover of the server chosen, in its place', async () => {
+            rolesApi.fetchMembers.mockResolvedValue(page([BINH]))
+            renderAt('/study')
+            useMembershipDialogs.getState().show({ kind: 'deletionBlocked', servers: BLOCKING })
+            const dialog = await screen.findByRole('dialog', { name: 'Hand over your servers first' })
+
+            await userEvent.click(within(dialog).getByRole('button', { name: /Nhóm Đề cương/ }))
+
+            const picker = await screen.findByRole('dialog', { name: 'Transfer ownership' })
+            expect(picker).toHaveTextContent('Nhóm Đề cương')
+            expect(screen.queryByRole('dialog', { name: 'Hand over your servers first' })).not.toBeInTheDocument()
+        })
+
+        it('closes with Close', async () => {
+            renderAt('/study')
+            useMembershipDialogs.getState().show({ kind: 'deletionBlocked', servers: BLOCKING })
+            const dialog = await screen.findByRole('dialog', { name: 'Hand over your servers first' })
+            // The footer's, before the corner ×, which has the same name.
+            await userEvent.click(within(dialog).getAllByRole('button', { name: 'Close' })[0]!)
+            expect(useMembershipDialogs.getState().open).toBeNull()
+        })
+    })
+
+    describe('serverOwnership (auth port, S-ME-03)', () => {
+        const mine = (id: string, memberCount: number) => server(id, id, { isOwner: true, memberCount })
+
+        it('reads the list again, so a member who joined since decides it', async () => {
+            const { serverOwnership } = await import('../api/serverOwnership')
+            const { QueryClient } = await import('@tanstack/react-query')
+            const { serverKeys } = await import('../api/keys')
+            const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity, retry: false } } })
+            queryClient.setQueryData(serverKeys.list(), [mine('ot', 1)])
+            serversApi.fetchServers.mockResolvedValue([mine('ot', 2), mine('solo', 1), ND])
+
+            const owned = await serverOwnership.owned(queryClient)
+
+            expect(owned.blocking).toEqual([{ id: 'ot', name: 'ot', memberCount: 2 }])
+            expect(owned.alone).toEqual([{ id: 'solo', name: 'solo', memberCount: 1 }])
+        })
+
+        it('goes by the list it has when it cannot read it, and by none without one', async () => {
+            const { serverOwnership } = await import('../api/serverOwnership')
+            const { QueryClient } = await import('@tanstack/react-query')
+            const { serverKeys } = await import('../api/keys')
+            const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+            serversApi.fetchServers.mockRejectedValue(new Error('offline'))
+
+            expect(await serverOwnership.owned(queryClient)).toEqual({ blocking: [], alone: [] })
+            queryClient.setQueryData(serverKeys.list(), [mine('ot', 13)])
+            expect((await serverOwnership.owned(queryClient)).blocking).toEqual([
+                { id: 'ot', name: 'ot', memberCount: 13 }
+            ])
+        })
+
+        it('offline, goes by the list it has rather than wait for the connection', async () => {
+            const { serverOwnership } = await import('../api/serverOwnership')
+            const { QueryClient, onlineManager } = await import('@tanstack/react-query')
+            const { serverKeys } = await import('../api/keys')
+            const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+            queryClient.setQueryData(serverKeys.list(), [mine('ot', 13)])
+            serversApi.fetchServers.mockRejectedValue(new (await import('axios')).AxiosError('offline'))
+            onlineManager.setOnline(false)
+            try {
+                const owned = await Promise.race([
+                    serverOwnership.owned(queryClient),
+                    new Promise((resolve) => setTimeout(() => resolve('still waiting'), 500))
+                ])
+                expect(owned).toEqual({ blocking: [{ id: 'ot', name: 'ot', memberCount: 13 }], alone: [] })
+            } finally {
+                onlineManager.setOnline(true)
+            }
+        })
+
+        it('shows the servers the API named, and reads the list again for their handover', async () => {
+            const { serverOwnership } = await import('../api/serverOwnership')
+            const { QueryClient } = await import('@tanstack/react-query')
+            const { serverKeys } = await import('../api/keys')
+            const queryClient = new QueryClient()
+            queryClient.setQueryData(serverKeys.list(), [OT])
+
+            serverOwnership.showBlocked(BLOCKING_ONE, queryClient)
+
+            expect(useMembershipDialogs.getState().open).toEqual({ kind: 'deletionBlocked', servers: BLOCKING_ONE })
+            expect(queryClient.getQueryState(serverKeys.list())?.isInvalidated).toBe(true)
         })
     })
 })

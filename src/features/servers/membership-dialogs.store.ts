@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import type { OwnedServer } from '@/features/auth'
 
 /** Who a handover goes to, when chosen before the dialog opens (the ⋯ menu of S-SET-03). */
 export interface TransferRecipient {
@@ -21,6 +22,11 @@ export type MembershipDialog =
     | { kind: 'transfer'; serverId: string; recipient?: TransferRecipient; thenLeave?: boolean }
     /** 04 S-SET-07 `delete-type-name`. */
     | { kind: 'delete'; serverId: string }
+    /**
+     * 10 S-ME-03 `delete-blocked-owner`: the servers to hand over before the
+     * account can go, each row leading to its `transfer-picker`.
+     */
+    | { kind: 'deletionBlocked'; servers: OwnedServer[] }
 
 interface MembershipDialogsState {
     open: MembershipDialog | null
@@ -30,8 +36,9 @@ interface MembershipDialogsState {
 
 /**
  * Leaving, handing over and deleting a server (03 S-SRV-04, 04 S-SET-07).
- * Opened from the server menu, the Overview's owner group and the members'
- * ⋯ menu, and drawn by the AppShell, which loads them the first time one opens.
+ * Opened from the server menu, the Overview's owner group, the members' ⋯
+ * menu and deleting the account (through auth's ServerOwnership port), and
+ * drawn by the AppShell, which loads them the first time one opens.
  */
 export const useMembershipDialogs = create<MembershipDialogsState>((set) => ({
     open: null,

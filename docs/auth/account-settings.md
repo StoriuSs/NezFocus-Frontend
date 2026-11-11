@@ -203,9 +203,13 @@ API deletes the account for good.
 **The group.** The last group on `/settings/account`, "Delete account"
 ([DeleteAccountSection.tsx](../../src/features/auth/components/DeleteAccountSection.tsx)):
 "Your account is deleted for good after 14 days; sign in again before then to
-restore it.", then a small red **Delete account** button. The section owns the
-dialog's open state, and mounts the dialog only while it is open, so it opens
-empty every time.
+restore it.", then a small red **Delete account** button. The button first
+looks at the servers the account owns (below, [An Owner of servers](#an-owner-of-servers)),
+turning while it does (`aria-disabled`, not `disabled`: the focus stays on
+it, so a dialog closed later gives it back there; a second press waits for
+the first). An answer that comes once the page is left is dropped; a check
+that breaks lets go of the button with a toast. Then the section mounts the
+dialog, only while it is open, so it opens empty every time.
 
 **The dialog** ("Delete your account?", 440 wide at most;
 [DeleteAccountDialog.tsx](../../src/features/auth/components/DeleteAccountDialog.tsx),
@@ -214,7 +218,11 @@ S-ME-03 `delete-confirm`) is the shared password step,
 (C-14 `password`, also used to hand a server over), given the title, the
 words and what to send. It says what deleting means and names the day: "Your
 account will be deleted for good on dd/mm/yyyy. Until then, sign in again to
-restore it. ...". The day is 14 days from when the dialog opened, in the
+restore it. ...". The servers only they are in go with the account (D-121),
+so it names them under it: "The servers only you are in are deleted with your
+account: **CLB Guitar PTIT**. Their invite links stop working now." (the
+names bold, comma separated; nothing when there are none). The day is 14 days
+from when the dialog opened, in the
 account's time zone, read from the settings query the AppShell already loaded
 (`deletionDate` in
 [deletion-date.ts](../../src/features/auth/lib/deletion-date.ts)). The password
@@ -242,6 +250,7 @@ Other devices get the same banner at their next request.
 |---|---|
 | `400 AUTH_CURRENT_PASSWORD_INVALID` | "That password isn't right", under the password, which empties and takes the focus (C-14) |
 | `429`, reason `wrong_password` | five wrong passwords in 15 minutes (D-121): a neutral message, "You entered a wrong password too many times. Try again in ...", counting down; **Delete account** stays disabled until then |
+| `409 OWNERSHIP_TRANSFER_REQUIRED` | a server gained a member since the check: the dialog closes and the blocking dialog opens with the servers the API lists (`data.servers`), the server list read again for their handover. A refusal naming none it can read stays in the dialog as any other refusal |
 | no answer, or anything else | "You're offline..." or the API's message, in red above the buttons |
 
 **Forgot password?** sends a reset code with `sendResetCode(email)`, and the
@@ -252,10 +261,38 @@ password step puts the change-password dialog on the code in its place
 (`onBack`, `onDone`). A send that fails still opens the code
 mode, which says why, as in [Change the password](#change-the-password).
 
-**An Owner of servers.** The API refuses an Owner of servers with other
-members (`409 OWNERSHIP_TRANSFER_REQUIRED`). Its dialog (`delete-blocked-owner`,
-the servers to hand over) waits for servers in M1; until then no account owns
-one.
+### An Owner of servers
+
+Servers with other members are handed over (or deleted) before the account
+can go (REQ-AUTH-09, D-76), and the app says so before any password
+(S-ME-03 `delete-blocked-owner`). **Delete account** reads the server list
+again (`GET /servers`, not the copy in the cache: someone may have joined
+since) and sorts the servers the account owns by `member_count`:
+
+- **With other members:** "Hand over your servers first", one row per server
+  (its picture at 32, the name, "13 members" under it, ›) and **Close**. A
+  row opens that
+  server's handover in the dialog's place (04 S-SET-07 `transfer-picker`, then
+  the password); once done, **Delete account** checks again.
+- **Only them:** the delete dialog opens and names them (above; "The server
+  only you are in is ..." for one).
+
+The list cannot be read (offline: the read fails at once, `networkMode:
+'always'`, rather than wait for the connection): the copy in the cache decides, or none,
+and the API's own check (`409 OWNERSHIP_TRANSFER_REQUIRED`) still refuses
+what it must, which opens the same dialog.
+
+**Who answers.** Servers are another feature, and it already uses auth (the
+password step), so auth does not import it back. Auth says what it needs in
+a port, [server-ownership.ts](../../src/features/auth/lib/server-ownership.ts)
+(`ServerOwnership`: `owned(queryClient)`, `showBlocked(servers)`); the
+servers feature answers
+([serverOwnership.ts](../../src/features/servers/api/serverOwnership.ts)),
+with the dialog in its `MembershipDialogs`; the AppShell connects the two
+(`connectServerOwnership`), as `main.tsx` connects the API client and the
+session, and as the API's auth module asks its servers module through
+`SERVER_OWNERSHIP` (D-160). Used before it is connected, `serverOwnership()`
+throws rather than finding no servers.
 
 What the API removes, and when, is in the API's `docs/account-deletion.md`.
 Restoring is on the sign-in page:

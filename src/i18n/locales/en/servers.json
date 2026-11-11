@@ -645,6 +645,14 @@
       "done": "Deleted {{name}}",
       "offline": "You need a connection to delete the server. Check your connection and try again.",
       "renamed": "The server was renamed meanwhile. Type its new name to confirm."
+    },
+    "deletionBlocked": {
+      "title": "Hand over your servers first",
+      "body_one": "You own {{count}} server that has other members. Hand it over (or delete it), then delete your account.",
+      "body_other": "You own {{count}} servers that have other members. Hand them over (or delete them), then delete your account.",
+      "members_one": "{{count}} member",
+      "members_other": "{{count}} members",
+      "close": "Close"
     }
   }
 }

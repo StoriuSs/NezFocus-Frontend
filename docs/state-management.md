@@ -96,11 +96,16 @@ the members' ⋯ menu.
   `hideJoin()`.
 - `useMembershipDialogs`: `open`, `leave`, `transfer` (with a chosen
   `recipient`, and `thenLeave` from the leave flow) or `delete` on a server,
-  or `null`; `show(dialog)`, `hide()`. A server gone from the list takes its
-  dialog with it.
+  `deletionBlocked` (the servers that block deleting the account), or `null`;
+  `show(dialog)`, `hide()`. A server gone from the list takes its dialog with
+  it.
 
 They hold ids, never server data: the dialog reads the server from the
-servers query (`useServers`).
+servers query (`useServers`). One exception: `deletionBlocked` keeps the
+names and member counts it is opened with, since after a
+`409 OWNERSHIP_TRANSFER_REQUIRED` the dialog shows the servers as the API
+named them, which the cached list may not have yet (the list is read again
+as it opens, for the handover each row leads to).
 
 ## Using a store
 

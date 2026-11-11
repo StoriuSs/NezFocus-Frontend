@@ -503,7 +503,8 @@ in the first download, does not bring the dialog with it. Render it inside a
 "Delete your account?" (`src/features/auth/components/DeleteAccountDialog.tsx`,
 S-ME-03 `delete-confirm`), opened by the **Delete account** group at the foot
 of the account page (`DeleteAccountSection.tsx`), which mounts it while open:
-the day the account goes, then `ConfirmPasswordDialog`
+the day the account goes and the servers only they are in, then
+`ConfirmPasswordDialog`
 ([auth/account-settings.md](./auth/account-settings.md#delete-the-account)).
 It is not exported from `src/features/auth/index.ts`: the entry imports that
 index, so an export would put the dialog in the first download
@@ -526,6 +527,12 @@ with `lazy()` the first time one opens):
   follows.
 - `DeleteServerDialog`: C-14 `type-name`, as `DeleteChannelDialog`, with
   `sameTyped` from `lib/typed-name.ts`.
+- `DeletionBlockedDialog`: deleting the account while owning servers with
+  other members (10 S-ME-03 `delete-blocked-owner`, C-14 `simple`): a row per
+  server (`ServerIcon` 32, squircle; the name over its members; ›) that opens its
+  `TransferOwnershipDialog`, and **Close**. Opened through auth's
+  `ServerOwnership` port (`kind: 'deletionBlocked'`, with the servers, not a
+  `serverId`).
 
 Left or deleted, `useMoveAwayFrom` moves a page of that server to the next
 on the rail (below, else above), or to /study, and only then does the hook

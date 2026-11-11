@@ -7,7 +7,9 @@
   "confirm": {
     "title": "Xóa tài khoản?",
     "description": "Tài khoản sẽ bị xóa vĩnh viễn vào {{date}}. Trước ngày đó, đăng nhập lại để khôi phục. Sau đó hồ sơ, chuỗi ngày học và bạn bè bị xóa; tin nhắn hiện \"Tài khoản đã bị xóa\".",
-    "submit": "Xóa tài khoản"
+    "submit": "Xóa tài khoản",
+    "alone_one": "Server chỉ có bạn sẽ bị xóa cùng tài khoản: <0>{{names}}</0>. Link mời của server đó dừng ngay từ bây giờ.",
+    "alone_other": "Server chỉ có bạn sẽ bị xóa cùng tài khoản: <0>{{names}}</0>. Link mời của chúng dừng ngay từ bây giờ."
   },
   "banner": "Tài khoản sẽ bị xóa vĩnh viễn vào {{date}} · đăng nhập trước ngày đó để khôi phục",
   "bannerUndated": "Tài khoản của bạn đang chờ xóa · đăng nhập trong vòng 14 ngày kể từ khi yêu cầu để khôi phục",

@@ -7,7 +7,9 @@
   "confirm": {
     "title": "Delete your account?",
     "description": "Your account will be deleted for good on {{date}}. Until then, sign in again to restore it. After that your profile, study streak and friends are deleted; your messages show \"Deleted account\".",
-    "submit": "Delete account"
+    "submit": "Delete account",
+    "alone_one": "The server only you are in is deleted with your account: <0>{{names}}</0>. Its invite links stop working now.",
+    "alone_other": "The servers only you are in are deleted with your account: <0>{{names}}</0>. Their invite links stop working now."
   },
   "banner": "Your account will be deleted for good on {{date}} · sign in before then to restore it",
   "bannerUndated": "Your account is waiting to be deleted · sign in within 14 days of your request to restore it",

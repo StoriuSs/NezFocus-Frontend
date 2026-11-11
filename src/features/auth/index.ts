@@ -19,3 +19,6 @@ export const ConfirmPasswordDialog = lazy(() => import('./components/ConfirmPass
 export type { ConfirmPasswordDialogProps } from './components/ConfirmPasswordDialog'
 // For main.tsx, which connects the API client to the session.
 export { apiSession } from './lib/api-session'
+// What deleting the account asks of the servers feature; the AppShell connects it.
+export { connectServerOwnership } from './lib/server-ownership'
+export type { OwnedServer, OwnedServers, ServerOwnership } from './lib/server-ownership'

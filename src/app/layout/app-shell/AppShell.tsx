@@ -12,6 +12,8 @@ import { useChannelDialogs } from '@/features/servers/channel-dialogs.store'
 import { useInviteDialogs } from '@/features/servers/invite-dialogs.store'
 import { useMembershipDialogs } from '@/features/servers/membership-dialogs.store'
 import { useServerGoneWatch } from '@/features/servers/hooks/useServerGoneWatch'
+import { serverOwnership } from '@/features/servers/api/serverOwnership'
+import { connectServerOwnership } from '@/features/auth'
 import { cn } from '@/lib/utils'
 import { ListColumn } from './ListColumn'
 import { Rail } from './Rail'
@@ -31,6 +33,11 @@ const InviteDialog = lazy(() => import('@/features/servers/components/invites/In
 const JoinInviteDialog = lazy(() => import('@/features/servers/components/invites/JoinInviteDialog'))
 // Leave, hand over, delete (S-SRV-04, S-SET-07); the password step inside loads on its own.
 const MembershipDialogs = lazy(() => import('@/features/servers/components/membership/MembershipDialogs'))
+
+// Deleting the account (auth) asks the servers feature which servers block it
+// (S-ME-03 `delete-blocked-owner`). Connected here, not in main.tsx: every page
+// that deletes is inside this shell, and the servers code stays out of the first download.
+connectServerOwnership(serverOwnership)
 
 /**
  * The frame of every page after sign-in (02 S-SHELL-01): rail 72, list

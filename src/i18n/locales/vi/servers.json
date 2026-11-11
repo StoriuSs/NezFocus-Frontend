@@ -645,6 +645,14 @@
       "done": "Đã xóa {{name}}",
       "offline": "Cần kết nối mạng để xóa server. Kiểm tra mạng rồi thử lại.",
       "renamed": "Tên server vừa được đổi. Gõ tên mới để xác nhận."
+    },
+    "deletionBlocked": {
+      "title": "Chuyển quyền chủ server trước",
+      "body_one": "Bạn đang là chủ server của {{count}} server còn thành viên khác. Chuyển quyền chủ server (hoặc xóa server) rồi xóa tài khoản.",
+      "body_other": "Bạn đang là chủ server của {{count}} server còn thành viên khác. Chuyển quyền chủ server (hoặc xóa server) rồi xóa tài khoản.",
+      "members_one": "{{count}} thành viên",
+      "members_other": "{{count}} thành viên",
+      "close": "Đóng"
     }
   }
 }

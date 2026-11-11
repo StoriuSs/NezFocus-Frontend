@@ -320,6 +320,12 @@ Habits worth keeping:
   a feature. Needing
   many is the first sign the boundary is in the wrong place — either the thing
   belongs in `lib/` or `components/`, or the two features are really one.
+  Features import one way (`users ← auth ← servers`). When the one imported
+  needs the other, it declares a port and is handed it: deleting the account
+  (auth) asks the servers it owns through `ServerOwnership`
+  (`auth/lib/server-ownership.ts`), the servers feature answers
+  (`servers/api/serverOwnership.ts`), and the AppShell connects the two
+  ([auth/account-settings.md](./auth/account-settings.md#an-owner-of-servers)).
 - **Shared code imports no feature.** `src/lib`, `src/components` and
   `src/hooks` are refused any `@/features/...` import. When shared code needs
   something a feature owns, it says what in an interface and is handed it: the

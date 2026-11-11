@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { AxiosError, AxiosHeaders } from 'axios'
 import { apiError } from '@/test/helpers'
-import { highestRoleName, notFoundServerId, pageAfterHandover, serverAfter, transferRefusal } from '../lib/membership'
+import {
+    highestRoleName,
+    notFoundServerId,
+    ownedServers,
+    pageAfterHandover,
+    serverAfter,
+    transferRefusal
+} from '../lib/membership'
 import { toastName } from '../lib/server-name'
 import { sameTyped } from '../lib/typed-name'
 
@@ -118,5 +125,19 @@ describe('toastName (C-16)', () => {
         expect(toastName('Ôn thi Giải tích 2')).toBe('Ôn thi Giải tích 2')
         expect(toastName('x'.repeat(24))).toBe('x'.repeat(24))
         expect(toastName('Câu lạc bộ Ôn thi Giải tích 2')).toBe('Câu lạc bộ Ôn thi Giải t…')
+    })
+})
+
+describe('ownedServers (10 S-ME-03, REQ-AUTH-09)', () => {
+    const one = (id: string, isOwner: boolean, memberCount: number) => ({ id, name: id, isOwner, memberCount })
+
+    it('sorts the ones they own: with others in to hand over, only them to go with the account', () => {
+        const owned = ownedServers([one('ot', true, 13), one('nd', false, 6), one('solo', true, 1), one('mb', true, 2)])
+        expect(owned.blocking.map((server) => server.id)).toEqual(['ot', 'mb'])
+        expect(owned.alone).toEqual([{ id: 'solo', name: 'solo', memberCount: 1 }])
+    })
+
+    it('finds none when they own none', () => {
+        expect(ownedServers([one('nd', false, 6)])).toEqual({ blocking: [], alone: [] })
     })
 })

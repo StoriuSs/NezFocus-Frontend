@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { getApiErrorType } from '@/lib/api-error'
+import type { OwnedServers } from '@/features/auth'
 import { refusedRule } from './layout-error'
 import { channelPath, serverSettingsPath } from './paths'
 import { settingsSections } from './settings-sections'
@@ -61,4 +62,19 @@ export function pageAfterHandover(pathname: string, server: Pick<Server, 'id' | 
     const sections = settingsSections(server)
     if (sections.some((open) => open === section)) return null
     return sections[0] ? serverSettingsPath(server.id, sections[0]) : channelPath(server.id)
+}
+
+/**
+ * The servers one owns, as deleting the account sorts them (10 S-ME-03,
+ * REQ-AUTH-09): with others in, to hand over first; only them, deleted with
+ * the account (D-121). In the rail's order.
+ */
+export function ownedServers(servers: Pick<Server, 'id' | 'name' | 'isOwner' | 'memberCount'>[]): OwnedServers {
+    const owned = servers
+        .filter((server) => server.isOwner)
+        .map(({ id, name, memberCount }) => ({ id, name, memberCount }))
+    return {
+        blocking: owned.filter((server) => server.memberCount > 1),
+        alone: owned.filter((server) => server.memberCount <= 1)
+    }
 }
