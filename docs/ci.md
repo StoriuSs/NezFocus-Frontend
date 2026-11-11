@@ -289,7 +289,11 @@ step names what failed and prints nginx's log.
 **The image scan:** almost always a package of the nginx base image. The
 `Dockerfile` upgrades the image's Alpine packages as it builds (`apk upgrade`),
 so a hole Alpine has fixed is fixed in the next build, even before nginx
-rebuilds its image. When the scan still fails, the fix isn't in Alpine yet:
+rebuilds its image. That stage is never taken from the build cache
+(`no-cache-filters: prod` in `ci.yml`): cached, the upgrade would not run
+again while the nginx image stays the same, and a fixed hole would stay
+(libxslt, 11/2026). Rerunning a failed scan therefore picks up Alpine's
+latest. When the scan still fails, the fix isn't in Alpine yet:
 wait, or move the `Dockerfile` to a newer nginx version (the even numbers, like
 1.30, are the stable ones). A hole that doesn't affect you: add
 its ID (e.g. `CVE-2026-12345`) to a file named `.trivyignore` at the root of

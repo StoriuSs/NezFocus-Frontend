@@ -248,6 +248,12 @@ jobs:
           secrets: ${{ secrets.SENTRY_AUTH_TOKEN != '' && format('sentry_auth_token={0}', secrets.SENTRY_AUTH_TOKEN) || '' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          # The prod stage is built afresh every time: its `apk upgrade` is how
+          # Alpine's fixes reach the image before nginx's is rebuilt, and taken
+          # from the cache it never runs again while the base stays the same
+          # (libxslt CVE-2026-87636 and CVE-2026-9947, 11/2026). It is a few
+          # seconds; the build stage, the slow one, keeps its cache.
+          no-cache-filters: prod
       - name: Serves the app with its Content-Security-Policy
         run: scripts/smoke-image.sh "${{ steps.image.outputs.ref }}"
       # Docker Hub now and then doesn't answer a runner in time; pulling first,
