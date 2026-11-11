@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, onTestFinished } from 'vitest'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
@@ -67,8 +67,26 @@ async function fillIn({ displayName = 'An', password = 'Ontap2026!' } = {}) {
     await userEvent.click(screen.getByRole('checkbox'))
 }
 
+// Kept before any test replaces it: a second replacement would call the first.
+const realResolvedOptions = Intl.DateTimeFormat.prototype.resolvedOptions
+
+/**
+ * The browser's time zone for the next test. UTC by default, as on CI: it is
+ * not one the picker lists, so the picker starts on Hồ Chí Minh whatever the
+ * machine running the tests is set to.
+ */
+function browserZone(zone: string) {
+    const spy = vi.spyOn(Intl.DateTimeFormat.prototype, 'resolvedOptions').mockImplementation(function (
+        this: Intl.DateTimeFormat
+    ) {
+        return { ...realResolvedOptions.call(this), timeZone: zone }
+    })
+    onTestFinished(() => spy.mockRestore())
+}
+
 describe('complete your account (S-ONB-01)', () => {
     beforeEach(async () => {
+        browserZone('UTC')
         await i18n.changeLanguage('en')
         authApi.completeAccount.mockReset()
         authState.markComplete.mockReset()
@@ -193,10 +211,11 @@ describe('complete your account (S-ONB-01)', () => {
     })
 
     it("offers the browser's zone first, the only row ticked while it is the one chosen", async () => {
+        browserZone('Asia/Tokyo')
         renderWelcome()
         await userEvent.click(await screen.findByRole('button', { name: 'Time zone' }))
         const options = within(screen.getByRole('listbox')).getAllByRole('option')
-        expect(options[0]).toHaveTextContent(/^From your browser: GMT\+7 · /)
+        expect(options[0]).toHaveTextContent(/^From your browser: GMT\+9 · Tokyo/)
         expect(options.filter((option) => option.getAttribute('aria-selected') === 'true')).toEqual([options[0]])
     })
 

@@ -138,6 +138,15 @@ it('merges Tailwind classes', () => {
 })
 ```
 
+### The machine's time zone
+
+CI runs in UTC; a laptop runs in its owner's zone. A test that reads the
+browser's zone (`browserTimeZone()`, the time zone pickers) sets it first, or
+it passes on one machine and fails on the other. `welcome.test.tsx` shows the
+way: `browserZone('UTC')` before each test, `browserZone('Asia/Tokyo')` in the
+one about the "From your browser" row. Check such a file with another zone
+too: `$env:TZ='America/New_York'; pnpm vitest run <file>`.
+
 ## How the auth tests stand in for the API
 
 No test talks to a real API. Each one replaces the module it would reach
