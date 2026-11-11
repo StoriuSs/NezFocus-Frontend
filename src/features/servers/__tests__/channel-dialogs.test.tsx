@@ -229,6 +229,31 @@ describe('Create a channel (S-SRV-05)', () => {
         expect(layoutApi.createChannel.mock.calls[0]![1]).toMatchObject({ isPrivate: true, viewRoleIds: ['coord'] })
     })
 
+    it('searches the roles of a private channel without case or accents, from ten roles', async () => {
+        const roles = [
+            ...OT.roles,
+            ...Array.from({ length: 7 }, (_, i) => ({
+                id: `r${i}`,
+                name: `Nhóm ${i}`,
+                position: 0,
+                administrator: false
+            }))
+        ]
+        useChannelDialogs.getState().show({ kind: 'createChannel', serverId: 'ot', categoryId: 'info', type: 'text' })
+        renderDialogs({ ...OT, roles })
+        await userEvent.click(await screen.findByRole('switch', { name: 'Private channel' }))
+        const search = screen.getByRole('searchbox', { name: 'Search roles' })
+
+        await userEvent.type(search, 'dieu phoi')
+        expect(screen.getAllByRole('checkbox')).toHaveLength(1)
+        expect(screen.getByRole('checkbox', { name: /Điều phối phòng học/ })).toBeInTheDocument()
+
+        await userEvent.clear(search)
+        await userEvent.type(search, 'TRƯỞNG')
+        expect(screen.getAllByRole('checkbox')).toHaveLength(1)
+        expect(screen.getByRole('checkbox', { name: /Trưởng nhóm/ })).toBeInTheDocument()
+    })
+
     it('stops at 500 channels and categories, saying why', async () => {
         const full = {
             ...OT,

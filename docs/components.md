@@ -22,13 +22,13 @@ every page shows. Components used by one feature only live in that feature's
 ```
 src/components/
 ├── ui/                    # shadcn/ui primitives (button, dialog, input, tooltip…)
-│                          # and icon-button, presence-dot, count-badge, select, option-cards, empty-state
+│                          # and icon-button, presence-dot, count-badge, select, combobox, option-cards, empty-state
 ├── shell/                 # ShellPage, RightPanel + usePanel, shell-context
 ├── brand/Logo.tsx         # The NezFocus mark and the logo lockup
 ├── brand/mascot/          # Mascot (the still picture, then Rive), RiveMascot
 ├── form/FormField.tsx     # Label, control and the line under it, wired for screen readers
 ├── form/FormMessage.tsx   # The message for a whole form, above its main button (C-22)
-├── form/TimeZoneCombobox.tsx  # The time zone picker (C-25)
+├── form/TimeZoneCombobox.tsx  # The time zone picker (C-25), on the Combobox
 ├── ErrorBoundary.tsx      # Catches a page that crashes
 ├── RouteErrorPage.tsx     # The full-page screen for a crash outside any page
 ├── PageLoader.tsx         # The spinner while a page's chunk loads
@@ -368,14 +368,50 @@ errors never go to a toast.
 Used by every auth page and by the change-password, delete and restore
 dialogs. `Notice` from `AuthCard.tsx` is left on `/auth/callback` only.
 
+### `Combobox`
+
+`src/components/ui/combobox.tsx` (C-25): a button that reads like a text
+field, opening a panel (`Popover`) with a search box over a list, for more
+than ten choices (ten or fewer: [`Select`](#select)). Its rows are the
+Select's `SelectOption`s, drawn the same way (an icon, a second line, words at
+the right), the chosen one with a `check`.
+
+Props: `value`, `onValueChange`, `options`, and the words `searchLabel` (the
+search box's name and placeholder), `listLabel` and `empty` (the line when
+nothing matches); named by `id` and a `<Label htmlFor>` or by
+`aria-labelledby`, plus `aria-describedby`, `aria-invalid`, `disabled`, and a
+`ref` to the button. `aria-invalid` draws the `danger` edge (`data-invalid`):
+ARIA does not allow it on a button, so the error itself is read through
+`aria-describedby`, which `FormField` points at its message. Three more for a
+picker with its own rules:
+
+- `matches(option, query)`: whether a row matches what was typed. By default
+  its label or the words at its right, without case or accents (`folded()`
+  from `src/lib/utils.ts`).
+- `shortcut`: a row above the list while nothing is typed, with a line under
+  it. While the value is the shortcut's, only the shortcut is ticked.
+- `display`: what the closed field shows when the value is not one of the
+  rows (a time zone left out of the list); a row's own label comes first.
+
+Keyboard: Enter or ↓ on the field opens; typing filters; ↑ ↓ move; Enter
+picks and closes; Esc closes and keeps the value. The search box keeps the
+focus throughout (`role="combobox"` with `aria-activedescendant` over a
+`listbox`); a row is picked on mouse down, so the mouse does not take the
+focus either. Each opening starts with an empty search. When the rows change
+while it is open, the highlight stays on the last row left.
+
+Used by `TimeZoneCombobox`, and for the welcome channel once its list passes
+ten rows, "Send none" included (S-SET-01, 04 Q14: searched by channel or
+category).
+In tests, open it by its button, then type into the `combobox` named by
+`searchLabel`.
+
 ### `TimeZoneCombobox`
 
-`src/components/form/TimeZoneCombobox.tsx` (C-25): a button that reads like a
-text field, opening a panel (`Popover`) with a search box over the list of
-time zones. The first row is always "From your browser: ...". Typing filters
-by city ("tokyo", "ho chi minh", without accents) or by offset ("+9",
-"gmt+9"); ↑ ↓ move, Enter picks, Esc closes and keeps the value. The value is
-the zone's IANA name (`Asia/Ho_Chi_Minh`).
+`src/components/form/TimeZoneCombobox.tsx` (C-25): the [`Combobox`](#combobox)
+over the time zones. Its shortcut row is "From your browser: ...". Typing
+filters by city ("tokyo", "ho chi minh", without accents) or by offset ("+9",
+"gmt+9"). The value is the zone's IANA name (`Asia/Ho_Chi_Minh`).
 
 The list comes from `src/lib/time-zones.ts`: every IANA zone the browser
 knows, as "GMT+7 · Hồ Chí Minh" in the language on screen, ordered by offset
@@ -425,8 +461,8 @@ language.
 
 `src/components/ui/select.tsx` (C-25 `select`): a 40-high field with
 `chevron-down` that opens a list without a search box, for ten choices or
-fewer; more, or a search, wants a combobox like `TimeZoneCombobox`. It is
-Radix Select behind a props API rather than shadcn's parts.
+fewer; more, or a search, wants the [`Combobox`](#combobox), which takes the
+same options. It is Radix Select behind a props API rather than shadcn's parts.
 
 Props: `value`, `onValueChange`, `options`, named by `id` and a
 `<Label htmlFor>` or by `aria-label`, plus `aria-describedby`, `disabled`,
@@ -439,7 +475,7 @@ channel's category).
 The chosen row has a 16 `check`. Keyboard as Radix Select: Enter, Space or ↓
 open; ↑ ↓ move; Enter chooses; Esc closes keeping the value; a letter jumps.
 Used for a new channel's category, an invite's expiry and uses, the welcome
-channel, and the page size in `Pagination`. In tests it needs the
+channel (ten rows or fewer), and the page size in `Pagination`. In tests it needs the
 `scrollIntoView` stub in `src/test/setup.ts`, and is changed through its
 hidden native `<select>`.
 
@@ -596,9 +632,10 @@ account" ([auth/pages-and-flows.md](./auth/pages-and-flows.md#complete-your-acco
 `siteConfig.name`, `src/config/site.ts`), and the product's name again when
 it closes. Call it once at the top of a page with its translated title. Used
 by the six sign-in pages (SignIn, Register, Verify, Welcome, ForgotPassword,
-ResetPassword) and the legal pages. The invite page sets its title by hand
-for now (`InvitePage.tsx`: the server's name once known, then the title it
-had before), with "· NezFocus" in its words rather than `siteConfig.name`.
+ResetPassword), the legal pages and the invite page. A page whose title is not
+known yet passes `null` and shows the product's name alone: the invite page
+until the server's name comes ("Nhóm đồ án Mobile · NezFocus", or "Invite no
+longer valid · NezFocus").
 
 ## shadcn/ui components
 
@@ -611,12 +648,13 @@ components written for this project in the same style (the rows that say so):
 | `Avatar` | A profile picture with a fallback |
 | `Button` | Default, secondary, outline, ghost, text, destructive and link variants |
 | `Checkbox` | A checkbox (C-24b), a plain input rather than a Radix primitive ([above](#checkbox)) |
+| `Combobox` | A long list with a search box (C-25), written for this project on `Popover` ([above](#combobox)) |
 | `Dialog` | Modal dialogs |
 | `DropdownMenu` | Menus, like your menu (`MeMenu`) |
 | `Input` | Text inputs, drawn to C-22 ([above](#formfield)) |
 | `Label` | Form labels |
 | `OptionCards` | Two or three choices as cards (C-37), written for this project ([above](#optioncards)) |
-| `Popover` | A floating panel anchored to the control that opened it (C-15; `@radix-ui/react-popover`). The time zone picker's panel |
+| `Popover` | A floating panel anchored to the control that opened it (C-15; `@radix-ui/react-popover`). The `Combobox`'s panel |
 | `SegmentedControl` | A few choices side by side (C-26a), written for this project ([above](#segmentedcontrol)) |
 | `Select` | A short list to choose from (C-25), Radix Select behind a props API ([above](#select)) |
 | `Skeleton` | Loading placeholders |

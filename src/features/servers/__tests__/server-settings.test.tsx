@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useEffect, useRef } from 'react'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, Outlet, RouterProvider, useLocation } from 'react-router-dom'
 import { Toaster } from 'sonner'
@@ -289,6 +289,57 @@ describe('Server settings › Overview (S-SET-01)', () => {
         expect(serversApi.updateServer).toHaveBeenLastCalledWith('ot', { welcomeChannelId: null })
         await waitFor(() => expect(select).toHaveTextContent('Send none'))
         expect(screen.getByText('Nothing is posted when someone joins the server.')).toBeInTheDocument()
+    })
+
+    it('offers a search over the welcome channels once the list passes ten rows (04 Q14, C-25)', async () => {
+        const many = (count: number, extra: Partial<Server> = {}) =>
+            server(MANAGER, {
+                welcomeChannelId: 'bi-mat',
+                channels: [
+                    ...Array.from({ length: count - 2 }, (_, index) =>
+                        channel(`de-${index + 1}`, { position: index + 1 })
+                    ),
+                    channel('bi-mat', { position: 0, isPrivate: true }),
+                    channel('on-thi', { categoryId: 'rooms' }),
+                    channel('phong', { categoryId: 'rooms', type: 'voice', name: 'Phòng học im lặng' })
+                ],
+                ...extra
+            })
+        // "Send none" and nine text channels: ten rows, a Select.
+        renderSettings(many(9))
+        expect(await screen.findByRole('combobox', { name: 'Welcome channel' })).toBeInTheDocument()
+        cleanup()
+        // The same and a private one they cannot see: eleven rows.
+        renderSettings(many(9, { welcomeChannelId: 'secret' }))
+        expect(await screen.findByRole('button', { name: 'Welcome channel' })).toBeInTheDocument()
+        cleanup()
+
+        serversApi.updateServer.mockResolvedValueOnce({ ...many(10), welcomeChannelId: 'de-1' })
+        renderSettings(many(10))
+        const field = await screen.findByRole('button', { name: 'Welcome channel' })
+        expect(field).toHaveTextContent('# bi-mat')
+        expect(field).toHaveAccessibleDescription('#bi-mat is private: only those who see it see the greeting.')
+        await expectNoA11yViolations()
+
+        await userEvent.click(field)
+        const rows = screen.getAllByRole('option')
+        expect(rows).toHaveLength(11)
+        expect(rows[0]).toHaveTextContent('Send none')
+        expect(rows.filter((row) => row.getAttribute('aria-selected') === 'true')).toEqual([rows[1]])
+        const search = screen.getByRole('combobox', { name: 'Search channels' })
+        await userEvent.type(search, 'phong hoc')
+        expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual(['# on-thiPhòng học'])
+
+        await userEvent.clear(search)
+        await userEvent.type(search, 'DE-1')
+        expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual(['# de-1Thông tin'])
+        await userEvent.keyboard('{Enter}')
+        expect(serversApi.updateServer).toHaveBeenCalledWith('ot', { welcomeChannelId: 'de-1' })
+        await waitFor(() => expect(field).toHaveTextContent('# de-1'))
+
+        await userEvent.click(field)
+        await userEvent.type(screen.getByRole('combobox', { name: 'Search channels' }), 'hoa-hoc')
+        expect(screen.getByText('No channel matches')).toBeInTheDocument()
     })
 
     it('says who sees the greeting in a private channel, or one they cannot see', async () => {

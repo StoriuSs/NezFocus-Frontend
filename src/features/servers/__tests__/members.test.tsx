@@ -605,9 +605,15 @@ describe('Bans (S-SET-04)', () => {
         )
         moderationApi.fetchBans.mockResolvedValue(bans(many))
         renderPage('/servers/ot/settings/bans', an, 'an')
-        await user.type(await screen.findByRole('searchbox', { name: 'Search banned people' }), 'khanh')
+        const search = await screen.findByRole('searchbox', { name: 'Search banned people' })
+        await user.type(search, 'khanh')
         await waitFor(() => expect(screen.getAllByRole('row')).toHaveLength(2))
         expect(await rowOf('Khánh')).toBeTruthy()
+
+        await user.clear(search)
+        await user.type(search, 'NGÂN')
+        await waitFor(() => expect(screen.getAllByRole('row')).toHaveLength(2))
+        expect(await rowOf('Ngân')).toBeTruthy()
     })
 
     it('says when no one is banned', async () => {

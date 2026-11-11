@@ -192,6 +192,14 @@ describe('complete your account (S-ONB-01)', () => {
         )
     })
 
+    it("offers the browser's zone first, the only row ticked while it is the one chosen", async () => {
+        renderWelcome()
+        await userEvent.click(await screen.findByRole('button', { name: 'Time zone' }))
+        const options = within(screen.getByRole('listbox')).getAllByRole('option')
+        expect(options[0]).toHaveTextContent(/^From your browser: GMT\+7 · /)
+        expect(options.filter((option) => option.getAttribute('aria-selected') === 'true')).toEqual([options[0]])
+    })
+
     it('shows the time now in the zone chosen, so a wrong pick is easy to spot', async () => {
         // Only the clock is faked: the user events still need real timers.
         vi.useFakeTimers({ toFake: ['Date'] })

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AUTH_PATHS, useAuthStore } from '@/features/auth'
+import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { useInvitePreview } from '../api/useInvites'
 import { InviteCard } from '../components/invites/InviteCard'
 import { InviteNotice } from '../components/invites/InviteNotice'
@@ -55,14 +56,9 @@ function GuestInvite({ code, channel }: { code: string; channel: string | null }
     const flow = inviteFlow(code, channel)
     const problem = preview.isError ? inviteProblem(preview.error) : null
 
-    useEffect(() => {
-        const before = document.title
-        if (preview.data) document.title = t('join.tab', { server: preview.data.server.name })
-        else if (problem?.kind === 'invalid') document.title = t('join.tabExpired')
-        return () => {
-            document.title = before
-        }
-    }, [preview.data, problem?.kind, t])
+    useDocumentTitle(
+        preview.data ? preview.data.server.name : problem?.kind === 'invalid' ? t('join.tabExpired') : null
+    )
 
     if (problem) {
         return (

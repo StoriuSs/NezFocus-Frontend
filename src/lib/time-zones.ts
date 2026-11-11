@@ -1,3 +1,5 @@
+import { folded } from '@/lib/utils'
+
 /**
  * Time zones to pick from (C-25, REQ-AUTH-08): every IANA zone the browser
  * knows, as "GMT+7 · Hồ Chí Minh", ordered by offset, then city.
@@ -164,14 +166,14 @@ export function initialTimeZone(): string {
     return browserTimeZone() ?? FALLBACK_ZONES.find(isSelectableTimeZone) ?? 'Asia/Ho_Chi_Minh'
 }
 
-/** Lower case, no accents, `đ` as `d`, a real minus as `-`: how a search compares. */
-function folded(text: string): string {
-    return text.normalize('NFD').replace(/\p{M}/gu, '').replace(/đ/gi, 'd').replace(/−/g, '-').toLowerCase()
+/** How a search compares (`folded`), a real minus as `-`. */
+function searched(text: string): string {
+    return folded(text).replace(/−/g, '-')
 }
 
 /** Does the option match what was typed: the city ("tokyo", "ho chi minh") or the offset ("+9", "gmt+9"). */
 export function matchesTimeZone(option: TimeZoneOption, query: string): boolean {
-    const wanted = folded(query.trim()).replace(/\s+/g, ' ')
+    const wanted = searched(query.trim()).replace(/\s+/g, ' ')
     if (!wanted) return true
-    return folded(option.city).includes(wanted) || folded(option.gmt).includes(wanted.replace(/\s/g, ''))
+    return searched(option.city).includes(wanted) || searched(option.gmt).includes(wanted.replace(/\s/g, ''))
 }

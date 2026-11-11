@@ -159,7 +159,10 @@
         "hint": "\"X joined the server\" is posted in this channel.",
         "hintNone": "Nothing is posted when someone joins the server.",
         "hintPrivate": "#{{name}} is private: only those who see it see the greeting.",
-        "hintHidden": "Only those who see that channel see the greeting."
+        "hintHidden": "Only those who see that channel see the greeting.",
+        "search": "Search channels",
+        "list": "Channels",
+        "noMatch": "No channel matches"
       },
       "saved": "Changes saved",
       "failed": "Could not save the change",
@@ -265,8 +268,7 @@
     "alreadyMember": "You're already in {{server}}",
     "pending": "Your invite to <0>{{server}}</0> is waiting · create an account or sign in to join",
     "pendingWelcome": "Your invite to <0>{{server}}</0> is waiting · finish your account to join",
-    "tab": "{{server}} · NezFocus",
-    "tabExpired": "Invite no longer valid · NezFocus"
+    "tabExpired": "Invite no longer valid"
   },
   "byCode": {
     "open": "Join with an invite code",

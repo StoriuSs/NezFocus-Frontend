@@ -159,7 +159,10 @@
         "hint": "Tin \"X đã tham gia server\" được gửi vào kênh này.",
         "hintNone": "Không có tin nào khi có người vào server.",
         "hintPrivate": "#{{name}} là kênh riêng tư: chỉ người thấy kênh mới thấy lời chào.",
-        "hintHidden": "Chỉ người thấy kênh đó mới thấy lời chào."
+        "hintHidden": "Chỉ người thấy kênh đó mới thấy lời chào.",
+        "search": "Tìm kênh",
+        "list": "Kênh",
+        "noMatch": "Không tìm thấy kênh"
       },
       "saved": "Đã lưu thay đổi",
       "failed": "Chưa lưu được thay đổi",
@@ -265,8 +268,7 @@
     "alreadyMember": "Bạn đã ở trong {{server}}",
     "pending": "Lời mời vào <0>{{server}}</0> đang chờ bạn · tạo tài khoản hoặc đăng nhập để tham gia",
     "pendingWelcome": "Lời mời vào <0>{{server}}</0> đang chờ bạn · hoàn tất tài khoản để tham gia",
-    "tab": "{{server}} · NezFocus",
-    "tabExpired": "Lời mời không còn hiệu lực · NezFocus"
+    "tabExpired": "Lời mời không còn hiệu lực"
   },
   "byCode": {
     "open": "Nhập mã mời",

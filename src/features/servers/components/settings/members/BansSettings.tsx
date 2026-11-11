@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { FormMessage } from '@/components/form/FormMessage'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
+import { folded } from '@/lib/utils'
 import {
     Dialog,
     DialogContent,
@@ -34,14 +35,6 @@ type Person = BanItem['user']
 /** The search box shows past ten people (04 S-SET-04, Q9). */
 const SEARCH_FROM = 11
 const SIZES: PageSize[] = [10, 50, 100]
-
-/** Folded for matching: no case, no accents, đ as d. */
-const folded = (text: string) =>
-    text
-        .normalize('NFD')
-        .replace(/\p{Diacritic}/gu, '')
-        .replace(/đ/gi, 'd')
-        .toLowerCase()
 
 /**
  * Bans (S-SET-04 `bans`, BAN_MEMBERS): newest first, with the reason, the day

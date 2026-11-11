@@ -34,3 +34,11 @@ const twMerge = extendTailwindMerge({
 export function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs))
 }
+
+/**
+ * How a search compares words: lower case, no accents, `đ` as `d`, so "giai
+ * tich" finds "Giải tích". Spaces and other characters stay as they are.
+ */
+export function folded(text: string): string {
+    return text.normalize('NFD').replace(/\p{M}/gu, '').replace(/đ/gi, 'd').toLowerCase()
+}

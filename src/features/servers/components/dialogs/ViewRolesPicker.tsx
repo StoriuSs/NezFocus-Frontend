@@ -6,16 +6,12 @@ import { FormMessage } from '@/components/form/FormMessage'
 import { Tag } from '@/components/settings/SettingsRow'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
-import { cn } from '@/lib/utils'
+import { cn, folded } from '@/lib/utils'
 import { can } from '../../lib/permissions'
 import type { Server } from '../../types'
 
 /** From this many roles on, a search box (S-SRV-05). */
 const SEARCH_FROM = 10
-
-/** Case and accents left out: "ban" finds "Ban học tập" and "Bàn". */
-const fold = (text: string) =>
-    text.normalize('NFD').replace(/\p{M}/gu, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase()
 
 /**
  * The roles that see a private channel (S-SRV-05 `private*`, S-SET-05
@@ -43,7 +39,7 @@ export function ViewRolesPicker({
     const labelId = useId()
     const [query, setQuery] = useState('')
 
-    const roles = server.roles.filter((role) => fold(role.name).includes(fold(query.trim())))
+    const roles = server.roles.filter((role) => folded(role.name).includes(folded(query.trim())))
     const counted = selected.filter((id) => server.roles.some((role) => role.id === id && !role.administrator))
     const allPowerful = server.isOwner || can(server.permissions, 'ADMINISTRATOR')
     const losesIt = !allPowerful && !server.roleIds.some((id) => selected.includes(id))

@@ -2,6 +2,7 @@ import '@/i18n/servers'
 import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Lock } from 'lucide-react'
+import { Combobox } from '@/components/ui/combobox'
 import { Label } from '@/components/ui/label'
 import { Select, type SelectOption } from '@/components/ui/select'
 import { useChooseWelcomeChannel } from '../../api/useServerSettings'
@@ -9,6 +10,8 @@ import { welcomeChoices, type WelcomeChoice } from '../../lib/settings-sections'
 import type { Server } from '../../types'
 
 const NONE = 'none'
+/** More rows than this ("Send none" and the channels), and the list gets a search box (C-25: a Select is for ten or fewer). */
+const SELECT_MAX = 10
 const lock = <Lock className='size-3 shrink-0 text-text-tertiary' aria-hidden='true' />
 
 /**
@@ -17,6 +20,7 @@ const lock = <Lock className='size-3 shrink-0 text-text-tertiary' aria-hidden='t
  * one has a `lock` and may be chosen, with a line saying who sees the
  * greeting. Choosing saves at once (04 › Lưu thay đổi), shown before the
  * answer; a refusal puts the old one back with "Could not save" + "Try again".
+ * Past ten rows it is a Combobox, searched by channel or category.
  */
 export function WelcomeChannelSetting({ server }: { server: Server }) {
     const { t } = useTranslation('servers')
@@ -66,13 +70,26 @@ export function WelcomeChannelSetting({ server }: { server: Server }) {
             <Label htmlFor={id} className='text-label text-text-secondary'>
                 {t('settings.overview.welcome.label')}
             </Label>
-            <Select
-                id={id}
-                aria-describedby={`${id}-hint`}
-                value={chosen ? chosen.id : NONE}
-                onValueChange={choose}
-                options={choices.map(option)}
-            />
+            {choices.length > SELECT_MAX ? (
+                <Combobox
+                    id={id}
+                    aria-describedby={`${id}-hint`}
+                    value={chosen ? chosen.id : NONE}
+                    onValueChange={choose}
+                    options={choices.map(option)}
+                    searchLabel={t('settings.overview.welcome.search')}
+                    listLabel={t('settings.overview.welcome.list')}
+                    empty={t('settings.overview.welcome.noMatch')}
+                />
+            ) : (
+                <Select
+                    id={id}
+                    aria-describedby={`${id}-hint`}
+                    value={chosen ? chosen.id : NONE}
+                    onValueChange={choose}
+                    options={choices.map(option)}
+                />
+            )}
             <p id={`${id}-hint`} className='text-label text-text-tertiary'>
                 {hint}
             </p>

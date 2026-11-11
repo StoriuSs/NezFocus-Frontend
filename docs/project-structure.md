@@ -223,7 +223,7 @@ Shared and feature-free.
 | `error-tracking.ts`, `error-sdk.ts` | Sentry: loaded only when a DSN is set, and what is scrubbed — see [error-tracking.md](./error-tracking.md) |
 | `safe-storage.ts` | `localStorage` and `sessionStorage` that do not throw when site data is blocked |
 | `navigation.ts` | A full page load (`hardNavigate`), e.g. after signing out |
-| `utils.ts` | `cn()`, which merges Tailwind classes |
+| `utils.ts` | `cn()`, which merges Tailwind classes; `folded()`, how a search compares words (no case, no accents, đ as d) |
 | `crop-image.ts` | Cuts the chosen area out of a picture as a JPEG, longest edge 1024; used by `ImageCropDialog` |
 | `image-file.ts` | `imageProblem()`: JPG, PNG or WEBP up to 8 MB (an avatar, a server icon), checked before the cropper opens |
 | `before-sign-out.ts` | Work that must be sent before the tab signs out or closes (a removed avatar waiting out its Undo); the auth store runs it while the token is still in hand |
