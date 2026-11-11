@@ -128,7 +128,7 @@ const refused = (status: number, data: object = {}) =>
     })
 
 describe('Who sees which settings page (04 S-SET-01 Q2)', () => {
-    it('lists the pages built so far that their bits open', () => {
+    it('lists the pages their bits open', () => {
         // Overview and Invites both need MANAGE_SERVER (04 Q2).
         expect(settingsSections({ permissions: MANAGER })).toEqual(['overview', 'invites'])
         expect(settingsSections({ permissions: MEMBER })).toEqual([])

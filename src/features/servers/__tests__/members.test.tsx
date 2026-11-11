@@ -370,6 +370,67 @@ describe('Members (S-SET-03)', () => {
         expect(moderationApi.banMember).toHaveBeenLastCalledWith('ot', 'dung', null)
     })
 
+    it.each([
+        ['Kick from server', 'Kick Dũng from the server?', 'Kick', moderationApi.kickMember],
+        ['Ban from server', 'Ban Dũng from the server?', 'Ban', moderationApi.banMember]
+    ])(
+        'counts the members again after "%s", so Leave and Delete server go by who is left',
+        async (item, title, submit, send) => {
+            const user = userEvent.setup()
+            send.mockResolvedValue(undefined)
+            renderPage('/servers/ot/settings/members', an, 'an')
+            await user.click(within(await rowOf('Dũng')).getByRole('button', { name: 'Actions for Dũng' }))
+            await user.click(await screen.findByRole('menuitem', { name: item }))
+            const dialog = await screen.findByRole('dialog', { name: title })
+            expect(serversApi.fetchServers).toHaveBeenCalledTimes(1)
+            await user.click(within(dialog).getByRole('button', { name: submit }))
+            await waitFor(() => expect(serversApi.fetchServers).toHaveBeenCalledTimes(2))
+        }
+    )
+
+    it('stays on the page, and says the kick is done, when reading the servers again then fails', async () => {
+        const user = userEvent.setup()
+        moderationApi.kickMember.mockResolvedValue(undefined)
+        renderPage('/servers/ot/settings/members', an, 'an')
+        await user.click(within(await rowOf('Dũng')).getByRole('button', { name: 'Actions for Dũng' }))
+        await user.click(await screen.findByRole('menuitem', { name: 'Kick from server' }))
+        const dialog = await screen.findByRole('dialog', { name: 'Kick Dũng from the server?' })
+        serversApi.fetchServers.mockRejectedValue(new Error('offline'))
+        await user.click(within(dialog).getByRole('button', { name: 'Kick' }))
+        expect(await screen.findByText('Kicked Dũng from the server')).toBeInTheDocument()
+        await waitFor(() => expect(serversApi.fetchServers).toHaveBeenCalledTimes(2))
+        await act(async () => {})
+        expect(screen.getByRole('table')).toBeInTheDocument()
+    })
+
+    it('finds a role in "+" past ten roles when typed without accents, and says when none matches', async () => {
+        const user = userEvent.setup()
+        const groups = Array.from({ length: 9 }, (_, index) => ({
+            ...ROLES[2],
+            id: `group-${index}`,
+            name: `Nhóm ${index + 1}`,
+            position: 11 - index
+        }))
+        rolesApi.fetchRoles.mockResolvedValue([
+            ...groups,
+            { ...ROLES[2], id: 'outline', name: 'Đề cương', position: 1 },
+            ROLES[3]
+        ])
+        renderPage('/servers/ot/settings/members', an, 'an')
+        await user.click(within(await rowOf('Dũng')).getByRole('button', { name: 'Assign roles' }))
+        const picker = await screen.findByRole('dialog', { name: 'Roles of Dũng' })
+        await user.type(within(picker).getByRole('textbox', { name: 'Find a role' }), 'de cuong')
+        expect(
+            within(picker)
+                .getAllByRole('listitem')
+                .map((item) => item.textContent)
+        ).toEqual(['Đề cương'])
+
+        await user.clear(within(picker).getByRole('textbox', { name: 'Find a role' }))
+        await user.type(within(picker).getByRole('textbox', { name: 'Find a role' }), 'xyz')
+        expect(within(picker).getByText('No role matches “xyz”')).toBeInTheDocument()
+    })
+
     it('refuses to time out someone holding Administrator, with the reason (D-147)', async () => {
         const user = userEvent.setup()
         moderationApi.timeoutMember.mockRejectedValue(refused('VALIDATION_ERROR', 422, { rule: 'target_admin' }))

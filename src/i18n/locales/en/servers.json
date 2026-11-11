@@ -509,6 +509,7 @@
     "assign": "Assign roles",
     "pickerTitle": "Roles of {{name}}",
     "findRole": "Find a role",
+    "noRoleMatch": "No role matches “{{query}}”",
     "actions": "Actions for {{name}}",
     "menu": {
       "timeout": "Time out",

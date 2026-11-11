@@ -15,6 +15,15 @@ function reload(queryClient: QueryClient, serverId: string): Promise<unknown> {
     ])
 }
 
+/**
+ * After a kick or a ban: one fewer in the server, which Leave and Delete
+ * server go by (`owner-alone`, D-161). Not awaited: the dialog closes without
+ * waiting for the heaviest read.
+ */
+function recount(queryClient: QueryClient) {
+    void queryClient.invalidateQueries({ queryKey: serverKeys.list() })
+}
+
 /** Each dialog says what went wrong itself (04 › Lỗi gửi hộp thoại), and useEndTimeout has its own toast. */
 const QUIET = { errorToast: false }
 
@@ -23,7 +32,10 @@ export function useKickMember(serverId: string) {
     return useMutation({
         mutationFn: ({ userId, reason }: { userId: string; reason: string | null }) =>
             kickMember(serverId, userId, reason),
-        onSuccess: () => reload(queryClient, serverId),
+        onSuccess: () => {
+            recount(queryClient)
+            return reload(queryClient, serverId)
+        },
         meta: QUIET
     })
 }
@@ -33,7 +45,10 @@ export function useBanMember(serverId: string) {
     return useMutation({
         mutationFn: ({ userId, reason }: { userId: string; reason: string | null }) =>
             banMember(serverId, userId, reason),
-        onSuccess: () => reload(queryClient, serverId),
+        onSuccess: () => {
+            recount(queryClient)
+            return reload(queryClient, serverId)
+        },
         meta: QUIET
     })
 }

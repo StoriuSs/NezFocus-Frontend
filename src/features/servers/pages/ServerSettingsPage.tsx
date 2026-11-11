@@ -41,8 +41,10 @@ export default function ServerSettingsPage() {
     const servers = useServers()
 
     if (servers.isPending) return <PageLoader className='min-h-0 flex-1' />
-    // The page's error boundary offers to try again.
-    if (servers.isError) throw servers.error
+    // The page's error boundary offers to try again, only with nothing to
+    // show: a failed re-read (back to the tab, after a kick) keeps the last
+    // list, so the page stays.
+    if (servers.data === undefined) throw servers.error
 
     const server = servers.data.find((candidate) => candidate.id === serverId)
     if (!server) return <Navigate to='/study' replace />

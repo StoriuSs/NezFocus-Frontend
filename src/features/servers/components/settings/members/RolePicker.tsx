@@ -7,6 +7,7 @@ import { IconButton } from '@/components/ui/icon-button'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { WithTooltip } from '@/components/ui/tooltip'
+import { folded } from '@/lib/utils'
 import { useSetMemberRole } from '../../../api/useRoles'
 import type { Role, ServerMember } from '../../../types'
 import { memberName } from '../roles/RoleMembers'
@@ -26,7 +27,7 @@ export function RolePicker({ serverId, member, roles }: { serverId: string; memb
     const titleId = useId()
     const name = memberName(member)
     const held = new Set(member.roleIds)
-    const shown = roles.filter((role) => role.name.toLowerCase().includes(query.trim().toLowerCase()))
+    const shown = roles.filter((role) => folded(role.name).includes(folded(query.trim())))
 
     function tick(role: Role, on: boolean) {
         setRole.mutate({ roleId: role.id, userId: member.userId, held: on })
@@ -72,6 +73,11 @@ export function RolePicker({ serverId, member, roles }: { serverId: string; memb
                             </li>
                         )
                     })}
+                    {shown.length === 0 ? (
+                        <li className='px-2 py-2 text-label text-text-tertiary'>
+                            {t('members.noRoleMatch', { query: query.trim() })}
+                        </li>
+                    ) : null}
                 </ul>
             </PopoverContent>
         </Popover>

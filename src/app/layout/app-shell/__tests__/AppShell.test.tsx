@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { focusManager } from '@tanstack/react-query'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { Users } from 'lucide-react'
@@ -235,6 +236,18 @@ describe('AppShell (S-SHELL-01)', () => {
             const channels = screen.getByRole('navigation', { name: 'Channels of Ôn thi Giải tích 2' })
             expect(await screen.findByRole('heading', { level: 1, name: 'ban-can-su' })).toBeInTheDocument()
             expect(within(channels).getByRole('link', { name: /ban-can-su/ })).toHaveAttribute('aria-current', 'page')
+        })
+
+        it('keeps the channel shown when reading the servers again fails on coming back to the tab', async () => {
+            renderAt('/channels/ot/ban-can-su')
+            expect(await screen.findByRole('heading', { level: 1, name: 'ban-can-su' })).toBeInTheDocument()
+            const reads = serversApi.fetchServers.mock.calls.length
+            serversApi.fetchServers.mockRejectedValue(new Error('offline'))
+            act(() => focusManager.setFocused(true))
+            await waitFor(() => expect(serversApi.fetchServers.mock.calls.length).toBeGreaterThan(reads))
+            await act(async () => {})
+            focusManager.setFocused(undefined)
+            expect(screen.getByRole('heading', { level: 1, name: 'ban-can-su' })).toBeInTheDocument()
         })
 
         it('lists channels outside any category first, then each category in order, titles in capitals', async () => {

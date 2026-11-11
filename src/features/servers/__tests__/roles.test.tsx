@@ -237,6 +237,19 @@ describe('Edit role (S-SET-02 edit-role)', () => {
         expect(rolesApi.updateRole).toHaveBeenCalledTimes(1)
     })
 
+    it('stays on the role when reading the roles again after a save fails', async () => {
+        rolesApi.updateRole.mockResolvedValue(undefined)
+        const user = userEvent.setup()
+        renderRoles('/servers/ot/settings/roles/docs')
+        const kick = await screen.findByRole('switch', { name: 'Kick members' })
+        const reads = rolesApi.fetchRoles.mock.calls.length
+        rolesApi.fetchRoles.mockRejectedValue(new Error('offline'))
+        await user.click(kick)
+        await waitFor(() => expect(rolesApi.fetchRoles.mock.calls.length).toBeGreaterThan(reads))
+        await act(async () => {})
+        expect(screen.getByRole('switch', { name: 'Kick members' })).toBeInTheDocument()
+    })
+
     it('offers Try again for a refused permission, on top of what was saved since (04 › Lưu thay đổi)', async () => {
         let saved = '0'
         const user = userEvent.setup()

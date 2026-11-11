@@ -294,6 +294,11 @@ for every mutation that fails. So:
 - **For a different fallback message**: `meta: { errorFallbackKey: 'api:SOME_KEY' }`.
 
 Failed **queries** show no toast: the component has `isError` and decides.
+A page that throws to its error boundary does so only when it has **no data**
+(`if (query.data === undefined) throw query.error`), not on `isError`: a
+failed re-read (back to the tab, after a kick, after a role save) leaves
+`isError` true with the last data kept, and the page should stay on it
+(`ChannelPage`, `ServerSettingsPage`, `RoleEditor`).
 
 Error answers use the same envelope as successes, and their identity is in
 `meta`:

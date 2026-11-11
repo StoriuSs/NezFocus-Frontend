@@ -54,7 +54,8 @@ export function RoleEditor({ server, roleId }: { server: Server; roleId: string 
             </Page>
         )
     }
-    if (roles.isError) throw roles.error
+    // Only with nothing to show: a failed re-read after a save keeps the roles.
+    if (roles.data === undefined) throw roles.error
     if (!role) return <Gone to={back} message={t('roles.edit.gone')} />
 
     const lock = roleLock(server, role)

@@ -8,20 +8,18 @@ export type SettingsSection = 'overview' | 'roles' | 'members' | 'invites' | 'ba
 /**
  * Who sees which page (04 S-SET-01 › Mục nào cho ai, Q2): any one of the
  * bits. The owner and Toàn quyền hold every bit already (D-145).
- * `built` is false for a page of a later slice (L7–L8): until then it is
- * neither in the nav nor a reason to show "Server settings".
  */
-const SECTIONS: { id: SettingsSection; anyOf: PermissionName[]; built: boolean }[] = [
-    { id: 'overview', anyOf: ['MANAGE_SERVER'], built: true },
-    { id: 'roles', anyOf: ['MANAGE_ROLES'], built: true },
-    { id: 'members', anyOf: ['KICK_MEMBERS', 'BAN_MEMBERS', 'MODERATE_MEMBERS', 'MANAGE_ROLES'], built: true },
-    { id: 'invites', anyOf: ['MANAGE_SERVER'], built: true },
-    { id: 'bans', anyOf: ['BAN_MEMBERS'], built: true }
+const SECTIONS: { id: SettingsSection; anyOf: PermissionName[] }[] = [
+    { id: 'overview', anyOf: ['MANAGE_SERVER'] },
+    { id: 'roles', anyOf: ['MANAGE_ROLES'] },
+    { id: 'members', anyOf: ['KICK_MEMBERS', 'BAN_MEMBERS', 'MODERATE_MEMBERS', 'MANAGE_ROLES'] },
+    { id: 'invites', anyOf: ['MANAGE_SERVER'] },
+    { id: 'bans', anyOf: ['BAN_MEMBERS'] }
 ]
 
 /** The pages they may open, in order; none: no "Server settings" in the server menu. */
 export function settingsSections(server: Pick<Server, 'permissions'>): SettingsSection[] {
-    return SECTIONS.filter((section) => section.built && section.anyOf.some((bit) => can(server.permissions, bit))).map(
+    return SECTIONS.filter((section) => section.anyOf.some((bit) => can(server.permissions, bit))).map(
         (section) => section.id
     )
 }

@@ -509,6 +509,7 @@
     "assign": "Gán vai trò",
     "pickerTitle": "Vai trò của {{name}}",
     "findRole": "Tìm vai trò",
+    "noRoleMatch": "Không có vai trò nào khớp “{{query}}”",
     "actions": "Thao tác với {{name}}",
     "menu": {
       "timeout": "Tạm khóa",
