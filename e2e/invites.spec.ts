@@ -90,6 +90,9 @@ test('a friend without an account signs up through the link and lands in its cha
     const link = panel.getByRole('textbox', { name: 'Invite link' })
     await expect(link).toHaveValue(/\/invite\/[A-Za-z0-9]{8}$/)
     await expect(panel.getByText('Expires in 7 days · no limit on uses')).toBeVisible()
+    // The menu that opened it closes after: the focus stays on "Copy", not on the picture behind.
+    await owner.waitForTimeout(300)
+    await expect(panel.getByRole('button', { name: 'Copy' })).toBeFocused()
     await shoot(owner, 'srv02-default')
     const code = (await link.inputValue()).split('/invite/')[1]!
 

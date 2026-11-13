@@ -144,6 +144,12 @@ afterEach(() => {
     useAuthStore.setState({ isAuthenticated: false, isComplete: false })
 })
 
+/** A click outside: Radix dismisses on the click that follows the pointer going down. */
+const clickOutside = () => {
+    fireEvent.pointerDown(document.body)
+    fireEvent.click(document.body)
+}
+
 describe('invite helpers', () => {
     it('takes a code, or a whole link with or without https, keeping its channel', () => {
         expect(parseInviteInput(' k7Qm2xPa ')).toEqual({ code: 'k7Qm2xPa', channel: null })
@@ -168,6 +174,15 @@ describe('invite helpers', () => {
         expect(timeLeft(new Date(NOW.getTime() + 25 * 60_000).toISOString(), NOW)).toEqual({
             unit: 'minutes',
             count: 25
+        })
+        // Rounding up never says "24 hours" or "60 minutes": that is the next unit.
+        expect(timeLeft(new Date(NOW.getTime() + DAY - 5 * 60_000).toISOString(), NOW)).toEqual({
+            unit: 'days',
+            count: 1
+        })
+        expect(timeLeft(new Date(NOW.getTime() + 3600_000 - 20_000).toISOString(), NOW)).toEqual({
+            unit: 'hours',
+            count: 1
         })
         expect(usesLeft({ maxUses: null, uses: 3 })).toEqual({ kind: 'unlimited', count: 0 })
         expect(usesLeft({ maxUses: 10, uses: 0 })).toEqual({ kind: 'max', count: 10 })
@@ -278,11 +293,11 @@ describe('Invite friends (S-SRV-02)', () => {
         await screen.findByRole('textbox', { name: 'Invite link' })
         await userEvent.click(screen.getByRole('button', { name: 'Change settings' }))
         fireEvent.change(document.querySelectorAll('select')[1]!, { target: { value: '10' } })
-        fireEvent.pointerDown(document.body)
+        clickOutside()
         expect(screen.getByRole('dialog')).toBeInTheDocument()
 
         fireEvent.change(document.querySelectorAll('select')[1]!, { target: { value: 'unlimited' } })
-        fireEvent.pointerDown(document.body)
+        clickOutside()
         await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     })
 
@@ -296,7 +311,7 @@ describe('Invite friends (S-SRV-02)', () => {
         await waitFor(() => expect(invitesApi.createInvite).toHaveBeenCalledTimes(2))
         expect(await screen.findByRole('button', { name: 'Create a new link' })).toBeEnabled()
         expect(screen.getByRole('combobox', { name: 'Expire after' })).toHaveTextContent('1 day')
-        fireEvent.pointerDown(document.body)
+        clickOutside()
         await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     })
 
@@ -507,6 +522,19 @@ describe('Invites settings (S-SET-04)', () => {
         renderAt('/servers/ot/settings/invites', [
             { path: '/servers/:serverId/settings/:section', element: <InvitesSettings server={OT} /> }
         ])
+
+    it('copies a link from its row, the tooltip turning to "Copied"', async () => {
+        const writeText = vi.fn().mockResolvedValue(undefined)
+        Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+        invitesApi.fetchInvites.mockResolvedValue([row({})])
+        show()
+        const copy = await screen.findByRole('button', { name: 'Copy link' })
+        await userEvent.hover(copy)
+        expect(await screen.findByRole('tooltip')).toHaveTextContent('Copy link')
+        await userEvent.click(copy)
+        expect(writeText).toHaveBeenCalledWith(expect.stringMatching(/\/invite\/k7Qm2xPa$/))
+        expect(await screen.findByRole('tooltip')).toHaveTextContent('Copied')
+    })
 
     it('lists each link with its creator, uses and time left, and revokes after asking', async () => {
         invitesApi.fetchInvites.mockResolvedValue([

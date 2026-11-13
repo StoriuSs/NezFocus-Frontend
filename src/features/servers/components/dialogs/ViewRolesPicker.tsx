@@ -52,7 +52,8 @@ export function ViewRolesPicker({
     }
 
     return (
-        <div className='grid gap-2'>
+        // One column no wider than the dialog: a long role name is cut, not stretching the list.
+        <div className='grid grid-cols-1 gap-2'>
             <p id={labelId} className='text-label text-text-secondary'>
                 {t('channel.private.roles', { count: counted.length })}
             </p>

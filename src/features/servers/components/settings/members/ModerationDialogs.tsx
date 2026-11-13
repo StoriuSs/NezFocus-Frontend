@@ -1,5 +1,5 @@
 import '@/i18n/servers'
-import { useId, useState, type ReactNode } from 'react'
+import { type ReactNode, useId, useRef, useState } from 'react'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -23,7 +23,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { useMinuteClock } from '@/hooks/useMinuteClock'
 import { getApiErrorType } from '@/lib/api-error'
 import { cn } from '@/lib/utils'
-import { userKeys, type UserSettings } from '@/features/users'
+import { settingsCache } from '@/features/users'
 import { useBanMember, useKickMember, useTimeoutMember } from '../../../api/useModeration'
 import { refusedRule } from '../../../lib/layout-error'
 import {
@@ -130,10 +130,22 @@ function ModerationDialog({
 }) {
     const { t } = useTranslation('servers')
     const blocked = stopsSending(failure)
+    const content = useRef<HTMLDivElement>(null)
+    const cancel = useRef<HTMLButtonElement>(null)
     return (
         <Dialog open onOpenChange={(open) => !open && !pending && onClose()}>
             {/* Tạm khóa is a `form` dialog, 520, for its six lengths; Mời ra and Cấm are `simple`, 440 (04 › Hộp thoại). */}
-            <DialogContent className={danger ? 'sm:max-w-dialog' : 'sm:max-w-[520px]'}>
+            <DialogContent
+                ref={content}
+                className={danger ? 'sm:max-w-dialog' : 'sm:max-w-[520px]'}
+                onOpenAutoFocus={(event) => {
+                    // Not the first field (the reason): Tạm khóa opens on the length chosen,
+                    // Mời ra and Cấm, `danger`, on Hủy (04 › Bàn phím, C-14).
+                    event.preventDefault()
+                    const chosen = content.current?.querySelector<HTMLElement>('[role="radio"][aria-checked="true"]')
+                    ;(danger ? cancel.current : chosen)?.focus()
+                }}
+            >
                 <DialogHeader>
                     <DialogTitle>{title}</DialogTitle>
                     <DialogDescription>{body}</DialogDescription>
@@ -141,7 +153,7 @@ function ModerationDialog({
                 {children}
                 {failure ? <FormMessage tone='danger'>{t(`members.dialog.${failure}`, { name })}</FormMessage> : null}
                 <DialogFooter>
-                    <Button type='button' variant='text' disabled={pending} onClick={onClose}>
+                    <Button ref={cancel} type='button' variant='text' disabled={pending} onClick={onClose}>
                         {t('members.dialog.cancel')}
                     </Button>
                     <Button
@@ -173,7 +185,7 @@ function TimeoutDialog({ serverId, member, onClose }: { serverId: string; member
     const { t, i18n } = useTranslation('servers')
     const now = useMinuteClock()
     // Read only: the AppShell loads the account's settings as the app opens.
-    const timeZone = useQuery<UserSettings>({ queryKey: userKeys.settings(), enabled: false }).data?.timezone
+    const timeZone = useQuery(settingsCache).data?.timezone
     const timeout = useTimeoutMember(serverId)
     const { control, handleSubmit } = useForm<TimeoutValues>({
         resolver: zodResolver(timeoutSchema),

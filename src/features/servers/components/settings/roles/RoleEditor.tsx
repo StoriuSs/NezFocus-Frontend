@@ -75,7 +75,8 @@ export function RoleEditor({ server, roleId }: { server: Server; roleId: string 
                     </Link>
                 </Button>
             </div>
-            <h2 className='truncate text-title-2 font-semibold text-text-primary'>{role.name}</h2>
+            {/* A long name: two lines, then "…" (04 long-role-name). */}
+            <h2 className='line-clamp-2 text-title-2 font-semibold text-text-primary'>{role.name}</h2>
             {role.isEveryone ? null : (
                 <div role='tablist' aria-label={role.name} className='flex gap-4 border-b'>
                     {tabs.map((item) => (

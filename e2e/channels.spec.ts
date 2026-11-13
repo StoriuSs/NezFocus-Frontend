@@ -126,6 +126,16 @@ test('creates, opens, makes private, renames and deletes a channel; creates a ca
     await expect(settings).toBeHidden()
     await expect(channels(page).getByRole('link', { name: 'tài-liệu-ôn-tập' })).toBeVisible()
     await expect(channels(page).getByRole('img', { name: 'Private channel' })).toBeVisible()
+    // The lock follows the name (C-06), not pushed to the row's end.
+    const nameEnd = await channels(page)
+        .getByText('tài-liệu-ôn-tập', { exact: true })
+        .evaluate((span) => {
+            const range = document.createRange()
+            range.selectNodeContents(span)
+            return range.getBoundingClientRect().right
+        })
+    const lockBox = (await channels(page).getByRole('img', { name: 'Private channel' }).boundingBox())!
+    expect(lockBox.x - nameEnd).toBeLessThan(12)
 
     // Delete, typing the name without its accents.
     const renamed = rowOf(page, 'tài-liệu-ôn-tập')

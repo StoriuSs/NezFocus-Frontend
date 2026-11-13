@@ -18,7 +18,7 @@ import { FormMessage } from '@/components/form/FormMessage'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
-import { WithTooltip } from '@/components/ui/tooltip'
+import { TooltipWhenCut, WithTooltip } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { useReorderRoles, useServerRoles } from '../../../api/useRoles'
 import { roleEditPath } from '../../../lib/paths'
@@ -309,7 +309,13 @@ function RoleRow({
                 aria-hidden='true'
             />
             <Icon className={cn('shrink-0 text-text-tertiary', lock ? 'size-3.5' : 'size-4')} aria-hidden='true' />
-            <span className='min-w-0 flex-1 truncate'>{role.name}</span>
+            {lock ? (
+                <span className='min-w-0 flex-1 truncate'>{role.name}</span>
+            ) : (
+                <TooltipWhenCut label={role.name}>
+                    <span className='min-w-0 flex-1 truncate'>{role.name}</span>
+                </TooltipWhenCut>
+            )}
             <span className='text-text-secondary'>{value}</span>
             <ChevronRight className='size-4 text-text-tertiary' aria-hidden='true' />
         </Link>

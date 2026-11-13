@@ -309,12 +309,37 @@ describe('The channel list for whoever manages channels (S-SRV-04, S-SRV-06)', (
         await userEvent.keyboard('{Enter}')
         expect(screen.getByRole('button', { name: 'Phòng học' })).toHaveAttribute('aria-expanded', 'false')
     })
+
+    it('fades a lifted category with its channels, the whole group, as S-SRV-06 drag-category draws it', async () => {
+        renderColumn(server(MANAGER))
+        ;(await screen.findByRole('button', { name: 'Phòng học' })).focus()
+        await userEvent.keyboard(' ')
+        const rows = within(document.getElementById('category-ot-rooms')!).getAllByRole('link')
+        for (const row of rows) expect(row).toHaveClass('opacity-40')
+        for (const row of within(document.getElementById('category-ot-info')!).getAllByRole('link'))
+            expect(row).not.toHaveClass('opacity-40')
+        await userEvent.keyboard('{Escape}')
+    })
 })
 
 describe('The channel list for a member', () => {
     beforeEach(async () => {
         await i18n.changeLanguage('en')
         vi.clearAllMocks()
+    })
+
+    it('dims a room they may not join and locks it, keeping the row a row (its Tooltip wraps the link)', async () => {
+        const noConnect = String(BigInt(MEMBER) & ~(1n << 15n))
+        const data = server(MEMBER)
+        renderColumn({
+            ...data,
+            channels: data.channels.map((c) => (c.type === 'voice' ? { ...c, permissions: noConnect } : c))
+        })
+        const room = await screen.findByRole('link', { name: /Phòng học im lặng/ })
+        expect(room).toHaveClass('flex', 'h-8', 'text-text-tertiary')
+        expect(room).not.toHaveClass('text-text-primary')
+        expect(room.className).not.toContain('=>')
+        expect(within(room).getByRole('img', { name: 'You may not join this room' })).toBeInTheDocument()
     })
 
     it('has a menu with Leave only, no buttons on rows, and Space does not lift anything', async () => {

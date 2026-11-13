@@ -129,8 +129,63 @@ test('a role given shows its private channel, and taken back hides it', async ({
     await expect(an.getByRole('switch', { name: 'Kick members' })).not.toBeChecked()
     await shoot(an, 'set02-edit-role')
 
-    // Trưởng nhóm, tab Members: add Bình.
+    // A 100-character name (04 long-role-name): two lines on its page, then one line in the list with its tooltip.
+    const long = 'Nhóm phụ trách đề cương, tài liệu và lịch ôn tập cho kỳ thi cuối kỳ môn Giải tích 2 K22 khoa CNTT nha'
+        .slice(0, 100)
+        .padEnd(100, '.')
     await an.getByRole('link', { name: 'Roles' }).first().click()
+    await an.getByRole('button', { name: 'Create role' }).click()
+    await an.getByRole('dialog', { name: 'Create role' }).getByLabel('Role name').fill(long)
+    await an.getByRole('dialog', { name: 'Create role' }).getByRole('button', { name: 'Create role' }).click()
+    const title = an.getByRole('heading', { level: 2, name: long })
+    await expect(title).toBeVisible()
+    const lines = await title.evaluate(
+        (h) => h.getBoundingClientRect().height / parseFloat(getComputedStyle(h).lineHeight)
+    )
+    expect(Math.round(lines)).toBe(2)
+    await an.getByRole('link', { name: 'Roles' }).first().click()
+    const name = an.getByRole('link', { name: new RegExp(`^${long.slice(0, 20)}`) }).getByText(long, { exact: true })
+    await name.hover()
+    await expect(an.getByRole('tooltip')).toHaveText(long)
+    // Ticked for a private channel, it is cut too: the dialog never scrolls sideways.
+    await an.goto(`/channels/${serverId}`)
+    await an.getByRole('heading', { level: 2 }).getByRole('button').click()
+    await an.getByRole('menuitem', { name: 'Create channel' }).click()
+    const create = an.getByRole('dialog', { name: 'Create a channel' })
+    await create.getByRole('switch', { name: 'Private channel' }).click()
+    const roleList = create.getByRole('list', { name: /Roles that can see it/ })
+    await expect(roleList.getByText(long, { exact: true })).toBeVisible()
+    const listBox = (await roleList.boundingBox())!
+    const dialogBox = (await create.boundingBox())!
+    expect(listBox.x + listBox.width).toBeLessThanOrEqual(dialogBox.x + dialogBox.width - 24)
+    await create.getByRole('button', { name: 'Cancel' }).click()
+    // Given to Bình from Members: cut in the picker, and its Tag stops at 160 with the full name in a tooltip.
+    await an.goto(`/servers/${serverId}/settings/members`)
+    const binhRow = an.getByRole('row').filter({ hasText: 'Bình' })
+    await binhRow.getByRole('button', { name: 'Assign roles' }).click()
+    const picker = an.getByRole('dialog', { name: 'Roles of Bình' })
+    await picker.getByRole('checkbox', { name: long }).click()
+    await expect(picker.getByRole('checkbox', { name: long })).toBeChecked()
+    // Measured together, once the popover has settled where it opens.
+    await expect
+        .poll(() =>
+            picker
+                .getByText(long, { exact: true })
+                .evaluate(
+                    (name) =>
+                        name.closest('[role="dialog"]')!.getBoundingClientRect().right -
+                        name.getBoundingClientRect().right
+                )
+        )
+        .toBeGreaterThanOrEqual(0)
+    await an.keyboard.press('Escape')
+    const tag = binhRow.getByText(long, { exact: true })
+    expect((await tag.boundingBox())!.width).toBeLessThanOrEqual(160)
+    await tag.hover()
+    await expect(an.getByRole('tooltip')).toHaveText(long)
+    await an.goto(`/servers/${serverId}/settings/roles`)
+
+    // Trưởng nhóm, tab Members: add Bình.
     await an.getByRole('link', { name: /Trưởng nhóm/ }).click()
     await an.getByRole('tab', { name: /Members/ }).click()
     await an.getByRole('button', { name: 'Add members' }).click()

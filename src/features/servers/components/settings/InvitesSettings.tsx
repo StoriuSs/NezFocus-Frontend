@@ -16,7 +16,7 @@ import {
 import { EmptyState } from '@/components/ui/empty-state'
 import { IconButton } from '@/components/ui/icon-button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { WithTooltip } from '@/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { getApiErrorType } from '@/lib/api-error'
 import { useRevokeInvite, useServerInvites } from '../../api/useInvites'
 import { inviteLink, timeLeft } from '../../lib/invites'
@@ -77,7 +77,7 @@ export function InvitesSettings({ server }: { server: Server }) {
                     {t('invitesPage.emptyBody')}
                 </EmptyState>
             ) : (
-                <div role='table' aria-label={t('invitesPage.description')} className='grid'>
+                <div role='table' aria-label={t('invitesPage.description')} className='grid grid-cols-1'>
                     <div role='row' className={`${ROW} pb-2 text-label uppercase text-text-tertiary`}>
                         <span role='columnheader' className='w-28 shrink-0'>
                             {t('invitesPage.code')}
@@ -110,6 +110,7 @@ export function InvitesSettings({ server }: { server: Server }) {
 function InviteRow({ invite, now, onRevoke }: { invite: InviteListItem; now: number; onRevoke: () => void }) {
     const { t } = useTranslation('servers')
     const [copied, setCopied] = useState(false)
+    const [hovered, setHovered] = useState(false)
     useEffect(() => {
         if (!copied) return
         const timer = setTimeout(() => setCopied(false), 2000)
@@ -147,16 +148,22 @@ function InviteRow({ invite, now, onRevoke }: { invite: InviteListItem; now: num
                     : t('invitesPage.never')}
             </span>
             <span role='cell' className='flex w-28 shrink-0 items-center justify-end gap-1'>
-                <WithTooltip label={copied ? t('invitesPage.copied') : t('invitesPage.copy')}>
-                    <IconButton
-                        label={t('invitesPage.copy')}
-                        onClick={() =>
-                            void navigator.clipboard.writeText(inviteLink(invite.code)).then(() => setCopied(true))
-                        }
-                    >
-                        <Copy aria-hidden='true' />
-                    </IconButton>
-                </WithTooltip>
+                {/* A click closes a tooltip: "Copied" holds it open for its 2 seconds. */}
+                <Tooltip open={hovered || copied} onOpenChange={setHovered}>
+                    <TooltipTrigger asChild>
+                        <IconButton
+                            label={t('invitesPage.copy')}
+                            onClick={() =>
+                                void navigator.clipboard.writeText(inviteLink(invite.code)).then(() => setCopied(true))
+                            }
+                        >
+                            <Copy aria-hidden='true' />
+                        </IconButton>
+                    </TooltipTrigger>
+                    <TooltipContent side='top'>
+                        {copied ? t('invitesPage.copied') : t('invitesPage.copy')}
+                    </TooltipContent>
+                </Tooltip>
                 <Button type='button' variant='text' size='sm' className='text-danger' onClick={onRevoke}>
                     {t('invitesPage.revoke')}
                 </Button>

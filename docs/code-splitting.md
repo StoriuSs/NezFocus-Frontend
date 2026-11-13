@@ -120,9 +120,10 @@ imports in with it, and Rollup does not split a feature's `index.ts`
   (`@/features/users/hooks/useAccountSettings`); `src/app` may import deep,
   as it wires the features in. A feature cannot (the ESLint rule), so
   another feature reads the settings straight from the cache the AppShell
-  fills: `useQuery({ queryKey: userKeys.settings(), enabled: false })`, with
-  `userKeys` that the index exports already. No new module reaches the first
-  download.
+  fills: `useQuery(settingsCache)`, the key with
+  `queryFn: skipToken` (`api/settingsCache.ts`, exported by the index; a query
+  without a queryFn logs an error). It imports only `userKeys`, so no new
+  module reaches the first download.
 - What only the AppShell and the settings pages use is kept apart:
   `src/features/users/api/settings.api.ts` (`fetchSettings`,
   `settingsQuery`, `updateSettings`) is not in `users.api.ts`, and the

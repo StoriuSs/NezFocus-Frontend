@@ -42,9 +42,11 @@ export const shownLink = (link: string) => link.replace(/^https?:\/\//, '')
 export function timeLeft(expiresAt: string, now: Date): { unit: 'days' | 'hours' | 'minutes'; count: number } {
     // Whole minutes first: a 1-day link made a moment ago reads "1 day", not "24 hours".
     const minutes = Math.max(1, Math.ceil((new Date(expiresAt).getTime() - now.getTime()) / 60_000))
-    if (minutes >= 24 * 60) return { unit: 'days', count: Math.ceil(minutes / (24 * 60)) }
-    if (minutes >= 60) return { unit: 'hours', count: Math.ceil(minutes / 60) }
-    return { unit: 'minutes', count: minutes }
+    if (minutes < 60) return { unit: 'minutes', count: minutes }
+    // Rounded up, 23 h 55 min is 24 hours: that reads as "1 day".
+    const hours = Math.ceil(minutes / 60)
+    if (hours < 24) return { unit: 'hours', count: hours }
+    return { unit: 'days', count: Math.ceil(minutes / (24 * 60)) }
 }
 
 /** Uses on the settings line (Q15): "no limit", "up to 10" while unused, then "7 left". */

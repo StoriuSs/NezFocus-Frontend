@@ -194,6 +194,19 @@ describe('deleting your account', () => {
             )
         })
 
+        it('says it of one server in the singular in Vietnamese too, which i18next counts as one form', async () => {
+            await i18n.changeLanguage('vi')
+            ownership.owned.mockResolvedValue({
+                blocking: [],
+                alone: [{ id: 'gt', name: 'CLB Guitar PTIT', memberCount: 1 }]
+            })
+            render(<DeleteAccountSection email='ada@example.test' username='ada' />, { wrapper: queryWrapper() })
+            await userEvent.click(screen.getByRole('button', { name: 'Xóa tài khoản' }))
+            const dialog = await screen.findByRole('dialog', { name: 'Xóa tài khoản?' })
+
+            expect(dialog).toHaveTextContent('Link mời của server đó dừng ngay từ bây giờ.')
+        })
+
         it('says nothing of servers when none goes with it', async () => {
             const dialog = await openDialog()
             expect(dialog).not.toHaveTextContent('servers only you are in')

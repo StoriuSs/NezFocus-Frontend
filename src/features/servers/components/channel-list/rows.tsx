@@ -1,5 +1,5 @@
-import type { KeyboardEvent, ReactNode } from 'react'
-import { NavLink } from 'react-router-dom'
+import { createElement, type KeyboardEvent, type ReactNode } from 'react'
+import { NavLink, useMatch } from 'react-router-dom'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
 import {
     Ban,
@@ -100,40 +100,42 @@ export function ChannelRow({
     const { setNodeRef: dragRef, listeners } = useDraggable({ id, disabled: !manages })
     const { setNodeRef: dropRef } = useDroppable({ id, disabled: !acceptsDrops })
     const locked = channel.type === 'voice' && !can(channel.permissions, 'CONNECT')
-    const Icon = channelIcon(channel)
+
+    const path = channelPath(server.id, channel.id)
+    // Strings, not NavLink's functions: a locked room's Tooltip (Radix Slot)
+    // merges the link's className as text, and would print a function.
+    const active = useMatch({ path, end: true }) !== null
 
     const row = (
         <NavLink
             ref={dragRef}
-            to={channelPath(server.id, channel.id)}
+            to={path}
             draggable={false}
             {...listeners}
             onKeyDown={onKeyDown}
-            className={({ isActive }) =>
-                cn(
-                    ROW,
-                    manages && 'pr-8',
-                    lifted && 'opacity-40',
-                    isActive
-                        ? 'bg-surface-3 font-semibold text-text-primary'
-                        : cn(
-                              'hover:bg-surface-2',
-                              locked ? 'font-medium text-text-tertiary' : 'font-medium text-text-secondary'
-                          )
-                )
-            }
-        >
-            {({ isActive }) => (
-                <>
-                    <Icon className={isActive ? 'text-text-primary' : 'text-text-tertiary'} aria-hidden='true' />
-                    <span className='min-w-0 flex-1 truncate'>{channel.name}</span>
-                    {locked ? (
-                        <SmallLock label={t('shell.channels.noConnect')} />
-                    ) : channel.isPrivate ? (
-                        <SmallLock label={t('shell.channels.private')} />
-                    ) : null}
-                </>
+            className={cn(
+                ROW,
+                manages && 'pr-8',
+                lifted && 'opacity-40',
+                active
+                    ? 'bg-surface-3 font-semibold text-text-primary'
+                    : cn(
+                          'hover:bg-surface-2',
+                          locked ? 'font-medium text-text-tertiary' : 'font-medium text-text-secondary'
+                      )
             )}
+        >
+            {createElement(channelIcon(channel), {
+                className: active ? 'text-text-primary' : 'text-text-tertiary',
+                'aria-hidden': true
+            })}
+            {/* Not stretched: the lock follows the name, as C-06 draws it. */}
+            <span className='min-w-0 truncate'>{channel.name}</span>
+            {locked ? (
+                <SmallLock label={t('shell.channels.noConnect')} />
+            ) : channel.isPrivate ? (
+                <SmallLock label={t('shell.channels.private')} />
+            ) : null}
         </NavLink>
     )
 

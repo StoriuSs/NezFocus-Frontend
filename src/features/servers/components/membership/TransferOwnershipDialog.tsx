@@ -23,7 +23,7 @@ import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { useMinuteClock } from '@/hooks/useMinuteClock'
 import { cn } from '@/lib/utils'
 import { ConfirmPasswordDialog, useAuthStore } from '@/features/auth'
-import { userKeys, type UserSettings } from '@/features/users'
+import { settingsCache } from '@/features/users'
 import { useTransferOwnership } from '../../api/useMembership'
 import { useServerMembers } from '../../api/useRoles'
 import { highestRoleName, pageAfterHandover, transferRefusal } from '../../lib/membership'
@@ -136,7 +136,7 @@ function PickRecipient({
     const tCommon = useTranslation().t
     const now = useMinuteClock()
     // Read only: the AppShell loads the account's settings as the app opens.
-    const timeZone = useQuery<UserSettings>({ queryKey: userKeys.settings(), enabled: false }).data?.timezone
+    const timeZone = useQuery(settingsCache).data?.timezone
     const [q, setQ] = useState('')
     const query = useDebouncedValue(q.trim(), 250)
     const members = useServerMembers(server.id, {

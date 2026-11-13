@@ -203,6 +203,17 @@ describe('Members (S-SET-03)', () => {
         await expectNoA11yViolations(container)
     })
 
+    it('reads the time zone from the settings in the cache, never asking for them and logging nothing', async () => {
+        const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+        try {
+            renderPage('/servers/ot/settings/members', binh)
+            expect(await screen.findByText('4 members')).toBeInTheDocument()
+            expect(logged.mock.calls.filter(([message]) => String(message).includes('queryFn'))).toEqual([])
+        } finally {
+            logged.mockRestore()
+        }
+    })
+
     it('offers the owner a handover at the end of ⋯, set apart, but not to someone timed out (Q15, D-91)', async () => {
         const { useMembershipDialogs } = await import('../membership-dialogs.store')
         const user = userEvent.setup()
@@ -258,6 +269,25 @@ describe('Members (S-SET-03)', () => {
         await user.click(screen.getByRole('button', { name: 'Try again' }))
         expect(await screen.findByText('Removed the timeout of Phong')).toBeInTheDocument()
         expect(moderationApi.timeoutMember).toHaveBeenCalledTimes(2)
+    })
+
+    it('opens Time out on its chosen length, and Kick and Ban on Cancel (04 › Bàn phím, C-14 danger)', async () => {
+        const user = userEvent.setup()
+        renderPage('/servers/ot/settings/members', an, 'an')
+        const open = async (item: string, title: string) => {
+            await user.click(within(await rowOf('Dũng')).getByRole('button', { name: 'Actions for Dũng' }))
+            await user.click(await screen.findByRole('menuitem', { name: item }))
+            return screen.findByRole('dialog', { name: title })
+        }
+
+        let dialog = await open('Time out', 'Time out Dũng')
+        await waitFor(() => expect(within(dialog).getByRole('radio', { name: '1 hour' })).toHaveFocus())
+        await user.keyboard('{Escape}')
+        dialog = await open('Kick from server', 'Kick Dũng from the server?')
+        await waitFor(() => expect(within(dialog).getByRole('button', { name: 'Cancel' })).toHaveFocus())
+        await user.keyboard('{Escape}')
+        dialog = await open('Ban from server', 'Ban Dũng from the server?')
+        await waitFor(() => expect(within(dialog).getByRole('button', { name: 'Cancel' })).toHaveFocus())
     })
 
     it('times out for 1 hour by default with the reason, then says so', async () => {
@@ -602,6 +632,23 @@ describe('Members (S-SET-03)', () => {
         expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled()
         await user.click(screen.getByRole('button', { name: 'Page 1' }))
         await waitFor(() => expect(router.state.location.search).toBe(''))
+    })
+
+    it('turns the rows into Skeletons when the next page takes over 0.3 s, not before (D-90)', async () => {
+        const user = userEvent.setup()
+        let release!: () => void
+        rolesApi.fetchMembers.mockImplementation(async (_id: string, query: { page: number; limit: number }) => {
+            if (query.page === 2) await new Promise<void>((resolve) => (release = resolve))
+            return { items: MEMBERS, meta: meta(137, query.page, query.limit) }
+        })
+        const { container } = renderPage('/servers/ot/settings/members', binh)
+        expect(await screen.findByText('of 137 members')).toBeInTheDocument()
+        await user.click(screen.getByRole('button', { name: 'Page 2' }))
+        expect(container.querySelector('[aria-busy="true"]')).toBeNull()
+        await waitFor(() => expect(container.querySelector('[aria-busy="true"]')).not.toBeNull(), { timeout: 1000 })
+        release()
+        await waitFor(() => expect(container.querySelector('[aria-busy="true"]')).toBeNull())
+        expect(await rowOf('Dũng')).toBeDefined()
     })
 
     it('says when no one matches', async () => {

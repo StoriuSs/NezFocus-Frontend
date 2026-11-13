@@ -23,7 +23,7 @@ import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { getApiErrorType } from '@/lib/api-error'
-import { userKeys, type UserSettings } from '@/features/users'
+import { settingsCache } from '@/features/users'
 import { useServerBans, useUnbanMember } from '../../../api/useModeration'
 import type { PageSize } from '../../../api/roles.api'
 import { tableDate } from '../../../lib/moderation'
@@ -115,7 +115,7 @@ export function BansSettings({ server }: { server: Server }) {
                     {null}
                 </EmptyState>
             ) : (
-                <div role='table' aria-label={t('bans.description')} className='grid'>
+                <div role='table' aria-label={t('bans.description')} className='grid grid-cols-1'>
                     <div role='row' className='flex items-center gap-3 pb-2 text-label uppercase text-text-tertiary'>
                         <span role='columnheader' className='w-48 shrink-0'>
                             {t('bans.columns.user')}
@@ -175,7 +175,7 @@ export function BansSettings({ server }: { server: Server }) {
 function useBanDate() {
     const { i18n } = useTranslation()
     // Read only: the AppShell loads the account's settings as the app opens.
-    const timeZone = useQuery<UserSettings>({ queryKey: userKeys.settings(), enabled: false }).data?.timezone
+    const timeZone = useQuery(settingsCache).data?.timezone
     return (at: string | Date) => tableDate(new Date(at), i18n.language, timeZone)
 }
 

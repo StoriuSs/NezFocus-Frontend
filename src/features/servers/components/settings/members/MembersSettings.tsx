@@ -17,11 +17,12 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { IconButton } from '@/components/ui/icon-button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
-import { WithTooltip } from '@/components/ui/tooltip'
+import { TooltipWhenCut, WithTooltip } from '@/components/ui/tooltip'
+import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { useMinuteClock } from '@/hooks/useMinuteClock'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/features/auth'
-import { userKeys, type UserSettings } from '@/features/users'
+import { settingsCache } from '@/features/users'
 import { useEndTimeout } from '../../../api/useModeration'
 import { useMembershipDialogs } from '../../../membership-dialogs.store'
 import { useServerMembers, useServerRoles } from '../../../api/useRoles'
@@ -86,7 +87,7 @@ export function MembersSettings({ server }: { server: Server }) {
     const myId = useAuthStore((state) => state.user?.id) ?? ''
     const now = useMinuteClock()
     // Read only: the AppShell loads the account's settings as the app opens.
-    const timeZone = useQuery<UserSettings>({ queryKey: userKeys.settings(), enabled: false }).data?.timezone
+    const timeZone = useQuery(settingsCache).data?.timezone
     const list = useListState()
     const members = useServerMembers(server.id, {
         q: list.q || undefined,
@@ -147,6 +148,9 @@ export function MembersSettings({ server }: { server: Server }) {
     }
 
     const total = members.data?.meta.totalItems ?? 0
+    // Another page, order or search shows the last one meanwhile; past 0.3 s its rows turn to Skeletons (D-90).
+    const waited = useDebouncedValue(members.isPlaceholderData, 300)
+    const slow = members.isPlaceholderData && waited
 
     return (
         <div className='flex w-full max-w-settings flex-1 flex-col gap-4 p-6 lg:p-8'>
@@ -173,7 +177,7 @@ export function MembersSettings({ server }: { server: Server }) {
                 ) : null}
             </div>
 
-            {members.isPending ? (
+            {members.isPending || slow ? (
                 <div className='grid gap-2' aria-busy='true'>
                     {[0, 1, 2, 3, 4, 5, 6, 7].map((row) => (
                         <Skeleton key={row} className='h-12 w-full' />
@@ -196,7 +200,12 @@ export function MembersSettings({ server }: { server: Server }) {
                     {null}
                 </EmptyState>
             ) : (
-                <div role='table' aria-label={t('members.columns.member')} aria-rowcount={total} className='grid'>
+                <div
+                    role='table'
+                    aria-label={t('members.columns.member')}
+                    aria-rowcount={total}
+                    className='grid grid-cols-1'
+                >
                     <div role='row' className='flex items-center gap-3 pb-2 text-label uppercase text-text-tertiary'>
                         {SORTS.map((sort) => (
                             <SortHeader
@@ -408,8 +417,13 @@ function MemberRow({
             </span>
             <span role='cell' className='flex min-w-0 flex-1 flex-wrap items-center gap-1'>
                 {member.isOwner ? <Tag>{t('members.owner')}</Tag> : null}
+                {/* A role's Tag stops at 160, its whole name in a Tooltip (04 long-role-name). */}
                 {heldRoles(member, server.roles).map((role) => (
-                    <Tag key={role.id}>{role.name}</Tag>
+                    <Tag key={role.id} className='max-w-[160px]'>
+                        <TooltipWhenCut label={role.name}>
+                            <span className='min-w-0 truncate'>{role.name}</span>
+                        </TooltipWhenCut>
+                    </Tag>
                 ))}
                 {assignable.length > 0 ? <RolePicker serverId={server.id} member={member} roles={assignable} /> : null}
             </span>

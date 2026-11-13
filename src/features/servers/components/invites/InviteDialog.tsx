@@ -107,6 +107,13 @@ export default function InviteDialog() {
         if (serverId) mutate(DEFAULT_INVITE_SETTINGS, { onSuccess: setInvite })
     }, [serverId, mutate])
 
+    // "Copy" is disabled while the link is being made, so focusing it as the
+    // dialog opens does nothing: it takes the focus once the link is there.
+    const hasLink = Boolean(invite) && !create.isPending
+    useEffect(() => {
+        if (hasLink && !editing) copyButton.current?.focus()
+    }, [hasLink, editing])
+
     useEffect(() => {
         if (!copied) return
         const timer = setTimeout(() => setCopied(false), 2000)

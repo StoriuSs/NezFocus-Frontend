@@ -48,9 +48,14 @@ export function SettingsRow({
 }
 
 /** A short label that cannot be clicked (C-36): "This device", a role. */
-export function Tag({ children }: { children: ReactNode }) {
+export function Tag({ children, className }: { children: ReactNode; className?: string }) {
     return (
-        <span className='inline-flex h-5 shrink-0 items-center rounded-full border px-2 text-label text-text-secondary'>
+        <span
+            className={cn(
+                'inline-flex h-5 shrink-0 items-center rounded-full border px-2 text-label text-text-secondary',
+                className
+            )}
+        >
             {children}
         </span>
     )

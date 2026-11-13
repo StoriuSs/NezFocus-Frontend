@@ -129,7 +129,13 @@ test('times out and bans from Members, and lifts the ban from Bans', async ({ pa
     await rowOf(page, 'Bình').getByRole('button', { name: 'Actions for Bình' }).click()
     await page.getByRole('menuitem', { name: 'Ban from server' }).click()
     const ban = page.getByRole('dialog', { name: 'Ban Bình from the server?' })
-    await ban.getByLabel('Reason (optional)').fill('Bán đề thi có đáp án')
+    // A long reason over several lines (about 300 characters), as a moderator writes one.
+    const reason = [
+        'Bán đề thi có đáp án trong #tai-lieu hai lần dù đã được nhắc ở #thong-bao.',
+        'Đăng link quảng cáo khóa học bên ngoài vào #hoi-dap, làm loãng các câu hỏi của mọi người.',
+        'Nhắn riêng cho thành viên mới để mời mua tài liệu. Có thể xin bỏ cấm sau kỳ thi cuối kỳ.'
+    ].join('\n')
+    await ban.getByLabel('Reason (optional)').fill(reason)
     await shoot(page, 'set03-ban-confirm')
     await ban.getByRole('button', { name: 'Ban' }).click()
     await expect(page.getByText('Banned Bình')).toBeVisible()
@@ -141,6 +147,11 @@ test('times out and bans from Members, and lifts the ban from Bans', async ({ pa
     await page.goto(`/servers/${serverId}/settings/bans`)
     const row = rowOf(page, 'Bình')
     await expect(row.getByText('Bán đề thi có đáp án')).toBeVisible({ timeout: 20_000 })
+    // Cut on one line: the date, who banned and Unban stay in the row, nothing scrolls sideways.
+    await expect(row.getByRole('button', { name: 'Unban' })).toBeInViewport()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBe(
+        0
+    )
     await shoot(page, 'set04-bans')
     await row.getByRole('button', { name: 'Unban' }).click()
     await page.getByRole('dialog', { name: 'Unban Bình?' }).getByRole('button', { name: 'Unban' }).click()

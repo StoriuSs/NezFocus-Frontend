@@ -42,7 +42,7 @@ export function RolePicker({ serverId, member, roles }: { serverId: string; memb
                     </IconButton>
                 </PopoverTrigger>
             </WithTooltip>
-            <PopoverContent align='start' className='grid w-64 gap-2 p-2' aria-labelledby={titleId}>
+            <PopoverContent align='start' className='grid w-64 grid-cols-1 gap-2 p-2' aria-labelledby={titleId}>
                 <p id={titleId} className='px-2 pt-1 text-label font-semibold text-text-secondary'>
                     {t('members.pickerTitle', { name })}
                 </p>
@@ -54,7 +54,7 @@ export function RolePicker({ serverId, member, roles }: { serverId: string; memb
                         onChange={(event) => setQuery(event.target.value)}
                     />
                 ) : null}
-                <ul className='grid max-h-[206px] overflow-y-auto'>
+                <ul className='grid max-h-[206px] grid-cols-1 overflow-y-auto'>
                     {shown.map((role) => {
                         const id = `${titleId}-${role.id}`
                         const on =

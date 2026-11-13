@@ -17,7 +17,7 @@ a few small Zustand stores, or in a component.**
 | Data the API owns (the profile, a list of orders) | TanStack Query, one hook per resource | `useProfile()` in `src/features/users/api/` ([data-fetching.md](./data-fetching.md)) |
 | Who is signed in | The auth store, `src/features/auth/auth.store.ts` | `useAuthStore((s) => s.user)` |
 | The access token | Module memory, `src/features/auth/lib/access-token.ts` — not a store, not storage | read only by the store and the API client |
-| The account's settings (theme, language, time zone, switches) | TanStack Query, key `userKeys.settings()`, loaded by the AppShell | `useSettings()` inside the users feature; elsewhere `useQuery({ queryKey: userKeys.settings(), enabled: false })` |
+| The account's settings (theme, language, time zone, switches) | TanStack Query, key `userKeys.settings()`, loaded by the AppShell | `useSettings()` inside the users feature; elsewhere `useQuery(settingsCache)` (the key with `queryFn: skipToken`: the cache only, never a request) |
 | The theme on screen | The theme store, `src/hooks/useTheme.ts`, set from the settings once signed in | `useTheme()` |
 | A removed avatar waiting out its "Undo" | `useAvatarRemoval`, `src/features/users/lib/avatar-removal-state.ts` | read by `useProfile` |
 | A form's values and errors | React Hook Form | [shadcn-forms.md](./shadcn-forms.md) |

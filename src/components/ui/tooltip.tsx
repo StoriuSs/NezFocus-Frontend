@@ -54,4 +54,32 @@ function WithTooltip({
     )
 }
 
-export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider, WithTooltip }
+/**
+ * Text cut on one line (`children` is the element with `truncate`), its whole
+ * `label` in a Tooltip only while it is cut: a short name shows no tooltip
+ * repeating itself (04 long-role-name).
+ */
+function TooltipWhenCut({
+    label,
+    side = 'top',
+    children
+}: {
+    label: React.ReactNode
+    side?: React.ComponentProps<typeof TooltipPrimitive.Content>['side']
+    children: React.ReactElement
+}) {
+    // The trigger's type; with asChild it is the child (a span), read only for its widths.
+    const text = React.useRef<HTMLButtonElement>(null)
+    const [open, setOpen] = React.useState(false)
+    const cut = () => Boolean(text.current && text.current.scrollWidth > text.current.clientWidth)
+    return (
+        <Tooltip open={open} onOpenChange={(next) => setOpen(next && cut())}>
+            <TooltipTrigger asChild ref={text}>
+                {children}
+            </TooltipTrigger>
+            <TooltipContent side={side}>{label}</TooltipContent>
+        </Tooltip>
+    )
+}
+
+export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider, TooltipWhenCut, WithTooltip }

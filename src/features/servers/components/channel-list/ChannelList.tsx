@@ -199,7 +199,12 @@ export function ChannelList({ server }: { server: Server }) {
                     <ChannelRow
                         server={server}
                         channel={channel}
-                        lifted={dragged?.kind === 'channel' && dragged.id === channel.id}
+                        // A lifted category takes its channels with it: the whole group fades.
+                        lifted={
+                            dragged?.kind === 'channel'
+                                ? dragged.id === channel.id
+                                : dragged?.kind === 'category' && dragged.id === categoryId
+                        }
                         acceptsDrops={dragged?.kind !== 'category'}
                         onKeyDown={onKey(
                             { kind: 'channel', id: channel.id },

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import '@/i18n/deletion'
-import { userKeys, type UserSettings } from '@/features/users'
+import { settingsCache } from '@/features/users'
 import { useDeleteAccount } from '@/features/auth/api/useDeleteAccount'
 import { useAuthStore } from '@/features/auth/auth.store'
 import { DELETION_WAIT_MS, deletionDate } from '@/features/auth/lib/deletion-date'
@@ -35,7 +35,7 @@ export function DeleteAccountDialog({
     const { t } = useTranslation('deletion')
     const logout = useAuthStore((state) => state.logout)
     // Read only: the AppShell loads the account's settings as the app opens.
-    const timeZone = useQuery<UserSettings>({ queryKey: userKeys.settings(), enabled: false }).data?.timezone
+    const timeZone = useQuery(settingsCache).data?.timezone
     const deleteAccount = useDeleteAccount()
     const queryClient = useQueryClient()
     // When the dialog opened: the day it names is the day the request would set.
@@ -51,10 +51,10 @@ export function DeleteAccountDialog({
                     {t('confirm.description', { date: deletesOn })}
                     {alone.length > 0 ? (
                         <span className='mt-2 block'>
+                            {/* The form named, not counted: Vietnamese has one plural form, so a count would always give `_other`. */}
                             <Trans
                                 ns='deletion'
-                                i18nKey='confirm.alone'
-                                count={alone.length}
+                                i18nKey={alone.length === 1 ? 'confirm.alone_one' : 'confirm.alone_other'}
                                 values={{ names: alone.map((server) => server.name).join(', ') }}
                                 components={[<strong key='names' className='font-semibold text-text-primary' />]}
                             />

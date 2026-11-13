@@ -151,8 +151,8 @@ The name, the last-use label and the IP come from
   22:15", an older day as "Fri, 16/10/2026", and more than a year ago the date
   alone, "14/03/2025". Always 24-hour time. The day and the time are in the
   account's time zone (NFR-I18N-01): the Sessions group reads it from the
-  settings cache the AppShell fills (`useQuery({ queryKey: userKeys.settings(),
-  enabled: false })`) and passes it on; until the settings have loaded,
+  settings cache the AppShell fills (`useQuery(settingsCache)`) and passes
+  it on; until the settings have loaded,
   the browser's zone (`wallClock()` in `src/lib/time-zones.ts`). A clock a
   little ahead of the browser's still reads as today. The row's label moves on
   each minute (`useMinuteClock`).
