@@ -14,7 +14,10 @@
 // page's classes in the one stylesheet loaded first). CSS raised to 8.77 kB
 // after M1 L9b (11/11/2026, 8.75 kB: the 160 cap of the role column in the
 // handover picker, S-SET-07, once the slice's other new classes were swapped
-// for ones already there). Raise them
+// for ones already there). CSS raised to 8.80 kB after M2 L3 (13/11/2026,
+// 8.79 kB: the chat's text that keeps its line breaks and the composer's
+// counter, once 15 other new classes were swapped for ones already there).
+// Raise them
 // only as CONSTRAINTS.md says: the owner decides, in a commit of its own.
 import { existsSync, readFileSync } from 'node:fs'
 
@@ -42,5 +45,5 @@ const css = tags('link')
 
 export default [
     { name: 'Initial JS (gzip)', path: js, gzip: true, limit: '246.75 kB' },
-    { name: 'Initial CSS (gzip)', path: css, gzip: true, limit: '8.77 kB' }
+    { name: 'Initial CSS (gzip)', path: css, gzip: true, limit: '8.80 kB' }
 ]
