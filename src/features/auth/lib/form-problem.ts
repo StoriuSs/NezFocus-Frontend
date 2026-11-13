@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { useTranslation } from 'react-i18next'
 import i18n from '@/i18n'
-import { getApiErrorInfo, getApiErrorType, NETWORK_ERROR } from '@/lib/api-error'
+import { getApiErrorInfo, getApiErrorType, NETWORK_ERROR, retryAfterSeconds } from '@/lib/api-error'
 import type { RateLimitReason } from './form-errors'
 import { rejectedRules, type PasswordRule } from './password-rules'
 
@@ -56,13 +56,12 @@ export function requestFailure(error: unknown, now = Date.now()): RequestFailure
     if (status !== undefined && status >= 500) return { ...failure, message: { key: 'auth:problems.server' } }
 
     if (status === 429) {
-        const header = axios.isAxiosError(error) ? error.response?.headers?.['retry-after'] : undefined
-        const seconds = Number(header)
+        const seconds = retryAfterSeconds(error)
         const reason =
             typeof details.reason === 'string' && RATE_LIMIT_REASONS.has(details.reason)
                 ? (details.reason as RateLimitReason)
                 : undefined
-        if (Number.isFinite(seconds) && seconds > 0) {
+        if (seconds) {
             return { ...failure, limit: { reason, until: now + Math.ceil(seconds) * 1000 } }
         }
         return { ...failure, message: { key: 'api:RATE_LIMIT_EXCEEDED' } }

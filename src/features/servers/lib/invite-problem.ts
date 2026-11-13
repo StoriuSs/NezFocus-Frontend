@@ -1,5 +1,4 @@
-import axios from 'axios'
-import { getApiErrorType, NETWORK_ERROR } from '@/lib/api-error'
+import { getApiErrorType, NETWORK_ERROR, retryAfterSeconds } from '@/lib/api-error'
 
 /** What went wrong opening or joining by an invite, as the screens tell it apart (S-SRV-01, S-SRV-03). */
 export type InviteProblem =
@@ -14,11 +13,8 @@ export function inviteProblem(error: unknown): InviteProblem {
     switch (getApiErrorType(error)) {
         case 'INVITE_INVALID':
             return { kind: 'invalid' }
-        case 'RATE_LIMIT_EXCEEDED': {
-            const header = axios.isAxiosError(error) ? error.response?.headers?.['retry-after'] : undefined
-            const seconds = Number(header)
-            return { kind: 'limited', waitSeconds: Number.isFinite(seconds) && seconds > 0 ? seconds : 60 }
-        }
+        case 'RATE_LIMIT_EXCEEDED':
+            return { kind: 'limited', waitSeconds: retryAfterSeconds(error) ?? 60 }
         case 'BANNED_FROM_SERVER':
             return { kind: 'banned' }
         case 'MAX_SERVERS_REACHED':

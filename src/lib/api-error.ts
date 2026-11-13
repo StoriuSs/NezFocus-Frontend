@@ -41,6 +41,16 @@ export function getApiErrorInfo(error: unknown): ApiErrorInfo {
     return { status }
 }
 
+/**
+ * How long a limit asks to wait (`Retry-After` of a 429), in whole seconds;
+ * none when the answer is not a 429 or carries no usable wait.
+ */
+export function retryAfterSeconds(error: unknown): number | undefined {
+    if (!axios.isAxiosError(error) || error.response?.status !== 429) return undefined
+    const seconds = Number(error.response.headers?.['retry-after'])
+    return Number.isFinite(seconds) && seconds > 0 ? seconds : undefined
+}
+
 /** The backend's `meta.type` (e.g. `USERNAME_CONFLICT`), `NETWORK_ERROR`, or `undefined`. */
 export function getApiErrorType(error: unknown): string | undefined {
     if (axios.isAxiosError(error) && !error.response) return NETWORK_ERROR
