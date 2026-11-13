@@ -14,6 +14,7 @@ import { useMembershipDialogs } from '@/features/servers/membership-dialogs.stor
 import { useServerGoneWatch } from '@/features/servers/hooks/useServerGoneWatch'
 import { serverOwnership } from '@/features/servers/api/serverOwnership'
 import { connectServerOwnership } from '@/features/auth'
+import { useConnectionBanner, useRealtimeConnection } from '@/features/realtime'
 import { cn } from '@/lib/utils'
 import { ListColumn } from './ListColumn'
 import { Rail } from './Rail'
@@ -65,9 +66,15 @@ export default function AppShell() {
     useAccountSettings()
     // A server one is no longer in leaves the rail with a Toast (D-143).
     useServerGoneWatch()
+    // The tab's socket (SRS 5.2), opened after this first paint; and the Banner it shows when lost.
+    useRealtimeConnection()
+    const connection = useConnectionBanner()
 
     const toggleNav = useCallback(() => setNavOpen((open) => !open), [])
-    const shell = useMemo<ShellContextValue>(() => ({ navOpen, toggleNav }), [navOpen, toggleNav])
+    const shell = useMemo<ShellContextValue>(
+        () => ({ navOpen, toggleNav, connection }),
+        [navOpen, toggleNav, connection]
+    )
 
     // Opening a page closes the sheet (state adjusted while rendering, not in an effect).
     const [openedAt, setOpenedAt] = useState(pathname)

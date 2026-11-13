@@ -1,12 +1,18 @@
 import { createContext } from 'react'
 
+/** The connection Banner a page shows under its Header (C-16, S-SHELL-01). */
+export type ConnectionNotice = 'reconnecting' | 'offline'
+
 /**
  * What a page inside the AppShell needs from it: the ☰ button of its header
  * opens the navigation (the list column below 1024; the rail too below 768).
+ * Its body starts with the connection Banner when there is one (C-16).
  */
 export interface ShellContextValue {
     navOpen: boolean
     toggleNav: () => void
+    /** The socket lost for 3 s, or no network (S-SHELL-01); null: none. */
+    connection: ConnectionNotice | null
 }
 
 /** Null outside the AppShell (a page rendered alone, as in its tests): no ☰ then. */

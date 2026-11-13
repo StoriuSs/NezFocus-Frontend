@@ -22,6 +22,7 @@ a few small Zustand stores, or in a component.**
 | A removed avatar waiting out its "Undo" | `useAvatarRemoval`, `src/features/users/lib/avatar-removal-state.ts` | read by `useProfile` |
 | A form's values and errors | React Hook Form | [shadcn-forms.md](./shadcn-forms.md) |
 | Which servers dialog is open, and on what (create a server, a channel or category dialog, invite friends, join from an invite, leave, hand over or delete a server) | `useCreateServerDialog`, `useChannelDialogs`, `useInviteDialogs`, `useMembershipDialogs` (`src/features/servers/*.store.ts`); the AppShell draws the dialogs | `useCreateServerDialog((s) => s.show)` |
+| The tab's connection: the socket's state, the browser online or not (S-SHELL-01) | `useRealtimeStore`, `src/features/realtime/realtime.store.ts`, kept by `useRealtimeConnection` in the AppShell | `useConnectionBanner()`, which Banner the page shows |
 | Whether a dialog its own component opens is open, a tab, a hover | `useState` in the component | — |
 
 **Don't copy server data into a store.** The copy is what goes stale: a
@@ -77,6 +78,14 @@ auth store runs it while the token is still in hand). It is not server data copi
 person did and the API has not heard yet. It sits in a file of its own
 because `useProfile` reads it and is in the first download; the removal logic
 stays in the profile page's chunk.
+
+**The connection store** (`useRealtimeStore`, `src/features/realtime/`):
+whether the socket is connected, down (and since when), or not opened yet,
+and whether the browser is online. UI state only: the socket itself lives in
+`src/lib/socket.ts`, and the data its events carry goes into the query cache
+(ARCHITECTURE 10.2), not here. `useConnectionBanner()` turns it into the
+Banner a page shows: `offline` without a network, `reconnecting` once the
+socket has been down 3 seconds, nothing otherwise.
 
 **The servers dialog stores** (`useCreateServerDialog`, `useChannelDialogs`,
 `useInviteDialogs`, `useMembershipDialogs`, in `src/features/servers/`):

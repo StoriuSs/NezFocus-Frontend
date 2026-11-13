@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { WithTooltip } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { SHELL_LIST_ID, SHELL_NAV_BUTTON_ID, ShellContext } from './shell-context'
+import { ConnectionBanner } from './ConnectionBanner'
 import { IconButton } from '@/components/ui/icon-button'
 
 /**
@@ -14,6 +15,10 @@ import { IconButton } from '@/components/ui/icon-button'
  * Header: ☰ below 1024 (opens the navigation), an optional icon, the title
  * (`headline` 600, cut with … when long), then the page's actions, which
  * always stay visible.
+ *
+ * Under the Header, the connection Banner when the AppShell has one (C-16).
+ * `composer`: the page has a message box, so offline says messages will be
+ * sent later.
  */
 export function ShellPage({
     title,
@@ -21,7 +26,8 @@ export function ShellPage({
     actions,
     panel,
     children,
-    bodyClassName
+    bodyClassName,
+    composer = false
 }: {
     title: string
     icon?: LucideIcon
@@ -29,6 +35,7 @@ export function ShellPage({
     panel?: ReactNode
     children?: ReactNode
     bodyClassName?: string
+    composer?: boolean
 }) {
     const { t } = useTranslation()
     const shell = useContext(ShellContext)
@@ -58,6 +65,7 @@ export function ShellPage({
                     </h1>
                     {actions ? <div className='flex shrink-0 items-center gap-1'>{actions}</div> : null}
                 </header>
+                {shell?.connection ? <ConnectionBanner status={shell.connection} composer={composer} /> : null}
                 <div className={cn('min-h-0 flex-1 overflow-y-auto', bodyClassName)}>{children}</div>
             </section>
             {panel}

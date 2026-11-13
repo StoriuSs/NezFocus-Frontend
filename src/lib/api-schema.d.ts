@@ -856,6 +856,27 @@ export interface paths {
         patch?: never
         trace?: never
     }
+    '/api/v1/realtime/ticket': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        /**
+         * A ticket for this session, spendable once within 30 seconds. Not
+         *     `@Idempotent()`: it makes nothing that lasts, and a retry is simply
+         *     another ticket.
+         */
+        post: operations['RealtimeController_ticket_v1']
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
 }
 export type webhooks = Record<string, never>
 export interface components {
@@ -1488,6 +1509,12 @@ export interface components {
         BanPageResponseDto: {
             items: components['schemas']['BanResponseDto'][]
             meta: components['schemas']['PageMetaResponseDto']
+        }
+        RealtimeTicketResponseDto: {
+            /** @description Sent once in the socket's `auth`; never in a URL. Spent on the first connection. */
+            ticket: string
+            /** @description How long it can still be spent: 30 seconds. */
+            expires_in_seconds: number
         }
     }
     responses: never
@@ -3251,6 +3278,28 @@ export interface operations {
                     'application/json': {
                         meta: components['schemas']['ApiResponseMetaDto']
                         data: null
+                    }
+                }
+            }
+        }
+    }
+    RealtimeController_ticket_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['RealtimeTicketResponseDto']
                     }
                 }
             }

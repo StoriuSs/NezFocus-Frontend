@@ -41,6 +41,11 @@
     "signOut": "Đăng xuất"
   },
   "shell": {
+    "connection": {
+      "reconnecting": "Đang kết nối lại…",
+      "offline": "Bạn đang mất kết nối",
+      "offlineWithComposer": "Bạn đang mất kết nối · Tin nhắn sẽ gửi khi có mạng lại"
+    },
     "comingSoon": "{{name}} · sắp có",
     "openNav": "Mở danh sách",
     "closePanel": "Đóng",

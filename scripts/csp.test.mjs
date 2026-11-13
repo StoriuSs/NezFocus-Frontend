@@ -42,9 +42,21 @@ describe('the Content-Security-Policy template', () => {
         expect(directive(policy, 'script-src')).toEqual(["'self'", "'wasm-unsafe-eval'", sha256('\n  go()\n')])
     })
 
+    // An https: source does not cover wss:, so the socket's origin is listed
+    // on its own; only 'self' stretches to ws/wss (CSP3).
+    it("allows the API's websocket origin as well as its https one", () => {
+        const policy = cspTemplate([])
+        expect(directive(policy, 'connect-src')).toContain(PLACEHOLDERS.apiSocket)
+    })
+
     it('leaves every origin the server knows as a placeholder, and holds no address of its own', () => {
         const policy = cspTemplate(['<head><script>var a = 1</script></head>'])
-        expect(directive(policy, 'connect-src')).toEqual(["'self'", PLACEHOLDERS.api, PLACEHOLDERS.errorTracking])
+        expect(directive(policy, 'connect-src')).toEqual([
+            "'self'",
+            PLACEHOLDERS.api,
+            PLACEHOLDERS.apiSocket,
+            PLACEHOLDERS.errorTracking
+        ])
         expect(directive(policy, 'img-src')).toContain(PLACEHOLDERS.images)
         expect(policy).not.toMatch(/https?:\/\/(?!__)/)
     })

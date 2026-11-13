@@ -34,6 +34,8 @@ export function inlineScripts(html) {
  */
 export const PLACEHOLDERS = {
     api: '__API_ORIGIN__',
+    // The same host as ws:// or wss://, for the socket (SRS 5.2).
+    apiSocket: '__API_SOCKET_ORIGIN__',
     errorTracking: '__SENTRY_ORIGIN__',
     images: '__EXTRA_IMAGE_ORIGINS__'
 }
@@ -47,6 +49,7 @@ export const PLACEHOLDERS = {
 export function cspTemplate(pages) {
     return policy({
         api: PLACEHOLDERS.api,
+        apiSocket: PLACEHOLDERS.apiSocket,
         errorTracking: [PLACEHOLDERS.errorTracking],
         extraImages: [PLACEHOLDERS.images],
         pages
@@ -54,7 +57,7 @@ export function cspTemplate(pages) {
 }
 
 /** The policy from origins that are already resolved (or placeholders). */
-function policy({ api, errorTracking, extraImages, pages }) {
+function policy({ api, apiSocket, errorTracking, extraImages, pages }) {
     const hashes = pages
         .flatMap(inlineScripts)
         .map((body) => `'sha256-${createHash('sha256').update(body, 'utf8').digest('base64')}'`)
@@ -74,7 +77,9 @@ function policy({ api, errorTracking, extraImages, pages }) {
         // must be listed in CSP_IMG_SRC.
         `img-src ${unique("'self'", 'data:', 'blob:', 'https:', api, ...extraImages)}`,
         "font-src 'self' data:",
-        `connect-src ${unique("'self'", api, ...errorTracking)}`,
+        // The socket's origin on its own: an https: source does not cover
+        // wss:, and only 'self' stretches to ws/wss (CSP3).
+        `connect-src ${unique("'self'", api, apiSocket, ...errorTracking)}`,
         // No frames. Something that needs one (a payment form) adds its
         // origin here, not a wildcard.
         "frame-src 'none'",

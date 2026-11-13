@@ -230,6 +230,7 @@ src/
 ├── features/       # ← most new code goes here
 │   ├── auth/       # Session store, the auth pages, Google, route and role guards
 │   ├── servers/    # Servers, channels, invites, server settings: api/ · components/ · hooks/ · lib/ · pages/ · routes.tsx
+│   ├── realtime/   # The tab's socket and its connection Banner: api/ · hooks/ · lib/ · realtime.store.ts
 │   └── users/      # api/ · components/ · hooks/ · lib/ · pages/ · routes.tsx · types.ts
 ├── hooks/          # Shared hooks
 ├── i18n/           # Translations

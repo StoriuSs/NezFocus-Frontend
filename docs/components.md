@@ -204,7 +204,10 @@ after sign-in, behind `ProtectedRoute`:
 - **The page area.** A page draws its own header with `ShellPage`
   (`src/components/shell/ShellPage.tsx`): the 48-high header with the
   title and the page's actions, a scrolling body, and an optional right
-  panel (`RightPanel` + `usePanel`).
+  panel (`RightPanel` + `usePanel`). Under the header, the connection
+  Banner when the AppShell has one (`ConnectionBanner`, C-16 `reconnecting`
+  / `offline`); a page with a message box passes `composer`, so offline adds
+  "Messages will send when you are back online".
 - **The servers dialogs** (`CreateServerDialog`, `ChannelDialogs`,
   `InviteDialog`, `JoinInviteDialog`), drawn here because many places open
   them; each is loaded with `lazy()` the first time its store opens it
@@ -235,6 +238,11 @@ page says there why a session ended (S-AUTH-03 `session-revoked`).
 ```tsx
 <Banner icon={LogOut}>{t('sessionEnded.ended')}</Banner>
 ```
+
+`variant='strip'` is the 36-high band right under a page's Header, full
+width, no corners (C-16 in the content area); `iconClassName` spins the
+`reconnecting` icon. `ConnectionBanner` (`src/components/shell/`) is the one
+user so far.
 
 ## Settings rows
 

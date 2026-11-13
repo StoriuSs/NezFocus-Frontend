@@ -96,9 +96,13 @@ Fonts (`src/styles/fonts.css`, self-hosted `.woff2` files) are never inlined
 into the stylesheet (`assetsInlineLimit` in `vite.config.ts`): each stays a
 file, so the browser downloads only the subsets a page uses.
 
-One more is loaded only when needed: **`error-sdk`**, the Sentry SDK (about
+Two more are loaded only when needed: **`error-sdk`**, the Sentry SDK (about
 30 kB gzipped). The browser downloads it only when error tracking is on, that
 is when the deployment has a DSN ([error-tracking.md](./error-tracking.md)).
+And **`socket`**, socket.io-client with `src/lib/socket.ts` (about 13 kB
+gzipped), fetched with `import()` by `useRealtimeConnection` once the
+AppShell has painted: the first screen loads over REST, live updates start a
+moment later.
 
 The files are named with a hash of their content (`index-D7I3D5tE.js`), so
 nginx can tell browsers to cache them for a year: a changed file gets a new

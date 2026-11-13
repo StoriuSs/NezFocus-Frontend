@@ -41,6 +41,11 @@
     "signOut": "Sign out"
   },
   "shell": {
+    "connection": {
+      "reconnecting": "Reconnecting…",
+      "offline": "You are offline",
+      "offlineWithComposer": "You are offline · Messages will send when you are back online"
+    },
     "comingSoon": "{{name}} · coming soon",
     "openNav": "Open navigation",
     "closePanel": "Close",

@@ -30,6 +30,9 @@ const serversApi = {
 vi.mock('@/features/auth/auth.store', () => mockAuthStore(authState))
 vi.mock('@/features/users/api/useProfile', () => ({ useProfile: () => ({ data: profile }) }))
 vi.mock('@/features/servers/api/servers.api', () => serversApi)
+// The shell opens its socket after the first paint: no network here.
+vi.mock('@/lib/socket', () => ({ openSocket: () => () => undefined }))
+vi.mock('@/features/realtime/api/realtime.api', () => ({ fetchRealtimeTicket: vi.fn() }))
 
 const { default: AppShell } = await import('@/app/layout/app-shell/AppShell')
 const { default: ChannelPage } = await import('@/features/servers/pages/ChannelPage')

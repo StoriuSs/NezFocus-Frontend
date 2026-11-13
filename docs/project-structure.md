@@ -45,7 +45,7 @@ react-starter/
     ├── components/            # Shared UI, used by more than one feature
     │   ├── ui/                # shadcn/ui primitives (button, dialog, input, tooltip…) and the project's own
     │   │                      #   (icon-button, segmented-control, select, option-cards, empty-state…)
-    │   ├── shell/             # ShellPage, RightPanel — what a page in the AppShell draws
+    │   ├── shell/             # ShellPage, RightPanel, ConnectionBanner — what a page in the AppShell draws
     │   ├── brand/             # Logo; mascot/ (Mascot, RiveMascot)
     │   ├── form/              # FormField — the label/control/error pattern; FormMessage, TimeZoneCombobox
     │   ├── settings/          # SaveBar, SettingsRow, SwitchRow — the rows of a settings page
@@ -90,6 +90,9 @@ react-starter/
     │   │   ├── routes.tsx     # serversInviteRoutes (AuthShell), serversChannelRoutes, serversSettingsRoutes (AppShell)
     │   │   ├── types.ts
     │   │   └── index.ts       # What other features may import
+    │   ├── realtime/          # The tab's socket (SRS 5.2): api/realtime.api.ts (the ticket),
+    │   │                      #   hooks/ (useRealtimeConnection, useConnectionBanner), lib/ (which
+    │   │                      #   Banner shows, what to do when the session ends), realtime.store.ts
     │   └── users/             # The profile and the account's settings
     │       ├── api/           # users.api.ts (fetchProfile, removeAvatar),
     │       │                  #   settings.api.ts (fetchSettings, settingsQuery, updateSettings), hooks, keys
@@ -229,6 +232,7 @@ Shared and feature-free.
 | `before-sign-out.ts` | Work that must be sent before the tab signs out or closes (a removed avatar waiting out its Undo); the auth store runs it while the token is still in hand |
 | `time-zones.ts` | The time zones to pick from (C-25), named and ordered, and the search over them; `wallClock()`, the calendar and clock in a zone (times shown in the account's zone) |
 | `phase-sound.ts` | `playPhaseSound()`: the phase sound, two short notes (C6 then E6) made with Web Audio (D-140), silent where the browser cannot play. "Play sample" on Notifications now, the end of a study phase later |
+| `socket.ts` | `openSocket()`: the tab's one socket.io connection (SRS 5.2), websocket only, a new ticket for each attempt, a refused handshake tried again with a growing wait, a session that ended asked about (still signed in: connect again). Loaded with `import()` after the AppShell's first paint; knows no feature (the ticket and what to do come in its options) |
 | `simple-markdown.ts` | The small Markdown subset the legal pages are written in, read into blocks React draws (never `innerHTML`) |
 
 ### `src/pages/`
@@ -320,7 +324,8 @@ Habits worth keeping:
   a feature. Needing
   many is the first sign the boundary is in the wrong place — either the thing
   belongs in `lib/` or `components/`, or the two features are really one.
-  Features import one way (`users ← auth ← servers`). When the one imported
+  Features import one way (`users ← auth ← servers`, and `auth ← realtime`:
+  a socket whose session ended asks the auth store). When the one imported
   needs the other, it declares a port and is handed it: deleting the account
   (auth) asks the servers it owns through `ServerOwnership`
   (`auth/lib/server-ownership.ts`), the servers feature answers
