@@ -1,3 +1,4 @@
+import type { RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ImageCropDialog } from '@/components/ImageCropDialog'
 import { useUpdateAvatar } from '@/features/users/api/useUpdateAvatar'
@@ -8,9 +9,18 @@ import { useUpdateAvatar } from '@/features/users/api/useUpdateAvatar'
  * dialog stays (Esc and Cancel wait, `avatar-uploading`). Saved, it closes.
  * A refusal is toasted by the query client; the dialog stays to try again.
  *
- * `src` is an object URL of the chosen file, the caller's to release.
+ * `src` is an object URL of the chosen file, the caller's to release;
+ * `returnFocus`, where the focus goes once the dialog has gone.
  */
-export function AvatarCropDialog({ src, onClose }: { src: string; onClose: () => void }) {
+export function AvatarCropDialog({
+    src,
+    returnFocus,
+    onClose
+}: {
+    src: string
+    returnFocus?: RefObject<HTMLElement | null>
+    onClose: () => void
+}) {
     const { t } = useTranslation('users')
     const upload = useUpdateAvatar()
 
@@ -22,6 +32,7 @@ export function AvatarCropDialog({ src, onClose }: { src: string; onClose: () =>
             description={t('crop.description')}
             confirmLabel={t('crop.save')}
             busy={upload.isPending}
+            returnFocus={returnFocus}
             onConfirm={(blob) => upload.mutate(blob, { onSuccess: onClose })}
             onClose={onClose}
         />

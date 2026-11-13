@@ -79,17 +79,32 @@ test('from no server to a Study Server with a picture, opened at its welcome cha
     await shoot(page, 'create-default')
 
     await dialog.getByRole('textbox', { name: 'Server name' }).fill('Ôn thi Giải tích 2')
-    await dialog.locator('input[type=file]').setInputFiles({
-        name: 'icon.png',
-        mimeType: 'image/png',
-        buffer: solidPng(400)
-    })
+    // Tab: the template, then "Choose image" (the picture tile is for the mouse, 03 › Bàn phím).
+    await dialog.getByRole('radio', { name: /Study Server/ }).focus()
+    await page.keyboard.press('Tab')
+    await expect(dialog.getByRole('button', { name: 'Choose image' })).toBeFocused()
+
+    // A wide picture, as phones and screenshots make them: cancelled first, then used.
+    const picture = { name: 'icon.png', mimeType: 'image/png', buffer: solidPng(800, 450) }
     const crop = page.getByRole('dialog', { name: 'Crop the server picture' })
+    await dialog.locator('input[type=file]').setInputFiles(picture)
+    await crop.getByRole('button', { name: 'Cancel' }).click()
+    await expect(crop).toBeHidden()
+    await expect(dialog.getByRole('button', { name: 'Choose image' })).toBeFocused()
+
+    await dialog.locator('input[type=file]').setInputFiles(picture)
     await expect(crop).toBeVisible()
+    // At its smallest the picture still fills the mask: what the mask shows is what is kept.
+    const image = await crop.locator('.reactEasyCrop_Image').boundingBox()
+    const mask = await crop.locator('.reactEasyCrop_CropArea').boundingBox()
+    expect(image!.y).toBeLessThanOrEqual(mask!.y + 0.5)
+    expect(image!.y + image!.height).toBeGreaterThanOrEqual(mask!.y + mask!.height - 0.5)
+    expect(image!.height).toBeCloseTo(mask!.height, 0)
     await shoot(page, 'icon-crop')
     await crop.getByRole('button', { name: 'Use image' }).click()
     await expect(crop).toBeHidden()
     await expect(dialog.getByRole('button', { name: 'Change image' })).toBeVisible()
+    await expect(dialog.getByRole('button', { name: 'Change image' })).toBeFocused()
 
     await dialog.getByRole('button', { name: 'Create server' }).click()
     // Created: the invite panel opens over the new server (S-SRV-02 `created`, Q5).

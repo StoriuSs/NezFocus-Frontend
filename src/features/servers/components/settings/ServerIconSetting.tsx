@@ -19,6 +19,7 @@ import { ServerIcon } from '../ServerIcon'
 export function ServerIconSetting({ server }: { server: Server }) {
     const { t } = useTranslation('servers')
     const fileInput = useRef<HTMLInputElement>(null)
+    const pickButton = useRef<HTMLButtonElement>(null)
     const [problem, setProblem] = useState<ImageProblem | null>(null)
     const [chosen, setChosen] = useState<string | null>(null)
     const upload = useUploadServerIcon(server.id)
@@ -41,9 +42,11 @@ export function ServerIconSetting({ server }: { server: Server }) {
 
     return (
         <div className='flex items-center gap-6'>
+            {/* For the mouse; the keyboard has the buttons beside it. */}
             <button
                 type='button'
                 aria-label={t('settings.overview.icon.pick')}
+                tabIndex={-1}
                 onClick={pick}
                 className='rounded-[33%] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-bg'
             >
@@ -64,7 +67,7 @@ export function ServerIconSetting({ server }: { server: Server }) {
                     <p className='text-label text-text-tertiary'>{t('settings.overview.icon.hint')}</p>
                 )}
                 <div className='flex gap-2'>
-                    <Button type='button' variant='outline' size='sm' onClick={pick}>
+                    <Button ref={pickButton} type='button' variant='outline' size='sm' onClick={pick}>
                         {server.iconUrl ? t('settings.overview.icon.change') : t('settings.overview.icon.upload')}
                     </Button>
                     {server.iconUrl ? (
@@ -103,6 +106,7 @@ export function ServerIconSetting({ server }: { server: Server }) {
                     description={t('crop.description')}
                     confirmLabel={t('crop.confirm')}
                     busy={upload.isPending}
+                    returnFocus={pickButton}
                     onConfirm={(blob) => upload.mutate(blob, { onSuccess: closeCrop })}
                     onClose={closeCrop}
                 />

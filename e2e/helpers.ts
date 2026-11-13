@@ -114,9 +114,9 @@ export async function submitPatiently(page: Page, button: string): Promise<void>
 
 /**
  * A small PNG of one colour, made here: a real image the browser can crop and
- * the API can decode, without a fixture file.
+ * the API can decode, without a fixture file. Square unless a height is given.
  */
-export function solidPng(size = 64): Buffer {
+export function solidPng(size = 64, height = size): Buffer {
     const chunk = (type: string, data: Buffer) => {
         const body = Buffer.concat([Buffer.from(type, 'ascii'), data])
         const length = Buffer.alloc(4)
@@ -127,14 +127,14 @@ export function solidPng(size = 64): Buffer {
     }
     const header = Buffer.alloc(13)
     header.writeUInt32BE(size, 0)
-    header.writeUInt32BE(size, 4)
+    header.writeUInt32BE(height, 4)
     header[8] = 8 // bits per channel
     header[9] = 2 // RGB
     const row = Buffer.concat([Buffer.from([0]), Buffer.from('33aa77'.repeat(size), 'hex')])
     return Buffer.concat([
         Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
         chunk('IHDR', header),
-        chunk('IDAT', zlib.deflateSync(Buffer.concat(Array.from({ length: size }, () => row)))),
+        chunk('IDAT', zlib.deflateSync(Buffer.concat(Array.from({ length: height }, () => row)))),
         chunk('IEND', Buffer.alloc(0))
     ])
 }

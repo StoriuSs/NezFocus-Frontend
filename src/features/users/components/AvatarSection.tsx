@@ -21,6 +21,7 @@ export function AvatarSection({ profile }: { profile: UserProfile }) {
     const { t } = useTranslation('users')
     const queryClient = useQueryClient()
     const fileInput = useRef<HTMLInputElement>(null)
+    const changeButton = useRef<HTMLButtonElement>(null)
     const [problem, setProblem] = useState<ImageProblem | null>(null)
     const [chosen, setChosen] = useState<string | null>(null)
     const refreshAvatar = useAvatarErrorRefresh(profile.avatarUrl)
@@ -43,9 +44,11 @@ export function AvatarSection({ profile }: { profile: UserProfile }) {
 
     return (
         <div className='flex items-center gap-6'>
+            {/* For the mouse and a dropped file; the keyboard has the buttons beside it. */}
             <button
                 type='button'
                 aria-label={t('profile.avatar.label')}
+                tabIndex={-1}
                 onClick={() => fileInput.current?.click()}
                 onDragOver={(event) => event.dataTransfer.types.includes('Files') && event.preventDefault()}
                 onDrop={drop}
@@ -65,7 +68,13 @@ export function AvatarSection({ profile }: { profile: UserProfile }) {
             </button>
             <div className='grid gap-2'>
                 <div className='flex gap-2'>
-                    <Button type='button' variant='outline' size='sm' onClick={() => fileInput.current?.click()}>
+                    <Button
+                        ref={changeButton}
+                        type='button'
+                        variant='outline'
+                        size='sm'
+                        onClick={() => fileInput.current?.click()}
+                    >
                         {t('profile.avatar.change')}
                     </Button>
                     {profile.avatarUrl ? (
@@ -100,6 +109,7 @@ export function AvatarSection({ profile }: { profile: UserProfile }) {
                 <AvatarCropDialog
                     key={chosen}
                     src={chosen}
+                    returnFocus={changeButton}
                     onClose={() => {
                         // An object URL pins the file in memory until released.
                         URL.revokeObjectURL(chosen)

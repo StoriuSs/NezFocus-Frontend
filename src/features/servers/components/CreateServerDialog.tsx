@@ -109,7 +109,6 @@ export default function CreateServerDialog() {
     function closeCrop() {
         if (chosen) URL.revokeObjectURL(chosen)
         setChosen(null)
-        chooseButton.current?.focus()
     }
 
     function drop(event: DragEvent) {
@@ -221,9 +220,11 @@ export default function CreateServerDialog() {
                     </div>
 
                     <div className='flex items-start gap-4'>
+                        {/* For the mouse and a dropped file; the keyboard has "Choose image" beside it. */}
                         <button
                             type='button'
                             aria-label={t('create.icon.pick')}
+                            tabIndex={-1}
                             disabled={creating}
                             onClick={() => fileInput.current?.click()}
                             onDragOver={(event) => event.dataTransfer.types.includes('Files') && event.preventDefault()}
@@ -367,6 +368,7 @@ export default function CreateServerDialog() {
                     title={t('crop.title')}
                     description={t('crop.description')}
                     confirmLabel={t('crop.confirm')}
+                    returnFocus={chooseButton}
                     onConfirm={(blob) => {
                         setIcon({ blob, url: URL.createObjectURL(blob) })
                         closeCrop()
