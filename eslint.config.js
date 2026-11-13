@@ -64,6 +64,24 @@ export default defineConfig([
             'react-hooks/set-state-in-effect': 'off'
         }
     },
+    // A message of the chat takes focus (C-10 › Accessibility, S-CHAT-01 ›
+    // Focus): Tab reaches the list, ↑ / ↓ go from message to message,
+    // Shift+F10 opens its menu. That is the WAI-ARIA feed pattern, focusable
+    // articles, which jsx-a11y's strict set refuses on <article>. Only this
+    // file, only those two rules (CONSTRAINTS.md › Exceptions, E2).
+    {
+        files: ['src/features/messaging/components/MessageRow.tsx'],
+        rules: {
+            'jsx-a11y/no-noninteractive-tabindex': ['error', { tags: ['article'], roles: [] }],
+            'jsx-a11y/no-noninteractive-element-interactions': [
+                'error',
+                {
+                    handlers: ['onClick', 'onMouseDown', 'onMouseUp', 'onKeyPress', 'onKeyDown', 'onKeyUp'],
+                    article: ['onKeyDown']
+                }
+            ]
+        }
+    },
     // Shared code knows no feature: the API client gets the session through
     // connectApiSession (main.tsx), not by importing the auth store.
     {
