@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { env } from '@/config/env'
 import { fetchRealtimeTicket } from '../api/realtime.api'
+import { emitRealtimeEvent } from '../lib/realtime-events'
 import { endSession } from '../lib/session-end'
 import { useRealtimeStore } from '../realtime.store'
 
@@ -11,7 +12,8 @@ import { useRealtimeStore } from '../realtime.store'
  *
  * The socket code is fetched after the shell's first paint (import(), its
  * own chunk): the first screen loads over REST as before, and live updates
- * start once `ready` comes. Leaving the shell (signing out) closes it.
+ * start once `ready` comes. What it hears goes to the features listening
+ * (`onRealtimeEvent`). Leaving the shell (signing out) closes it.
  */
 export function useRealtimeConnection(): void {
     useEffect(() => {
@@ -29,8 +31,13 @@ export function useRealtimeConnection(): void {
                 close = openSocket({
                     url: new URL(env.VITE_API_URL).origin,
                     getTicket: fetchRealtimeTicket,
-                    onStatus: (status) => useRealtimeStore.getState().setSocket(status),
-                    onSessionEnded: endSession
+                    onStatus: (status) => {
+                        useRealtimeStore.getState().setSocket(status)
+                        // Live again: what was missed meanwhile is read now (ARCHITECTURE 3.4).
+                        if (status === 'connected') emitRealtimeEvent('ready', undefined)
+                    },
+                    onSessionEnded: endSession,
+                    onEvent: emitRealtimeEvent
                 })
             })
         }, 0)

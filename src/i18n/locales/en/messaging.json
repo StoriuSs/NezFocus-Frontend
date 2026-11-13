@@ -1,0 +1,43 @@
+{
+  "time": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "yesterdayAt": "Yesterday at {{time}}",
+    "full": "{{weekday}}, {{date}} at {{time}}",
+    "weekday_0": "Sunday",
+    "weekday_1": "Monday",
+    "weekday_2": "Tuesday",
+    "weekday_3": "Wednesday",
+    "weekday_4": "Thursday",
+    "weekday_5": "Friday",
+    "weekday_6": "Saturday"
+  },
+  "list": {
+    "label": "Messages in #{{channel}}",
+    "loading": "Loading messages",
+    "loadError": "Couldn't load messages",
+    "retry": "Try again",
+    "newMessages_one": "{{count}} new message",
+    "newMessages_other": "{{count}} new messages",
+    "toLatest": "Jump to the latest messages"
+  },
+  "intro": {
+    "title": "Welcome to #{{channel}}",
+    "body": "This is the start of the channel. Send the first message."
+  },
+  "message": {
+    "deletedAccount": "Deleted account",
+    "failed": "Couldn't send",
+    "retry": "Try again",
+    "discard": "Discard",
+    "rateLimited_one": "You're sending too fast · sending again in {{count}} second",
+    "rateLimited_other": "You're sending too fast · sending again in {{count}} seconds",
+    "waiting": "Will send when you're back online",
+    "sending": "Sending"
+  },
+  "composer": {
+    "placeholder": "Message #{{channel}}",
+    "left": "{{count}} left",
+    "tooLong": "Messages can be at most 2000 characters"
+  }
+}

@@ -22,6 +22,8 @@ a few small Zustand stores, or in a component.**
 | A removed avatar waiting out its "Undo" | `useAvatarRemoval`, `src/features/users/lib/avatar-removal-state.ts` | read by `useProfile` |
 | A form's values and errors | React Hook Form | [shadcn-forms.md](./shadcn-forms.md) |
 | Which servers dialog is open, and on what (create a server, a channel or category dialog, invite friends, join from an invite, leave, hand over or delete a server) | `useCreateServerDialog`, `useChannelDialogs`, `useInviteDialogs`, `useMembershipDialogs` (`src/features/servers/*.store.ts`); the AppShell draws the dialogs | `useCreateServerDialog((s) => s.show)` |
+| A channel's history, and the messages typed there not saved yet (`sending`, `waiting`, `rate-limited`, `failed`) | TanStack Query, key `messageKeys.channel(id)`: the not-yet-saved ones on the last page (`outgoing`), matched by nonce when the saved copy comes (ARCHITECTURE 10.2) | `useChannelMessages`, `useSendMessage` in `src/features/messaging/api/` |
+| What is typed in a channel's composer | `sessionStorage`, one key per channel, until the tab closes (C-12) | `useDraft` (`src/features/messaging/hooks/`) |
 | The tab's connection: the socket's state, the browser online or not (S-SHELL-01) | `useRealtimeStore`, `src/features/realtime/realtime.store.ts`, kept by `useRealtimeConnection` in the AppShell | `useConnectionBanner()`, which Banner the page shows |
 | Whether a dialog its own component opens is open, a tab, a hover | `useState` in the component | — |
 

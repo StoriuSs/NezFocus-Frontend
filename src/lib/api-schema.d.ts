@@ -877,6 +877,28 @@ export interface paths {
         patch?: never
         trace?: never
     }
+    '/api/v1/channels/{channelId}/messages': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        /** A page of history, oldest first; the newest when no cursor is given (D-48). */
+        get: operations['MessagingController_list_v1']
+        put?: never
+        /**
+         * Send a message (REQ-MSG-01): SEND_MESSAGES, then the limits (REQ-MSG-10),
+         *     then saved and told to the channel as `message.created`. A nonce already
+         *     used answers with that message, told to no one again.
+         */
+        post: operations['MessagingController_send_v1']
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
 }
 export type webhooks = Record<string, never>
 export interface components {
@@ -1515,6 +1537,59 @@ export interface components {
             ticket: string
             /** @description How long it can still be spent: 30 seconds. */
             expires_in_seconds: number
+        }
+        MessageAuthorResponseDto: {
+            id: string
+            username: string | null
+            display_name: string | null
+            avatar_url: string | null
+        }
+        MessageResponseDto: {
+            /**
+             * @description `system`: made by the app (REQ-MSG-08), with no author.
+             * @enum {string}
+             */
+            type: 'regular' | 'system'
+            /** @description Null on a system message (D-168). */
+            author: components['schemas']['MessageAuthorResponseDto'] | null
+            /** @description What a system message reports (`member_joined`, `message_pinned`); null on a regular one. */
+            system_event: string | null
+            /** @description Whom a system message is about (`{ user_id }`, D-168); null on a regular one. */
+            system_data: {
+                [key: string]: unknown
+            } | null
+            /**
+             * Format: date-time
+             * @description Shown as "edited"; null if never edited.
+             */
+            edited_at: string | null
+            id: string
+            channel_id: string
+            /** @description Plain text; empty on a system message. */
+            content: string
+            /** Format: date-time */
+            created_at: string
+        }
+        MessagePageResponseDto: {
+            items: components['schemas']['MessageResponseDto'][]
+            /** @description Older messages exist: ask with `before` = the first id. */
+            has_more_before: boolean
+            /** @description Newer messages exist: ask with `after` = the last id. */
+            has_more_after: boolean
+        }
+        SendMessageRequestDto: {
+            /**
+             * @description At most 2000 characters, an emoji counting as one. Spaces and blank lines
+             *     around it are dropped; nothing left is refused (VALIDATION_ERROR).
+             */
+            content: string
+            /**
+             * @description Chosen by the client for this message and kept across its retries: the
+             *     same nonce again answers with the message already sent (REQ-MSG-10),
+             *     and `message.created` carries it back so the sender's "sending" copy
+             *     is swapped for the saved one.
+             */
+            nonce: string
         }
     }
     responses: never
@@ -3300,6 +3375,70 @@ export interface operations {
                     'application/json': {
                         meta: components['schemas']['ApiResponseMetaDto']
                         data: components['schemas']['RealtimeTicketResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    MessagingController_list_v1: {
+        parameters: {
+            query?: {
+                /** @description Messages older than this id: scrolling up. */
+                before?: string
+                /** @description Messages newer than this id: catching up after a lost connection. */
+                after?: string
+                /** @description This message and those on both sides of it: opening a link to a message. */
+                around?: string
+                /** @description 1-100; 50 when left out. */
+                limit?: number
+            }
+            header?: never
+            path: {
+                channelId: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['MessagePageResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    MessagingController_send_v1: {
+        parameters: {
+            query?: never
+            header: {
+                /** @description UUID identifying one user intent */
+                'Idempotency-Key': string
+            }
+            path: {
+                channelId: string
+            }
+            cookie?: never
+        }
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['SendMessageRequestDto']
+            }
+        }
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['MessageResponseDto']
                     }
                 }
             }

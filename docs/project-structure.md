@@ -92,7 +92,11 @@ react-starter/
     │   │   └── index.ts       # What other features may import
     │   ├── realtime/          # The tab's socket (SRS 5.2): api/realtime.api.ts (the ticket),
     │   │                      #   hooks/ (useRealtimeConnection, useConnectionBanner), lib/ (which
-    │   │                      #   Banner shows, what to do when the session ends), realtime.store.ts
+    │   │                      #   Banner shows, what to do when the session ends, realtime-events.ts:
+    │   │                      #   onRealtimeEvent for the features keeping data), realtime.store.ts
+    │   ├── messaging/         # A text channel's chat (S-CHAT-01), lazy (index.ts: ChannelChat):
+    │   │                      #   api/ (history, sending, liveMessages: socket events into the cache),
+    │   │                      #   components/, hooks/ (scrolling, drafts), lib/ (cache changes, rows, times)
     │   └── users/             # The profile and the account's settings
     │       ├── api/           # users.api.ts (fetchProfile, removeAvatar),
     │       │                  #   settings.api.ts (fetchSettings, settingsQuery, updateSettings), hooks, keys
@@ -324,8 +328,11 @@ Habits worth keeping:
   a feature. Needing
   many is the first sign the boundary is in the wrong place — either the thing
   belongs in `lib/` or `components/`, or the two features are really one.
-  Features import one way (`users ← auth ← servers`, and `auth ← realtime`:
-  a socket whose session ended asks the auth store). When the one imported
+  Features import one way (`users ← auth ← servers`, `auth ← realtime`:
+  a socket whose session ended asks the auth store, and
+  `users, realtime ← messaging ← servers`: the channel page shows the chat,
+  which hears the socket through `onRealtimeEvent`, realtime knowing no
+  feature). When the one imported
   needs the other, it declares a port and is handed it: deleting the account
   (auth) asks the servers it owns through `ServerOwnership`
   (`auth/lib/server-ownership.ts`), the servers feature answers

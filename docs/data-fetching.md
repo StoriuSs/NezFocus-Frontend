@@ -342,6 +342,26 @@ refetched when the window regains focus (`refetchOnWindowFocus: false`), but
 the server list is, every time (`'always'` in `useServers`: `true` only
 reads a list older than the 5-minute stale time; see below).
 
+## Kept live by the socket
+
+A channel's history (`useChannelMessages`, `src/features/messaging/api/`)
+is read once and never again on its own (`staleTime: Infinity`): socket
+events change the cache instead (ARCHITECTURE 10.2). `liveMessages.ts`
+listens through realtime's `onRealtimeEvent`, once per query client:
+`message.created` goes into its channel's history if that history is
+loaded, and each `ready` (the socket live again) reads what every loaded
+history missed with `after=<newest id>`; more than 100 missed and the
+history starts over from the newest page. The changes themselves are pure
+functions (`lib/message-cache.ts`), tested without React.
+
+Sending (`useSendMessage`) puts the message in the cache at once with a
+nonce and swaps it for the saved copy (the answer or the event, whichever
+comes first, taken in once). One at a time per channel, in the order typed;
+a 429 waits out `Retry-After` and goes again by itself, no network waits for
+the browser to be back online, anything else is `failed` with "Try again"
+(the same nonce, so never twice) and "Discard". The row says what happened,
+so the mutation opts out of the error toast.
+
 ## A server one is no longer in
 
 Until M2 brings live updates, the app learns that someone was kicked, banned,

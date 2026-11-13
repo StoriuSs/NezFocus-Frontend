@@ -1,9 +1,11 @@
+import { Suspense } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
 import { Hash, LampDesk, Volume2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { PageLoader } from '@/components/PageLoader'
 import { ShellPage } from '@/components/shell/ShellPage'
 import { EmptyState } from '@/components/ui/empty-state'
+import { ChannelChat } from '@/features/messaging'
 import { useServers } from '../api/useServers'
 import { firstTextChannel } from '../lib/channel-list'
 import { channelPath } from '../lib/paths'
@@ -13,8 +15,8 @@ import { channelPath } from '../lib/paths'
  * channel they cannot see, lands on its first text channel (02 S-SHELL-01).
  * A server they are not in (any more) leads back to the Study page.
  *
- * M1 has the Header only: messages arrive in M2, voice rooms in M4 (D-144),
- * which until then say so.
+ * A text channel holds its chat (S-CHAT-01, the messaging feature's), a
+ * chunk of its own; voice rooms come in M4 (D-144), which until then say so.
  */
 export default function ChannelPage() {
     const { t } = useTranslation()
@@ -47,5 +49,11 @@ export default function ChannelPage() {
         )
     }
 
-    return <ShellPage title={channel.name} icon={Hash} />
+    return (
+        <ShellPage title={channel.name} icon={Hash} composer bodyClassName='flex flex-col overflow-y-hidden'>
+            <Suspense fallback={<PageLoader className='min-h-0 flex-1' />}>
+                <ChannelChat key={channel.id} channelId={channel.id} channelName={channel.name} />
+            </Suspense>
+        </ShellPage>
+    )
 }

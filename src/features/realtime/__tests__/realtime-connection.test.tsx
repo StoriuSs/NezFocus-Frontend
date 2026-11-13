@@ -24,6 +24,7 @@ const { useRealtimeConnection } = await import('../hooks/useRealtimeConnection')
 const { endSession } = await import('../lib/session-end')
 const { useConnectionBanner } = await import('../hooks/useConnectionBanner')
 const { useRealtimeStore } = await import('../realtime.store')
+const { onRealtimeEvent } = await import('../lib/realtime-events')
 
 function Shell() {
     useRealtimeConnection()
@@ -60,6 +61,22 @@ describe('The AppShell socket', () => {
         expect(useRealtimeStore.getState().socket).toBe('idle')
     })
 
+    it('hands what the socket hears to the listeners, and tells them each time it is live again', async () => {
+        const created = vi.fn()
+        const ready = vi.fn()
+        const stops = [onRealtimeEvent('message.created', created), onRealtimeEvent('ready', ready)]
+        render(<Shell />)
+        await afterFirstPaint()
+
+        act(() => opened!.onStatus('connected'))
+        act(() => opened!.onEvent?.('message.created', { nonce: 'n1' }))
+        act(() => opened!.onStatus('down'))
+        act(() => opened!.onStatus('connected'))
+
+        expect(created).toHaveBeenCalledWith({ nonce: 'n1' })
+        expect(ready).toHaveBeenCalledTimes(2)
+        stops.forEach((stop) => stop())
+    })
     it('shows reconnecting once the socket has been down 3 seconds, and nothing once it is back', async () => {
         render(<Shell />)
         await afterFirstPaint()

@@ -148,7 +148,11 @@ lazily: `src/features/auth/index.ts` has
 `export const ConfirmPasswordDialog = lazy(() => import('./components/ConfirmPasswordDialog'))`.
 The first download carries only that `lazy()` wrapper; the dialog, its form
 and the emailed-code reset are a chunk of their own, fetched the first time
-the servers feature's handover step opens it (inside a `Suspense`). A type
+the servers feature's handover step opens it (inside a `Suspense`). A
+channel's chat is the same: `src/features/messaging/index.ts` exports
+`ChannelChat` lazily, and the servers feature's `ChannelPage` shows it in a
+`Suspense`; its hooks, words and components come with it (6.9 kB gzipped at
+M2 L3). A type
 export (`export type { ConfirmPasswordDialogProps }`) costs nothing.
 
 Check after adding to an index, or importing one from somewhere new: run

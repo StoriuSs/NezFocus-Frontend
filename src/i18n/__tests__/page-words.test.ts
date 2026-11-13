@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest'
 // name the module that forgot.
 
 const src = resolve(__dirname, '../..')
-const LAZY = ['settings', 'deletion', 'servers'] as const
+const LAZY = ['settings', 'deletion', 'servers', 'messaging'] as const
 
 /** The code without its comments: words named in a comment are not a use, nor is an import there. */
 const withoutComments = (code: string) => code.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:\\])\/\/.*$/gm, '$1')
