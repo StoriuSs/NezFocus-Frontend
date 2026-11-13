@@ -4,6 +4,8 @@ import type { ApiModel } from '@/lib/api-types'
 /** A saved message, as history pages, the send route and `message.created` give it. */
 export type Message = ApiModel<'MessageResponseDto'>
 export type MessageAuthor = ApiModel<'MessageAuthorResponseDto'>
+/** The message a reply answers, as its reply line shows it; only its id once deleted (REQ-MSG-05). */
+export type RepliedMessage = ApiModel<'RepliedMessageResponseDto'>
 /** A page of history, oldest first. */
 export type MessagePage = ApiModel<'MessagePageResponseDto'>
 
@@ -35,6 +37,8 @@ export interface OutgoingMessage {
     state: OutgoingState
     /** `rate-limited`: when it goes again (ms since epoch). */
     retryAt?: number
+    /** The message it answers, quoted as the saved one will be. */
+    replyTo?: RepliedMessage | null
 }
 
 /** A page as kept in the cache: the last one also holds the messages not saved yet. */
@@ -48,4 +52,31 @@ export type ChannelMessages = InfiniteData<CachedPage, MessageCursor>
 /** What the list draws: a saved message or one on its way. */
 export type ChatMessage = Message | OutgoingMessage
 
+/**
+ * What the person may do with messages in the channel, read from the
+ * channel's permissions by the page that shows the chat (the servers
+ * feature: messaging does not read permission bits). The backend still
+ * refuses on its own (REQ-MSG-05, SRS 1.70).
+ */
+export interface ChatPermissions {
+    /** SEND_MESSAGES: reply, and edit one's own messages. */
+    send: boolean
+    /** MANAGE_MESSAGES: delete anyone's message. */
+    manage: boolean
+    /** Not timed out: delete one's own messages. */
+    deleteOwn: boolean
+}
+
 export const isOutgoing = (message: ChatMessage): message is OutgoingMessage => 'state' in message
+
+/** What can be done to a saved message, handed down by the chat to its rows (stable, so rows do not draw again). */
+export interface MessageHandlers {
+    /** Whose messages are "one's own". */
+    me: string | undefined
+    permissions: ChatPermissions
+    reply: (message: Message) => void
+    edit: (message: Message) => void
+    askDelete: (message: Message) => void
+    copyText: (message: Message) => void
+    copyLink: (message: Message) => void
+}

@@ -22,6 +22,7 @@ const message = (n: number, who = person): Message => ({
     content: `Tin ${n}`,
     systemEvent: null,
     systemData: null,
+    replyTo: null,
     editedAt: null,
     createdAt: new Date(Date.UTC(2026, 9, 18, 13, n)).toISOString()
 })

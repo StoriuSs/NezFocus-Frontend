@@ -1,7 +1,7 @@
 import type { QueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import { onRealtimeEvent } from '@/features/realtime'
-import { addNewer, addSaved, lastSavedId, startOver } from '../lib/message-cache'
+import { addNewer, addSaved, lastSavedId, removeSaved, replaceSaved, startOver } from '../lib/message-cache'
 import type { ChannelMessages, Message } from '../types'
 import { messageKeys } from './keys'
 import { fetchMessages } from './messages.api'
@@ -19,9 +19,11 @@ function listenToWindow(type: 'beforeunload', listener: (event: BeforeUnloadEven
 
 /**
  * Keep every open channel history in the cache live (ARCHITECTURE 10.2,
- * 3.4): `message.created` goes into its channel's history when that history
- * is loaded (a channel never opened has nothing to keep), and each time the
- * socket is live again, every loaded history reads what it missed.
+ * 3.4): `message.created`, `message.updated` and `message.deleted` change
+ * their channel's history when that history is loaded (a channel never
+ * opened has nothing to keep), and each time the socket is live again, every
+ * loaded history reads the newer messages it missed. An edit or a deletion
+ * missed while the socket was down shows once the channel is read again.
  *
  * A message heard while a history's first page is still on its way may be
  * missing from that page: once the page is in, the history catches up
@@ -45,6 +47,20 @@ export function listenForMessages(client: QueryClient): () => void {
             const key = messageKeys.channel(message.channelId)
             if (client.getQueryState(key)?.status === 'pending') heardWhileLoading.add(message.channelId)
             client.setQueryData<ChannelMessages>(key, (history) => history && addSaved(history, message, nonce))
+        }),
+        onRealtimeEvent('message.updated', (data) => {
+            const { message } = data as { message: Message }
+            client.setQueryData<ChannelMessages>(
+                messageKeys.channel(message.channelId),
+                (history) => history && replaceSaved(history, message)
+            )
+        }),
+        onRealtimeEvent('message.deleted', (data) => {
+            const { id, channelId } = data as { id: string; channelId: string }
+            client.setQueryData<ChannelMessages>(
+                messageKeys.channel(channelId),
+                (history) => history && removeSaved(history, id)
+            )
         }),
         onRealtimeEvent('ready', () => {
             for (const [key] of client.getQueriesData<ChannelMessages>({ queryKey: [...messageKeys.all, 'channel'] })) {

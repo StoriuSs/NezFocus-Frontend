@@ -1,13 +1,15 @@
+import { useState, type FocusEvent } from 'react'
 import { ArrowDown, CloudOff } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import '@/i18n/messaging'
 import { Button } from '@/components/ui/button'
 import { useChatScroll } from '../hooks/useChatScroll'
 import type { ChatRow } from '../lib/chat-rows'
+import { isOutgoing, type MessageHandlers } from '../types'
 import { dayLabel } from '../lib/message-time'
 import { ChannelIntro } from './ChannelIntro'
 import { DateDivider } from './DateDivider'
-import { MessageRow } from './MessageRow'
+import { MessageRow, type EditorState } from './MessageRow'
 import { MessageSkeletons } from './MessageSkeletons'
 
 interface MessageListProps {
@@ -22,6 +24,9 @@ interface MessageListProps {
     online: boolean
     onRetry: (nonce: string) => unknown
     onDiscard: (nonce: string) => void
+    handlers: MessageHandlers
+    /** The message being edited, and its editor. */
+    editing?: { messageId: string; editor: EditorState }
 }
 
 /**
@@ -29,6 +34,10 @@ interface MessageListProps {
  * out politely as messages arrive (C-10 › Accessibility). The channel's
  * beginning (ChannelIntro) shows above the first message once nothing older
  * is left, so an empty channel has it at the bottom.
+ *
+ * Tab reaches one message, the newest at first, then the one last focused;
+ * ↑ / ↓ go to the one before or after (C-10 › Accessibility, S-CHAT-01 ›
+ * Focus).
  */
 export function MessageList({
     channelName,
@@ -40,10 +49,23 @@ export function MessageList({
     timeZone,
     online,
     onRetry,
-    onDiscard
+    onDiscard,
+    handlers,
+    editing
 }: MessageListProps) {
     const { t } = useTranslation('messaging')
     const { list, onScroll, away, newCount, toBottom } = useChatScroll(rows, older)
+    const [focused, setFocused] = useState<string>()
+    // The messages drawn: a system message is not one yet (it draws nothing before L10).
+    const keys = rows.flatMap((row) =>
+        row.kind === 'message' && (isOutgoing(row.message) || row.message.type === 'regular') ? [row.key] : []
+    )
+    const tabbable = focused && keys.includes(focused) ? focused : keys.at(-1)
+
+    const focusIn = (event: FocusEvent<HTMLElement>) => {
+        const key = (event.target as HTMLElement).closest('article')?.dataset.rowKey
+        if (key) setFocused(key)
+    }
 
     if (status === 'error') {
         return (
@@ -62,6 +84,7 @@ export function MessageList({
             <div
                 ref={list}
                 onScroll={onScroll}
+                onFocus={focusIn}
                 role='log'
                 aria-label={t('list.label', { channel: channelName })}
                 aria-busy={status === 'loading' || older.loading || undefined}
@@ -88,6 +111,7 @@ export function MessageList({
                                 ) : (
                                     <MessageRow
                                         key={row.key}
+                                        rowKey={row.key}
                                         message={row.message}
                                         grouped={row.grouped}
                                         now={now}
@@ -95,6 +119,9 @@ export function MessageList({
                                         online={online}
                                         onRetry={onRetry}
                                         onDiscard={onDiscard}
+                                        handlers={handlers}
+                                        editor={editing?.messageId === row.key ? editing.editor : undefined}
+                                        tabbable={row.key === tabbable}
                                     />
                                 )
                             )}

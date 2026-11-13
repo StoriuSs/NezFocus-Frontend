@@ -1,6 +1,14 @@
 import { describe, it, expect } from 'vitest'
 import { matchPath } from 'react-router-dom'
-import { channelPath, invitePath, roleEditPath, SERVERS_PATHS, serverSettingsPath } from '@/features/servers/lib/paths'
+import {
+    channelPath,
+    invitePath,
+    messageLink,
+    messagePath,
+    roleEditPath,
+    SERVERS_PATHS,
+    serverSettingsPath
+} from '@/features/servers/lib/paths'
 
 describe('the servers paths', () => {
     it('build the addresses the pages had before SERVERS_PATHS', () => {
@@ -29,5 +37,15 @@ describe('the servers paths', () => {
             roleId: 'mod'
         })
         expect(matchPath(SERVERS_PATHS.invite, invitePath('Ab12Cd34'))?.params).toEqual({ code: 'Ab12Cd34' })
+    })
+
+    it('build a link to a message that opens its route (D-48)', () => {
+        expect(messagePath('ot', 'hoi-dap', 'm1')).toBe('/channels/ot/hoi-dap/m1')
+        expect(messageLink('ot', 'hoi-dap', 'm1')).toBe(`${window.location.origin}/channels/ot/hoi-dap/m1`)
+        expect(matchPath(SERVERS_PATHS.message, messagePath('ot', 'hoi-dap', 'm1'))?.params).toEqual({
+            serverId: 'ot',
+            channelId: 'hoi-dap',
+            messageId: 'm1'
+        })
     })
 })

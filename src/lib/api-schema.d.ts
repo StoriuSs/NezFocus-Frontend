@@ -890,13 +890,39 @@ export interface paths {
         /**
          * Send a message (REQ-MSG-01): SEND_MESSAGES, then the limits (REQ-MSG-10),
          *     then saved and told to the channel as `message.created`. A nonce already
-         *     used answers with that message, told to no one again.
+         *     used answers with that message, told to no one again. `reply_to_id`
+         *     answers a regular message of the channel (REQ-MSG-05).
          */
         post: operations['MessagingController_send_v1']
         delete?: never
         options?: never
         head?: never
         patch?: never
+        trace?: never
+    }
+    '/api/v1/messages/{messageId}': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        post?: never
+        /**
+         * One's own message unless timed out, anyone's with MANAGE_MESSAGES; told
+         *     to the channel as `message.deleted`.
+         */
+        delete: operations['MessageController_delete_v1']
+        options?: never
+        head?: never
+        /**
+         * New text for one's own message, while one may still post in the
+         *     channel; marked edited and told to the channel as `message.updated`.
+         *     Answers with the message as it now is (D-169).
+         */
+        patch: operations['MessageController_edit_v1']
         trace?: never
     }
 }
@@ -1544,6 +1570,15 @@ export interface components {
             display_name: string | null
             avatar_url: string | null
         }
+        RepliedMessageResponseDto: {
+            /** @description Null once that message is deleted. */
+            author: components['schemas']['MessageAuthorResponseDto'] | null
+            id: string
+            /** @description Its text as it is now (edits show); empty once deleted. */
+            content: string
+            /** @description The reply line says "the original message was deleted" (REQ-MSG-05). */
+            deleted: boolean
+        }
         MessageResponseDto: {
             /**
              * @description `system`: made by the app (REQ-MSG-08), with no author.
@@ -1558,6 +1593,8 @@ export interface components {
             system_data: {
                 [key: string]: unknown
             } | null
+            /** @description The message this one answers; null if none (REQ-MSG-05). */
+            reply_to: components['schemas']['RepliedMessageResponseDto'] | null
             /**
              * Format: date-time
              * @description Shown as "edited"; null if never edited.
@@ -1578,10 +1615,7 @@ export interface components {
             has_more_after: boolean
         }
         SendMessageRequestDto: {
-            /**
-             * @description At most 2000 characters, an emoji counting as one. Spaces and blank lines
-             *     around it are dropped; nothing left is refused (VALIDATION_ERROR).
-             */
+            /** @description 1-2000 characters, an emoji counting as one, once the blank around it is dropped. */
             content: string
             /**
              * @description Chosen by the client for this message and kept across its retries: the
@@ -1590,6 +1624,15 @@ export interface components {
              *     is swapped for the saved one.
              */
             nonce: string
+            /**
+             * Format: uuid
+             * @description The message this one answers: a regular message of the same channel, deleted or not (REQ-MSG-05).
+             */
+            reply_to_id?: string
+        }
+        EditMessageRequestDto: {
+            /** @description 1-2000 characters, an emoji counting as one, once the blank around it is dropped. */
+            content: string
         }
     }
     responses: never
@@ -3432,6 +3475,58 @@ export interface operations {
         }
         responses: {
             201: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['MessageResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    MessageController_delete_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                messageId: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: null
+                    }
+                }
+            }
+        }
+    }
+    MessageController_edit_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                messageId: string
+            }
+            cookie?: never
+        }
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['EditMessageRequestDto']
+            }
+        }
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown
                 }

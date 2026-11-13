@@ -1,0 +1,8 @@
+/*
+ * The chat's classes (tailwind.messaging.config.js): only the utilities the
+ * messaging feature's files use, loaded with the chat's chunk. The base
+ * styles and the design tokens come from src/index.css, loaded first.
+ */
+@config "../../../tailwind.messaging.config.js";
+
+@tailwind utilities;

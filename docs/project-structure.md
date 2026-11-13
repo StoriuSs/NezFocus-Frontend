@@ -95,8 +95,10 @@ react-starter/
     │   │                      #   Banner shows, what to do when the session ends, realtime-events.ts:
     │   │                      #   onRealtimeEvent for the features keeping data), realtime.store.ts
     │   ├── messaging/         # A text channel's chat (S-CHAT-01), lazy (index.ts: ChannelChat):
-    │   │                      #   api/ (history, sending, liveMessages: socket events into the cache),
-    │   │                      #   components/, hooks/ (scrolling, drafts), lib/ (cache changes, rows, times)
+    │   │                      #   api/ (history, sending, editing and deleting, liveMessages: socket
+    │   │                      #   events into the cache), components/ (list, row, toolbar and menu,
+    │   │                      #   editor, delete dialog, composer), hooks/ (scrolling, drafts),
+    │   │                      #   lib/ (cache changes, rows, times), messaging.css (the chat's classes)
     │   └── users/             # The profile and the account's settings
     │       ├── api/           # users.api.ts (fetchProfile, removeAvatar),
     │       │                  #   settings.api.ts (fetchSettings, settingsQuery, updateSettings), hooks, keys

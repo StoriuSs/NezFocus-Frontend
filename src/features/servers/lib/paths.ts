@@ -8,6 +8,8 @@ import type { SettingsSection } from './settings-sections'
 export const SERVERS_PATHS = {
     /** A server's channel; without one, the page opens the first text channel. */
     channel: '/channels/:serverId/:channelId?',
+    /** A message of a channel (D-48): the channel opens; going to the message comes with M2 L4b. */
+    message: '/channels/:serverId/:channelId/:messageId',
     /** The server settings; without a section, the first one they see. */
     settings: '/servers/:serverId/settings/:section?',
     /**
@@ -22,6 +24,14 @@ export const SERVERS_PATHS = {
 /** `/channels/{server}[/{channel}]`. */
 export const channelPath = (serverId: string, channelId?: string) =>
     `/channels/${serverId}${channelId ? `/${channelId}` : ''}`
+
+/** `/channels/{server}/{channel}/{message}`. */
+export const messagePath = (serverId: string, channelId: string, messageId: string) =>
+    `${channelPath(serverId, channelId)}/${messageId}`
+
+/** The whole link to a message, to copy (S-CHAT-03 "Copy message link", REQ-MSG-05). */
+export const messageLink = (serverId: string, channelId: string, messageId: string) =>
+    new URL(messagePath(serverId, channelId, messageId), window.location.origin).toString()
 
 /** `/servers/{id}/settings[/{section}]`. */
 export const serverSettingsPath = (serverId: string, section?: SettingsSection) =>

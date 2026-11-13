@@ -1,4 +1,4 @@
-import { Suspense } from 'react'
+import { Suspense, useCallback, useMemo } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
 import { Hash, LampDesk, Volume2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -7,8 +7,10 @@ import { ShellPage } from '@/components/shell/ShellPage'
 import { EmptyState } from '@/components/ui/empty-state'
 import { ChannelChat } from '@/features/messaging'
 import { useServers } from '../api/useServers'
+import { chatPermissions } from '../lib/chat-permissions'
 import { firstTextChannel } from '../lib/channel-list'
-import { channelPath } from '../lib/paths'
+import { channelPath, messageLink } from '../lib/paths'
+import type { Server, ServerChannel } from '../types'
 
 /**
  * A channel of one of their servers. Opening a server without a channel, or a
@@ -49,10 +51,36 @@ export default function ChannelPage() {
         )
     }
 
+    return <TextChannel key={channel.id} server={server} channel={channel} />
+}
+
+/**
+ * A text channel's page: its chat, with what one may do with messages there
+ * (read from the permission bits here, as the chat reads none) and how to
+ * link to one of them. Both kept from one render to the next while they
+ * stay the same, so the chat's rows do not draw again.
+ */
+function TextChannel({ server, channel }: { server: Server; channel: ServerChannel }) {
+    const { id: serverId, timeoutUntil } = server
+    const { id: channelId, permissions: bits } = channel
+    const permissions = useMemo(
+        () => chatPermissions({ timeoutUntil }, { permissions: bits }, new Date()),
+        [timeoutUntil, bits]
+    )
+    const linkTo = useCallback(
+        (messageId: string) => messageLink(serverId, channelId, messageId),
+        [serverId, channelId]
+    )
+
     return (
         <ShellPage title={channel.name} icon={Hash} composer bodyClassName='flex flex-col overflow-y-hidden'>
             <Suspense fallback={<PageLoader className='min-h-0 flex-1' />}>
-                <ChannelChat key={channel.id} channelId={channel.id} channelName={channel.name} />
+                <ChannelChat
+                    channelId={channelId}
+                    channelName={channel.name}
+                    permissions={permissions}
+                    linkTo={linkTo}
+                />
             </Suspense>
         </ShellPage>
     )

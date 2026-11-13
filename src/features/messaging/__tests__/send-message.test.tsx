@@ -23,6 +23,7 @@ const savedFrom = (body: { content: string }, id = 'm9'): Message => ({
     content: body.content,
     systemEvent: null,
     systemData: null,
+    replyTo: null,
     editedAt: null,
     createdAt: new Date().toISOString()
 })
@@ -168,6 +169,18 @@ describe('Sending a message (REQ-MSG-01, C-10 sending / failed / rate-limited)',
         setOnline(true)
         act(() => void window.dispatchEvent(new Event('online')))
         await waitFor(() => expect(savedIds()).toEqual(['m9']))
+    })
+
+    it('drops, without a word, a message saved then deleted before its answer came (REQ-MSG-10)', async () => {
+        sendMessage.mockRejectedValueOnce(apiError(404, 'NOT_FOUND_ERROR'))
+        sendMessage.mockImplementation(async (_channel, body) => savedFrom(body))
+        const hook = setUp()
+
+        act(() => void hook.current.send('Đã bị xóa'))
+        act(() => void hook.current.send('Tin sau'))
+
+        await waitFor(() => expect(savedIds()).toEqual(['m9']))
+        expect(outgoing()).toEqual([])
     })
 
     it('waits for the network when the request got no answer', async () => {

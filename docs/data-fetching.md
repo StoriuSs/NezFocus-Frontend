@@ -349,7 +349,9 @@ is read once and never again on its own (`staleTime: Infinity`): socket
 events change the cache instead (ARCHITECTURE 10.2). `liveMessages.ts`
 listens through realtime's `onRealtimeEvent`, once per query client:
 `message.created` goes into its channel's history if that history is
-loaded, and each `ready` (the socket live again) reads what every loaded
+loaded, `message.updated` swaps a message in (and the reply lines quoting
+it), `message.deleted` takes it out (its reply lines then say it was
+deleted), and each `ready` (the socket live again) reads what every loaded
 history missed with `after=<newest id>`; more than 100 missed and the
 history starts over from the newest page. The changes themselves are pure
 functions (`lib/message-cache.ts`), tested without React.
@@ -361,6 +363,14 @@ a 429 waits out `Retry-After` and goes again by itself, no network waits for
 the browser to be back online, anything else is `failed` with "Try again"
 (the same nonce, so never twice) and "Discard". The row says what happened,
 so the mutation opts out of the error toast.
+
+Editing and deleting (`useEditMessage`, `useDeleteMessage`) change the
+cache with the answer, then the event brings the same change, which changes
+nothing. A `NOT_FOUND` means the message went meanwhile: it leaves the list
+(the open editor closes with "This message was deleted", once, and not for
+one's own delete); any other failure is a Toast. A send answered
+`NOT_FOUND` for a nonce whose message was deleted meanwhile drops the copy
+on its way, without a word (REQ-MSG-10).
 
 ## A server one is no longer in
 

@@ -18,6 +18,7 @@ const saved = (id: string, channelId = 'hoi-dap'): Message => ({
     content: `Tin ${id}`,
     systemEvent: null,
     systemData: null,
+    replyTo: null,
     editedAt: null,
     createdAt: '2026-10-18T13:02:00.000Z'
 })
@@ -50,6 +51,24 @@ describe('Keeping open histories live (ARCHITECTURE 3.4, 10.2)', () => {
 
         expect(ids()).toEqual(['m1', 'm2'])
         expect(history('tai-lieu')).toBeUndefined()
+    })
+
+    it('swaps an edited message heard on the socket into its channel (REQ-MSG-05)', () => {
+        client.setQueryData(messageKeys.channel('hoi-dap'), cached(['m1', 'm2']))
+
+        emitRealtimeEvent('message.updated', {
+            message: { ...saved('m1'), content: 'Đã sửa', editedAt: '2026-10-18T13:05:00.000Z' }
+        })
+
+        expect(history()?.pages[0]?.items[0]).toMatchObject({ content: 'Đã sửa', editedAt: '2026-10-18T13:05:00.000Z' })
+    })
+
+    it('drops a message deleted elsewhere from its channel (REQ-MSG-05)', () => {
+        client.setQueryData(messageKeys.channel('hoi-dap'), cached(['m1', 'm2']))
+
+        emitRealtimeEvent('message.deleted', { id: 'm1', channelId: 'hoi-dap' })
+
+        expect(ids()).toEqual(['m2'])
     })
 
     it('listens once per query client, however many lists mount', () => {

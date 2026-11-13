@@ -35,6 +35,7 @@ const message = (id: string, author: typeof BINH, content: string, createdAt: st
     content,
     systemEvent: null,
     systemData: null,
+    replyTo: null,
     editedAt: null,
     createdAt
 })
@@ -52,7 +53,13 @@ function renderChat(
             <TooltipProvider>
                 <button type='button'>Nút khác</button>
                 <div className='flex h-[600px] flex-col'>
-                    <ChannelChat key={channelId} channelId={channelId} channelName={channelId} />
+                    <ChannelChat
+                        key={channelId}
+                        linkTo={(id) => `/channels/ot/${channelId}/${id}`}
+                        channelId={channelId}
+                        channelName={channelId}
+                        permissions={{ send: true, manage: false, deleteOwn: true }}
+                    />
                 </div>
             </TooltipProvider>
         </QueryClientProvider>

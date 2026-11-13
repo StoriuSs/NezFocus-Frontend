@@ -44,7 +44,9 @@ const type = (size, lineHeight, fontWeight) => [`${size}px`, { lineHeight: `${li
 /** @type {import('tailwindcss').Config} */
 export default {
     darkMode: 'class',
-    content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
+    // The chat's own classes go in its own stylesheet (tailwind.messaging.config.js),
+    // loaded with its chunk, not in the one loaded before the first screen.
+    content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}', '!./src/features/messaging/**'],
     theme: {
         container: {
             center: true,

@@ -152,7 +152,23 @@ the servers feature's handover step opens it (inside a `Suspense`). A
 channel's chat is the same: `src/features/messaging/index.ts` exports
 `ChannelChat` lazily, and the servers feature's `ChannelPage` shows it in a
 `Suspense`; its hooks, words and components come with it (6.9 kB gzipped at
-M2 L3). A type
+M2 L3, 12 kB at L4a). Its classes come with it too: a second Tailwind
+config (`tailwind.messaging.config.js`) builds `messaging.css` from the
+messaging feature's files only, `ChannelChat` imports it, and Vite emits it
+as the chunk's own stylesheet; `tailwind.config.js` leaves that folder out,
+so the stylesheet loaded before the first screen does not grow with the chat
+(CONSTRAINTS.md, "Chat CSS" in `.size-limit.mjs`; owner's call at M2 L4a).
+
+The chat's file holds only the classes the rest of the app does not use:
+its config blocks every class candidate of the other files, read with
+Tailwind's own extractor. It loads after the main file, and a class written
+in both would beat the main file's rules everywhere in the app, not only in
+the chat (first seen at L4a: the chat's plain `text-center` turned
+DialogHeader's `text-center sm:text-left` centred in every dialog once a
+channel opened). `pnpm size` fails if the two files share a class. A class
+the chat starts using that another feature already uses simply comes from
+the main file.
+A type
 export (`export type { ConfirmPasswordDialogProps }`) costs nothing.
 
 Check after adding to an index, or importing one from somewhere new: run

@@ -12,7 +12,10 @@ const InvitePage = lazy(() => import('@/features/servers/pages/InvitePage'))
 export const serversInviteRoutes: RouteObject[] = [{ path: SERVERS_PATHS.invite, element: <InvitePage /> }]
 
 /** A server's channels, for a signed-in user (the router puts them in the AppShell). */
-export const serversChannelRoutes: RouteObject[] = [{ path: SERVERS_PATHS.channel, element: <ChannelPage /> }]
+export const serversChannelRoutes: RouteObject[] = [
+    { path: SERVERS_PATHS.channel, element: <ChannelPage /> },
+    { path: SERVERS_PATHS.message, element: <ChannelPage /> }
+]
 
 /** A server's settings, for a signed-in user (the router puts them in the AppShell). */
 export const serversSettingsRoutes: RouteObject[] = [

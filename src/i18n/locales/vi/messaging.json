@@ -33,11 +33,45 @@
     "rateLimited_one": "Bạn gửi quá nhanh · tự gửi lại sau {{count}} giây",
     "rateLimited_other": "Bạn gửi quá nhanh · tự gửi lại sau {{count}} giây",
     "waiting": "Sẽ gửi khi có mạng",
-    "sending": "Đang gửi"
+    "sending": "Đang gửi",
+    "edited": "(đã chỉnh sửa)",
+    "editedAt": "Đã sửa {{time}}",
+    "label": "{{name}}, {{time}}: {{content}}",
+    "replyTo": "Trả lời {{name}}",
+    "replyDeleted": "Tin nhắn gốc đã bị xóa",
+    "gone": "Tin nhắn này đã bị xóa",
+    "labelReply": "{{name}}, {{time}}, trả lời {{replyTo}}: {{content}}",
+    "labelReplyDeleted": "{{name}}, {{time}}, trả lời tin đã bị xóa: {{content}}"
   },
   "composer": {
     "placeholder": "Nhắn #{{channel}}",
     "left": "còn {{count}}",
     "tooLong": "Tin nhắn dài quá 2000 ký tự"
+  },
+  "actions": {
+    "toolbar": "Thao tác với tin nhắn",
+    "reply": "Trả lời",
+    "more": "Thêm",
+    "edit": "Sửa",
+    "copyText": "Sao chép chữ",
+    "copyLink": "Sao chép link tin",
+    "delete": "Xóa tin nhắn",
+    "copied": "Đã sao chép",
+    "copyFailed": "Không sao chép được"
+  },
+  "edit": {
+    "label": "Sửa tin nhắn",
+    "hint": "Esc để hủy · Enter để lưu"
+  },
+  "reply": {
+    "replying": "Đang trả lời",
+    "cancel": "Hủy trả lời"
+  },
+  "delete": {
+    "title": "Xóa tin nhắn?",
+    "bodyOwn": "Tin của bạn sẽ bị xóa với mọi người trong kênh.",
+    "bodyOthers": "Tin của {{name}} sẽ bị xóa với mọi người trong kênh.",
+    "cancel": "Hủy",
+    "confirm": "Xóa"
   }
 }

@@ -5,6 +5,8 @@ import {
     addSaved,
     dropOutgoing,
     lastSavedId,
+    removeSaved,
+    replaceSaved,
     setOutgoingState,
     startOver
 } from '../lib/message-cache'
@@ -20,6 +22,7 @@ const saved = (id: string): Message => ({
     content: `Tin ${id}`,
     systemEvent: null,
     systemData: null,
+    replyTo: null,
     editedAt: null,
     createdAt: '2026-10-18T13:02:00.000Z'
 })
@@ -107,5 +110,67 @@ describe('A channel history in the cache, with messages on their way (ARCHITECTU
         expect(ids(data)).toEqual(['m90'])
         expect(data.pageParams).toEqual([null])
         expect(nonces(data)).toEqual(['n1'])
+    })
+})
+
+describe('Edits and deletions in the cache (REQ-MSG-05)', () => {
+    const answering = (id: string, original: Message): Message => ({
+        ...saved(id),
+        replyTo: { id: original.id, author: original.author, content: original.content, deleted: false }
+    })
+    const outgoingAnswer = (nonce: string, original: Message): OutgoingMessage => ({
+        ...outgoing(nonce),
+        replyTo: { id: original.id, author: original.author, content: original.content, deleted: false }
+    })
+    const withReplies = () => {
+        const data = history({ ids: ['m1'] }, { ids: [] })
+        data.pages[1]!.items = [answering('m2', saved('m1'))]
+        return addOutgoing(data, outgoingAnswer('n1', saved('m1')))
+    }
+
+    it('swaps an edited message in its place, and in the reply lines that quote it', () => {
+        const edited = { ...saved('m1'), content: 'Câu 4 đổi cận', editedAt: '2026-10-18T13:05:00.000Z' }
+
+        const data = replaceSaved(withReplies(), edited)
+
+        expect(data.pages[0]!.items[0]).toEqual(edited)
+        expect(data.pages[1]!.items[0]!.replyTo).toMatchObject({ content: 'Câu 4 đổi cận', deleted: false })
+        expect(data.pages[1]!.outgoing![0]!.replyTo).toMatchObject({ content: 'Câu 4 đổi cận' })
+    })
+
+    it('keeps a newer edit when an older one arrives late', () => {
+        const newer = { ...saved('m1'), content: 'Bản sau', editedAt: '2026-10-18T13:06:00.000Z' }
+        const older = { ...saved('m1'), content: 'Bản trước', editedAt: '2026-10-18T13:05:00.000Z' }
+
+        const data = replaceSaved(replaceSaved(history({ ids: ['m1'] }), newer), older)
+
+        expect(data.pages[0]!.items[0]!.content).toBe('Bản sau')
+    })
+
+    it('brings back no quote of a message deleted before its edit arrived', () => {
+        const edited = { ...saved('m1'), content: 'Sửa muộn', editedAt: '2026-10-18T13:05:00.000Z' }
+
+        const data = replaceSaved(removeSaved(withReplies(), 'm1'), edited)
+
+        expect(data.pages[1]!.items[0]!.replyTo).toMatchObject({ deleted: true, content: '' })
+    })
+
+    it('ignores an edit of a message it does not hold', () => {
+        const data = history({ ids: ['m1'] })
+        expect(replaceSaved(data, saved('m9'))).toBe(data)
+    })
+
+    it('drops a deleted message; the replies to it say it was deleted', () => {
+        const data = removeSaved(withReplies(), 'm1')
+
+        expect(ids(data)).toEqual(['m2'])
+        const deleted = { id: 'm1', author: null, content: '', deleted: true }
+        expect(data.pages[1]!.items[0]!.replyTo).toEqual(deleted)
+        expect(data.pages[1]!.outgoing![0]!.replyTo).toEqual(deleted)
+    })
+
+    it('leaves a history that never held the deleted message as it was', () => {
+        const data = history({ ids: ['m1'] })
+        expect(removeSaved(data, 'm9')).toBe(data)
     })
 })

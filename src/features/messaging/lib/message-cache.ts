@@ -1,4 +1,12 @@
-import type { CachedPage, ChannelMessages, Message, MessagePage, OutgoingMessage, OutgoingState } from '../types'
+import type {
+    CachedPage,
+    ChannelMessages,
+    Message,
+    MessagePage,
+    OutgoingMessage,
+    OutgoingState,
+    RepliedMessage
+} from '../types'
 
 /*
  * Changes to a channel's history in the cache (ARCHITECTURE 10.2), as pure
@@ -89,4 +97,74 @@ export function addNewer(data: ChannelMessages, missed: MessagePage): ChannelMes
 export function startOver(data: ChannelMessages, latest: MessagePage): ChannelMessages {
     const outgoing = data.pages.at(-1)?.outgoing
     return { pages: [{ ...latest, ...(outgoing?.length ? { outgoing } : {}) }], pageParams: [null] }
+}
+
+/** A message quoted in a reply line, as it now is; null when no line quotes it. */
+type Quote = (replyTo: RepliedMessage) => RepliedMessage
+
+/**
+ * Every page with `change` applied to its saved messages and to the reply
+ * lines quoting message `id`, saved or on their way. The same object back
+ * when nothing changed, so a list not holding them does not draw again.
+ */
+function changeEverywhere(
+    data: ChannelMessages,
+    id: string,
+    items: (items: Message[]) => Message[],
+    quote: Quote
+): ChannelMessages {
+    let changed = false
+    const requote = <T extends { replyTo?: RepliedMessage | null }>(message: T): T => {
+        if (message.replyTo?.id !== id) return message
+        const replyTo = quote(message.replyTo)
+        if (replyTo === message.replyTo) return message
+        changed = true
+        return { ...message, replyTo }
+    }
+    const pages = data.pages.map((page) => {
+        const kept = items(page.items)
+        if (kept !== page.items) changed = true
+        return {
+            ...page,
+            items: kept.map(requote),
+            ...(page.outgoing ? { outgoing: page.outgoing.map(requote) } : {})
+        }
+    })
+    return changed ? { ...data, pages } : data
+}
+
+/** Whether `edit` is older than what the list holds: events of two edits may cross. */
+const olderThan = (edit: Message, held: Message) => !!held.editedAt && (!edit.editedAt || edit.editedAt < held.editedAt)
+
+/**
+ * `message.updated`, or the answer to one's own edit: the message in its
+ * place, and the reply lines quoting it (they show its text as it now is).
+ * An edit older than the one held is late and changes nothing; neither does
+ * one of a message already deleted here (`message.deleted` came first), so a
+ * reply line that says "deleted" stays so.
+ */
+export function replaceSaved(data: ChannelMessages, message: Message): ChannelMessages {
+    const held = data.pages.flatMap((page) => page.items).find((item) => item.id === message.id)
+    if (held && olderThan(message, held)) return data
+    return changeEverywhere(
+        data,
+        message.id,
+        (items) => (held ? items.map((item) => (item.id === message.id ? message : item)) : items),
+        (replyTo) =>
+            replyTo.deleted ? replyTo : { ...replyTo, author: message.author, content: message.content, deleted: false }
+    )
+}
+
+/**
+ * `message.deleted`, or one's own delete: the message leaves the list (the
+ * history no longer shows it), and the reply lines quoting it say "the
+ * original message was deleted" (REQ-MSG-05).
+ */
+export function removeSaved(data: ChannelMessages, id: string): ChannelMessages {
+    return changeEverywhere(
+        data,
+        id,
+        (items) => (items.some((item) => item.id === id) ? items.filter((item) => item.id !== id) : items),
+        () => ({ id, author: null, content: '', deleted: true })
+    )
 }

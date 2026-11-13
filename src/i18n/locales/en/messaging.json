@@ -33,11 +33,45 @@
     "rateLimited_one": "You're sending too fast · sending again in {{count}} second",
     "rateLimited_other": "You're sending too fast · sending again in {{count}} seconds",
     "waiting": "Will send when you're back online",
-    "sending": "Sending"
+    "sending": "Sending",
+    "edited": "(edited)",
+    "editedAt": "Edited {{time}}",
+    "label": "{{name}}, {{time}}: {{content}}",
+    "replyTo": "Replying to {{name}}",
+    "replyDeleted": "Original message was deleted",
+    "gone": "This message was deleted",
+    "labelReply": "{{name}}, {{time}}, replying to {{replyTo}}: {{content}}",
+    "labelReplyDeleted": "{{name}}, {{time}}, replying to a deleted message: {{content}}"
   },
   "composer": {
     "placeholder": "Message #{{channel}}",
     "left": "{{count}} left",
     "tooLong": "Messages can be at most 2000 characters"
+  },
+  "actions": {
+    "toolbar": "Message actions",
+    "reply": "Reply",
+    "more": "More",
+    "edit": "Edit",
+    "copyText": "Copy text",
+    "copyLink": "Copy message link",
+    "delete": "Delete message",
+    "copied": "Copied",
+    "copyFailed": "Couldn't copy"
+  },
+  "edit": {
+    "label": "Edit message",
+    "hint": "Esc to cancel · Enter to save"
+  },
+  "reply": {
+    "replying": "Replying to",
+    "cancel": "Cancel reply"
+  },
+  "delete": {
+    "title": "Delete message?",
+    "bodyOwn": "Your message will be deleted for everyone in the channel.",
+    "bodyOthers": "{{name}}'s message will be deleted for everyone in the channel.",
+    "cancel": "Cancel",
+    "confirm": "Delete"
   }
 }

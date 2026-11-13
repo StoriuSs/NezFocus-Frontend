@@ -4,7 +4,7 @@ import { onRealtimeEvent } from '@/features/realtime'
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation'
 import { getApiErrorType, NETWORK_ERROR, retryAfterSeconds } from '@/lib/api-error'
 import { addOutgoing, addSaved, dropOutgoing, setOutgoingState } from '../lib/message-cache'
-import type { ChannelMessages, MessageAuthor, OutgoingMessage, OutgoingState } from '../types'
+import type { ChannelMessages, MessageAuthor, OutgoingMessage, OutgoingState, RepliedMessage } from '../types'
 import { messageKeys } from './keys'
 import { sendMessage } from './messages.api'
 
@@ -19,12 +19,15 @@ const ON_ITS_WAY = new Set<OutgoingState>(['sending', 'queued', 'waiting', 'rate
  * - no network (offline when typed, or no answer): `waiting`, sent again
  *   when the browser is back online;
  * - too fast (429): `rate-limited`, sent again by itself after Retry-After;
+ * - not found: the message was saved, then deleted before this answer came
+ *   (a retry of its nonce, REQ-MSG-10), so the copy leaves without a word;
  * - anything else: `failed`, until "Try again" (the same nonce, so never
  *   twice, REQ-MSG-10) or "Discard".
  * One at a time per channel, in the order typed: a message typed while an
  * earlier one is still on its way is `queued` behind it, so a later message
  * never overtakes one waiting out the limit.
- * The row itself says what happened, so no error toast.
+ * The row itself says what happened, so no error toast. A reply carries the
+ * message it answers, quoted at once as the saved one will be (REQ-MSG-05).
  */
 export function useSendMessage(channelId: string, author: MessageAuthor | undefined) {
     const client = useQueryClient()
@@ -35,7 +38,7 @@ export function useSendMessage(channelId: string, author: MessageAuthor | undefi
         [client, key]
     )
     const { mutateAsync } = useIdempotentMutation({
-        mutationFn: (body: { content: string; nonce: string }, idempotencyKey: string) =>
+        mutationFn: (body: { content: string; nonce: string; replyToId?: string }, idempotencyKey: string) =>
             sendMessage(channelId, body, idempotencyKey),
         meta: { errorToast: false }
     })
@@ -49,15 +52,19 @@ export function useSendMessage(channelId: string, author: MessageAuthor | undefi
     const next = useRef<() => void>(() => undefined)
 
     const deliver = useCallback(
-        async ({ nonce, content }: OutgoingMessage) => {
+        async ({ nonce, content, replyTo }: OutgoingMessage) => {
             update((history) => setOutgoingState(history, nonce, 'sending'))
             try {
-                const saved = await mutateAsync({ content, nonce })
+                const saved = await mutateAsync({ content, nonce, ...(replyTo ? { replyToId: replyTo.id } : {}) })
                 update((history) => addSaved(history, saved, nonce))
             } catch (error) {
                 const wait = retryAfterSeconds(error)
-                if (getApiErrorType(error) === NETWORK_ERROR) {
+                const type = getApiErrorType(error)
+                if (type === NETWORK_ERROR) {
                     update((history) => setOutgoingState(history, nonce, 'waiting'))
+                } else if (type === 'NOT_FOUND_ERROR') {
+                    // Saved, then deleted before this retry's answer (REQ-MSG-10): nothing to show.
+                    update((history) => dropOutgoing(history, nonce))
                 } else if (wait) {
                     update((history) => setOutgoingState(history, nonce, 'rate-limited', Date.now() + wait * 1000))
                 } else {
@@ -122,7 +129,7 @@ export function useSendMessage(channelId: string, author: MessageAuthor | undefi
 
     /** Whether the message was taken: not when blank, or before the history (where it shows) is loaded. */
     const send = useCallback(
-        (text: string): boolean => {
+        (text: string, replyTo?: RepliedMessage | null): boolean => {
             const content = text.trim()
             if (!content || !author || !client.getQueryData<ChannelMessages>(key)) return false
             const message: OutgoingMessage = {
@@ -131,6 +138,7 @@ export function useSendMessage(channelId: string, author: MessageAuthor | undefi
                 content,
                 author,
                 createdAt: new Date().toISOString(),
+                ...(replyTo ? { replyTo } : {}),
                 state: outgoing().some((item) => ON_ITS_WAY.has(item.state))
                     ? 'queued'
                     : navigator.onLine

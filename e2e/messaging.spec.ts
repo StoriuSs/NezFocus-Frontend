@@ -170,6 +170,53 @@ test("two browsers see each other's messages at once, and none is lost or double
     await binh.context.close()
 })
 
+test('an edit, a reply and a deletion reach the other browser at once (REQ-MSG-05)', async ({ browser }) => {
+    test.setTimeout(90_000)
+    const an = await openAs(browser, anEmail)
+    const binh = await openAs(browser, binhEmail)
+    const article = (page: Page, text: string) => log(page).locator('article').filter({ hasText: text }).last()
+
+    await say(an.page, 'Ok, mình vào sớm giữ chỗ')
+    await seenOnce(binh.page, 'Ok, mình vào sớm giữ chỗ')
+
+    // ↑ in the empty composer edits An's last message; Bình sees the new text, marked edited.
+    await an.page.getByRole('textbox', { name: `Message #${channelName}` }).press('ArrowUp')
+    const editor = an.page.getByRole('textbox', { name: 'Edit message' })
+    await editor.fill('Mình vào phòng rồi nhé')
+    await shoot(an.page, 'chat01-edit-mode')
+    await editor.press('Enter')
+    // The text and "(edited)" share one paragraph: look for the label in the message.
+    await expect(article(binh.page, 'Mình vào phòng rồi nhé').getByText('(edited)')).toBeVisible({ timeout: 15_000 })
+
+    // Bình answers it; An sees whom the reply answers.
+    await article(binh.page, 'Mình vào phòng rồi nhé').hover()
+    await article(binh.page, 'Mình vào phòng rồi nhé').getByRole('button', { name: 'Reply' }).click()
+    await expect(binh.page.getByText('Replying to')).toBeVisible()
+    await shoot(binh.page, 'chat01-reply-mode')
+    await say(binh.page, 'Mình giữ chỗ cạnh An rồi nè')
+    await seenOnce(an.page, 'Mình giữ chỗ cạnh An rồi nè')
+    const reply = article(an.page, 'Mình giữ chỗ cạnh An rồi nè')
+    await expect(reply.getByText('Mình vào phòng rồi nhé')).toBeVisible()
+
+    // An deletes the original: it leaves Bình's list, and the reply says so.
+    const original = an.page.getByRole('article', { name: /^An, .*: Mình vào phòng rồi nhé/ })
+    await original.hover()
+    await original.getByRole('button', { name: 'More' }).click()
+    await shoot(an.page, 'chat03-own')
+    await an.page.getByRole('menuitem', { name: 'Delete message' }).click()
+    const dialog = an.page.getByRole('dialog', { name: 'Delete message?' })
+    await shoot(an.page, 'chat03-delete-confirm')
+    await dialog.getByRole('button', { name: 'Delete' }).click()
+    await expect(binh.page.getByRole('article', { name: /^An, .*: Mình vào phòng rồi nhé/ })).toHaveCount(0)
+    await expect(
+        article(binh.page, 'Mình giữ chỗ cạnh An rồi nè').getByText('Original message was deleted')
+    ).toBeVisible()
+
+    expect([...an.problems, ...binh.problems]).toEqual([])
+    await an.context.close()
+    await binh.context.close()
+})
+
 test('messages past 5 in 5 seconds wait, then go by themselves, each once and in order', async ({ browser }) => {
     test.setTimeout(60_000)
     const an = await openAs(browser, anEmail)
