@@ -74,10 +74,9 @@ function Overview({ server }: { server: Server }) {
     return (
         <div className='flex w-full max-w-settings flex-1 flex-col gap-8 p-6 pb-6 lg:p-8 lg:pb-6'>
             <ServerIconSetting server={server} />
-            <ServerNameForm server={server}>
+            <ServerNameForm server={server} after={server.isOwner ? <OwnerSettings server={server} /> : null}>
                 <WelcomeChannelSetting server={server} />
             </ServerNameForm>
-            {server.isOwner ? <OwnerSettings server={server} /> : null}
         </div>
     )
 }

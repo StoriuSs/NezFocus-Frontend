@@ -89,6 +89,10 @@ test('changes the picture, the name and the welcome channel from Overview', asyn
     await expect(rail(page).getByRole('link', { name: 'Ôn thi Giải tích 2' })).toHaveAttribute('aria-current', 'page')
     const welcome = page.getByRole('combobox', { name: 'Welcome channel' })
     await expect(welcome).toHaveText('# chao-mung')
+    // "Owner" follows the fields, as in the frame, not pushed to the bottom of the page.
+    const owner = page.getByRole('region', { name: 'Owner' })
+    const welcomeBox = (await welcome.boundingBox())!
+    expect((await owner.boundingBox())!.y - (welcomeBox.y + welcomeBox.height)).toBeLessThan(100)
     await shoot(page, 'set-owner')
 
     // The picture: cropped, uploaded at once.
@@ -109,6 +113,9 @@ test('changes the picture, the name and the welcome channel from Overview', asyn
     await shoot(page, 'set-name-error')
     await name.fill('Ôn thi Giải tích 2 – K22')
     await expect(page.getByText('You have unsaved changes')).toBeVisible()
+    // The save bar still floats 24 above the bottom of the content, after "Owner".
+    const bar = (await page.getByText('You have unsaved changes').locator('..').boundingBox())!
+    expect(bar.y + bar.height).toBeCloseTo(page.viewportSize()!.height - 24, 0)
     await shoot(page, 'set-editing')
     await name.press('Enter')
     await expect(page.getByText('Changes saved')).toBeVisible()

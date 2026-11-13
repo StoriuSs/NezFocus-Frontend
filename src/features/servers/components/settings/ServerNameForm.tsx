@@ -1,5 +1,5 @@
 import '@/i18n/servers'
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { useBlocker } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -28,11 +28,22 @@ import type { Server } from '../../types'
  * typed is never wiped. Enter saves, Esc discards. Leaving with a draft asks
  * first (`discard-confirm`, as S-ME-02); closing the tab, the browser asks.
  *
- * `children` go under the field and above the save bar: settings saved on
- * their own that the page lists after the name.
+ * `children` go under the field, in the form: settings saved on their own
+ * that the page lists after the name. `after` follows the form and comes
+ * before the save bar, outside the form (the owner's settings, Q15): the
+ * save bar floats at the bottom of the page, not between them.
  */
-export function ServerNameForm({ server, children }: { server: Server; children?: ReactNode }) {
+export function ServerNameForm({
+    server,
+    children,
+    after
+}: {
+    server: Server
+    children?: ReactNode
+    after?: ReactNode
+}) {
     const { t } = useTranslation('servers')
+    const formId = useId()
     const update = useUpdateServer(server.id)
     const input = useRef<HTMLInputElement>(null)
     const [draft, setDraft] = useState<string | null>(null)
@@ -83,46 +94,49 @@ export function ServerNameForm({ server, children }: { server: Server; children?
     const length = serverNameLength(value)
 
     return (
-        <form onSubmit={save} className='flex flex-1 flex-col gap-8' noValidate>
-            <div className='max-w-[400px]'>
-                <FormField
-                    label={t('settings.overview.name.label')}
-                    error={invalid ? t('settings.overview.name.invalid') : undefined}
-                    action={
-                        <span
-                            className={cn(
-                                'font-numeric tabular-nums',
-                                length >= SERVER_NAME_MAX_LENGTH ? 'text-text-secondary' : 'text-text-tertiary'
-                            )}
-                        >
-                            {length}/{SERVER_NAME_MAX_LENGTH}
-                        </span>
-                    }
-                >
-                    {(field) => (
-                        <Input
-                            ref={input}
-                            {...field}
-                            value={value}
-                            readOnly={update.isPending}
-                            autoComplete='off'
-                            onChange={(event) => {
-                                // Typing stops at the limit, counted as the API counts.
-                                setDraft([...event.target.value].slice(0, SERVER_NAME_MAX_LENGTH).join(''))
-                                setInvalid(false)
-                            }}
-                            onKeyDown={(event) => {
-                                if (event.key === 'Escape' && dirty) {
-                                    event.preventDefault()
-                                    discard()
-                                }
-                            }}
-                        />
-                    )}
-                </FormField>
-            </div>
-            {children}
-            {dirty ? <SaveBar saving={update.isPending} onDiscard={discard} /> : null}
+        <>
+            <form id={formId} onSubmit={save} className='flex flex-col gap-8' noValidate>
+                <div className='max-w-[400px]'>
+                    <FormField
+                        label={t('settings.overview.name.label')}
+                        error={invalid ? t('settings.overview.name.invalid') : undefined}
+                        action={
+                            <span
+                                className={cn(
+                                    'font-numeric tabular-nums',
+                                    length >= SERVER_NAME_MAX_LENGTH ? 'text-text-secondary' : 'text-text-tertiary'
+                                )}
+                            >
+                                {length}/{SERVER_NAME_MAX_LENGTH}
+                            </span>
+                        }
+                    >
+                        {(field) => (
+                            <Input
+                                ref={input}
+                                {...field}
+                                value={value}
+                                readOnly={update.isPending}
+                                autoComplete='off'
+                                onChange={(event) => {
+                                    // Typing stops at the limit, counted as the API counts.
+                                    setDraft([...event.target.value].slice(0, SERVER_NAME_MAX_LENGTH).join(''))
+                                    setInvalid(false)
+                                }}
+                                onKeyDown={(event) => {
+                                    if (event.key === 'Escape' && dirty) {
+                                        event.preventDefault()
+                                        discard()
+                                    }
+                                }}
+                            />
+                        )}
+                    </FormField>
+                </div>
+                {children}
+            </form>
+            {after}
+            {dirty ? <SaveBar saving={update.isPending} onDiscard={discard} form={formId} /> : null}
             <Dialog open={blocker.state === 'blocked'} onOpenChange={(open) => !open && blocker.reset?.()}>
                 <DialogContent className='sm:max-w-dialog'>
                     <DialogHeader>
@@ -146,6 +160,6 @@ export function ServerNameForm({ server, children }: { server: Server; children?
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </form>
+        </>
     )
 }

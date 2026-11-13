@@ -7,9 +7,10 @@ import { Button } from '@/components/ui/button'
  * Place it last in the form, shown only while the form has changes: it
  * floats 24 above the bottom of the content area, as wide as the content,
  * and at the end of the page it sits after the last field, never over it.
- * "Save changes" submits the form.
+ * "Save changes" submits the form; placed after the form instead (settings
+ * that are not the form's come between), `form` names the form's id.
  */
-export function SaveBar({ saving, onDiscard }: { saving: boolean; onDiscard: () => void }) {
+export function SaveBar({ saving, onDiscard, form }: { saving: boolean; onDiscard: () => void; form?: string }) {
     const { t } = useTranslation()
     return (
         <div className='sticky bottom-6 mt-auto pt-8'>
@@ -18,7 +19,7 @@ export function SaveBar({ saving, onDiscard }: { saving: boolean; onDiscard: () 
                 <Button type='button' variant='text' size='sm' disabled={saving} onClick={onDiscard}>
                     {t('saveBar.discard')}
                 </Button>
-                <Button type='submit' size='sm' disabled={saving}>
+                <Button type='submit' form={form} size='sm' disabled={saving}>
                     {saving ? <Loader2 className='animate-spin' aria-hidden='true' /> : null}
                     {t('saveBar.save')}
                 </Button>
