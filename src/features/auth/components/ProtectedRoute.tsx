@@ -45,15 +45,19 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 /**
  * "Complete your account" (S-ONB-01): only for a signed-in account that has
  * not done it. A visitor goes to sign in first; a completed account goes on
- * to `?next=`, or home.
+ * to `?next=`, or home. Completed on this page, the page moves on by itself,
+ * greeting the new account on Study (02 S-SHELL-01 `no-server-first`): a
+ * redirect from here would get there first, without the greeting.
  */
 export function IncompleteOnlyRoute({ children }: { children: React.ReactNode }) {
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
     const isComplete = useAuthStore((state) => state.isComplete)
     const isSigningOut = useAuthStore((state) => state.isSigningOut)
+    const [completeOnArrival] = useState(isAuthenticated && isComplete)
     const { search } = useLocation()
 
     if (isAuthenticated && !isComplete) return <>{children}</>
+    if (isAuthenticated && !completeOnArrival) return <>{children}</>
     // Incomplete accounts never wait to be deleted; a completed one goes on,
     // and ProtectedRoute sends one that waits to sign in.
     if (isAuthenticated) return <Navigate to={flowNext(new URLSearchParams(search))} replace />

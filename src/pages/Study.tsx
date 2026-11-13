@@ -1,4 +1,5 @@
-import { useLocation } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ShellPage } from '@/components/shell/ShellPage'
 import { NoServers, useServers } from '@/features/servers'
@@ -20,15 +21,21 @@ export interface StudyPageState {
 export default function Study() {
     const { t } = useTranslation()
     const { state } = useLocation() as { state: StudyPageState | null }
+    const navigate = useNavigate()
+    // Greeted once: the browser keeps a page's state across a reload, so it is
+    // read here and taken off the history entry.
+    const [first] = useState(state?.firstVisit === true)
     const servers = useServers()
     const profile = useProfile()
     const noServers = servers.isSuccess && servers.data.length === 0
 
+    useEffect(() => {
+        if (state?.firstVisit) void navigate('.', { replace: true, state: null })
+    }, [navigate, state])
+
     return (
         <ShellPage title={t('shell.study.title')}>
-            {noServers ? (
-                <NoServers first={state?.firstVisit === true} name={profile.data?.displayName ?? undefined} />
-            ) : null}
+            {noServers ? <NoServers first={first} name={profile.data?.displayName ?? undefined} /> : null}
         </ShellPage>
     )
 }

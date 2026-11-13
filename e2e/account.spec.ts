@@ -107,6 +107,35 @@ test('create an account: the emailed code signs in, then "complete your account"
     expect(problems).toEqual([])
 })
 
+test('a new account with nowhere else to go is greeted once on Study (02 S-SHELL-01 no-server-first)', async ({
+    page
+}) => {
+    const problems = await watchForProblems(page)
+    const newcomer = email.replace('@', '-new@')
+    await page.goto('/register')
+    const sentAt = new Date()
+    await page.getByLabel('Email').fill(newcomer)
+    await page.getByRole('button', { name: 'Continue', exact: true }).click()
+    await page.waitForURL(/\/verify$/)
+    await page.getByLabel('6-digit one-time code').fill(await codeFromEmail(newcomer, 'code to create', sentAt))
+    await page.waitForURL(/\/welcome$/)
+
+    await page.getByLabel('Display name').fill('Ada')
+    await page.getByLabel('Username').fill(`${username.slice(0, 28)}_new`)
+    await expect(page.getByText('Username is available')).toBeVisible()
+    await page.getByLabel('Password', { exact: true }).fill(PASSWORD)
+    await page.getByRole('checkbox').check()
+    await page.getByRole('button', { name: 'Enter NezFocus' }).click()
+
+    // Completing the account must not let the welcome page's own guard move on
+    // first: its redirect to Study carries no greeting.
+    await page.waitForURL(/\/study$/)
+    await expect(page.getByRole('heading', { name: 'Welcome to NezFocus, Ada' })).toBeVisible()
+    await page.reload()
+    await expect(page.getByRole('heading', { name: 'No servers yet' })).toBeVisible()
+    expect(problems).toEqual([])
+})
+
 test('a reload keeps the session; a deep link comes back after sign-in', async ({ page }) => {
     const problems = await watchForProblems(page)
     await page.goto('/settings/account')
