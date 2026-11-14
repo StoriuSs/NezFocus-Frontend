@@ -22,7 +22,10 @@
 // 321 B when it began (only the chat's own classes, none the main file has),
 // limit with the same 0.5% tolerance. Raised to 511 B after M2 L4b
 // (13/11/2026, 508 B: message formatting, message link chips and the
-// `highlight` keyframes).
+// `highlight` keyframes). Raised to 614 B after M2 L5 (14/11/2026, 611 B:
+// the pinned cards' 3 lines, the emoji picker's 8 columns and the reaction
+// chip's padding, once the slice's other new classes were swapped for ones
+// the main stylesheet has).
 // Raise them
 // only as CONSTRAINTS.md says: the owner decides, in a commit of its own.
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
@@ -83,5 +86,5 @@ if (shared.length)
 export default [
     { name: 'Initial JS (gzip)', path: js, gzip: true, limit: '246.75 kB' },
     { name: 'Initial CSS (gzip)', path: css, gzip: true, limit: '8.80 kB' },
-    { name: 'Chat CSS (gzip)', path: chatCss, gzip: true, limit: '511 B' }
+    { name: 'Chat CSS (gzip)', path: chatCss, gzip: true, limit: '614 B' }
 ]

@@ -67,10 +67,14 @@ export default defineConfig([
     // A message of the chat takes focus (C-10 › Accessibility, S-CHAT-01 ›
     // Focus): Tab reaches the list, ↑ / ↓ go from message to message,
     // Shift+F10 opens its menu. That is the WAI-ARIA feed pattern, focusable
-    // articles, which jsx-a11y's strict set refuses on <article>. Only this
-    // file, only those two rules (CONSTRAINTS.md › Exceptions, E2).
+    // articles, which jsx-a11y's strict set refuses on <article>. Only these
+    // files (a message, a system message), only those two rules
+    // (CONSTRAINTS.md › Exceptions, E2).
     {
-        files: ['src/features/messaging/components/MessageRow.tsx'],
+        files: [
+            'src/features/messaging/components/MessageRow.tsx',
+            'src/features/messaging/components/SystemMessageRow.tsx'
+        ],
         rules: {
             'jsx-a11y/no-noninteractive-tabindex': ['error', { tags: ['article'], roles: [] }],
             'jsx-a11y/no-noninteractive-element-interactions': [
