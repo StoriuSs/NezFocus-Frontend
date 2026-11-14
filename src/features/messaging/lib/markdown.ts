@@ -10,6 +10,13 @@
  * The text becomes blocks of parts, never HTML: whatever the message says
  * is drawn as text (`<b>` included), and a link is only ever http or https,
  * so `javascript:` stays words (REQ-MSG-02).
+ *
+ * Mentions are tokens in the text (REQ-MSG-03, D-164): <@id> a person, <@&id>
+ * a role, <#id> a channel, and @everyone as a word of its own. They count
+ * only in the text, never in code or a link (D-172): the backend reads them
+ * with a copy of this parser (`messaging/domain/message-markdown.ts`) and
+ * the same patterns, so a chip is drawn exactly where a mention counts.
+ * @here is words until presence (M2 L7).
  */
 
 export type Inline =
@@ -17,6 +24,10 @@ export type Inline =
     | { type: 'bold' | 'italic' | 'strike'; children: Inline[] }
     | { type: 'code'; text: string }
     | { type: 'link'; href: string }
+    | MentionPart
+
+/** A mention in the text: a token, or @everyone. */
+export type MentionPart = { type: 'mention'; kind: 'user' | 'role' | 'channel'; id: string } | { type: 'everyone' }
 
 export type Block =
     | { type: 'paragraph'; children: Inline[] }
@@ -32,6 +43,13 @@ const URL_START = /^https?:\/\/[^\s<]+/
 /** Punctuation after an address that ends the sentence, not the address. */
 const TRAILING = /[.,:;!?'"]$/
 const WORD = /[\p{L}\p{N}]/u
+const ID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+/** A token, as the backend's `mention.rules.ts` writes it. */
+export const MENTION_TOKEN = new RegExp(`<(@&|@|#)(${ID})>`, 'g')
+/** @everyone as a word of its own (the backend's `EVERYONE`): not inside an address or a longer word. */
+const EVERYONE = /(?<![\p{L}\p{N}_@.])@everyone(?![\p{L}\p{N}_])/u
+const MENTION = new RegExp(`${MENTION_TOKEN.source}|${EVERYONE.source}`, 'gu')
+const KINDS = { '@': 'user', '@&': 'role', '#': 'channel' } as const
 
 const isWord = (char: string | undefined) => char !== undefined && WORD.test(char)
 const isSpace = (char: string | undefined) => char === undefined || /\s/.test(char)
@@ -89,7 +107,7 @@ export function parseInline(text: string): Inline[] {
     const parts: Inline[] = []
     let plain = ''
     const push = (part: Inline) => {
-        if (plain) parts.push({ type: 'text', text: plain })
+        if (plain) parts.push(...mentionsIn(plain))
         plain = ''
         parts.push(part)
     }
@@ -137,9 +155,29 @@ export function parseInline(text: string): Inline[] {
         plain += char
         at += 1
     }
-    if (plain) parts.push({ type: 'text', text: plain })
+    if (plain) parts.push(...mentionsIn(plain))
     return parts
 }
+
+/** A run of text as words and mentions; each run on its own, as the backend reads it. */
+function mentionsIn(text: string): Inline[] {
+    const parts: Inline[] = []
+    let from = 0
+    for (const match of text.matchAll(MENTION)) {
+        if (match.index > from) parts.push({ type: 'text', text: text.slice(from, match.index) })
+        const kind = match[1] as keyof typeof KINDS | undefined
+        parts.push(kind ? { type: 'mention', kind: KINDS[kind], id: match[2]! } : { type: 'everyone' })
+        from = match.index + match[0].length
+    }
+    if (from < text.length) parts.push({ type: 'text', text: text.slice(from) })
+    return parts
+}
+
+/** A mention as written in the text. */
+export const tokenOf = (part: MentionPart): string =>
+    part.type === 'everyone'
+        ? '@everyone'
+        : `<${part.kind === 'user' ? '@' : part.kind === 'role' ? '@&' : '#'}${part.id}>`
 
 /** Inline code opening at `at`: a run of one or two backticks, closed by the same run. */
 function codeSpan(text: string, at: number): { text: string; end: number } | null {
@@ -220,17 +258,27 @@ function closeAt(
     return null
 }
 
-/** What the message says without its markers: read aloud, and quoted in reply lines. */
-export function plainText(content: string): string {
+/**
+ * What the message says without its markers: read aloud, and quoted in reply
+ * lines. Each mention as `say` puts it (its name), else as written.
+ */
+export function plainText(content: string, say: (part: MentionPart) => string = tokenOf): string {
     const words = (parts: Inline[]): string =>
         parts
-            .map((part) =>
-                part.type === 'text' || part.type === 'code'
-                    ? part.text
-                    : part.type === 'link'
-                      ? part.href
-                      : words(part.children)
-            )
+            .map((part) => {
+                switch (part.type) {
+                    case 'text':
+                    case 'code':
+                        return part.text
+                    case 'link':
+                        return part.href
+                    case 'mention':
+                    case 'everyone':
+                        return say(part)
+                    default:
+                        return words(part.children)
+                }
+            })
             .join('')
     return parseMessage(content)
         .map((block) => (block.type === 'codeBlock' ? block.text : words(block.children)))

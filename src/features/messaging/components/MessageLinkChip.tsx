@@ -6,7 +6,8 @@ import '@/i18n/messaging'
 import { WithTooltip } from '@/components/ui/tooltip'
 import type { AppLink } from '../types'
 
-const CHIP =
+/** A chip in a message's text: a message link, a channel mention. */
+export const CHIP =
     'inline-flex max-w-[320px] items-center gap-1 rounded-badge bg-surface-2 px-1 text-body-sm font-semibold [&_svg]:size-3.5 [&_svg]:shrink-0'
 
 /**

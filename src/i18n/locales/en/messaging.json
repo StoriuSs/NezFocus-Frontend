@@ -41,7 +41,10 @@
     "replyDeleted": "Original message was deleted",
     "gone": "This message was deleted",
     "labelReply": "{{name}}, {{time}}, replying to {{replyTo}}: {{content}}",
-    "labelReplyDeleted": "{{name}}, {{time}}, replying to a deleted message: {{content}}"
+    "labelReplyDeleted": "{{name}}, {{time}}, replying to a deleted message: {{content}}",
+    "labelRelated": "{{name}}, {{time}}, mentions you: {{content}}",
+    "labelReplyRelated": "{{name}}, {{time}}, replying to {{replyTo}}, mentions you: {{content}}",
+    "labelReplyDeletedRelated": "{{name}}, {{time}}, replying to a deleted message, mentions you: {{content}}"
   },
   "composer": {
     "placeholder": "Message #{{channel}}",
@@ -137,5 +140,19 @@
     "view": "View",
     "viewLabel": "View the pinned message",
     "label": "{{text}}, {{time}}"
+  },
+  "mention": {
+    "unknownUser": "@unknown user",
+    "unknownRole": "@unknown role",
+    "hiddenChannel": "#can't view",
+    "hiddenChannelToast": "You can't view this channel",
+    "suggestions": "Mention suggestions",
+    "members": "Members",
+    "roles": "Roles",
+    "channels": "Channels",
+    "roleMembers_one": "{{count}} member",
+    "roleMembers_other": "{{count}} members",
+    "everyone": "Everyone who can see this channel",
+    "none": "No results"
   }
 }

@@ -7,11 +7,21 @@ import { PopoverAnchor } from '@/components/ui/popover'
 import { WithTooltip } from '@/components/ui/tooltip'
 import { useCountdown } from '@/hooks/useCountdown'
 import { cn } from '@/lib/utils'
-import { plainText } from '../lib/markdown'
+import { useMentionWords } from '../hooks/useMentionWords'
+import { plainText, type MentionPart } from '../lib/markdown'
+import { composerNames, isRelated, mentionName, type MentionWords } from '../lib/mentions'
 import { messageTime, messageTimeInFull } from '../lib/message-time'
-import { isOutgoing, type ChatMessage, type MessageHandlers, type OutgoingMessage, type RepliedMessage } from '../types'
+import {
+    isOutgoing,
+    type ChatMessage,
+    type MentionSource,
+    type MessageHandlers,
+    type OutgoingMessage,
+    type RepliedMessage
+} from '../types'
 import { EmojiPicker } from './EmojiPicker'
 import { HoverToolbar } from './HoverToolbar'
+import type { ContentMentions } from './MentionChip'
 import { MessageContent } from './MessageContent'
 import { MessageEditor } from './MessageEditor'
 import { MessageMenu, type MenuAnchor } from './MessageMenu'
@@ -58,6 +68,12 @@ interface MessageRowProps {
  * out, then how many reactions. Opened by a link, its background fades to
  * `surface-2` twice and back (`highlight`). System messages are the
  * list's `SystemMessageRow`.
+ *
+ * Mentions are drawn with the names the message carries (D-171), its reply
+ * line's too. One about the reader (C-10 `related`, D-39: it mentions them,
+ * a role they hold, @everyone, or answers them; never their own) sits on
+ * `surface-1` with a 2-wide `primary` rule at its left, and reads "mentions
+ * you".
  */
 export const MessageRow = memo(function MessageRow({
     rowKey,
@@ -75,6 +91,7 @@ export const MessageRow = memo(function MessageRow({
     onHighlightEnd
 }: MessageRowProps) {
     const { t } = useTranslation('messaging')
+    const words = useMentionWords()
     const [menu, setMenu] = useState<{ anchor: MenuAnchor } | null>(null)
     const [picker, setPicker] = useState<{ anchor: MenuAnchor } | null>(null)
     const openedFrom = useRef<HTMLElement | null>(null)
@@ -94,14 +111,32 @@ export const MessageRow = memo(function MessageRow({
     )
     const outgoing = isOutgoing(message) ? message : undefined
     const saved = isOutgoing(message) ? undefined : message
-    // Read as "who, when[, answering whom]: what[ (edited)]" (C-10 › Accessibility).
+    const source = handlers.mentions
+    const mentions: ContentMentions = {
+        names: { users: message.mentionUsers ?? [], roles: message.mentionRoles ?? [], channel: source.channel },
+        everyone: message.mentionEveryone ?? false,
+        me: handlers.me,
+        roleIds: source.roleIds
+    }
+    const related = saved !== undefined && isRelated(saved, { id: handlers.me, roleIds: source.roleIds })
+    // Read as "who, when[, answering whom][, mentions you]: what[ (edited)]" (C-10 › Accessibility).
     const replyName =
         message.replyTo?.author?.displayName ?? message.replyTo?.author?.username ?? t('message.deletedAccount')
-    const read = { name, time: shownTime, content: plainText(message.content), replyTo: replyName }
+    const say = (part: MentionPart) => mentionName(part, mentions.names, words)
+    const read = { name, time: shownTime, content: plainText(message.content, say), replyTo: replyName }
     const label =
         (message.replyTo
-            ? t(message.replyTo.deleted ? 'message.labelReplyDeleted' : 'message.labelReply', read)
-            : t('message.label', read)) +
+            ? t(
+                  message.replyTo.deleted
+                      ? related
+                          ? 'message.labelReplyDeletedRelated'
+                          : 'message.labelReplyDeleted'
+                      : related
+                        ? 'message.labelReplyRelated'
+                        : 'message.labelReply',
+                  read
+              )
+            : t(related ? 'message.labelRelated' : 'message.label', read)) +
         (saved?.editedAt ? ` ${t('message.edited')}` : '') +
         (saved?.reactions.length ? `, ${t('reactions.inMessage', { count: saved.reactions.length })}` : '')
     // Queued behind another: shown as sending, or as waiting for the network while offline.
@@ -153,20 +188,26 @@ export const MessageRow = memo(function MessageRow({
             aria-label={label}
             aria-busy={onItsWay || undefined}
             data-highlight={highlighted || undefined}
+            data-related={related || undefined}
             onContextMenu={contextMenu}
             onKeyDown={keyDown}
             onAnimationEnd={(event) => {
                 if (highlighted && event.target === event.currentTarget) onHighlightEnd?.()
             }}
             className={cn(
-                'group relative flex gap-3 px-4 hover:bg-surface-1',
-                'focus-visible:bg-surface-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary',
+                'group relative flex gap-3 px-4',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary',
+                // One step up on hover and focus: `bg` to `surface-1`, `related` to `surface-2` (C-10 › Trạng thái).
+                related
+                    ? 'bg-surface-1 hover:bg-surface-2 focus-visible:bg-surface-2'
+                    : 'hover:bg-surface-1 focus-visible:bg-surface-1',
                 grouped ? 'py-0.5' : 'mt-2 py-1',
-                (menu || picker || editor) && 'bg-surface-1',
+                (menu || picker || editor) && (related ? 'bg-surface-2' : 'bg-surface-1'),
                 onItsWay && 'opacity-50',
                 highlighted && 'animate-highlight'
             )}
         >
+            {related ? <span aria-hidden='true' className='absolute inset-y-0 left-0 w-0.5 bg-primary' /> : null}
             <div className='flex w-10 shrink-0 justify-center'>
                 {grouped ? (
                     // The grouped message's own time, shown on hover (C-10 › Luật).
@@ -183,7 +224,9 @@ export const MessageRow = memo(function MessageRow({
                 )}
             </div>
             <div className='min-w-0 flex-1'>
-                {message.replyTo ? <ReplyLine quoted={message.replyTo} onShow={handlers.show} /> : null}
+                {message.replyTo ? (
+                    <ReplyLine quoted={message.replyTo} onShow={handlers.show} source={source} words={words} />
+                ) : null}
                 {grouped ? null : (
                     <h3 className='flex items-center gap-2'>
                         <span className='truncate text-body font-semibold text-text-primary'>{name}</span>
@@ -194,14 +237,19 @@ export const MessageRow = memo(function MessageRow({
                     <MessageEditor
                         messageId={saved.id}
                         content={saved.content}
+                        names={composerNames(saved.content, mentions.names, words)}
                         saving={editor.saving}
                         onSave={editor.save}
                         onCancel={editor.cancel}
+                        source={source}
+                        me={handlers.me}
+                        mentionEveryone={handlers.permissions.mentionEveryone}
                     />
                 ) : (
                     <MessageContent
                         content={message.content}
                         readLink={handlers.readLink}
+                        mentions={mentions}
                         trailing={
                             saved?.editedAt ? (
                                 <WithTooltip
@@ -277,10 +325,21 @@ const hangAt = (anchor: MenuAnchor): CSSProperties =>
 
 /**
  * The message a reply answers (C-10 `reply`): who wrote it and its text
- * without formatting, on one line; a click goes to it in the list, lit up
- * (S-CHAT-01). "Original message was deleted" once it is.
+ * without formatting, its mentions named (D-171), on one line; a click goes
+ * to it in the list, lit up (S-CHAT-01). "Original message was deleted" once
+ * it is.
  */
-function ReplyLine({ quoted, onShow }: { quoted: RepliedMessage; onShow: (messageId: string) => void }) {
+function ReplyLine({
+    quoted,
+    onShow,
+    source,
+    words
+}: {
+    quoted: RepliedMessage
+    onShow: (messageId: string) => void
+    source: MentionSource
+    words: MentionWords
+}) {
     const { t } = useTranslation('messaging')
     const name = quoted.author?.displayName ?? quoted.author?.username ?? t('message.deletedAccount')
     const line = 'flex min-w-0 max-w-full items-center gap-1 text-label text-text-tertiary'
@@ -299,7 +358,15 @@ function ReplyLine({ quoted, onShow }: { quoted: RepliedMessage; onShow: (messag
             <span className='shrink-0 font-semibold text-text-secondary' aria-hidden='true'>
                 {name}
             </span>
-            <span className='truncate'>{plainText(quoted.content)}</span>
+            <span className='truncate'>
+                {plainText(quoted.content, (part) =>
+                    mentionName(
+                        part,
+                        { users: quoted.mentionUsers, roles: quoted.mentionRoles, channel: source.channel },
+                        words
+                    )
+                )}
+            </span>
         </button>
     )
 }

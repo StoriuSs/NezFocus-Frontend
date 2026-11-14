@@ -23,6 +23,10 @@ export type PinnedMessage = ApiModel<'PinnedMessageResponseDto'>
 export type RepliedMessage = ApiModel<'RepliedMessageResponseDto'>
 /** A page of history, oldest first. */
 export type MessagePage = ApiModel<'MessagePageResponseDto'>
+/** A person a message's <@id> token names, as they are now; both names null once the account is deleted (D-171). */
+export type MentionedUser = ApiModel<'MentionedUserResponseDto'>
+/** A role a message mentions in effect, as named now (D-171). */
+export type MentionedRole = ApiModel<'MentionedRoleResponseDto'>
 
 /** Where a history page starts: the newest messages when null (SRS 5.1). */
 export type MessageCursor = { before: string } | { after: string } | { around: string } | null
@@ -54,6 +58,10 @@ export interface OutgoingMessage {
     retryAt?: number
     /** The message it answers, quoted as the saved one will be. */
     replyTo?: RepliedMessage | null
+    /** Its mentions as the composer named them, drawn until the saved one names them (REQ-MSG-03). */
+    mentionUsers?: MentionedUser[]
+    mentionRoles?: MentionedRole[]
+    mentionEveryone?: boolean
 }
 
 /** A page as kept in the cache: the last one also holds the messages not saved yet. */
@@ -84,6 +92,8 @@ export interface ChatPermissions {
     react: boolean
     /** ADD_REACTIONS: give an emoji the message does not have yet. */
     addReactions: boolean
+    /** MENTION_EVERYONE: @everyone, and any role (REQ-MSG-03). */
+    mentionEveryone: boolean
 }
 
 /**
@@ -112,6 +122,52 @@ export interface ChatTarget {
     focus?: boolean
 }
 
+/**
+ * A <#id> token as the page that shows the chat reads it (the servers
+ * feature knows the channels one sees): a chip "#name" leading to it, the
+ * server named when it is another one; or "Can't view" (C-10).
+ */
+export type MentionChannel = { kind: 'channel'; to: string; name: string; server?: string } | { kind: 'hidden' }
+
+/** A person to suggest after @ (C-12 › MentionSuggest). */
+export interface MentionPerson {
+    id: string
+    username: string | null
+    displayName: string | null
+    avatarUrl: string | null
+}
+
+/** A role to suggest after @: one people may mention, or any for MENTION_EVERYONE (D-171). */
+export interface MentionRole {
+    id: string
+    name: string
+    memberCount: number
+}
+
+/** What a query of the servers feature is, as `useQuery` takes it: its key and cache stay theirs. */
+export interface SourceQuery<T> {
+    queryKey: readonly unknown[]
+    queryFn: () => Promise<T>
+    staleTime?: number
+}
+
+/**
+ * What mentions need from the server the chat is in (REQ-MSG-03), handed by
+ * the page that shows it, as `readLink` is (the servers feature; owner,
+ * 14/11/2026): whom to suggest, how a channel token shows, and the roles one
+ * holds there (a mention of them is one's own, C-10, D-39). Kept the same
+ * from one render to the next while the server is.
+ */
+export interface MentionSource {
+    /** The people of the server whose name or username holds what follows @. */
+    members: (query: string) => SourceQuery<MentionPerson[]>
+    roles: SourceQuery<MentionRole[]>
+    /** The server's text channels one sees, in the list's order: suggested after #. */
+    channels: ReadonlyArray<{ id: string; name: string }>
+    channel: (id: string) => MentionChannel
+    roleIds: readonly string[]
+}
+
 export const isOutgoing = (message: ChatMessage): message is OutgoingMessage => 'state' in message
 
 /** What can be done to a saved message, handed down by the chat to its rows (stable, so rows do not draw again). */
@@ -133,4 +189,6 @@ export interface MessageHandlers {
     show: (messageId: string) => void
     /** How a link in a message shows: null for another site. */
     readLink: (href: string) => AppLink | null
+    /** The server's side of mentions: how a channel token shows, one's own roles (REQ-MSG-03). */
+    mentions: MentionSource
 }

@@ -8,6 +8,8 @@ import type { ChannelMessages, MessageAuthor, OutgoingMessage, OutgoingState, Re
 import { messageKeys } from './keys'
 import { sendMessage } from './messages.api'
 
+type OutgoingMentions = Pick<OutgoingMessage, 'mentionUsers' | 'mentionRoles' | 'mentionEveryone'>
+
 /** Still on its way: a message typed after one of these waits behind it. A failed one holds nothing back. */
 const ON_ITS_WAY = new Set<OutgoingState>(['sending', 'queued', 'waiting', 'rate-limited'])
 
@@ -127,9 +129,13 @@ export function useSendMessage(channelId: string, author: MessageAuthor | undefi
         }
     }, [outgoing, deliver])
 
-    /** Whether the message was taken: not when blank, or before the history (where it shows) is loaded. */
+    /**
+     * Whether the message was taken: not when blank, or before the history
+     * (where it shows) is loaded. `mentions`: as the composer named them,
+     * drawn until the saved message names them (REQ-MSG-03).
+     */
     const send = useCallback(
-        (text: string, replyTo?: RepliedMessage | null): boolean => {
+        (text: string, replyTo?: RepliedMessage | null, mentions?: OutgoingMentions): boolean => {
             const content = text.trim()
             if (!content || !author || !client.getQueryData<ChannelMessages>(key)) return false
             const message: OutgoingMessage = {
@@ -139,6 +145,7 @@ export function useSendMessage(channelId: string, author: MessageAuthor | undefi
                 author,
                 createdAt: new Date().toISOString(),
                 ...(replyTo ? { replyTo } : {}),
+                ...mentions,
                 state: outgoing().some((item) => ON_ITS_WAY.has(item.state))
                     ? 'queued'
                     : navigator.onLine

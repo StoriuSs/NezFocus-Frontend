@@ -72,7 +72,8 @@ react-starter/
     │   ├── servers/           # Servers: the rail's list, channels, invites, server settings
     │   │   ├── api/           # servers.api.ts, layout.api.ts, invites.api.ts, roles.api.ts, moderation.api.ts,
     │   │   │                  #   keys.ts; the hooks: useServers, useCreateServer, useChannelLayout, useInvites,
-    │   │   │                  #   useRoles, useModeration, useServerSettings, useMembership
+    │   │   │                  #   useRoles, useModeration, useServerSettings, useMembership; serverOwnership
+    │   │   │                  #   (auth's port), useMentionSource (the chat's MentionSource port)
     │   │   ├── components/    # CreateServerDialog, NoServers, ServerIcon, ServerMenuItems; channel-list/,
     │   │   │                  #   dialogs/ (channels, categories), invites/, membership/ (leave, hand over, delete),
     │   │   │                  #   settings/ (ServerNameForm, ServerIconSetting, WelcomeChannelSetting, OwnerSettings,
@@ -81,7 +82,8 @@ react-starter/
     │   │   │                  #   useServerGoneWatch (D-143, run by the AppShell)
     │   │   ├── lib/           # paths (SERVERS_PATHS and channelPath, messagePath, messageLink, invitePath,
     │   │   │                  #   serverSettingsPath, roleEditPath, isId), app-links (how a link in a message
-    │   │   │                  #   shows: a message chip, "can't view", a page of the app; D-117), chat-permissions,
+    │   │   │                  #   shows: a message chip, "can't view", a page of the app, D-117; and a channel
+    │   │   │                  #   mention, readChannelMention), chat-permissions,
     │   │   │                  #   layout-messages (the words for a refused name or move), invite-problem,
     │   │   │                  #   channel-layout, channel-list, drop-target, layout-error, invites, moderation,
     │   │   │                  #   membership, permissions, roles, server-name, settings-sections, typed-name
@@ -102,10 +104,12 @@ react-starter/
     │   │                      #   api/ (history, sending, editing and deleting, going to a message,
     │   │                      #   reactions, reactors, pins, liveMessages: socket events into the
     │   │                      #   cache), components/ (list, row, system row, text and its link chips,
-    │   │                      #   reaction bar and chip, emoji picker, toolbar and menu, editor, delete
-    │   │                      #   dialog, composer, pins panel), hooks/ (scrolling, going to a message,
-    │   │                      #   drafts), lib/ (formatting, cache changes, pins in the cache, emoji
-    │   │                      #   data, grid moves and recent picks, tooltip words, rows, times),
+    │   │                      #   mention chips and suggestions, reaction bar and chip, emoji picker,
+    │   │                      #   toolbar and menu, editor, delete dialog, composer, pins panel), hooks/
+    │   │                      #   (scrolling, going to a message, drafts, a box that writes mentions,
+    │   │                      #   their words), lib/ (formatting and mention tokens, mentions read and
+    │   │                      #   written, cache changes, pins in the cache, emoji data, grid moves and
+    │   │                      #   recent picks, tooltip words, rows, times),
     │   │                      #   messaging.css (the chat's classes)
     │   └── users/             # The profile and the account's settings
     │       ├── api/           # users.api.ts (fetchProfile, removeAvatar),
@@ -348,6 +352,13 @@ Habits worth keeping:
   (`auth/lib/server-ownership.ts`), the servers feature answers
   (`servers/api/serverOwnership.ts`), and the AppShell connects the two
   ([auth/account-settings.md](./auth/account-settings.md#an-owner-of-servers)).
+  A port can also be handed down as a prop by the page that shows the
+  other feature: the chat's mentions need the server's members, roles and
+  channels (`MentionSource` in `messaging/types.ts`), and the channel page
+  hands the servers feature's answer (`servers/api/useMentionSource.ts`). Its
+  queries go as query options (`queryKey`, `queryFn`), so the key and the
+  cache stay the servers feature's, as `settingsCache` does for the users
+  feature.
 - **Shared code imports no feature.** `src/lib`, `src/components` and
   `src/hooks` are refused any `@/features/...` import. When shared code needs
   something a feature owns, it says what in an interface and is handed it: the

@@ -721,6 +721,23 @@ export interface paths {
         patch?: never
         trace?: never
     }
+    '/api/v1/servers/{serverId}/roles/mentionable': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        /** The roles the caller may mention, for the composer (anyone in the server, D-171). */
+        get: operations['RolesController_mentionable_v1']
+        put?: never
+        post?: never
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
     '/api/v1/servers/{serverId}/roles/order': {
         parameters: {
             query?: never
@@ -1543,6 +1560,15 @@ export interface components {
         RoleListResponseDto: {
             roles: components['schemas']['RoleResponseDto'][]
         }
+        MentionableRoleResponseDto: {
+            id: string
+            name: string
+            /** @description Shown as "{N} members". */
+            member_count: number
+        }
+        MentionableRoleListResponseDto: {
+            roles: components['schemas']['MentionableRoleResponseDto'][]
+        }
         CreatedRoleResponseDto: {
             role_id: string
         }
@@ -1634,9 +1660,22 @@ export interface components {
             display_name: string | null
             avatar_url: string | null
         }
+        MentionedUserResponseDto: {
+            id: string
+            username: string | null
+            display_name: string | null
+        }
+        MentionedRoleResponseDto: {
+            id: string
+            name: string
+        }
         RepliedMessageResponseDto: {
             /** @description Null once that message is deleted. */
             author: components['schemas']['MessageAuthorResponseDto'] | null
+            /** @description The people its <@id> tokens name, as on a message (D-171); empty once deleted. */
+            mention_users: components['schemas']['MentionedUserResponseDto'][]
+            /** @description The roles it mentions in effect, as named now (D-171); empty once deleted. */
+            mention_roles: components['schemas']['MentionedRoleResponseDto'][]
             id: string
             /** @description Its text as it is now (edits show); empty once deleted. */
             content: string
@@ -1657,6 +1696,10 @@ export interface components {
             type: 'regular' | 'system'
             /** @description Null on a system message (D-168). */
             author: components['schemas']['MessageAuthorResponseDto'] | null
+            /** @description The people its <@id> tokens name, as they are now (D-171); an id of no account is left out. */
+            mention_users: components['schemas']['MentionedUserResponseDto'][]
+            /** @description The roles it mentions in effect, as named now; a role deleted since is left out (D-171). */
+            mention_roles: components['schemas']['MentionedRoleResponseDto'][]
             /** @description What a system message reports (`member_joined`, `message_pinned`); null on a regular one. */
             system_event: string | null
             /** @description Whom a system message is about (`{ user_id }`, `{ user_id, message_id }`, D-168); null on a regular one. */
@@ -1675,8 +1718,13 @@ export interface components {
             reactions: components['schemas']['ReactionSummaryResponseDto'][]
             id: string
             channel_id: string
-            /** @description Plain text; empty on a system message. */
+            /**
+             * @description Plain text; empty on a system message. Mentions are tokens: <@id> a
+             *     person, <@&id> a role, <#id> a channel, and @everyone (REQ-MSG-03).
+             */
             content: string
+            /** @description @everyone in effect: the author had MENTION_EVERYONE. Otherwise the words are only words. */
+            mention_everyone: boolean
             /** @description In the channel's pins (REQ-MSG-07). */
             pinned: boolean
             /** Format: date-time */
@@ -1697,6 +1745,10 @@ export interface components {
             type: 'regular' | 'system'
             /** @description Null on a system message (D-168). */
             author: components['schemas']['MessageAuthorResponseDto'] | null
+            /** @description The people its <@id> tokens name, as they are now (D-171); an id of no account is left out. */
+            mention_users: components['schemas']['MentionedUserResponseDto'][]
+            /** @description The roles it mentions in effect, as named now; a role deleted since is left out (D-171). */
+            mention_roles: components['schemas']['MentionedRoleResponseDto'][]
             /** @description What a system message reports (`member_joined`, `message_pinned`); null on a regular one. */
             system_event: string | null
             /** @description Whom a system message is about (`{ user_id }`, `{ user_id, message_id }`, D-168); null on a regular one. */
@@ -1714,8 +1766,13 @@ export interface components {
             edited_at: string | null
             id: string
             channel_id: string
-            /** @description Plain text; empty on a system message. */
+            /**
+             * @description Plain text; empty on a system message. Mentions are tokens: <@id> a
+             *     person, <@&id> a role, <#id> a channel, and @everyone (REQ-MSG-03).
+             */
             content: string
+            /** @description @everyone in effect: the author had MENTION_EVERYONE. Otherwise the words are only words. */
+            mention_everyone: boolean
             /** @description In the channel's pins (REQ-MSG-07). */
             pinned: boolean
             /** Format: date-time */
@@ -1758,6 +1815,10 @@ export interface components {
             type: 'regular' | 'system'
             /** @description Null on a system message (D-168). */
             author: components['schemas']['MessageAuthorResponseDto'] | null
+            /** @description The people its <@id> tokens name, as they are now (D-171); an id of no account is left out. */
+            mention_users: components['schemas']['MentionedUserResponseDto'][]
+            /** @description The roles it mentions in effect, as named now; a role deleted since is left out (D-171). */
+            mention_roles: components['schemas']['MentionedRoleResponseDto'][]
             /** @description What a system message reports (`member_joined`, `message_pinned`); null on a regular one. */
             system_event: string | null
             /** @description Whom a system message is about (`{ user_id }`, `{ user_id, message_id }`, D-168); null on a regular one. */
@@ -1776,8 +1837,13 @@ export interface components {
             reactions: components['schemas']['ReactionSummaryResponseDto'][]
             id: string
             channel_id: string
-            /** @description Plain text; empty on a system message. */
+            /**
+             * @description Plain text; empty on a system message. Mentions are tokens: <@id> a
+             *     person, <@&id> a role, <#id> a channel, and @everyone (REQ-MSG-03).
+             */
             content: string
+            /** @description @everyone in effect: the author had MENTION_EVERYONE. Otherwise the words are only words. */
+            mention_everyone: boolean
             /** @description In the channel's pins (REQ-MSG-07). */
             pinned: boolean
             /** Format: date-time */
@@ -3232,6 +3298,30 @@ export interface operations {
                     'application/json': {
                         meta: components['schemas']['ApiResponseMetaDto']
                         data: components['schemas']['CreatedRoleResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    RolesController_mentionable_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                serverId: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['MentionableRoleListResponseDto']
                     }
                 }
             }

@@ -193,8 +193,18 @@ export function replaceSaved(data: ChannelMessages, message: BareMessage): Chann
                       item.id === message.id ? { ...message, reactions: held.reactions, pinned: held.pinned } : item
                   )
                 : items,
+        // The reply lines too, with the mentions' names as they now are (D-171).
         (replyTo) =>
-            replyTo.deleted ? replyTo : { ...replyTo, author: message.author, content: message.content, deleted: false }
+            replyTo.deleted
+                ? replyTo
+                : {
+                      ...replyTo,
+                      author: message.author,
+                      content: message.content,
+                      mentionUsers: message.mentionUsers,
+                      mentionRoles: message.mentionRoles,
+                      deleted: false
+                  }
     )
 }
 
@@ -208,7 +218,7 @@ export function removeSaved(data: ChannelMessages, id: string): ChannelMessages 
         data,
         id,
         (items) => (items.some((item) => item.id === id) ? items.filter((item) => item.id !== id) : items),
-        () => ({ id, author: null, content: '', deleted: true })
+        () => ({ id, author: null, content: '', deleted: true, mentionUsers: [], mentionRoles: [] })
     )
 }
 

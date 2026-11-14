@@ -104,13 +104,13 @@ async function openAs(browser: Browser, email: string) {
     await page.getByRole('button', { name: 'Sign in', exact: true }).click()
     await page.waitForURL(/\/study$/)
     await page.goto(channelPath)
-    await expect(page.getByRole('textbox', { name: `Message #${channelName}` })).toBeFocused({ timeout: 20_000 })
+    await expect(page.getByRole('combobox', { name: `Message #${channelName}` })).toBeFocused({ timeout: 20_000 })
     return { context, page, problems }
 }
 
 const log = (page: Page) => page.getByRole('log')
 const say = async (page: Page, text: string) => {
-    await page.getByRole('textbox', { name: `Message #${channelName}` }).fill(text)
+    await page.getByRole('combobox', { name: `Message #${channelName}` }).fill(text)
     await page.keyboard.press('Enter')
 }
 /** The message `text` shows exactly once in the list, saved (not faded, nothing under it). */
@@ -180,8 +180,8 @@ test('an edit, a reply and a deletion reach the other browser at once (REQ-MSG-0
     await seenOnce(binh.page, 'Ok, mình vào sớm giữ chỗ')
 
     // ↑ in the empty composer edits An's last message; Bình sees the new text, marked edited.
-    await an.page.getByRole('textbox', { name: `Message #${channelName}` }).press('ArrowUp')
-    const editor = an.page.getByRole('textbox', { name: 'Edit message' })
+    await an.page.getByRole('combobox', { name: `Message #${channelName}` }).press('ArrowUp')
+    const editor = an.page.getByRole('combobox', { name: 'Edit message' })
     await editor.fill('Mình vào phòng rồi nhé')
     await shoot(an.page, 'chat01-edit-mode')
     await editor.press('Enter')
@@ -325,6 +325,38 @@ test('a reaction and a pin reach the other browser at once, with the pinned noti
     await expect(an.page.getByText('Unpinned')).toBeVisible()
     await expect(pins(binh.page).getByText('No pinned messages yet')).toBeVisible({ timeout: 15_000 })
     await shoot(binh.page, 'chat02-pins-empty')
+
+    expect([...an.problems, ...binh.problems]).toEqual([])
+    await an.context.close()
+    await binh.context.close()
+})
+
+test('a mention picked from the suggestions reaches the other browser, the message marked for them alone (REQ-MSG-03, D-39)', async ({
+    browser
+}) => {
+    test.setTimeout(120_000)
+    const an = await openAs(browser, anEmail)
+    const binh = await openAs(browser, binhEmail)
+    const box = an.page.getByRole('combobox', { name: `Message #${channelName}` })
+
+    // An types @ and the start of Bình's name, accents and all: Bình is suggested, An never.
+    await box.pressSequentially('Ôn bài nhé @bì')
+    const list = an.page.getByRole('listbox', { name: 'Mention suggestions' })
+    await expect(list.getByRole('option', { name: /^Bình, / })).toBeVisible({ timeout: 15_000 })
+    await expect(list.getByRole('option', { name: /^An, / })).toHaveCount(0)
+    await shoot(an.page, 'chat01-mention-suggest')
+    await an.page.keyboard.press('Enter')
+    await expect(box).toHaveValue('Ôn bài nhé @Bình ')
+    await an.page.keyboard.press('Enter')
+
+    // Bình: their own chip, the message about them; An's own message is not about An.
+    const article = (page: Page) => log(page).getByRole('article', { name: /Ôn bài nhé @Bình$/ })
+    await expect(article(binh.page)).toHaveAttribute('data-related', 'true', { timeout: 15_000 })
+    await expect(article(binh.page)).toHaveAccessibleName(/^An, .*, mentions you: Ôn bài nhé @Bình$/)
+    await expect(article(binh.page).getByText('@Bình', { exact: true })).toBeVisible()
+    await expect(article(an.page)).not.toHaveAttribute('data-related')
+    await expect(article(an.page).getByText('@Bình', { exact: true })).toBeVisible()
+    await shoot(binh.page, 'chat01-related-to-me')
 
     expect([...an.problems, ...binh.problems]).toEqual([])
     await an.context.close()

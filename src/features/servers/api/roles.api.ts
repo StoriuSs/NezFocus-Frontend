@@ -1,10 +1,16 @@
 import api from '@/lib/api'
 import type { ApiEnvelope } from '@/lib/api-types'
-import type { MemberPage, Role, UpdateRoleRequest } from '../types'
+import type { MemberPage, MentionableRole, Role, UpdateRoleRequest } from '../types'
 
 /** GET /servers/{id}/roles (MANAGE_ROLES): highest first, @everyone last. */
 export async function fetchRoles(serverId: string): Promise<Role[]> {
     const response = await api.get<ApiEnvelope<{ roles: Role[] }>>(`/servers/${serverId}/roles`)
+    return response.data.data.roles
+}
+
+/** GET /servers/{id}/roles/mentionable (D-171): anyone in the server; with MENTION_EVERYONE every role but @everyone. */
+export async function fetchMentionableRoles(serverId: string): Promise<MentionableRole[]> {
+    const response = await api.get<ApiEnvelope<{ roles: MentionableRole[] }>>(`/servers/${serverId}/roles/mentionable`)
     return response.data.data.roles
 }
 

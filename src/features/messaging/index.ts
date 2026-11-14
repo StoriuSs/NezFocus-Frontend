@@ -9,4 +9,12 @@ import { lazy } from 'react'
  */
 export const ChannelChat = lazy(() => import('./components/ChannelChat'))
 export const PinsPanel = lazy(() => import('./components/ChannelChat').then((chat) => ({ default: chat.PinsPanel })))
-export type { AppLink, ChatPermissions, ChatTarget } from './types'
+export type {
+    AppLink,
+    ChatPermissions,
+    ChatTarget,
+    MentionChannel,
+    MentionPerson,
+    MentionRole,
+    MentionSource
+} from './types'

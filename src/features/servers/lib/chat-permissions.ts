@@ -9,6 +9,7 @@ import { can } from './permissions'
  * VIEW_CHANNEL (appendix B, step 6), so it already takes SEND_MESSAGES,
  * ADD_REACTIONS and MANAGE_MESSAGES away; deleting one's own message and
  * clicking an emoji already on a message (SRS 1.71) also need to know of it.
+ * MENTION_EVERYONE: @everyone and any role in the suggestions (REQ-MSG-03).
  */
 export function chatPermissions(
     server: Pick<Server, 'timeoutUntil'>,
@@ -23,6 +24,7 @@ export function chatPermissions(
         manage,
         deleteOwn: free,
         react: free,
-        addReactions: can(channel.permissions, 'ADD_REACTIONS')
+        addReactions: can(channel.permissions, 'ADD_REACTIONS'),
+        mentionEveryone: can(channel.permissions, 'MENTION_EVERYONE')
     }
 }

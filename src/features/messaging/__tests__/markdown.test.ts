@@ -128,4 +128,55 @@ describe('plainText', () => {
     it('is what the message says, markers left out: read aloud and quoted in reply lines', () => {
         expect(plainText('**Tóm tắt** `x`\n> nhớ _đổi_\n```\ncode\n```')).toBe('Tóm tắt x\nnhớ đổi\ncode')
     })
+
+    it('says each mention as it is told to, tokens as written by default', () => {
+        const said = plainText(`hi <@${BINH}> <#${GENERAL}> @everyone`, (part) =>
+            part.type === 'everyone' ? '@everyone' : `[${part.kind}]`
+        )
+        expect(said).toBe('hi [user] [channel] @everyone')
+        expect(plainText(`hi <@${BINH}>`)).toBe(`hi <@${BINH}>`)
+    })
+})
+
+const BINH = '0190a0b0-0000-7000-8000-00000000000b'
+const LEADS = '0190a0b0-0000-7000-8000-0000000000f1'
+const GENERAL = '0190a0b0-0000-7000-8000-0000000000c1'
+
+describe('parseMessage, mentions (REQ-MSG-03, D-172)', () => {
+    it('reads people, roles, channels and @everyone in the text', () => {
+        expect(inline(`<@${BINH}>, <@&${LEADS}> và <#${GENERAL}>: @everyone`)).toEqual([
+            { type: 'mention', kind: 'user', id: BINH },
+            text(', '),
+            { type: 'mention', kind: 'role', id: LEADS },
+            text(' và '),
+            { type: 'mention', kind: 'channel', id: GENERAL },
+            text(': '),
+            { type: 'everyone' }
+        ])
+    })
+
+    it('reads them inside formatting and quotes', () => {
+        expect(inline(`**<@${BINH}>**`)).toEqual([
+            { type: 'bold', children: [{ type: 'mention', kind: 'user', id: BINH }] }
+        ])
+        expect(parseMessage('> @everyone')).toEqual([{ type: 'quote', children: [{ type: 'everyone' }] }])
+    })
+
+    it('leaves them as code inside code, and as part of a link inside one', () => {
+        expect(inline(`\`<@${BINH}>\``)).toEqual([{ type: 'code', text: `<@${BINH}>` }])
+        expect(parseMessage('```\n@everyone\n```')).toEqual([{ type: 'codeBlock', text: '@everyone' }])
+        expect(inline('https://example.com/@everyone')).toEqual([
+            { type: 'link', href: 'https://example.com/@everyone' }
+        ])
+    })
+
+    it('takes @everyone only as a word of its own, as the backend does', () => {
+        expect(inline('mail@everyone.example')).toEqual([text('mail@everyone.example')])
+        expect(inline('@everyones')).toEqual([text('@everyones')])
+        expect(inline('(@everyone!)')).toEqual([text('('), { type: 'everyone' }, text('!)')])
+    })
+
+    it('leaves @here and ill-formed tokens as words', () => {
+        expect(inline('@here <@123> <@&not-an-id> <#>')).toEqual([text('@here <@123> <@&not-an-id> <#>')])
+    })
 })

@@ -10,7 +10,16 @@ import { userKeys } from '@/features/users'
 import { expectNoA11yViolations } from '@/test/a11y'
 import { apiError } from '@/test/helpers'
 import { messageKeys } from '../api/keys'
-import type { AppLink, ChannelMessages, ChatTarget, Message, MessageCursor, MessagePage } from '../types'
+import type { AppLink, ChannelMessages, ChatTarget, MentionSource, Message, MessageCursor, MessagePage } from '../types'
+
+/** No one to suggest, no roles held: these tests are not about mentions (REQ-MSG-03). */
+const NO_MENTIONS: MentionSource = {
+    members: () => ({ queryKey: ['test', 'members'], queryFn: async () => [] }),
+    roles: { queryKey: ['test', 'roles'], queryFn: async () => [] },
+    channels: [],
+    channel: () => ({ kind: 'hidden' }),
+    roleIds: []
+}
 
 const messagesApi = {
     fetchMessages: vi.fn<(channelId: string, cursor: MessageCursor, limit?: number) => Promise<MessagePage>>(),
@@ -34,6 +43,9 @@ const message = (id: string, author: typeof AN, content: string, extra: Partial<
     type: 'regular',
     author,
     content,
+    mentionUsers: [],
+    mentionRoles: [],
+    mentionEveryone: false,
     systemEvent: null,
     systemData: null,
     systemUser: null,
@@ -93,10 +105,12 @@ function renderChat({ target, client = newClient() }: { target?: ChatTarget; cli
                                             manage: false,
                                             deleteOwn: true,
                                             react: true,
-                                            addReactions: true
+                                            addReactions: true,
+                                            mentionEveryone: false
                                         }}
                                         linkTo={(id) => `${ORIGIN}/channels/ot/hoi-dap/${id}`}
                                         readLink={readLink}
+                                        mentions={NO_MENTIONS}
                                         target={target}
                                     />
                                     <Where />
@@ -251,7 +265,14 @@ describe('Message links (REQ-MSG-05, D-48)', () => {
 
     it('goes to the original of a reply, and lights it up', async () => {
         const reply = message('m45', AN, 'Cảm ơn Chi, mình ra 8π/3 rồi', {
-            replyTo: { id: 'm04', author: CHI, content: SOLUTION.content, deleted: false }
+            replyTo: {
+                id: 'm04',
+                author: CHI,
+                content: SOLUTION.content,
+                deleted: false,
+                mentionUsers: [],
+                mentionRoles: []
+            }
         })
         messagesApi.fetchMessages.mockImplementation(async (_, cursor) =>
             cursor ? page([SOLUTION], { after: true }) : page([...LATEST, reply], { before: true })
@@ -289,12 +310,12 @@ describe('Message links (REQ-MSG-05, D-48)', () => {
         renderChat({ target: { messageId: 'm04', key: 'k1' } })
         await screen.findByText(SOLUTION.content)
 
-        await userEvent.type(screen.getByRole('textbox'), 'Cảm ơn nha{Enter}')
+        await userEvent.type(screen.getByRole('combobox'), 'Cảm ơn nha{Enter}')
 
         expect(await screen.findByText('Cảm ơn nha')).toBeInTheDocument()
         expect(screen.getByText(LATEST[0]!.content)).toBeInTheDocument()
         expect(cursors()).toEqual([{ around: 'm04' }, null])
-        expect(screen.getByRole('textbox')).toHaveValue('')
+        expect(screen.getByRole('combobox')).toHaveValue('')
     })
 
     it('keeps what was typed when the newest messages cannot be read, and sends nothing', async () => {
@@ -305,10 +326,10 @@ describe('Message links (REQ-MSG-05, D-48)', () => {
         renderChat({ target: { messageId: 'm04', key: 'k1' } })
         await screen.findByText(SOLUTION.content)
 
-        await userEvent.type(screen.getByRole('textbox'), 'Cảm ơn nha{Enter}')
+        await userEvent.type(screen.getByRole('combobox'), 'Cảm ơn nha{Enter}')
 
         await waitFor(() => expect(cursors()).toEqual([{ around: 'm04' }, null]))
-        expect(screen.getByRole('textbox')).toHaveValue('Cảm ơn nha')
+        expect(screen.getByRole('combobox')).toHaveValue('Cảm ơn nha')
         expect(messagesApi.sendMessage).not.toHaveBeenCalled()
     })
 
@@ -329,7 +350,14 @@ describe('Message links (REQ-MSG-05, D-48)', () => {
     it('keeps the message being edited, not "deleted", when the list goes to another one', async () => {
         const mine = message('m44', AN, 'Mình làm ra 8π/3')
         const reply = message('m45', AN, 'Cảm ơn Chi', {
-            replyTo: { id: 'm04', author: CHI, content: SOLUTION.content, deleted: false }
+            replyTo: {
+                id: 'm04',
+                author: CHI,
+                content: SOLUTION.content,
+                deleted: false,
+                mentionUsers: [],
+                mentionRoles: []
+            }
         })
         messagesApi.fetchMessages.mockImplementation(async (_, cursor) =>
             cursor ? page([SOLUTION], { after: true }) : page([...LATEST, mine, reply], { before: true })
@@ -347,7 +375,14 @@ describe('Message links (REQ-MSG-05, D-48)', () => {
 
     it('moves focus to the message gone to from the list', async () => {
         const reply = message('m45', AN, 'Cảm ơn Chi', {
-            replyTo: { id: 'm04', author: CHI, content: SOLUTION.content, deleted: false }
+            replyTo: {
+                id: 'm04',
+                author: CHI,
+                content: SOLUTION.content,
+                deleted: false,
+                mentionUsers: [],
+                mentionRoles: []
+            }
         })
         messagesApi.fetchMessages.mockImplementation(async (_, cursor) =>
             cursor ? page([SOLUTION], { after: true }) : page([...LATEST, reply], { before: true })
@@ -361,7 +396,14 @@ describe('Message links (REQ-MSG-05, D-48)', () => {
 
     it('keeps the message gone to when older messages read meanwhile come in', async () => {
         const reply = message('m45', AN, 'Cảm ơn Chi', {
-            replyTo: { id: 'm04', author: CHI, content: SOLUTION.content, deleted: false }
+            replyTo: {
+                id: 'm04',
+                author: CHI,
+                content: SOLUTION.content,
+                deleted: false,
+                mentionUsers: [],
+                mentionRoles: []
+            }
         })
         let older: (value: MessagePage) => void = () => undefined
         messagesApi.fetchMessages.mockImplementation((_, cursor) => {

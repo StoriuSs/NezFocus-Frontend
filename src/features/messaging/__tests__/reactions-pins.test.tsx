@@ -9,7 +9,24 @@ import { userKeys } from '@/features/users'
 import { expectNoA11yViolations } from '@/test/a11y'
 import { apiError } from '@/test/helpers'
 import type { RawEmoji } from '../lib/emoji-data'
-import type { ChatPermissions, Message, MessageCursor, MessagePage, PinnedMessage, Reactors } from '../types'
+import type {
+    ChatPermissions,
+    MentionSource,
+    Message,
+    MessageCursor,
+    MessagePage,
+    PinnedMessage,
+    Reactors
+} from '../types'
+
+/** No one to suggest, no roles held: these tests are not about mentions (REQ-MSG-03). */
+const NO_MENTIONS: MentionSource = {
+    members: () => ({ queryKey: ['test', 'members'], queryFn: async () => [] }),
+    roles: { queryKey: ['test', 'roles'], queryFn: async () => [] },
+    channels: [],
+    channel: () => ({ kind: 'hidden' }),
+    roleIds: []
+}
 
 const messagesApi = {
     fetchMessages: vi.fn<(channelId: string, cursor: MessageCursor, limit?: number) => Promise<MessagePage>>(),
@@ -66,6 +83,9 @@ const message = (
     type: 'regular',
     author,
     content,
+    mentionUsers: [],
+    mentionRoles: [],
+    mentionEveryone: false,
     systemEvent: null,
     systemData: null,
     systemUser: null,
@@ -86,15 +106,32 @@ const TUANS = message('m2', TUAN, 'Câu 4 đổi cận thế nào vậy mọi ng
 const PINNED_NOTICE = message('m3', AN, '', '21:46', {
     type: 'system',
     author: null,
+    mentionUsers: [],
+    mentionRoles: [],
+    mentionEveryone: false,
     systemEvent: 'message_pinned',
     systemData: { userId: 'an', messageId: 'm2' },
     systemUser: AN
 })
 
-const MEMBER: ChatPermissions = { send: true, manage: false, deleteOwn: true, react: true, addReactions: true }
+const MEMBER: ChatPermissions = {
+    send: true,
+    manage: false,
+    deleteOwn: true,
+    react: true,
+    addReactions: true,
+    mentionEveryone: false
+}
 const MODERATOR: ChatPermissions = { ...MEMBER, manage: true }
 const NO_NEW: ChatPermissions = { ...MEMBER, addReactions: false }
-const TIMED_OUT: ChatPermissions = { send: false, manage: false, deleteOwn: false, react: false, addReactions: false }
+const TIMED_OUT: ChatPermissions = {
+    send: false,
+    manage: false,
+    deleteOwn: false,
+    react: false,
+    addReactions: false,
+    mentionEveryone: false
+}
 
 function newClient() {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
@@ -115,6 +152,7 @@ function renderChat(permissions: ChatPermissions = MEMBER) {
                         permissions={permissions}
                         linkTo={(id) => `${window.location.origin}/channels/ot/hoi-dap/${id}`}
                         readLink={() => null}
+                        mentions={NO_MENTIONS}
                     />
                 </div>
                 <Toaster />
@@ -317,7 +355,7 @@ describe('Reactions on a message (REQ-MSG-05, C-10 ReactionChip, SRS 1.71)', () 
         await userEvent.click(within(await row(TUANS.content)).getByRole('button', { name: 'Thêm cảm xúc' }))
         await screen.findByRole('dialog', { name: 'Chọn emoji' })
 
-        const box = screen.getByRole('textbox', { name: /Nhắn #hoi-dap/ })
+        const box = screen.getByRole('combobox', { name: /Nhắn #hoi-dap/ })
         await userEvent.click(box)
 
         expect(screen.queryByRole('dialog', { name: 'Chọn emoji' })).not.toBeInTheDocument()
@@ -362,7 +400,7 @@ describe('Reactions on a message (REQ-MSG-05, C-10 ReactionChip, SRS 1.71)', () 
 
     it('inserts an emoji from the composer’s button where the cursor is (C-12)', async () => {
         renderChat()
-        const box = await screen.findByRole('textbox', { name: /Nhắn #hoi-dap/ })
+        const box = await screen.findByRole('combobox', { name: /Nhắn #hoi-dap/ })
         await userEvent.type(box, 'Hay quá')
 
         await userEvent.click(screen.getByRole('button', { name: 'Chèn emoji' }))
@@ -455,7 +493,7 @@ describe('The pins panel (S-CHAT-02)', () => {
         const view = render(
             <QueryClientProvider client={client}>
                 <TooltipProvider>
-                    <PinsPanel channelId='hoi-dap' manage={manage} onOpen={onOpen} />
+                    <PinsPanel channel={NO_MENTIONS.channel} channelId='hoi-dap' manage={manage} onOpen={onOpen} />
                     <Toaster />
                 </TooltipProvider>
             </QueryClientProvider>

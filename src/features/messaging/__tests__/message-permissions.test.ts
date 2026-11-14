@@ -8,6 +8,9 @@ const message = (authorId: string): Message => ({
     type: 'regular',
     author: { id: authorId, username: authorId, displayName: authorId, avatarUrl: null },
     content: 'Câu 3?',
+    mentionUsers: [],
+    mentionRoles: [],
+    mentionEveryone: false,
     systemEvent: null,
     systemData: null,
     systemUser: null,
@@ -18,10 +21,38 @@ const message = (authorId: string): Message => ({
     createdAt: '2026-10-18T13:02:00.000Z'
 })
 
-const MEMBER: ChatPermissions = { send: true, manage: false, deleteOwn: true, react: true, addReactions: true }
-const MANAGERS_ONLY: ChatPermissions = { send: false, manage: false, deleteOwn: true, react: true, addReactions: true }
-const TIMED_OUT: ChatPermissions = { send: false, manage: false, deleteOwn: false, react: false, addReactions: false }
-const MODERATOR: ChatPermissions = { send: true, manage: true, deleteOwn: true, react: true, addReactions: true }
+const MEMBER: ChatPermissions = {
+    send: true,
+    manage: false,
+    deleteOwn: true,
+    react: true,
+    addReactions: true,
+    mentionEveryone: false
+}
+const MANAGERS_ONLY: ChatPermissions = {
+    send: false,
+    manage: false,
+    deleteOwn: true,
+    react: true,
+    addReactions: true,
+    mentionEveryone: false
+}
+const TIMED_OUT: ChatPermissions = {
+    send: false,
+    manage: false,
+    deleteOwn: false,
+    react: false,
+    addReactions: false,
+    mentionEveryone: false
+}
+const MODERATOR: ChatPermissions = {
+    send: true,
+    manage: true,
+    deleteOwn: true,
+    react: true,
+    addReactions: true,
+    mentionEveryone: false
+}
 
 describe('What one may do to a message (REQ-MSG-05, SRS 1.70)', () => {
     it("lets a member edit, reply to and delete their own message, only reply to someone else's", () => {

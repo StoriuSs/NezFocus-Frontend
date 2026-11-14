@@ -1,7 +1,7 @@
 import { matchPath } from 'react-router-dom'
-import type { AppLink } from '@/features/messaging'
+import type { AppLink, MentionChannel } from '@/features/messaging'
 import type { Server, ServerChannel } from '../types'
-import { isId, SERVERS_PATHS } from './paths'
+import { channelPath, isId, SERVERS_PATHS } from './paths'
 
 /** What a link needs of a server: its name, and the channels they see. */
 export type LinkedServer = Pick<Server, 'id' | 'name'> & {
@@ -57,4 +57,26 @@ export function readAppLink(
         ...(server.id === serverId ? {} : { server: server.name }),
         channel: channel.name
     }
+}
+
+/**
+ * A <#id> token in a message (REQ-MSG-03, C-10): a channel of a server one is
+ * in and sees, as a chip "#name" leading to it, the server named when it is
+ * another one than the one open; any other id says nothing of what it is.
+ */
+export function readChannelMention(
+    channelId: string,
+    { servers, serverId }: { servers: LinkedServer[]; serverId: string }
+): MentionChannel {
+    for (const server of servers) {
+        const channel = server.channels.find((candidate) => candidate.id === channelId)
+        if (!channel) continue
+        return {
+            kind: 'channel',
+            to: channelPath(server.id, channel.id),
+            name: channel.name,
+            ...(server.id === serverId ? {} : { server: server.name })
+        }
+    }
+    return { kind: 'hidden' }
 }

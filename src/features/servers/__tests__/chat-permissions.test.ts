@@ -14,7 +14,8 @@ describe('What the chat may offer, from the channel’s bits (REQ-MSG-05, SRS 1.
             manage: false,
             deleteOwn: true,
             react: true,
-            addReactions: false
+            addReactions: false,
+            mentionEveryone: false
         })
     })
 
@@ -24,7 +25,8 @@ describe('What the chat may offer, from the channel’s bits (REQ-MSG-05, SRS 1.
             manage: false,
             deleteOwn: true,
             react: true,
-            addReactions: false
+            addReactions: false,
+            mentionEveryone: false
         })
     })
 
@@ -35,7 +37,8 @@ describe('What the chat may offer, from the channel’s bits (REQ-MSG-05, SRS 1.
             manage: false,
             deleteOwn: false,
             react: false,
-            addReactions: false
+            addReactions: false,
+            mentionEveryone: false
         })
         expect(chatPermissions(timedOut, viewOnly, new Date('2026-10-18T15:31:00Z'))).toMatchObject({
             deleteOwn: true,
@@ -57,5 +60,12 @@ describe('What the chat may offer, from the channel’s bits (REQ-MSG-05, SRS 1.
     it('lets a timed out moderator keep reacting, as the server does (appendix B, step 1)', () => {
         const moderator = { permissions: bits('VIEW_CHANNEL', 'MANAGE_MESSAGES', 'ADD_REACTIONS') }
         expect(chatPermissions(timedOut, moderator, NOW)).toMatchObject({ react: true, addReactions: true })
+    })
+
+    it('gives MENTION_EVERYONE @everyone and any role (REQ-MSG-03)', () => {
+        expect(
+            chatPermissions(free, { permissions: bits('VIEW_CHANNEL', 'MENTION_EVERYONE') }, NOW).mentionEveryone
+        ).toBe(true)
+        expect(chatPermissions(free, { permissions: bits('VIEW_CHANNEL') }, NOW).mentionEveryone).toBe(false)
     })
 })

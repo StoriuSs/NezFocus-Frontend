@@ -2,9 +2,16 @@ import { Fragment, useMemo, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { parseMessage, type Block, type Inline } from '../lib/markdown'
 import type { AppLink } from '../types'
+import { MentionChip, type ContentMentions } from './MentionChip'
 import { MessageLinkChip } from './MessageLinkChip'
 
 type ReadLink = (href: string) => AppLink | null
+
+/** What the parts of a message are drawn with: how links show, and its mentions' names. */
+interface Drawing {
+    readLink: ReadLink
+    mentions: ContentMentions
+}
 
 const LINK = 'text-primary underline'
 
@@ -14,18 +21,22 @@ const LINK = 'text-primary underline'
  * a block scrolling sideways), quotes (a 4-wide `border-input` rule on the
  * left) and links (`primary`, underlined). A link to a page of the app opens
  * in this tab, a message link as a chip; another site opens in a new tab
- * (D-117). Line breaks are kept. `trailing` ("(edited)") ends the last line.
+ * (D-117). Mentions are chips (`MentionChip`, REQ-MSG-03). Line breaks are
+ * kept. `trailing` ("(edited)") ends the last line.
  */
 export function MessageContent({
     content,
     readLink,
+    mentions,
     trailing
 }: {
     content: string
     readLink: ReadLink
+    mentions: ContentMentions
     trailing?: ReactNode
 }) {
     const blocks = useMemo(() => parseMessage(content), [content])
+    const drawing = { readLink, mentions }
     const last = blocks.at(-1)
     const endsInText = last !== undefined && last.type !== 'codeBlock'
 
@@ -35,7 +46,7 @@ export function MessageContent({
                 <BlockView
                     key={index}
                     block={block}
-                    readLink={readLink}
+                    drawing={drawing}
                     trailing={endsInText && index === blocks.length - 1 ? trailing : undefined}
                 />
             ))}
@@ -44,7 +55,7 @@ export function MessageContent({
     )
 }
 
-function BlockView({ block, readLink, trailing }: { block: Block; readLink: ReadLink; trailing?: ReactNode }) {
+function BlockView({ block, drawing, trailing }: { block: Block; drawing: Drawing; trailing?: ReactNode }) {
     if (block.type === 'codeBlock') {
         return (
             <pre className='my-1 overflow-x-auto rounded-input bg-surface-2 px-3 py-2 font-mono text-mono-code'>
@@ -54,7 +65,7 @@ function BlockView({ block, readLink, trailing }: { block: Block; readLink: Read
     }
     const parts = (
         <>
-            <Parts parts={block.children} readLink={readLink} />
+            <Parts parts={block.children} drawing={drawing} />
             {trailing ? <> {trailing}</> : null}
         </>
     )
@@ -64,40 +75,43 @@ function BlockView({ block, readLink, trailing }: { block: Block; readLink: Read
     return <p className='whitespace-pre-wrap'>{parts}</p>
 }
 
-function Parts({ parts, readLink }: { parts: Inline[]; readLink: ReadLink }) {
+function Parts({ parts, drawing }: { parts: Inline[]; drawing: Drawing }) {
     return parts.map((part, index) => (
         <Fragment key={index}>
-            <Part part={part} readLink={readLink} />
+            <Part part={part} drawing={drawing} />
         </Fragment>
     ))
 }
 
-function Part({ part, readLink }: { part: Inline; readLink: ReadLink }) {
+function Part({ part, drawing }: { part: Inline; drawing: Drawing }) {
     switch (part.type) {
         case 'text':
             return part.text
         case 'bold':
             return (
                 <strong className='font-semibold'>
-                    <Parts parts={part.children} readLink={readLink} />
+                    <Parts parts={part.children} drawing={drawing} />
                 </strong>
             )
         case 'italic':
             return (
                 <em>
-                    <Parts parts={part.children} readLink={readLink} />
+                    <Parts parts={part.children} drawing={drawing} />
                 </em>
             )
         case 'strike':
             return (
                 <s>
-                    <Parts parts={part.children} readLink={readLink} />
+                    <Parts parts={part.children} drawing={drawing} />
                 </s>
             )
         case 'code':
             return <code className='rounded-badge bg-surface-2 px-1 font-mono text-mono-code'>{part.text}</code>
         case 'link':
-            return <LinkPart href={part.href} readLink={readLink} />
+            return <LinkPart href={part.href} readLink={drawing.readLink} />
+        case 'mention':
+        case 'everyone':
+            return <MentionChip part={part} mentions={drawing.mentions} />
     }
 }
 

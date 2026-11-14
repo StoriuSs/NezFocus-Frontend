@@ -14,9 +14,11 @@ import { useMinuteClock } from '@/hooks/useMinuteClock'
 import { cn } from '@/lib/utils'
 import { usePinMessage } from '../api/usePinMessage'
 import { usePins } from '../api/usePins'
+import { useMentionWords } from '../hooks/useMentionWords'
 import { plainText } from '../lib/markdown'
+import { mentionName } from '../lib/mentions'
 import { messageTime } from '../lib/message-time'
-import type { PinnedMessage } from '../types'
+import type { MentionChannel, PinnedMessage } from '../types'
 
 /**
  * The pins of a channel (S-CHAT-02), inside the servers feature's
@@ -31,13 +33,16 @@ import type { PinnedMessage } from '../types'
 export function PinsPanel({
     channelId,
     manage,
-    onOpen
+    onOpen,
+    channel
 }: {
     channelId: string
     /** MANAGE_MESSAGES: unpin from the card. */
     manage: boolean
     /** Opens the message in the chat (its link, as a message link opens). */
     onOpen: (messageId: string) => void
+    /** How a channel token reads (the page's MentionSource): a card names its mentions. */
+    channel: (id: string) => MentionChannel
 }) {
     const { t } = useTranslation('messaging')
     const pins = usePins(channelId)
@@ -121,6 +126,7 @@ export function PinsPanel({
                     <PinCard
                         key={pin.id}
                         pin={pin}
+                        channel={channel}
                         time={messageTime(new Date(pin.createdAt), now, timeZone, t)}
                         manage={manage}
                         onOpen={() => onOpen(pin.id)}
@@ -135,6 +141,7 @@ export function PinsPanel({
 
 function PinCard({
     pin,
+    channel,
     time,
     manage,
     onOpen,
@@ -142,6 +149,7 @@ function PinCard({
     onKeyDown
 }: {
     pin: PinnedMessage
+    channel: (id: string) => MentionChannel
     time: string
     manage: boolean
     onOpen: () => void
@@ -151,7 +159,9 @@ function PinCard({
     const { t } = useTranslation('messaging')
     const [menuOpen, setMenuOpen] = useState(false)
     const name = pin.author?.displayName ?? pin.author?.username ?? t('message.deletedAccount')
-    const content = plainText(pin.content)
+    const words = useMentionWords()
+    const names = { users: pin.mentionUsers, roles: pin.mentionRoles, channel }
+    const content = plainText(pin.content, (part) => mentionName(part, names, words))
 
     return (
         <li className='group relative'>

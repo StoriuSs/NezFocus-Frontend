@@ -45,6 +45,9 @@ export type InvitePreview = ApiModel<'InvitePreviewResponseDto'>
 /** A role on the Roles page (S-SET-02), @everyone included, with how many hold it. */
 export type Role = ApiModel<'RoleResponseDto'>
 
+/** A role one may mention after @, with how many hold it (D-171). */
+export type MentionableRole = ApiModel<'MentionableRoleResponseDto'>
+
 /** A member as the server's lists show them (D-152). */
 export type ServerMember = ApiModel<'MemberResponseDto'>
 

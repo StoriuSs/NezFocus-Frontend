@@ -8,7 +8,16 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { userKeys } from '@/features/users'
 import { expectNoA11yViolations } from '@/test/a11y'
 import { apiError } from '@/test/helpers'
-import type { ChatPermissions, Message, MessageCursor, MessagePage } from '../types'
+import type { ChatPermissions, MentionSource, Message, MessageCursor, MessagePage } from '../types'
+
+/** No one to suggest, no roles held: these tests are not about mentions (REQ-MSG-03). */
+const NO_MENTIONS: MentionSource = {
+    members: () => ({ queryKey: ['test', 'members'], queryFn: async () => [] }),
+    roles: { queryKey: ['test', 'roles'], queryFn: async () => [] },
+    channels: [],
+    channel: () => ({ kind: 'hidden' }),
+    roleIds: []
+}
 
 const messagesApi = {
     fetchMessages: vi.fn<(channelId: string, cursor: MessageCursor, limit?: number) => Promise<MessagePage>>(),
@@ -42,6 +51,9 @@ const message = (id: string, author: typeof AN, content: string, time: string): 
     type: 'regular',
     author,
     content,
+    mentionUsers: [],
+    mentionRoles: [],
+    mentionEveryone: false,
     systemEvent: null,
     systemData: null,
     systemUser: null,
@@ -54,9 +66,30 @@ const message = (id: string, author: typeof AN, content: string, time: string): 
 const MINE = message('m1', AN, 'Ok, mình vào sớm giữ chỗ', '20:11')
 const THEIRS = message('m2', TUAN, 'Câu 4 đổi cận thế nào vậy mọi người?', '21:45')
 
-const MEMBER: ChatPermissions = { send: true, manage: false, deleteOwn: true, react: true, addReactions: true }
-const MODERATOR: ChatPermissions = { send: true, manage: true, deleteOwn: true, react: true, addReactions: true }
-const TIMED_OUT: ChatPermissions = { send: false, manage: false, deleteOwn: false, react: false, addReactions: false }
+const MEMBER: ChatPermissions = {
+    send: true,
+    manage: false,
+    deleteOwn: true,
+    react: true,
+    addReactions: true,
+    mentionEveryone: false
+}
+const MODERATOR: ChatPermissions = {
+    send: true,
+    manage: true,
+    deleteOwn: true,
+    react: true,
+    addReactions: true,
+    mentionEveryone: false
+}
+const TIMED_OUT: ChatPermissions = {
+    send: false,
+    manage: false,
+    deleteOwn: false,
+    react: false,
+    addReactions: false,
+    mentionEveryone: false
+}
 
 function renderChat(permissions: ChatPermissions = MEMBER) {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
@@ -72,6 +105,7 @@ function renderChat(permissions: ChatPermissions = MEMBER) {
                         permissions={permissions}
                         linkTo={(id) => `${window.location.origin}/channels/ot/hoi-dap/${id}`}
                         readLink={() => null}
+                        mentions={NO_MENTIONS}
                     />
                 </div>
                 <Toaster />
@@ -168,9 +202,9 @@ describe('The actions on a message (S-CHAT-03, C-11)', () => {
         renderChat()
         await userEvent.click(within(await openMenu(THEIRS.content)).getByRole('menuitem', { name: 'Trả lời' }))
 
-        await waitFor(() => expect(screen.getByRole('textbox', { name: 'Nhắn #hoi-dap' })).toHaveFocus())
+        await waitFor(() => expect(screen.getByRole('combobox', { name: 'Nhắn #hoi-dap' })).toHaveFocus())
         await new Promise((resolve) => setTimeout(resolve, 20))
-        expect(screen.getByRole('textbox', { name: 'Nhắn #hoi-dap' })).toHaveFocus()
+        expect(screen.getByRole('combobox', { name: 'Nhắn #hoi-dap' })).toHaveFocus()
     })
 
     it('puts the cursor in the editor after Edit from a right-click', async () => {
@@ -179,7 +213,7 @@ describe('The actions on a message (S-CHAT-03, C-11)', () => {
         await userEvent.click(within(await screen.findByRole('menu')).getByRole('menuitem', { name: /Sửa/ }))
 
         await new Promise((resolve) => setTimeout(resolve, 20))
-        expect(screen.getByRole('textbox', { name: 'Sửa tin nhắn' })).toHaveFocus()
+        expect(screen.getByRole('combobox', { name: 'Sửa tin nhắn' })).toHaveFocus()
     })
 
     it('says that copying failed when the browser refuses', async () => {
@@ -230,7 +264,7 @@ describe('Editing in place (S-CHAT-01 edit-mode, C-10 editing)', () => {
         const { container } = renderChat()
         await userEvent.click(within(await openMenu(MINE.content)).getByRole('menuitem', { name: /Sửa/ }))
 
-        const editor = screen.getByRole('textbox', { name: 'Sửa tin nhắn' })
+        const editor = screen.getByRole('combobox', { name: 'Sửa tin nhắn' })
         expect(editor).toHaveValue(MINE.content)
         expect(editor).toHaveFocus()
         expect(screen.getByText('Esc để hủy · Enter để lưu')).toBeInTheDocument()
@@ -242,19 +276,19 @@ describe('Editing in place (S-CHAT-01 edit-mode, C-10 editing)', () => {
         expect(messagesApi.editMessage).toHaveBeenCalledWith('m1', 'Mình vào phòng rồi nhé')
         expect(await screen.findByText('Mình vào phòng rồi nhé')).toBeInTheDocument()
         expect(screen.getByText('(đã chỉnh sửa)')).toBeInTheDocument()
-        expect(screen.queryByRole('textbox', { name: 'Sửa tin nhắn' })).not.toBeInTheDocument()
+        expect(screen.queryByRole('combobox', { name: 'Sửa tin nhắn' })).not.toBeInTheDocument()
     })
 
     it('starts on ↑ in the empty composer, with the last message of one’s own; Esc leaves it as it was', async () => {
         renderChat()
-        const composer = await screen.findByRole('textbox', { name: 'Nhắn #hoi-dap' })
+        const composer = await screen.findByRole('combobox', { name: 'Nhắn #hoi-dap' })
         await screen.findByText(MINE.content)
 
         await userEvent.type(composer, '{ArrowUp}')
-        const editor = screen.getByRole('textbox', { name: 'Sửa tin nhắn' })
+        const editor = screen.getByRole('combobox', { name: 'Sửa tin nhắn' })
         await userEvent.type(editor, ' thêm chữ{Escape}')
 
-        expect(screen.queryByRole('textbox', { name: 'Sửa tin nhắn' })).not.toBeInTheDocument()
+        expect(screen.queryByRole('combobox', { name: 'Sửa tin nhắn' })).not.toBeInTheDocument()
         expect(screen.getByText(MINE.content)).toBeInTheDocument()
         expect(messagesApi.editMessage).not.toHaveBeenCalled()
         expect(composer).toHaveFocus()
@@ -262,17 +296,17 @@ describe('Editing in place (S-CHAT-01 edit-mode, C-10 editing)', () => {
 
     it('sends nothing when the text did not change', async () => {
         renderChat()
-        await userEvent.type(await screen.findByRole('textbox', { name: 'Nhắn #hoi-dap' }), '{ArrowUp}')
-        await userEvent.type(screen.getByRole('textbox', { name: 'Sửa tin nhắn' }), '{Enter}')
+        await userEvent.type(await screen.findByRole('combobox', { name: 'Nhắn #hoi-dap' }), '{ArrowUp}')
+        await userEvent.type(screen.getByRole('combobox', { name: 'Sửa tin nhắn' }), '{Enter}')
 
-        expect(screen.queryByRole('textbox', { name: 'Sửa tin nhắn' })).not.toBeInTheDocument()
+        expect(screen.queryByRole('combobox', { name: 'Sửa tin nhắn' })).not.toBeInTheDocument()
         expect(messagesApi.editMessage).not.toHaveBeenCalled()
     })
 
     it('asks to delete when saved empty', async () => {
         renderChat()
-        await userEvent.type(await screen.findByRole('textbox', { name: 'Nhắn #hoi-dap' }), '{ArrowUp}')
-        const editor = screen.getByRole('textbox', { name: 'Sửa tin nhắn' })
+        await userEvent.type(await screen.findByRole('combobox', { name: 'Nhắn #hoi-dap' }), '{ArrowUp}')
+        const editor = screen.getByRole('combobox', { name: 'Sửa tin nhắn' })
         await userEvent.clear(editor)
         await userEvent.type(editor, '{Enter}')
 
@@ -282,20 +316,20 @@ describe('Editing in place (S-CHAT-01 edit-mode, C-10 editing)', () => {
 
     it('stops, saying so, when the message is deleted elsewhere meanwhile', async () => {
         renderChat()
-        await userEvent.type(await screen.findByRole('textbox', { name: 'Nhắn #hoi-dap' }), '{ArrowUp}')
+        await userEvent.type(await screen.findByRole('combobox', { name: 'Nhắn #hoi-dap' }), '{ArrowUp}')
 
         act(() => emitRealtimeEvent('message.deleted', { id: 'm1', channelId: 'hoi-dap' }))
 
         expect(await screen.findByText('Tin nhắn này đã bị xóa')).toBeInTheDocument()
-        expect(screen.queryByRole('textbox', { name: 'Sửa tin nhắn' })).not.toBeInTheDocument()
+        expect(screen.queryByRole('combobox', { name: 'Sửa tin nhắn' })).not.toBeInTheDocument()
     })
 
     it('says once that the message was deleted when the edit finds it gone', async () => {
         messagesApi.editMessage.mockRejectedValueOnce(apiError(404, 'NOT_FOUND_ERROR'))
         renderChat()
-        await userEvent.type(await screen.findByRole('textbox', { name: 'Nhắn #hoi-dap' }), '{ArrowUp}')
+        await userEvent.type(await screen.findByRole('combobox', { name: 'Nhắn #hoi-dap' }), '{ArrowUp}')
 
-        await userEvent.type(screen.getByRole('textbox', { name: 'Sửa tin nhắn' }), '!{Enter}')
+        await userEvent.type(screen.getByRole('combobox', { name: 'Sửa tin nhắn' }), '!{Enter}')
 
         expect(await screen.findByText('Tin nhắn này đã bị xóa')).toBeInTheDocument()
         await new Promise((resolve) => setTimeout(resolve, 50))
@@ -308,8 +342,8 @@ describe('Editing in place (S-CHAT-01 edit-mode, C-10 editing)', () => {
             act(() => emitRealtimeEvent('message.deleted', { id, channelId: 'hoi-dap' }))
         })
         renderChat()
-        await userEvent.type(await screen.findByRole('textbox', { name: 'Nhắn #hoi-dap' }), '{ArrowUp}')
-        const editor = screen.getByRole('textbox', { name: 'Sửa tin nhắn' })
+        await userEvent.type(await screen.findByRole('combobox', { name: 'Nhắn #hoi-dap' }), '{ArrowUp}')
+        const editor = screen.getByRole('combobox', { name: 'Sửa tin nhắn' })
         await userEvent.clear(editor)
         await userEvent.type(editor, '{Enter}')
         await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Xóa' }))
@@ -322,13 +356,13 @@ describe('Editing in place (S-CHAT-01 edit-mode, C-10 editing)', () => {
     it('says why an edit was refused, keeping the text being edited', async () => {
         messagesApi.editMessage.mockRejectedValueOnce(apiError(403, 'MEMBER_TIMED_OUT'))
         renderChat()
-        await userEvent.type(await screen.findByRole('textbox', { name: 'Nhắn #hoi-dap' }), '{ArrowUp}')
-        const editor = screen.getByRole('textbox', { name: 'Sửa tin nhắn' })
+        await userEvent.type(await screen.findByRole('combobox', { name: 'Nhắn #hoi-dap' }), '{ArrowUp}')
+        const editor = screen.getByRole('combobox', { name: 'Sửa tin nhắn' })
 
         await userEvent.type(editor, '!{Enter}')
 
         await waitFor(() => expect(messagesApi.editMessage).toHaveBeenCalled())
-        expect(screen.getByRole('textbox', { name: 'Sửa tin nhắn' })).toHaveValue(`${MINE.content}!`)
+        expect(screen.getByRole('combobox', { name: 'Sửa tin nhắn' })).toHaveValue(`${MINE.content}!`)
     })
 })
 
@@ -406,7 +440,14 @@ describe('Replying (S-CHAT-01 reply-mode, C-10 reply)', () => {
         })
         messagesApi.sendMessage.mockImplementation(async (_channel, body) => ({
             ...message('m3', AN, body.content, '21:47'),
-            replyTo: { id: 'm2', author: TUAN, content: THEIRS.content, deleted: false }
+            replyTo: {
+                id: 'm2',
+                author: TUAN,
+                content: THEIRS.content,
+                deleted: false,
+                mentionUsers: [],
+                mentionRoles: []
+            }
         }))
         sessionStorage.clear()
     })
@@ -415,7 +456,7 @@ describe('Replying (S-CHAT-01 reply-mode, C-10 reply)', () => {
         const { container } = renderChat()
         await userEvent.click(within(await row(THEIRS.content)).getByRole('button', { name: 'Trả lời' }))
 
-        const composer = screen.getByRole('textbox', { name: 'Nhắn #hoi-dap' })
+        const composer = screen.getByRole('combobox', { name: 'Nhắn #hoi-dap' })
         expect(composer).toHaveFocus()
         expect(screen.getByText('Đang trả lời')).toBeInTheDocument()
         expect(screen.getByText('Tuấn', { selector: 'strong' })).toBeInTheDocument()
@@ -448,7 +489,14 @@ describe('Replying (S-CHAT-01 reply-mode, C-10 reply)', () => {
                 THEIRS,
                 {
                     ...message('m3', AN, 'Đổi sang tọa độ cực', '21:46'),
-                    replyTo: { id: 'm2', author: TUAN, content: THEIRS.content, deleted: false }
+                    replyTo: {
+                        id: 'm2',
+                        author: TUAN,
+                        content: THEIRS.content,
+                        deleted: false,
+                        mentionUsers: [],
+                        mentionRoles: []
+                    }
                 }
             ],
             hasMoreBefore: false,
@@ -461,7 +509,7 @@ describe('Replying (S-CHAT-01 reply-mode, C-10 reply)', () => {
         act(() => emitRealtimeEvent('message.deleted', { id: 'm2', channelId: 'hoi-dap' }))
 
         expect(await screen.findAllByText('Tin nhắn gốc đã bị xóa')).toHaveLength(2)
-        await userEvent.type(screen.getByRole('textbox', { name: 'Nhắn #hoi-dap' }), 'Vẫn gửi{Enter}')
+        await userEvent.type(screen.getByRole('combobox', { name: 'Nhắn #hoi-dap' }), 'Vẫn gửi{Enter}')
         await waitFor(() => expect(messagesApi.sendMessage.mock.calls[0]![1]).toMatchObject({ replyToId: 'm2' }))
     })
 
@@ -471,7 +519,14 @@ describe('Replying (S-CHAT-01 reply-mode, C-10 reply)', () => {
                 { ...MINE, editedAt: at('20:12') },
                 {
                     ...message('m3', TUAN, 'Mình giữ chỗ rồi', '21:46'),
-                    replyTo: { id: 'm1', author: AN, content: MINE.content, deleted: false }
+                    replyTo: {
+                        id: 'm1',
+                        author: AN,
+                        content: MINE.content,
+                        deleted: false,
+                        mentionUsers: [],
+                        mentionRoles: []
+                    }
                 }
             ],
             hasMoreBefore: false,
@@ -482,13 +537,16 @@ describe('Replying (S-CHAT-01 reply-mode, C-10 reply)', () => {
         expect(
             await screen.findByRole('article', { name: `An, 20:11: ${MINE.content} (đã chỉnh sửa)` })
         ).toBeInTheDocument()
-        expect(screen.getByRole('article', { name: 'Tuấn, 21:46, trả lời An: Mình giữ chỗ rồi' })).toBeInTheDocument()
+        // A reply to one's own message is about oneself (C-10 `related`, D-39).
+        expect(
+            screen.getByRole('article', { name: 'Tuấn, 21:46, trả lời An, nhắc tới bạn: Mình giữ chỗ rồi' })
+        ).toBeInTheDocument()
     })
 
     it('tells the composer whom one answers', async () => {
         renderChat()
         await userEvent.click(within(await row(THEIRS.content)).getByRole('button', { name: 'Trả lời' }))
-        expect(screen.getByRole('textbox', { name: 'Nhắn #hoi-dap' })).toHaveAccessibleDescription('Đang trả lời Tuấn')
+        expect(screen.getByRole('combobox', { name: 'Nhắn #hoi-dap' })).toHaveAccessibleDescription('Đang trả lời Tuấn')
     })
 })
 

@@ -26,6 +26,9 @@ const saved = (id: string): Message => ({
     type: 'regular',
     author: binh,
     content: `Tin ${id}`,
+    mentionUsers: [],
+    mentionRoles: [],
+    mentionEveryone: false,
     systemEvent: null,
     systemData: null,
     systemUser: null,
@@ -172,11 +175,25 @@ describe('Whether a message is gone from the history (REQ-MSG-05)', () => {
 describe('Edits and deletions in the cache (REQ-MSG-05)', () => {
     const answering = (id: string, original: Message): Message => ({
         ...saved(id),
-        replyTo: { id: original.id, author: original.author, content: original.content, deleted: false }
+        replyTo: {
+            id: original.id,
+            author: original.author,
+            content: original.content,
+            deleted: false,
+            mentionUsers: [],
+            mentionRoles: []
+        }
     })
     const outgoingAnswer = (nonce: string, original: Message): OutgoingMessage => ({
         ...outgoing(nonce),
-        replyTo: { id: original.id, author: original.author, content: original.content, deleted: false }
+        replyTo: {
+            id: original.id,
+            author: original.author,
+            content: original.content,
+            deleted: false,
+            mentionUsers: [],
+            mentionRoles: []
+        }
     })
     const withReplies = () => {
         const data = history({ ids: ['m1'] }, { ids: [] })
@@ -184,13 +201,28 @@ describe('Edits and deletions in the cache (REQ-MSG-05)', () => {
         return addOutgoing(data, outgoingAnswer('n1', saved('m1')))
     }
 
+    it('gives the reply lines quoting an edited message its mentions as they now are (D-171)', () => {
+        const binh = { id: '0190a0b0-0000-7000-8000-00000000000b', username: 'binh', displayName: 'Bình' }
+        const role = { id: '0190a0b0-0000-7000-8000-0000000000f1', name: 'Trưởng nhóm' }
+        const edited = { ...saved('m1'), content: 'xem lại', mentionUsers: [binh], mentionRoles: [role] }
+
+        const data = replaceSaved(withReplies(), edited)
+
+        expect(data.pages[1]!.items[0]!.replyTo).toMatchObject({ mentionUsers: [binh], mentionRoles: [role] })
+    })
+
     it('swaps an edited message in its place, and in the reply lines that quote it', () => {
         const edited = { ...saved('m1'), content: 'Câu 4 đổi cận', editedAt: '2026-10-18T13:05:00.000Z' }
 
         const data = replaceSaved(withReplies(), edited)
 
         expect(data.pages[0]!.items[0]).toEqual(edited)
-        expect(data.pages[1]!.items[0]!.replyTo).toMatchObject({ content: 'Câu 4 đổi cận', deleted: false })
+        expect(data.pages[1]!.items[0]!.replyTo).toMatchObject({
+            content: 'Câu 4 đổi cận',
+            deleted: false,
+            mentionUsers: [],
+            mentionRoles: []
+        })
         expect(data.pages[1]!.outgoing![0]!.replyTo).toMatchObject({ content: 'Câu 4 đổi cận' })
     })
 
@@ -220,7 +252,7 @@ describe('Edits and deletions in the cache (REQ-MSG-05)', () => {
         const data = removeSaved(withReplies(), 'm1')
 
         expect(ids(data)).toEqual(['m2'])
-        const deleted = { id: 'm1', author: null, content: '', deleted: true }
+        const deleted = { id: 'm1', author: null, content: '', deleted: true, mentionUsers: [], mentionRoles: [] }
         expect(data.pages[1]!.items[0]!.replyTo).toEqual(deleted)
         expect(data.pages[1]!.outgoing![0]!.replyTo).toEqual(deleted)
     })

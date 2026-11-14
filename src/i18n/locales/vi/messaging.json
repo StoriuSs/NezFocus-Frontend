@@ -41,7 +41,10 @@
     "replyDeleted": "Tin nhắn gốc đã bị xóa",
     "gone": "Tin nhắn này đã bị xóa",
     "labelReply": "{{name}}, {{time}}, trả lời {{replyTo}}: {{content}}",
-    "labelReplyDeleted": "{{name}}, {{time}}, trả lời tin đã bị xóa: {{content}}"
+    "labelReplyDeleted": "{{name}}, {{time}}, trả lời tin đã bị xóa: {{content}}",
+    "labelRelated": "{{name}}, {{time}}, nhắc tới bạn: {{content}}",
+    "labelReplyRelated": "{{name}}, {{time}}, trả lời {{replyTo}}, nhắc tới bạn: {{content}}",
+    "labelReplyDeletedRelated": "{{name}}, {{time}}, trả lời tin đã bị xóa, nhắc tới bạn: {{content}}"
   },
   "composer": {
     "placeholder": "Nhắn #{{channel}}",
@@ -137,5 +140,19 @@
     "view": "Xem",
     "viewLabel": "Xem tin đã ghim",
     "label": "{{text}}, {{time}}"
+  },
+  "mention": {
+    "unknownUser": "@người dùng không rõ",
+    "unknownRole": "@vai trò không rõ",
+    "hiddenChannel": "#không xem được",
+    "hiddenChannelToast": "Bạn không xem được kênh này",
+    "suggestions": "Gợi ý nhắc tới",
+    "members": "Thành viên",
+    "roles": "Vai trò",
+    "channels": "Kênh",
+    "roleMembers_one": "{{count}} thành viên",
+    "roleMembers_other": "{{count}} thành viên",
+    "everyone": "Mọi người xem được kênh này",
+    "none": "Không có kết quả"
   }
 }

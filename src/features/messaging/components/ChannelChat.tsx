@@ -13,11 +13,22 @@ import { useReactions } from '../api/useReactions'
 import { useSendMessage } from '../api/useSendMessage'
 import { useBrowserOnline } from '../hooks/useBrowserOnline'
 import { useJumpToMessage } from '../hooks/useJumpToMessage'
+import { useMentionWords } from '../hooks/useMentionWords'
 import { authorFrom, chatMessages } from '../lib/chat-messages'
 import { chatRows } from '../lib/chat-rows'
+import { outgoingMentions, type ComposerNames } from '../lib/mention-text'
+import { readableText } from '../lib/mentions'
 import { isGoneFrom, stopsShort } from '../lib/message-cache'
 import { messageTime } from '../lib/message-time'
-import type { AppLink, ChatPermissions, ChatTarget, Message, MessageHandlers, RepliedMessage } from '../types'
+import type {
+    AppLink,
+    ChatPermissions,
+    ChatTarget,
+    MentionSource,
+    Message,
+    MessageHandlers,
+    RepliedMessage
+} from '../types'
 import { Composer } from './Composer'
 import { DeleteMessageDialog } from './DeleteMessageDialog'
 import { MessageList } from './MessageList'
@@ -30,7 +41,9 @@ const quote = (message: Message): RepliedMessage => ({
     id: message.id,
     author: message.author,
     content: message.content,
-    deleted: false
+    deleted: false,
+    mentionUsers: message.mentionUsers,
+    mentionRoles: message.mentionRoles
 })
 
 /**
@@ -51,6 +64,10 @@ const quote = (message: Message): RepliedMessage => ({
  * original of a reply: `useJumpToMessage`. From a history that stops short of
  * the newest, ↓ and sending go back to them first; a message is sent once
  * they are in, and stays in the composer if they cannot be read.
+ *
+ * Mentions (REQ-MSG-03): the page hands the server's side of them
+ * (`mentions`, the MentionSource port); "Copy text" gives their names
+ * (owner, 14/11/2026).
  */
 export default function ChannelChat({
     channelId,
@@ -58,6 +75,7 @@ export default function ChannelChat({
     permissions,
     linkTo,
     readLink,
+    mentions,
     target
 }: {
     channelId: string
@@ -68,10 +86,13 @@ export default function ChannelChat({
     linkTo: (messageId: string) => string
     /** How a link in a message shows (the servers feature knows its paths and what one sees). */
     readLink: (href: string) => AppLink | null
+    /** Whom to suggest after @ and #, how a channel token shows, one's roles (the servers feature's). */
+    mentions: MentionSource
     /** The message the page was opened on, if any. */
     target?: ChatTarget
 }) {
     const { t } = useTranslation('messaging')
+    const words = useMentionWords()
     const profile = useProfile().data
     const timeZone = useQuery(settingsCache).data?.timezone
     const now = useMinuteClock()
@@ -149,15 +170,23 @@ export default function ChannelChat({
             },
             edit: (message) => setEditingId(message.id),
             askDelete: (message) => setDeletingId(message.id),
-            copyText: (message) => copy(message.content),
+            copyText: (message) =>
+                copy(
+                    readableText(
+                        message.content,
+                        { users: message.mentionUsers, roles: message.mentionRoles, channel: mentions.channel },
+                        words
+                    )
+                ),
             copyLink: (message) => copy(linkTo(message.id)),
             react: (message, emoji, how) => react(message.id, emoji, how),
             pin: (message) => pin(message.id),
             unpin: (message) => unpin(message.id),
             show: jump.show,
-            readLink
+            readLink,
+            mentions
         }),
-        [me, permissions, backToComposer, copy, linkTo, react, pin, unpin, jump.show, readLink]
+        [me, permissions, backToComposer, copy, words, mentions, linkTo, react, pin, unpin, jump.show, readLink]
     )
 
     const stopEditing = useCallback(() => {
@@ -188,10 +217,10 @@ export default function ChannelChat({
         return !!last
     }
 
-    const sendReply = (text: string): boolean | Promise<boolean> => {
+    const sendReply = (text: string, names: ComposerNames): boolean | Promise<boolean> => {
         const quoted = replyQuote
         const go = () => {
-            const taken = send(text, quoted)
+            const taken = send(text, quoted, outgoingMentions(text, names, permissions.mentionEveryone))
             if (taken) setReplyingTo(null)
             return taken
         }
@@ -237,6 +266,8 @@ export default function ChannelChat({
                 onCancelReply={() => setReplyingTo(null)}
                 onEditLast={editLast}
                 onSend={sendReply}
+                source={mentions}
+                mentionEveryone={permissions.mentionEveryone}
             />
             {deleting ? (
                 <DeleteMessageDialog

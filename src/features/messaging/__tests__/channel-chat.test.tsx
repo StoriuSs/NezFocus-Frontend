@@ -7,7 +7,16 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { userKeys } from '@/features/users'
 import { expectNoA11yViolations } from '@/test/a11y'
 import { apiError } from '@/test/helpers'
-import type { Message, MessageCursor, MessagePage } from '../types'
+import type { MentionSource, Message, MessageCursor, MessagePage } from '../types'
+
+/** No one to suggest, no roles held: these tests are not about mentions (REQ-MSG-03). */
+const NO_MENTIONS: MentionSource = {
+    members: () => ({ queryKey: ['test', 'members'], queryFn: async () => [] }),
+    roles: { queryKey: ['test', 'roles'], queryFn: async () => [] },
+    channels: [],
+    channel: () => ({ kind: 'hidden' }),
+    roleIds: []
+}
 
 const messagesApi = {
     fetchMessages: vi.fn<(channelId: string, cursor: MessageCursor, limit?: number) => Promise<MessagePage>>(),
@@ -33,6 +42,9 @@ const message = (id: string, author: typeof BINH, content: string, createdAt: st
     type: 'regular',
     author,
     content,
+    mentionUsers: [],
+    mentionRoles: [],
+    mentionEveryone: false,
     systemEvent: null,
     systemData: null,
     systemUser: null,
@@ -60,9 +72,17 @@ function renderChat(
                         key={channelId}
                         linkTo={(id) => `/channels/ot/${channelId}/${id}`}
                         readLink={() => null}
+                        mentions={NO_MENTIONS}
                         channelId={channelId}
                         channelName={channelId}
-                        permissions={{ send: true, manage: false, deleteOwn: true, react: true, addReactions: true }}
+                        permissions={{
+                            send: true,
+                            manage: false,
+                            deleteOwn: true,
+                            react: true,
+                            addReactions: true,
+                            mentionEveryone: false
+                        }}
                     />
                 </div>
             </TooltipProvider>
@@ -117,7 +137,7 @@ describe('A text channel chat (S-CHAT-01)', () => {
             message('m9', AN, body.content, new Date().toISOString())
         )
         renderChat()
-        const box = await screen.findByRole('textbox', { name: 'Nhắn #hoi-dap' })
+        const box = await screen.findByRole('combobox', { name: 'Nhắn #hoi-dap' })
         expect(box).toHaveFocus()
 
         await userEvent.type(box, 'Dòng một{Shift>}{Enter}{/Shift}dòng hai{Enter}')
@@ -133,7 +153,7 @@ describe('A text channel chat (S-CHAT-01)', () => {
         messagesApi.sendMessage.mockRejectedValue(apiError(500, 'GENERIC_ERROR'))
         const { container } = renderChat()
 
-        await userEvent.type(await screen.findByRole('textbox', { name: 'Nhắn #hoi-dap' }), 'Không đi{Enter}')
+        await userEvent.type(await screen.findByRole('combobox', { name: 'Nhắn #hoi-dap' }), 'Không đi{Enter}')
 
         const alert = await screen.findByRole('alert')
         expect(alert).toHaveTextContent('Không gửi được')
@@ -146,7 +166,7 @@ describe('A text channel chat (S-CHAT-01)', () => {
     it('counts down from 200 left, and refuses Enter past 2000 characters', async () => {
         messagesApi.fetchMessages.mockResolvedValue(page([]))
         renderChat()
-        const box = await screen.findByRole('textbox', { name: 'Nhắn #hoi-dap' })
+        const box = await screen.findByRole('combobox', { name: 'Nhắn #hoi-dap' })
 
         await userEvent.click(box)
         await userEvent.paste('a'.repeat(1801))
@@ -175,7 +195,7 @@ describe('A text channel chat (S-CHAT-01)', () => {
     it('sends a letter typed outside any field to the composer, but leaves Space to the button it presses', async () => {
         messagesApi.fetchMessages.mockResolvedValue(page([]))
         renderChat()
-        const box = await screen.findByRole('textbox', { name: 'Nhắn #hoi-dap' })
+        const box = await screen.findByRole('combobox', { name: 'Nhắn #hoi-dap' })
         const other = screen.getByRole('button', { name: 'Nút khác' })
 
         other.focus()
@@ -191,18 +211,18 @@ describe('A text channel chat (S-CHAT-01)', () => {
         messagesApi.fetchMessages.mockResolvedValue(page([]))
         await userEvent.keyboard('{Tab}')
         const byKeyboard = renderChat()
-        expect(await screen.findByRole('textbox', { name: 'Nhắn #hoi-dap' })).not.toHaveFocus()
+        expect(await screen.findByRole('combobox', { name: 'Nhắn #hoi-dap' })).not.toHaveFocus()
         byKeyboard.unmount()
 
         await userEvent.pointer({ keys: '[MouseLeft]', target: document.body })
         renderChat()
-        expect(await screen.findByRole('textbox', { name: 'Nhắn #hoi-dap' })).toHaveFocus()
+        expect(await screen.findByRole('combobox', { name: 'Nhắn #hoi-dap' })).toHaveFocus()
     })
 
     it('keeps the text when the history is not there yet to show the message', async () => {
         messagesApi.fetchMessages.mockReturnValue(new Promise(() => undefined))
         renderChat()
-        const box = await screen.findByRole('textbox', { name: 'Nhắn #hoi-dap' })
+        const box = await screen.findByRole('combobox', { name: 'Nhắn #hoi-dap' })
 
         await userEvent.type(box, 'Gửi sớm quá{Enter}')
 
@@ -213,23 +233,23 @@ describe('A text channel chat (S-CHAT-01)', () => {
     it('keeps what was typed in a channel for when one comes back to it', async () => {
         messagesApi.fetchMessages.mockResolvedValue(page([]))
         const first = renderChat('hoi-dap')
-        await userEvent.type(await screen.findByRole('textbox', { name: 'Nhắn #hoi-dap' }), 'Nháp chưa gửi')
+        await userEvent.type(await screen.findByRole('combobox', { name: 'Nhắn #hoi-dap' }), 'Nháp chưa gửi')
         first.unmount()
 
         renderChat('tai-lieu', first.client)
-        expect(await screen.findByRole('textbox', { name: 'Nhắn #tai-lieu' })).toHaveValue('')
+        expect(await screen.findByRole('combobox', { name: 'Nhắn #tai-lieu' })).toHaveValue('')
         renderChat('hoi-dap', first.client)
-        expect(await screen.findByRole('textbox', { name: 'Nhắn #hoi-dap' })).toHaveValue('Nháp chưa gửi')
+        expect(await screen.findByRole('combobox', { name: 'Nhắn #hoi-dap' })).toHaveValue('Nháp chưa gửi')
     })
 
     it("never shows one account's draft to the next one signed in, in the same tab", async () => {
         messagesApi.fetchMessages.mockResolvedValue(page([]))
         const an = renderChat('hoi-dap')
-        await userEvent.type(await screen.findByRole('textbox', { name: 'Nhắn #hoi-dap' }), 'Nháp của An')
+        await userEvent.type(await screen.findByRole('combobox', { name: 'Nhắn #hoi-dap' }), 'Nháp của An')
         an.unmount()
 
         renderChat('hoi-dap', undefined, 'binh')
 
-        expect(await screen.findByRole('textbox', { name: 'Nhắn #hoi-dap' })).toHaveValue('')
+        expect(await screen.findByRole('combobox', { name: 'Nhắn #hoi-dap' })).toHaveValue('')
     })
 })

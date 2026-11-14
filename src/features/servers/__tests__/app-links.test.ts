@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { linkedServers, readAppLink, type LinkedServer } from '../lib/app-links'
+import { linkedServers, readAppLink, readChannelMention, type LinkedServer } from '../lib/app-links'
 
 const ORIGIN = 'https://nezfocus.app'
 const SERVERS: LinkedServer[] = [
@@ -73,5 +73,28 @@ describe('A link in a message, as the chat shows it (REQ-MSG-05, D-48, D-117)', 
 
     it('hides a link to a message whose id is not one', () => {
         expect(read('https://nezfocus.app/channels/ot/hoi-dap/m1')).toEqual({ kind: 'hidden' })
+    })
+})
+
+describe('A channel mention, as the chat shows it (REQ-MSG-03, C-10)', () => {
+    const channel = (id: string, serverId = 'ot') => readChannelMention(id, { servers: SERVERS, serverId })
+
+    it('names a channel they see and leads to it, with the server when it is another one', () => {
+        expect(channel('hoi-dap')).toEqual({ kind: 'channel', to: '/channels/ot/hoi-dap', name: 'hoi-dap' })
+        expect(channel('chung')).toEqual({
+            kind: 'channel',
+            to: '/channels/nd/chung',
+            name: 'chung',
+            server: 'Nhóm đồ án Mobile'
+        })
+        expect(channel('phong-hoc')).toEqual({
+            kind: 'channel',
+            to: '/channels/ot/phong-hoc',
+            name: 'Phòng học im lặng'
+        })
+    })
+
+    it('says nothing of one they cannot see', () => {
+        expect(channel('rieng-tu')).toEqual({ kind: 'hidden' })
     })
 })

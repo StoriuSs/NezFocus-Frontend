@@ -11,6 +11,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { IconButton } from '@/components/ui/icon-button'
 import { WithTooltip } from '@/components/ui/tooltip'
 import { ChannelChat, PinsPanel } from '@/features/messaging'
+import { useMentionSource } from '../api/useMentionSource'
 import { useServers } from '../api/useServers'
 import { linkedServers, readAppLink, type LinkedServer } from '../lib/app-links'
 import { chatPermissions } from '../lib/chat-permissions'
@@ -76,6 +77,10 @@ export default function ChannelPage() {
  * stay the same, so the chat's rows do not draw again. Opened at a message,
  * the chat goes to it, again each time a link to it is opened.
  *
+ * Mentions (REQ-MSG-03): the chat's MentionSource port answered here
+ * (`useMentionSource`): whom to suggest, how a channel token shows, the
+ * roles one holds.
+ *
  * [📌] in the Header opens the pins (S-CHAT-02) in the right panel, closed
  * at first and remembered as a column (SRS 1.71); a card opens its message's
  * link, closing the panel when it covers the chat (a sheet below 1280),
@@ -97,6 +102,7 @@ function TextChannel({ server, channel, messageId }: { server: Server; channel: 
         const servers = JSON.parse(linked) as LinkedServer[]
         return (href: string) => readAppLink(href, { origin: window.location.origin, servers, serverId })
     }, [linked, serverId])
+    const mentions = useMentionSource(server, linked)
     const { key, state } = useLocation()
     // From the pins sheet, which closes with the focus in it: focus goes to the message.
     const focus = (state as { focusMessage?: boolean } | null)?.focusMessage === true
@@ -123,7 +129,12 @@ function TextChannel({ server, channel, messageId }: { server: Server; channel: 
             panel={
                 <RightPanel state={pins} buttonRef={pinsButton} title={t('channel.pins')}>
                     <Suspense fallback={<PageLoader className='min-h-0 py-6' />}>
-                        <PinsPanel channelId={channelId} manage={permissions.manage} onOpen={openPinned} />
+                        <PinsPanel
+                            channelId={channelId}
+                            manage={permissions.manage}
+                            onOpen={openPinned}
+                            channel={mentions.channel}
+                        />
                     </Suspense>
                 </RightPanel>
             }
@@ -135,6 +146,7 @@ function TextChannel({ server, channel, messageId }: { server: Server; channel: 
                     permissions={permissions}
                     linkTo={linkTo}
                     readLink={readLink}
+                    mentions={mentions}
                     target={target}
                 />
             </Suspense>

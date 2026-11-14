@@ -1,16 +1,19 @@
-import { useRef, useState, type KeyboardEvent, type RefObject } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent, type RefObject } from 'react'
 import { CircleAlert, Smile } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import '@/i18n/messaging'
 import { IconButton } from '@/components/ui/icon-button'
-import { PopoverTrigger } from '@/components/ui/popover'
+import { PopoverAnchor, PopoverTrigger } from '@/components/ui/popover'
 import { WithTooltip } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { useComposerFocus } from '../hooks/useComposerFocus'
 import { useDraft } from '../hooks/useDraft'
+import { useMentionBox } from '../hooks/useMentionBox'
+import { replaceShown, type ComposerNames } from '../lib/mention-text'
 import { lengthNotice } from '../lib/message-length'
-import type { RepliedMessage } from '../types'
+import type { MentionSource, RepliedMessage } from '../types'
 import { EmojiPicker } from './EmojiPicker'
+import { MentionSuggest } from './MentionSuggest'
 import { ReplyBar } from './ReplyBar'
 
 /**
@@ -26,6 +29,12 @@ import { ReplyBar } from './ReplyBar'
  *
  * (☺) at its right opens the emoji picker above the box; the emoji picked
  * goes where the cursor was, and the cursor after it.
+ *
+ * @ or # opens the mention suggestions above the box (`useMentionBox`): a
+ * mention picked shows as its name and is sent as its token, the draft
+ * keeping the names; one typed by hand is words (owner, 14/11/2026). The
+ * counter counts the text as it is sent, tokens and all: the 2000 the
+ * backend holds it to.
  */
 export function Composer({
     box,
@@ -35,7 +44,9 @@ export function Composer({
     replyingTo,
     onCancelReply,
     onEditLast,
-    onSend
+    onSend,
+    source,
+    mentionEveryone
 }: {
     /** The box itself: the chat puts the cursor back in it. */
     box: RefObject<HTMLTextAreaElement | null>
@@ -54,10 +65,30 @@ export function Composer({
      * text meanwhile, sends nothing more, and empties once it is taken, unless
      * something else was typed.
      */
-    onSend: (text: string) => boolean | Promise<boolean>
+    onSend: (text: string, names: ComposerNames) => boolean | Promise<boolean>
+    /** Whom to suggest after @ and # (the page's MentionSource). */
+    source: MentionSource
+    /** MENTION_EVERYONE: @everyone among the suggestions. */
+    mentionEveryone: boolean
 }) {
     const { t } = useTranslation('messaging')
-    const [text, setText] = useDraft(userId, channelId)
+    const [draft, setDraft] = useDraft(userId, channelId)
+    const { text, names } = draft
+    const setText = (next: string, nextNames: ComposerNames = names) => setDraft({ text: next, names: nextNames })
+    const mention = useMentionBox({
+        box,
+        text,
+        names,
+        onChange: setText,
+        source,
+        me: userId,
+        mentionEveryone
+    })
+    /** The text now, for a message taken later: the box empties only if nothing else was typed. */
+    const latest = useRef(text)
+    useEffect(() => {
+        latest.current = text
+    }, [text])
     const [focused, setFocused] = useState(false)
     const [picking, setPicking] = useState(false)
     /** Where the cursor goes once the picker closes. */
@@ -72,6 +103,7 @@ export function Composer({
     useComposerFocus(box, channelId)
 
     const keyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+        if (mention.keyDown(event)) return
         if (event.key === 'Escape' && replyingTo) {
             event.preventDefault()
             onCancelReply()
@@ -84,23 +116,24 @@ export function Composer({
         if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) return
         event.preventDefault()
         if (tooLong || !text.trim() || waiting.current) return
-        const taken = onSend(text)
+        const taken = onSend(text, names)
         if (typeof taken === 'boolean') {
-            if (taken) setText('')
+            if (taken) setText('', {})
             return
         }
         waiting.current = true
         void taken.then((sent) => {
             waiting.current = false
-            if (sent && box.current?.value === text) setText('')
+            if (sent && latest.current === text) setText('', {})
         })
     }
 
     /** The emoji in place of what was selected, the cursor after it. */
     const insert = (emoji: string) => {
-        const start = box.current?.selectionStart ?? text.length
-        const end = box.current?.selectionEnd ?? text.length
-        setText(text.slice(0, start) + emoji + text.slice(end))
+        const shown = mention.value.length
+        const start = box.current?.selectionStart ?? shown
+        const end = box.current?.selectionEnd ?? shown
+        setText(replaceShown(text, names, start, end, emoji))
         caret.current = start + emoji.length
     }
     const backToBox = () => {
@@ -114,59 +147,70 @@ export function Composer({
     return (
         <div className='shrink-0 px-4 pb-4'>
             {replyingTo ? <ReplyBar id={replyId} quoted={replyingTo} onCancel={onCancelReply} /> : null}
-            <div
-                className={cn(
-                    'flex items-end rounded-input border bg-surface-1 px-4',
-                    focused ? 'border-primary shadow-[inset_0_0_0_1px_rgb(var(--primary))]' : 'border-border-input',
-                    tooLong && 'border-danger shadow-[inset_0_0_0_1px_rgb(var(--danger))]'
-                )}
-            >
-                <textarea
-                    ref={box}
-                    rows={1}
-                    value={text}
-                    onChange={(event) => setText(event.target.value)}
-                    onKeyDown={keyDown}
-                    onFocus={() => setFocused(true)}
-                    onBlur={() => setFocused(false)}
-                    placeholder={t('composer.placeholder', { channel: channelName })}
-                    aria-label={t('composer.placeholder', { channel: channelName })}
-                    aria-invalid={tooLong || undefined}
-                    aria-describedby={
-                        [replyingTo && replyId, tooLong && tooLongId].filter(Boolean).join(' ') || undefined
-                    }
-                    // At most half the window high, then it scrolls (C-12). Inline: a one-off size,
-                    // not worth a class in the stylesheet loaded first.
-                    style={{ maxHeight: '50vh' }}
-                    className='min-h-12 flex-1 resize-none bg-transparent py-3 text-body text-text-primary [field-sizing:content] placeholder:text-text-tertiary focus:outline-none'
-                />
-                {notice ? (
-                    <span
+            <MentionSuggest state={mention.suggest}>
+                <PopoverAnchor asChild>
+                    <div
                         className={cn(
-                            'shrink-0 py-3 pl-2 text-label',
-                            tooLong ? 'font-semibold text-danger' : 'text-text-tertiary'
+                            'flex items-end rounded-input border bg-surface-1 px-4',
+                            focused
+                                ? 'border-primary shadow-[inset_0_0_0_1px_rgb(var(--primary))]'
+                                : 'border-border-input',
+                            tooLong && 'border-danger shadow-[inset_0_0_0_1px_rgb(var(--danger))]'
                         )}
                     >
-                        {tooLong ? `−${-notice.left}` : t('composer.left', { count: notice.left })}
-                    </span>
-                ) : null}
-                <EmojiPicker
-                    open={picking}
-                    onOpenChange={setPicking}
-                    onPick={insert}
-                    userId={userId}
-                    side='top'
-                    returnFocus={backToBox}
-                >
-                    <WithTooltip label={t('emoji.insert')}>
-                        <PopoverTrigger asChild>
-                            <IconButton label={t('emoji.insert')} className='mb-2 shrink-0'>
-                                <Smile aria-hidden='true' />
-                            </IconButton>
-                        </PopoverTrigger>
-                    </WithTooltip>
-                </EmojiPicker>
-            </div>
+                        <textarea
+                            ref={box}
+                            rows={1}
+                            value={mention.value}
+                            onChange={mention.change}
+                            onSelect={mention.select}
+                            onKeyDown={keyDown}
+                            onFocus={() => setFocused(true)}
+                            onBlur={() => {
+                                setFocused(false)
+                                mention.leave()
+                            }}
+                            {...mention.aria}
+                            placeholder={t('composer.placeholder', { channel: channelName })}
+                            aria-label={t('composer.placeholder', { channel: channelName })}
+                            aria-invalid={tooLong || undefined}
+                            aria-describedby={
+                                [replyingTo && replyId, tooLong && tooLongId].filter(Boolean).join(' ') || undefined
+                            }
+                            // At most half the window high, then it scrolls (C-12). Inline: a one-off size,
+                            // not worth a class in the stylesheet loaded first.
+                            style={{ maxHeight: '50vh' }}
+                            className='min-h-12 flex-1 resize-none bg-transparent py-3 text-body text-text-primary [field-sizing:content] placeholder:text-text-tertiary focus:outline-none'
+                        />
+                        {notice ? (
+                            <span
+                                className={cn(
+                                    'shrink-0 py-3 pl-2 text-label',
+                                    tooLong ? 'font-semibold text-danger' : 'text-text-tertiary'
+                                )}
+                            >
+                                {tooLong ? `−${-notice.left}` : t('composer.left', { count: notice.left })}
+                            </span>
+                        ) : null}
+                        <EmojiPicker
+                            open={picking}
+                            onOpenChange={setPicking}
+                            onPick={insert}
+                            userId={userId}
+                            side='top'
+                            returnFocus={backToBox}
+                        >
+                            <WithTooltip label={t('emoji.insert')}>
+                                <PopoverTrigger asChild>
+                                    <IconButton label={t('emoji.insert')} className='mb-2 shrink-0'>
+                                        <Smile aria-hidden='true' />
+                                    </IconButton>
+                                </PopoverTrigger>
+                            </WithTooltip>
+                        </EmojiPicker>
+                    </div>
+                </PopoverAnchor>
+            </MentionSuggest>
             {tooLong ? (
                 <p id={tooLongId} className='mt-1 flex items-center gap-1.5 text-label text-danger'>
                     <CircleAlert className='size-4 shrink-0' aria-hidden='true' />
