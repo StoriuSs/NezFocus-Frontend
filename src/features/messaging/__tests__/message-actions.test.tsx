@@ -68,6 +68,7 @@ function renderChat(permissions: ChatPermissions = MEMBER) {
                         channelName='hoi-dap'
                         permissions={permissions}
                         linkTo={(id) => `${window.location.origin}/channels/ot/hoi-dap/${id}`}
+                        readLink={() => null}
                     />
                 </div>
                 <Toaster />

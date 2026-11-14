@@ -67,6 +67,30 @@ export interface ChatPermissions {
     deleteOwn: boolean
 }
 
+/**
+ * A link to a page of the app in a message, as the page that shows the chat
+ * reads it (the servers feature knows its paths and what one sees; D-117):
+ * - `message`: a message of a channel they see, a chip "#channel › Message"
+ *   (`server` named when it is another server than the one open);
+ * - `hidden`: a message they cannot see, a chip "Can't view" with no name;
+ * - `page`: any other page of the app, a plain link opened in the app.
+ * Another site is not one (null): it opens in a new tab.
+ */
+export type AppLink =
+    | { kind: 'message'; to: string; server?: string; channel: string }
+    | { kind: 'hidden' }
+    | { kind: 'page'; to: string }
+
+/**
+ * The message the page was opened on (`/channels/{s}/{c}/{m}`, D-48): shown
+ * and lit up for a moment. `key` changes each time the link is opened, so
+ * the same link opened again lights it up again.
+ */
+export interface ChatTarget {
+    messageId: string
+    key: string
+}
+
 export const isOutgoing = (message: ChatMessage): message is OutgoingMessage => 'state' in message
 
 /** What can be done to a saved message, handed down by the chat to its rows (stable, so rows do not draw again). */
@@ -79,4 +103,8 @@ export interface MessageHandlers {
     askDelete: (message: Message) => void
     copyText: (message: Message) => void
     copyLink: (message: Message) => void
+    /** A message of this channel shown and lit up: the original of a reply (S-CHAT-01). */
+    show: (messageId: string) => void
+    /** How a link in a message shows: null for another site. */
+    readLink: (href: string) => AppLink | null
 }

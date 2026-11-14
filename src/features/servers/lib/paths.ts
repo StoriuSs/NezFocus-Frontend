@@ -8,7 +8,7 @@ import type { SettingsSection } from './settings-sections'
 export const SERVERS_PATHS = {
     /** A server's channel; without one, the page opens the first text channel. */
     channel: '/channels/:serverId/:channelId?',
-    /** A message of a channel (D-48): the channel opens; going to the message comes with M2 L4b. */
+    /** A message of a channel (D-48): the channel opens at that message, lit up. */
     message: '/channels/:serverId/:channelId/:messageId',
     /** The server settings; without a section, the first one they see. */
     settings: '/servers/:serverId/settings/:section?',
@@ -20,6 +20,10 @@ export const SERVERS_PATHS = {
     /** An invite link (S-SRV-03): a visitor's page in the AuthShell. */
     invite: '/invite/:code'
 } as const
+
+/** Whether an id taken from a path can be one: ids are UUIDs (ARCHITECTURE 2.4), the API refuses anything else. */
+export const isId = (id: string | undefined): id is string =>
+    !!id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
 
 /** `/channels/{server}[/{channel}]`. */
 export const channelPath = (serverId: string, channelId?: string) =>

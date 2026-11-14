@@ -6,9 +6,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { WithTooltip } from '@/components/ui/tooltip'
 import { useCountdown } from '@/hooks/useCountdown'
 import { cn } from '@/lib/utils'
+import { plainText } from '../lib/markdown'
 import { messageTime, messageTimeInFull } from '../lib/message-time'
 import { isOutgoing, type ChatMessage, type MessageHandlers, type OutgoingMessage, type RepliedMessage } from '../types'
 import { HoverToolbar } from './HoverToolbar'
+import { MessageContent } from './MessageContent'
 import { MessageEditor } from './MessageEditor'
 import { MessageMenu, type MenuAnchor } from './MessageMenu'
 
@@ -36,16 +38,21 @@ interface MessageRowProps {
     editor?: EditorState
     /** The one message of the list reached with Tab; ↑ / ↓ move from there (C-10 › Accessibility). */
     tabbable: boolean
+    /** Opened by a link or from a reply: lit up for a moment (C-10 `highlight`, D-48). */
+    highlighted?: boolean
+    onHighlightEnd?: () => void
 }
 
 /**
  * One message (C-10 MessageRow): a flat row, avatar 40, name and time, the
- * line of the message it answers, the text as typed (line breaks kept) and
- * "(edited)". A saved message has its toolbar on hover or focus (C-11), and
+ * line of the message it answers (a click goes to it), the text with its
+ * formatting (line breaks kept) and "(edited)". A saved message has its toolbar on hover or focus (C-11), and
  * its menu there, on a right-click or on Shift+F10 (S-CHAT-03). A message not
  * saved yet is faded while it is sent, and says what went wrong under it
- * otherwise. Read out as "who, when: what". System messages are drawn once
- * the app writes them (REQ-MSG-08).
+ * otherwise. Read out as "who, when: what", the formatting's markers left
+ * out. Opened by a link, its background blinks `surface-2` twice and goes
+ * back (`highlight`). System messages are drawn once the app writes them
+ * (REQ-MSG-08).
  */
 export const MessageRow = memo(function MessageRow({
     rowKey,
@@ -58,7 +65,9 @@ export const MessageRow = memo(function MessageRow({
     onDiscard,
     handlers,
     editor,
-    tabbable
+    tabbable,
+    highlighted = false,
+    onHighlightEnd
 }: MessageRowProps) {
     const { t } = useTranslation('messaging')
     const [menu, setMenu] = useState<{ anchor: MenuAnchor } | null>(null)
@@ -81,7 +90,7 @@ export const MessageRow = memo(function MessageRow({
     // Read as "who, when[, answering whom]: what[ (edited)]" (C-10 › Accessibility).
     const replyName =
         message.replyTo?.author?.displayName ?? message.replyTo?.author?.username ?? t('message.deletedAccount')
-    const read = { name, time: shownTime, content: message.content, replyTo: replyName }
+    const read = { name, time: shownTime, content: plainText(message.content), replyTo: replyName }
     const label =
         (message.replyTo
             ? t(message.replyTo.deleted ? 'message.labelReplyDeleted' : 'message.labelReply', read)
@@ -121,14 +130,19 @@ export const MessageRow = memo(function MessageRow({
             tabIndex={tabbable ? 0 : -1}
             aria-label={label}
             aria-busy={onItsWay || undefined}
+            data-highlight={highlighted || undefined}
             onContextMenu={contextMenu}
             onKeyDown={keyDown}
+            onAnimationEnd={(event) => {
+                if (highlighted && event.target === event.currentTarget) onHighlightEnd?.()
+            }}
             className={cn(
                 'group relative flex gap-3 px-4 hover:bg-surface-1',
                 'focus-visible:bg-surface-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary',
                 grouped ? 'py-0.5' : 'mt-2 py-1',
                 (menu || editor) && 'bg-surface-1',
-                onItsWay && 'opacity-50'
+                onItsWay && 'opacity-50',
+                highlighted && 'animate-highlight'
             )}
         >
             <div className='flex w-10 shrink-0 justify-center'>
@@ -147,7 +161,7 @@ export const MessageRow = memo(function MessageRow({
                 )}
             </div>
             <div className='min-w-0 flex-1'>
-                {message.replyTo ? <ReplyLine quoted={message.replyTo} /> : null}
+                {message.replyTo ? <ReplyLine quoted={message.replyTo} onShow={handlers.show} /> : null}
                 {grouped ? null : (
                     <h3 className='flex items-center gap-2'>
                         <span className='truncate text-body font-semibold text-text-primary'>{name}</span>
@@ -163,11 +177,11 @@ export const MessageRow = memo(function MessageRow({
                         onCancel={editor.cancel}
                     />
                 ) : (
-                    <p className='whitespace-pre-wrap break-words text-body text-text-primary'>
-                        {message.content}
-                        {saved?.editedAt ? (
-                            <>
-                                {' '}
+                    <MessageContent
+                        content={message.content}
+                        readLink={handlers.readLink}
+                        trailing={
+                            saved?.editedAt ? (
                                 <WithTooltip
                                     label={t('message.editedAt', {
                                         time: messageTimeInFull(new Date(saved.editedAt), timeZone, t)
@@ -175,9 +189,9 @@ export const MessageRow = memo(function MessageRow({
                                 >
                                     <span className='text-label text-text-tertiary'>{t('message.edited')}</span>
                                 </WithTooltip>
-                            </>
-                        ) : null}
-                    </p>
+                            ) : undefined
+                        }
+                    />
                 )}
                 {onItsWay ? <span className='sr-only'>{t('message.sending')}</span> : null}
                 {outgoing && !onItsWay ? (
@@ -211,28 +225,31 @@ export const MessageRow = memo(function MessageRow({
 })
 
 /**
- * The message a reply answers (C-10 `reply`): who wrote it and its first
- * line, or "Original message was deleted" once it is. Opening it in the list
- * comes with message links (L4b).
+ * The message a reply answers (C-10 `reply`): who wrote it and its text
+ * without formatting, on one line; a click goes to it in the list, lit up
+ * (S-CHAT-01). "Original message was deleted" once it is.
  */
-function ReplyLine({ quoted }: { quoted: RepliedMessage }) {
+function ReplyLine({ quoted, onShow }: { quoted: RepliedMessage; onShow: (messageId: string) => void }) {
     const { t } = useTranslation('messaging')
     const name = quoted.author?.displayName ?? quoted.author?.username ?? t('message.deletedAccount')
-    return (
-        <p className='flex min-w-0 items-center gap-1 text-label text-text-tertiary'>
-            <CornerUpRight className='size-3.5 shrink-0' aria-hidden='true' />
-            {quoted.deleted ? (
+    const line = 'flex min-w-0 max-w-full items-center gap-1 text-label text-text-tertiary'
+    if (quoted.deleted) {
+        return (
+            <p className={line}>
+                <CornerUpRight className='size-3.5 shrink-0' aria-hidden='true' />
                 <span>{t('message.replyDeleted')}</span>
-            ) : (
-                <>
-                    <span className='sr-only'>{t('message.replyTo', { name })}</span>
-                    <span className='shrink-0 font-semibold text-text-secondary' aria-hidden='true'>
-                        {name}
-                    </span>
-                    <span className='truncate'>{quoted.content}</span>
-                </>
-            )}
-        </p>
+            </p>
+        )
+    }
+    return (
+        <button type='button' onClick={() => onShow(quoted.id)} className={cn(line, 'hover:text-text-secondary')}>
+            <CornerUpRight className='size-3.5 shrink-0' aria-hidden='true' />
+            <span className='sr-only'>{t('message.replyTo', { name })}</span>
+            <span className='shrink-0 font-semibold text-text-secondary' aria-hidden='true'>
+                {name}
+            </span>
+            <span className='truncate'>{plainText(quoted.content)}</span>
+        </button>
     )
 }
 

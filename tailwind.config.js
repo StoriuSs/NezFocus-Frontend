@@ -121,6 +121,19 @@ export default {
                 short: '200ms',
                 medium: '320ms'
             },
+            // A message opened by a link (C-10 `highlight`, D-48): its background
+            // fades to `surface-2` and back twice, 200ms (`short`) each way, then
+            // is as before. A change of colour, no movement: the same with less
+            // motion asked for (DESIGN.md › Giảm chuyển động, crossfade; src/index.css
+            // keeps its length). Only the chat uses it, so only its stylesheet has it.
+            keyframes: {
+                highlight: {
+                    '25%, 75%': { backgroundColor: rgb('surface-2').replace('<alpha-value>', '1') }
+                }
+            },
+            animation: {
+                highlight: 'highlight 800ms ease-in-out'
+            },
             // DESIGN.md › Layout: the rail and the right panel's widths
             // (`w-rail`, `left-rail`, `w-panel`).
             spacing: {

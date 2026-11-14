@@ -131,5 +131,12 @@
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
     }
+
+    /* A message opened by a link fades its background in and out (C-10
+       `highlight`): a change of colour, the crossfade DESIGN.md keeps, not a
+       movement. Cut short, it would never show which message it was. */
+    [data-highlight] {
+      animation-duration: 800ms !important;
+    }
   }
 }

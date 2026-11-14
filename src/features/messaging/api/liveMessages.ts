@@ -1,7 +1,7 @@
 import type { QueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import { onRealtimeEvent } from '@/features/realtime'
-import { addNewer, addSaved, lastSavedId, removeSaved, replaceSaved, startOver } from '../lib/message-cache'
+import { addNewer, addSaved, lastSavedId, removeSaved, replaceSaved, startOver, stopsShort } from '../lib/message-cache'
 import type { ChannelMessages, Message } from '../types'
 import { messageKeys } from './keys'
 import { fetchMessages } from './messages.api'
@@ -26,8 +26,10 @@ function listenToWindow(type: 'beforeunload', listener: (event: BeforeUnloadEven
  * missed while the socket was down shows once the channel is read again.
  *
  * A message heard while a history's first page is still on its way may be
- * missing from that page: once the page is in, the history catches up
- * (`after=<its newest id>`).
+ * missing from that page, and one heard while a history stops short of the
+ * newest (opened at a link) is left out of it: once the history holds the
+ * newest page, it catches up (`after=<its newest id>`), so a message saved
+ * while that page was read is not lost.
  *
  * Once per query client, for as long as the app runs: a history left on
  * another channel stays right for coming back. Signing out clears the cache.
@@ -39,13 +41,16 @@ function listenToWindow(type: 'beforeunload', listener: (event: BeforeUnloadEven
 export function listenForMessages(client: QueryClient): () => void {
     if (listening.has(client)) return () => undefined
     listening.add(client)
-    const heardWhileLoading = new Set<string>()
+    const heardMeanwhile = new Set<string>()
 
     const stops = [
         onRealtimeEvent('message.created', (data) => {
             const { message, nonce } = data as { message: Message; nonce?: string }
             const key = messageKeys.channel(message.channelId)
-            if (client.getQueryState(key)?.status === 'pending') heardWhileLoading.add(message.channelId)
+            const held = client.getQueryData<ChannelMessages>(key)
+            if (client.getQueryState(key)?.status === 'pending' || (held && stopsShort(held))) {
+                heardMeanwhile.add(message.channelId)
+            }
             client.setQueryData<ChannelMessages>(key, (history) => history && addSaved(history, message, nonce))
         }),
         onRealtimeEvent('message.updated', (data) => {
@@ -77,7 +82,9 @@ export function listenForMessages(client: QueryClient): () => void {
             if (event.type !== 'updated' || event.action.type !== 'success') return
             const key = event.query.queryKey
             const channelId = key[2] as string
-            if (!isChannelKey(key) || !heardWhileLoading.delete(channelId)) return
+            if (!isChannelKey(key)) return
+            const held = client.getQueryData<ChannelMessages>(key)
+            if (!held || stopsShort(held) || !heardMeanwhile.delete(channelId)) return
             void catchUp(client, channelId)
         })
     ]
@@ -90,20 +97,22 @@ export function listenForMessages(client: QueryClient): () => void {
 /**
  * What one history missed while the socket was down: the messages after its
  * newest saved one. More than a page missed: the newest page alone, older
- * ones read again on scrolling up. A channel no longer readable (deleted,
- * access lost) is forgotten; any other failure leaves the history for the
- * next time the socket is live.
+ * ones read again on scrolling up. A history that stops short of the newest
+ * messages (opened at a link) misses nothing: it reads them on scrolling
+ * down. A channel no longer readable (deleted, access lost) is forgotten; any
+ * other failure leaves the history for the next time the socket is live.
  */
 async function catchUp(client: QueryClient, channelId: string): Promise<void> {
     const key = messageKeys.channel(channelId)
     const history = client.getQueryData<ChannelMessages>(key)
-    if (!history) return
+    if (!history || stopsShort(history)) return
     const after = lastSavedId(history)
     try {
         const missed = after ? await fetchMessages(channelId, { after }, CATCH_UP_LIMIT) : undefined
         const latest = !missed || missed.hasMoreAfter ? await fetchMessages(channelId, null) : undefined
         client.setQueryData<ChannelMessages>(key, (now) => {
-            if (!now) return now
+            // Opened at a link meanwhile: it reads its newer messages on scrolling down.
+            if (!now || stopsShort(now)) return now
             return latest ? startOver(now, latest) : addNewer(now, missed!)
         })
     } catch (error) {

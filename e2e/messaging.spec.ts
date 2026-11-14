@@ -217,6 +217,56 @@ test('an edit, a reply and a deletion reach the other browser at once (REQ-MSG-0
     await binh.context.close()
 })
 
+test('a message link opens the message for someone else, lit up; one they cannot see is not found (D-48)', async ({
+    browser
+}) => {
+    test.setTimeout(90_000)
+    const an = await openAs(browser, anEmail)
+    const binh = await openAs(browser, binhEmail)
+
+    // Formatting is drawn, not shown as markers (REQ-MSG-02).
+    await say(an.page, '**Lời giải câu 3:** đổi sang _tọa độ cực_, đặt `x = r cos φ`')
+    const solution = log(an.page).getByRole('article', { name: /Lời giải câu 3: đổi sang tọa độ cực/ })
+    await expect(solution.locator('strong')).toHaveText('Lời giải câu 3:')
+    await expect(solution.locator('code')).toHaveText('x = r cos φ')
+    await shoot(an.page, 'chat01-formatting')
+    const id = await solution.getAttribute('data-row-key')
+    const origin = new URL(an.page.url()).origin
+    const missing = crypto.randomUUID()
+
+    // Bình links it, and a message of a channel An cannot see.
+    await say(binh.page, `Xem ở đây nè ${origin}${channelPath}/${id}`)
+    await say(binh.page, `Còn đây ${origin}/channels/${channelPath.split('/')[2]}/${missing}/${id}`)
+    const chip = an.page.getByRole('link', { name: `#${channelName} › Message` })
+    await expect(chip).toBeVisible({ timeout: 15_000 })
+    await chip.hover()
+    await shoot(an.page, 'chat01-message-link')
+
+    // "Can't view": a Toast, and An stays where she is.
+    await an.page.getByRole('button', { name: "Can't view" }).click()
+    await expect(an.page.getByText("You can't view this message")).toBeVisible()
+    await expect(an.page).toHaveURL(new RegExp(`${channelPath}$`))
+
+    // The chip opens the message in the app, lit up: a fade of its background,
+    // kept when less motion is asked for (DESIGN.md: a crossfade, not cut short).
+    await an.page.emulateMedia({ reducedMotion: 'reduce' })
+    await chip.click()
+    await expect(an.page).toHaveURL(new RegExp(`${channelPath}/${id}$`))
+    await expect(solution).toHaveAttribute('data-highlight', 'true')
+    expect(await solution.evaluate((element) => getComputedStyle(element).animationDuration)).toBe('0.8s')
+    await shoot(an.page, 'chat01-highlight')
+
+    // From the address bar, a message of a channel one cannot see: not found, the URL kept (S-MOD-06).
+    await binh.page.goto(`/channels/${channelPath.split('/')[2]}/${missing}/${id}`)
+    await expect(binh.page.getByRole('heading', { name: "We can't find this page" })).toBeVisible()
+    await expect(binh.page).toHaveURL(new RegExp(`/${missing}/${id}$`))
+    await shoot(binh.page, 'mod06-not-found')
+
+    expect([...an.problems, ...binh.problems]).toEqual([])
+    await an.context.close()
+    await binh.context.close()
+})
+
 test('messages past 5 in 5 seconds wait, then go by themselves, each once and in order', async ({ browser }) => {
     test.setTimeout(60_000)
     const an = await openAs(browser, anEmail)

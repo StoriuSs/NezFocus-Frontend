@@ -34,10 +34,11 @@ vi.mock('@/features/servers/api/servers.api', () => serversApi)
 vi.mock('@/lib/socket', () => ({ openSocket: () => () => undefined }))
 vi.mock('@/features/realtime/api/realtime.api', () => ({ fetchRealtimeTicket: vi.fn() }))
 // A text channel's chat reads its history: an empty one, never the network.
-vi.mock('@/features/messaging/api/messages.api', () => ({
-    fetchMessages: vi.fn(async () => ({ items: [], hasMoreBefore: false, hasMoreAfter: false })),
+const messagesApi = vi.hoisted(() => ({
+    fetchMessages: vi.fn(async (..._: unknown[]) => ({ items: [], hasMoreBefore: false, hasMoreAfter: false })),
     sendMessage: vi.fn()
 }))
+vi.mock('@/features/messaging/api/messages.api', () => messagesApi)
 
 const { default: AppShell } = await import('@/app/layout/app-shell/AppShell')
 const { default: ChannelPage } = await import('@/features/servers/pages/ChannelPage')
@@ -128,6 +129,11 @@ function renderAt(path: string | { pathname: string; state: unknown }) {
                     { path: '/study', element: <Study />, handle: { column: 'study' } },
                     {
                         path: '/channels/:serverId/:channelId?',
+                        element: <ChannelPage />,
+                        handle: { column: 'server' }
+                    },
+                    {
+                        path: '/channels/:serverId/:channelId/:messageId',
                         element: <ChannelPage />,
                         handle: { column: 'server' }
                     },
@@ -301,6 +307,52 @@ describe('AppShell (S-SHELL-01)', () => {
         it('goes back to the Study page from a server one is not in', async () => {
             const router = renderAt('/channels/gone/hoi-dap')
             await waitFor(() => expect(router.state.location.pathname).toBe('/study'))
+        })
+
+        it('opens a link to a message at that message (D-48)', async () => {
+            renderAt('/channels/ot/hoi-dap/0195a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b')
+            expect(await screen.findByRole('heading', { level: 1, name: 'hoi-dap' })).toBeInTheDocument()
+            expect(await screen.findByRole('log', {}, { timeout: 5000 })).toBeInTheDocument()
+            await waitFor(() =>
+                expect(messagesApi.fetchMessages).toHaveBeenCalledWith('hoi-dap', {
+                    around: '0195a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b'
+                })
+            )
+        })
+
+        it('says "Page not found" for a link to a message of a channel one cannot see, in its server (S-MOD-06)', async () => {
+            const router = renderAt('/channels/ot/secret/0195a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b')
+
+            expect(await screen.findByRole('heading', { name: "We can't find this page" })).toBeInTheDocument()
+            // Below 1024 its Header keeps only ☰, to reach the channels (S-MOD-06 768).
+            expect(screen.getByRole('button', { name: 'Open navigation' })).toBeInTheDocument()
+            expect(document.title).toBe('Page not found · NezFocus')
+            expect(router.state.location.pathname).toBe('/channels/ot/secret/0195a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b')
+            const channels = screen.getByRole('navigation', { name: /Ôn thi Giải tích 2/ })
+            expect(within(channels).queryByRole('link', { current: 'page' })).not.toBeInTheDocument()
+            await expectNoA11yViolations()
+
+            await userEvent.click(screen.getByRole('link', { name: 'Back to home' }))
+            await waitFor(() => expect(router.state.location.pathname).toBe('/study'))
+        })
+
+        it('says it too for a link to a message of a server one is not in, no server chosen', async () => {
+            const router = renderAt('/channels/gone/hoi-dap/0195a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b')
+
+            expect(await screen.findByRole('heading', { name: "We can't find this page" })).toBeInTheDocument()
+            expect(router.state.location.pathname).toBe('/channels/gone/hoi-dap/0195a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b')
+            expect(within(rail()).queryByRole('link', { current: 'page' })).not.toBeInTheDocument()
+        })
+
+        it('and for a link whose message id is not one', async () => {
+            renderAt('/channels/ot/hoi-dap/m1')
+            expect(await screen.findByRole('heading', { name: "We can't find this page" })).toBeInTheDocument()
+            expect(messagesApi.fetchMessages).not.toHaveBeenCalledWith('hoi-dap', { around: 'm1' })
+        })
+
+        it('and for a link to a message of a voice room', async () => {
+            renderAt('/channels/ot/quiet/0195a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b')
+            expect(await screen.findByRole('heading', { name: "We can't find this page" })).toBeInTheDocument()
         })
 
         it('has no critical or serious accessibility problem', async () => {

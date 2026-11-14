@@ -73,5 +73,10 @@
     "bodyOthers": "Tin của {{name}} sẽ bị xóa với mọi người trong kênh.",
     "cancel": "Hủy",
     "confirm": "Xóa"
+  },
+  "link": {
+    "message": "Tin nhắn",
+    "hidden": "Không xem được",
+    "hiddenMessage": "Bạn không xem được tin nhắn này"
   }
 }

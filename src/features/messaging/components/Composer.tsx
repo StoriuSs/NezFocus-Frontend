@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent, type RefObject } from 'react'
+import { useRef, useState, type KeyboardEvent, type RefObject } from 'react'
 import { CircleAlert } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import '@/i18n/messaging'
@@ -41,12 +41,19 @@ export function Composer({
     onCancelReply: () => void
     /** Whether there was a message of one's own to edit. */
     onEditLast: () => boolean
-    /** Whether the message was taken: the box empties only then. */
-    onSend: (text: string) => boolean
+    /**
+     * Whether the message was taken: the box empties only then. A promise when
+     * that is known later (the newest messages read first): the box keeps the
+     * text meanwhile, sends nothing more, and empties once it is taken, unless
+     * something else was typed.
+     */
+    onSend: (text: string) => boolean | Promise<boolean>
 }) {
     const { t } = useTranslation('messaging')
     const [text, setText] = useDraft(userId, channelId)
     const [focused, setFocused] = useState(false)
+    /** A message waiting to be taken: Enter sends nothing more meanwhile. */
+    const waiting = useRef(false)
     const notice = lengthNotice(text)
     const tooLong = notice !== null && notice.left < 0
     const replyId = `composer-reply-${channelId}`
@@ -66,8 +73,17 @@ export function Composer({
         }
         if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) return
         event.preventDefault()
-        if (tooLong || !text.trim()) return
-        if (onSend(text)) setText('')
+        if (tooLong || !text.trim() || waiting.current) return
+        const taken = onSend(text)
+        if (typeof taken === 'boolean') {
+            if (taken) setText('')
+            return
+        }
+        waiting.current = true
+        void taken.then((sent) => {
+            waiting.current = false
+            if (sent && box.current?.value === text) setText('')
+        })
     }
 
     return (

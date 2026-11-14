@@ -45,7 +45,7 @@ react-starter/
     ├── components/            # Shared UI, used by more than one feature
     │   ├── ui/                # shadcn/ui primitives (button, dialog, input, tooltip…) and the project's own
     │   │                      #   (icon-button, segmented-control, select, option-cards, empty-state…)
-    │   ├── shell/             # ShellPage, RightPanel, ConnectionBanner — what a page in the AppShell draws
+    │   ├── shell/             # ShellPage, RightPanel, ConnectionBanner, ShellNotFound — what a page in the AppShell draws
     │   ├── brand/             # Logo; mascot/ (Mascot, RiveMascot)
     │   ├── form/              # FormField — the label/control/error pattern; FormMessage, TimeZoneCombobox
     │   ├── settings/          # SaveBar, SettingsRow, SwitchRow — the rows of a settings page
@@ -79,11 +79,14 @@ react-starter/
     │   │   │                  #   InvitesSettings, Pagination; members/, roles/)
     │   │   ├── hooks/         # useFoldedCategories (the categories folded, kept in this browser), useMoveAwayFrom,
     │   │   │                  #   useServerGoneWatch (D-143, run by the AppShell)
-    │   │   ├── lib/           # paths (SERVERS_PATHS and channelPath, invitePath, serverSettingsPath, roleEditPath),
+    │   │   ├── lib/           # paths (SERVERS_PATHS and channelPath, messagePath, messageLink, invitePath,
+    │   │   │                  #   serverSettingsPath, roleEditPath, isId), app-links (how a link in a message
+    │   │   │                  #   shows: a message chip, "can't view", a page of the app; D-117), chat-permissions,
     │   │   │                  #   layout-messages (the words for a refused name or move), invite-problem,
     │   │   │                  #   channel-layout, channel-list, drop-target, layout-error, invites, moderation,
     │   │   │                  #   membership, permissions, roles, server-name, settings-sections, typed-name
-    │   │   ├── pages/         # ChannelPage (/channels/:serverId/:channelId?), ServerSettingsPage
+    │   │   ├── pages/         # ChannelPage (/channels/:serverId/:channelId?, and /…/:messageId: the channel
+    │   │   │                  #   at a message, D-48), ServerSettingsPage
     │   │   │                  #   (/servers/:serverId/settings/…), InvitePage (/invite/:code)
     │   │   ├── *.store.ts     # create-server, channel-dialogs, invite-dialogs, membership-dialogs: which dialog
     │   │   │                  #   the AppShell shows
@@ -95,10 +98,11 @@ react-starter/
     │   │                      #   Banner shows, what to do when the session ends, realtime-events.ts:
     │   │                      #   onRealtimeEvent for the features keeping data), realtime.store.ts
     │   ├── messaging/         # A text channel's chat (S-CHAT-01), lazy (index.ts: ChannelChat):
-    │   │                      #   api/ (history, sending, editing and deleting, liveMessages: socket
-    │   │                      #   events into the cache), components/ (list, row, toolbar and menu,
-    │   │                      #   editor, delete dialog, composer), hooks/ (scrolling, drafts),
-    │   │                      #   lib/ (cache changes, rows, times), messaging.css (the chat's classes)
+    │   │                      #   api/ (history, sending, editing and deleting, going to a message,
+    │   │                      #   liveMessages: socket events into the cache), components/ (list, row,
+    │   │                      #   text and its link chips, toolbar and menu, editor, delete dialog,
+    │   │                      #   composer), hooks/ (scrolling, going to a message, drafts), lib/ (formatting, cache
+    │   │                      #   changes, rows, times), messaging.css (the chat's classes)
     │   └── users/             # The profile and the account's settings
     │       ├── api/           # users.api.ts (fetchProfile, removeAvatar),
     │       │                  #   settings.api.ts (fetchSettings, settingsQuery, updateSettings), hooks, keys

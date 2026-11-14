@@ -73,5 +73,10 @@
     "bodyOthers": "{{name}}'s message will be deleted for everyone in the channel.",
     "cancel": "Cancel",
     "confirm": "Delete"
+  },
+  "link": {
+    "message": "Message",
+    "hidden": "Can't view",
+    "hiddenMessage": "You can't view this message"
   }
 }

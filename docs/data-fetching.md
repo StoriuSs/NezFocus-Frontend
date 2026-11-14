@@ -372,6 +372,25 @@ one's own delete); any other failure is a Toast. A send answered
 `NOT_FOUND` for a nonce whose message was deleted meanwhile drops the copy
 on its way, without a word (REQ-MSG-10).
 
+A message link (D-48) opens its channel at that message. A history not read
+yet starts with the page around it (`around=<id>`, the first page param);
+one already held that lacks it becomes that page (`useMessageJump`, which
+also takes the history back to its newest page). Such a history stops short
+of the newest messages (`hasMoreAfter`): newer pages are read on scrolling
+down (`after=<newest id>`, `getNextPageParam`), the socket's new messages
+are not added at its end (they would hide the ones in between), and a
+catch-up after a reconnect leaves it alone; once it holds the newest page
+again, it catches up once, so a message saved while that page was read is
+not lost. Going to a message or back to the newest first cancels a page
+still being read (it would put the old pages back). Sending from it, or ↓,
+goes back to the newest page first (the composer keeps the text if that
+fails), and a channel left that way opens at its newest messages next time.
+The backend answers `around` for a deleted message too, with the messages
+near where it was: the chat sees the id missing and opens at the newest
+messages with "This message was deleted". A message being edited or replied
+to counts as deleted only when missing from the part of the channel the
+history holds (`isGoneFrom`), not when the list went elsewhere.
+
 ## A server one is no longer in
 
 Until M2 brings live updates, the app learns that someone was kicked, banned,

@@ -109,6 +109,54 @@ describe('Keeping open histories live (ARCHITECTURE 3.4, 10.2)', () => {
         expect(fetchMessages).toHaveBeenCalledWith('hoi-dap', { after: 'm2' }, 100)
     })
 
+    it('leaves a history opened at a link where it is: it reads newer messages on scrolling down (D-48)', async () => {
+        client.setQueryData<ChannelMessages>(messageKeys.channel('hoi-dap'), {
+            pages: [page(['m4', 'm5'], { hasMoreAfter: true })],
+            pageParams: [{ around: 'm4' }]
+        })
+        fetchMessages.mockResolvedValue(page(['m200'], { hasMoreBefore: true }))
+
+        emitRealtimeEvent('ready', undefined)
+        await new Promise((resolve) => setTimeout(resolve, 0))
+
+        expect(fetchMessages).not.toHaveBeenCalled()
+        expect(ids()).toEqual(['m4', 'm5'])
+    })
+
+    it('reads what came meanwhile once a history that stopped short is back at the newest', async () => {
+        const key = messageKeys.channel('hoi-dap')
+        client.setQueryData<ChannelMessages>(key, {
+            pages: [page(['m4', 'm5'], { hasMoreAfter: true })],
+            pageParams: [{ around: 'm4' }]
+        })
+        emitRealtimeEvent('message.created', { message: saved('m9') })
+        fetchMessages.mockResolvedValue(page(['m9']))
+
+        // Back at the newest, read before m9 was saved.
+        client.setQueryData<ChannelMessages>(key, { pages: [page(['m7', 'm8'])], pageParams: [null] })
+
+        await vi.waitFor(() => expect(ids()).toEqual(['m7', 'm8', 'm9']))
+        expect(fetchMessages).toHaveBeenCalledWith('hoi-dap', { after: 'm8' }, 100)
+    })
+
+    it('leaves a history opened at a link meanwhile as it is when a catch-up ends', async () => {
+        const key = messageKeys.channel('hoi-dap')
+        client.setQueryData(key, cached(['m1', 'm2']))
+        let answer: (value: MessagePage) => void = () => undefined
+        fetchMessages.mockReturnValue(new Promise((resolve) => (answer = resolve)))
+        emitRealtimeEvent('ready', undefined)
+
+        client.setQueryData<ChannelMessages>(key, {
+            pages: [page(['a1', 'a2'], { hasMoreAfter: true })],
+            pageParams: [{ around: 'a1' }]
+        })
+        answer(page(['m3']))
+        await new Promise((resolve) => setTimeout(resolve, 0))
+
+        expect(ids()).toEqual(['a1', 'a2'])
+        expect(history()?.pages.at(-1)?.hasMoreAfter).toBe(true)
+    })
+
     it('starts over from the newest page when more than a page was missed', async () => {
         client.setQueryData(messageKeys.channel('hoi-dap'), cached(['m1']))
         fetchMessages.mockImplementation(async (_channel, cursor) =>

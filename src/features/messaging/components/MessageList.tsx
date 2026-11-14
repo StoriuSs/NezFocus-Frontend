@@ -3,7 +3,7 @@ import { ArrowDown, CloudOff } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import '@/i18n/messaging'
 import { Button } from '@/components/ui/button'
-import { useChatScroll } from '../hooks/useChatScroll'
+import { useChatScroll, type ScrollTarget } from '../hooks/useChatScroll'
 import type { ChatRow } from '../lib/chat-rows'
 import { isOutgoing, type MessageHandlers } from '../types'
 import { dayLabel } from '../lib/message-time'
@@ -18,6 +18,15 @@ interface MessageListProps {
     /** Nothing to show yet: first load (`loading`), or it failed (`error`). */
     status: 'ready' | 'loading' | 'error'
     older: { has: boolean; loading: boolean; load: () => void }
+    /** Newer messages to read on scrolling down: a history that stops short (opened at a link). */
+    newer: { has: boolean; loading: boolean; load: () => void }
+    /** Where to scroll: a message a link or a reply line opened, or the bottom (key null) once the newest are back. */
+    target?: ScrollTarget
+    /** The message lit up for a moment (D-48). */
+    highlighted?: string
+    onHighlightEnd: () => void
+    /** From a history that stops short: back to the newest messages, at the bottom. */
+    onToPresent: () => void
     onReload: () => void
     now: Date
     timeZone?: string
@@ -38,12 +47,21 @@ interface MessageListProps {
  * Tab reaches one message, the newest at first, then the one last focused;
  * ↑ / ↓ go to the one before or after (C-10 › Accessibility, S-CHAT-01 ›
  * Focus).
+ *
+ * Opened at an older message (a link), the list stops short of the newest:
+ * scrolling down reads them (skeletons at the bottom meanwhile), and ↓ goes
+ * back to the newest page at once.
  */
 export function MessageList({
     channelName,
     rows,
     status,
     older,
+    newer,
+    target,
+    highlighted,
+    onHighlightEnd,
+    onToPresent,
     onReload,
     now,
     timeZone,
@@ -54,7 +72,7 @@ export function MessageList({
     editing
 }: MessageListProps) {
     const { t } = useTranslation('messaging')
-    const { list, onScroll, away, newCount, toBottom } = useChatScroll(rows, older)
+    const { list, onScroll, away, newCount, toBottom } = useChatScroll(rows, older, { newer, target })
     const [focused, setFocused] = useState<string>()
     // The messages drawn: a system message is not one yet (it draws nothing before L10).
     const keys = rows.flatMap((row) =>
@@ -87,8 +105,9 @@ export function MessageList({
                 onFocus={focusIn}
                 role='log'
                 aria-label={t('list.label', { channel: channelName })}
-                aria-busy={status === 'loading' || older.loading || undefined}
-                className='h-full overflow-y-auto'
+                aria-busy={status === 'loading' || older.loading || newer.loading || undefined}
+                // Positioned: a message's offsetTop is measured from the list's top (useChatScroll).
+                className='relative h-full overflow-y-auto'
                 // No browser scroll anchoring: useChatScroll keeps the message being read in place.
                 // Inline: one element's behaviour, not worth a class in the stylesheet loaded first.
                 style={{ overflowAnchor: 'none' }}
@@ -122,9 +141,12 @@ export function MessageList({
                                         handlers={handlers}
                                         editor={editing?.messageId === row.key ? editing.editor : undefined}
                                         tabbable={row.key === tabbable}
+                                        highlighted={row.key === highlighted}
+                                        onHighlightEnd={onHighlightEnd}
                                     />
                                 )
                             )}
+                            {newer.loading ? <MessageSkeletons count={2} /> : null}
                         </>
                     )}
                 </div>
@@ -132,7 +154,7 @@ export function MessageList({
             {away ? (
                 <button
                     type='button'
-                    onClick={toBottom}
+                    onClick={newer.has ? onToPresent : toBottom}
                     aria-label={newCount ? undefined : t('list.toLatest')}
                     className='absolute bottom-0 right-4 flex h-9 items-center gap-1.5 rounded-full border bg-surface-2 px-3 text-label font-semibold text-text-primary shadow-float hover:bg-surface-3'
                 >

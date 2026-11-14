@@ -155,7 +155,13 @@
       "invites": "Lời mời",
       "bans": "Danh sách cấm"
     },
-    "serverGone": "Bạn không còn ở {{name}}"
+    "serverGone": "Bạn không còn ở {{name}}",
+    "notFound": {
+      "title": "Không tìm thấy trang này",
+      "body": "Đường dẫn có thể đã sai, hoặc nội dung đã bị xóa hay bạn không có quyền xem.",
+      "home": "Về trang chính",
+      "tab": "Không tìm thấy trang"
+    }
   },
   "timeZone": {
     "search": "Tìm thành phố hoặc GMT",

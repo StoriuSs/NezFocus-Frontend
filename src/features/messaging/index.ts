@@ -7,4 +7,4 @@ import { lazy } from 'react'
  * time a channel opens (docs/code-splitting.md).
  */
 export const ChannelChat = lazy(() => import('./components/ChannelChat'))
-export type { ChatPermissions } from './types'
+export type { AppLink, ChatPermissions, ChatTarget } from './types'

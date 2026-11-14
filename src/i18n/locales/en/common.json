@@ -155,7 +155,13 @@
       "invites": "Invites",
       "bans": "Bans"
     },
-    "serverGone": "You are no longer in {{name}}"
+    "serverGone": "You are no longer in {{name}}",
+    "notFound": {
+      "title": "We can't find this page",
+      "body": "The link may be wrong, or what it led to was deleted or isn't yours to see.",
+      "home": "Back to home",
+      "tab": "Page not found"
+    }
   },
   "timeZone": {
     "search": "Search a city or GMT",

@@ -18,7 +18,8 @@ import { IconButton } from '@/components/ui/icon-button'
  *
  * Under the Header, the connection Banner when the AppShell has one (C-16).
  * `composer`: the page has a message box, so offline says messages will be
- * sent later.
+ * sent later. `bare`: no Header from 1024 up, and below only its ☰ (11
+ * S-MOD-06), the title left to screen readers.
  */
 export function ShellPage({
     title,
@@ -27,7 +28,8 @@ export function ShellPage({
     panel,
     children,
     bodyClassName,
-    composer = false
+    composer = false,
+    bare = false
 }: {
     title: string
     icon?: LucideIcon
@@ -36,6 +38,7 @@ export function ShellPage({
     children?: ReactNode
     bodyClassName?: string
     composer?: boolean
+    bare?: boolean
 }) {
     const { t } = useTranslation()
     const shell = useContext(ShellContext)
@@ -43,7 +46,7 @@ export function ShellPage({
     return (
         <>
             <section className='flex min-w-0 flex-1 flex-col'>
-                <header className='flex h-12 shrink-0 items-center gap-2 border-b px-4'>
+                <header className={cn('flex h-12 shrink-0 items-center gap-2 border-b px-4', bare && 'lg:hidden')}>
                     {shell ? (
                         <WithTooltip label={t('shell.openNav')} side='bottom'>
                             <IconButton
@@ -60,7 +63,10 @@ export function ShellPage({
                         </WithTooltip>
                     ) : null}
                     {Icon ? <Icon className='size-5 shrink-0 text-text-tertiary' aria-hidden='true' /> : null}
-                    <h1 className='min-w-0 flex-1 truncate text-headline text-text-primary' title={title}>
+                    <h1
+                        className={cn('min-w-0 flex-1 truncate text-headline text-text-primary', bare && 'sr-only')}
+                        title={title}
+                    >
                         {title}
                     </h1>
                     {actions ? <div className='flex shrink-0 items-center gap-1'>{actions}</div> : null}

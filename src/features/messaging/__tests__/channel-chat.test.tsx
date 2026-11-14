@@ -56,6 +56,7 @@ function renderChat(
                     <ChannelChat
                         key={channelId}
                         linkTo={(id) => `/channels/ot/${channelId}/${id}`}
+                        readLink={() => null}
                         channelId={channelId}
                         channelName={channelId}
                         permissions={{ send: true, manage: false, deleteOwn: true }}

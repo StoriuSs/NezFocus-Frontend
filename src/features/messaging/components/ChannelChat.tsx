@@ -10,10 +10,12 @@ import { useDeleteMessage } from '../api/useDeleteMessage'
 import { useEditMessage } from '../api/useEditMessage'
 import { useSendMessage } from '../api/useSendMessage'
 import { useBrowserOnline } from '../hooks/useBrowserOnline'
+import { useJumpToMessage } from '../hooks/useJumpToMessage'
 import { authorFrom, chatMessages } from '../lib/chat-messages'
 import { chatRows } from '../lib/chat-rows'
+import { isGoneFrom, stopsShort } from '../lib/message-cache'
 import { messageTime } from '../lib/message-time'
-import type { ChatPermissions, Message, MessageHandlers, RepliedMessage } from '../types'
+import type { AppLink, ChatPermissions, ChatTarget, Message, MessageHandlers, RepliedMessage } from '../types'
 import { Composer } from './Composer'
 import { DeleteMessageDialog } from './DeleteMessageDialog'
 import { MessageList } from './MessageList'
@@ -36,14 +38,22 @@ const quote = (message: Message): RepliedMessage => ({
  * message deleted elsewhere meanwhile: its editor closes with a Toast "This
  * message was deleted" (not when one deleted it oneself), its delete dialog
  * closes, and the reply strip says the original was deleted (the reply still
- * sends). The dialog quotes the message as it now is, and gives focus back to
+ * sends). Gone means missing where the history holds every message: one only
+ * out of view (the list went to a link, or back to the newest) is not. The dialog quotes the message as it now is, and gives focus back to
  * it (or to the composer, once it is gone).
+ *
+ * Opened at a message (`target`, a message link; D-48), or going to the
+ * original of a reply: `useJumpToMessage`. From a history that stops short of
+ * the newest, ↓ and sending go back to them first; a message is sent once
+ * they are in, and stays in the composer if they cannot be read.
  */
 export default function ChannelChat({
     channelId,
     channelName,
     permissions,
-    linkTo
+    linkTo,
+    readLink,
+    target
 }: {
     channelId: string
     channelName: string
@@ -51,13 +61,17 @@ export default function ChannelChat({
     permissions: ChatPermissions
     /** The whole link to one of the channel's messages (the servers feature's paths). */
     linkTo: (messageId: string) => string
+    /** How a link in a message shows (the servers feature knows its paths and what one sees). */
+    readLink: (href: string) => AppLink | null
+    /** The message the page was opened on, if any. */
+    target?: ChatTarget
 }) {
     const { t } = useTranslation('messaging')
     const profile = useProfile().data
     const timeZone = useQuery(settingsCache).data?.timezone
     const now = useMinuteClock()
     const online = useBrowserOnline()
-    const history = useChannelMessages(channelId)
+    const history = useChannelMessages(channelId, target?.messageId)
     const author = useMemo(() => authorFrom(profile), [profile])
     const { send, retry, discard } = useSendMessage(channelId, author)
     const edit = useEditMessage(channelId)
@@ -69,6 +83,7 @@ export default function ChannelChat({
     const [replyingTo, setReplyingTo] = useState<RepliedMessage | null>(null)
     const [editingId, setEditingId] = useState<string | null>(null)
     const [deletingId, setDeletingId] = useState<string | null>(null)
+    const jump = useJumpToMessage(channelId, target, history.data)
 
     const pages = history.data?.pages
     const messages = useMemo(() => chatMessages(pages), [pages])
@@ -78,9 +93,9 @@ export default function ChannelChat({
         [pages]
     )
 
-    // A message gone while something was being done to it. Read from what the
-    // list holds: a history started over (too much missed) also loses it.
-    const editingGone = editingId !== null && pages !== undefined && !saved.has(editingId)
+    // A message gone while something was being done to it, read from what the
+    // list holds (a history started over, too much missed, also loses it).
+    const editingGone = editingId !== null && history.data !== undefined && isGoneFrom(history.data, editingId)
     useEffect(() => {
         if (!editingGone) return
         if (deletedHere.current !== editingId) toast(t('message.gone'))
@@ -91,7 +106,7 @@ export default function ChannelChat({
         if (deletingId && pages && !deleting) setDeletingId(null)
     }, [deletingId, deleting, pages])
     const replyQuote =
-        replyingTo && (saved.has(replyingTo.id) || !pages)
+        replyingTo && (!history.data || !isGoneFrom(history.data, replyingTo.id))
             ? replyingTo
             : replyingTo && { ...replyingTo, author: null, content: '', deleted: true }
 
@@ -99,6 +114,11 @@ export default function ChannelChat({
     const older = useMemo(
         () => ({ has: hasPreviousPage, loading: isFetchingPreviousPage, load: () => void fetchPreviousPage() }),
         [hasPreviousPage, isFetchingPreviousPage, fetchPreviousPage]
+    )
+    const { hasNextPage, isFetchingNextPage, fetchNextPage } = history
+    const newer = useMemo(
+        () => ({ has: hasNextPage, loading: isFetchingNextPage, load: () => void fetchNextPage() }),
+        [hasNextPage, isFetchingNextPage, fetchNextPage]
     )
 
     const backToComposer = useCallback(() => composer.current?.focus(), [])
@@ -123,9 +143,11 @@ export default function ChannelChat({
             edit: (message) => setEditingId(message.id),
             askDelete: (message) => setDeletingId(message.id),
             copyText: (message) => copy(message.content),
-            copyLink: (message) => copy(linkTo(message.id))
+            copyLink: (message) => copy(linkTo(message.id)),
+            show: jump.show,
+            readLink
         }),
-        [me, permissions, backToComposer, copy, linkTo]
+        [me, permissions, backToComposer, copy, linkTo, jump.show, readLink]
     )
 
     const stopEditing = useCallback(() => {
@@ -156,10 +178,16 @@ export default function ChannelChat({
         return !!last
     }
 
-    const sendReply = (text: string) => {
-        const taken = send(text, replyQuote)
-        if (taken) setReplyingTo(null)
-        return taken
+    const sendReply = (text: string): boolean | Promise<boolean> => {
+        const quoted = replyQuote
+        const go = () => {
+            const taken = send(text, quoted)
+            if (taken) setReplyingTo(null)
+            return taken
+        }
+        // Read at an older message: the newest come back first, so one's own lands after them.
+        if (history.data && stopsShort(history.data)) return jump.backToPresent().then((back) => back && go())
+        return go()
     }
 
     /** Back to the message the dialog was about, or to the composer once it is gone. */
@@ -175,6 +203,11 @@ export default function ChannelChat({
                 rows={rows}
                 status={pages ? 'ready' : history.isError ? 'error' : 'loading'}
                 older={older}
+                newer={newer}
+                target={jump.scrollTarget}
+                highlighted={jump.highlighted}
+                onHighlightEnd={jump.endHighlight}
+                onToPresent={() => void jump.backToPresent()}
                 onReload={() => void refetch()}
                 now={now}
                 timeZone={timeZone}

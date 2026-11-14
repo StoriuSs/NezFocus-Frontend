@@ -99,6 +99,37 @@ export function startOver(data: ChannelMessages, latest: MessagePage): ChannelMe
     return { pages: [{ ...latest, ...(outgoing?.length ? { outgoing } : {}) }], pageParams: [null] }
 }
 
+/**
+ * A link opened at message `id` that the history does not hold (D-48): the
+ * history becomes the page around it, older pages read on scrolling up and
+ * newer ones on scrolling down (it stops short of the newest). The messages
+ * on their way stay, after it.
+ */
+export function openAround(data: ChannelMessages | undefined, around: MessagePage, id: string): ChannelMessages {
+    const outgoing = data?.pages.at(-1)?.outgoing
+    return { pages: [{ ...around, ...(outgoing?.length ? { outgoing } : {}) }], pageParams: [{ around: id }] }
+}
+
+/** Whether the history stops before the newest messages (opened at an older one): newer ones are read on scrolling down. */
+export const stopsShort = (data: ChannelMessages): boolean => !!data.pages.at(-1)?.hasMoreAfter
+
+/**
+ * Whether message `id` was deleted, read from the history: missing where the
+ * history holds every message (between its oldest and newest, or past them
+ * where nothing more is left to read). One outside what it holds is elsewhere
+ * in the channel (the history moved to a link, or back to the newest), not
+ * gone. Pages are one unbroken run of messages, so this holds for them all.
+ */
+export function isGoneFrom(data: ChannelMessages, id: string): boolean {
+    const items = data.pages.flatMap((page) => page.items)
+    if (items.some((item) => item.id === id)) return false
+    const oldest = items[0]?.id
+    const newest = items.at(-1)?.id
+    const fromStart = !data.pages[0]?.hasMoreBefore
+    const toEnd = !data.pages.at(-1)?.hasMoreAfter
+    return (fromStart || (oldest !== undefined && id >= oldest)) && (toEnd || (newest !== undefined && id <= newest))
+}
+
 /** A message quoted in a reply line, as it now is; null when no line quotes it. */
 type Quote = (replyTo: RepliedMessage) => RepliedMessage
 

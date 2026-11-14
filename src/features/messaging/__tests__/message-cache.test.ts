@@ -4,11 +4,14 @@ import {
     addOutgoing,
     addSaved,
     dropOutgoing,
+    isGoneFrom,
     lastSavedId,
+    openAround,
     removeSaved,
     replaceSaved,
     setOutgoingState,
-    startOver
+    startOver,
+    stopsShort
 } from '../lib/message-cache'
 import type { ChannelMessages, Message, MessagePage, OutgoingMessage } from '../types'
 
@@ -110,6 +113,53 @@ describe('A channel history in the cache, with messages on their way (ARCHITECTU
         expect(ids(data)).toEqual(['m90'])
         expect(data.pageParams).toEqual([null])
         expect(nonces(data)).toEqual(['n1'])
+    })
+})
+
+describe('A history opened at a message (D-48)', () => {
+    const page = (list: string[], before: boolean, after: boolean): MessagePage => ({
+        items: list.map(saved),
+        hasMoreBefore: before,
+        hasMoreAfter: after
+    })
+
+    it('becomes the page around the message, read from that message on', () => {
+        const data = openAround(history({ ids: ['m8', 'm9'] }), page(['m2', 'm3', 'm4'], true, true), 'm3')
+        expect(ids(data)).toEqual(['m2', 'm3', 'm4'])
+        expect(data.pageParams).toEqual([{ around: 'm3' }])
+        expect(stopsShort(data)).toBe(true)
+    })
+
+    it('keeps the messages on their way', () => {
+        const data = openAround(addOutgoing(history({ ids: ['m9'] }), outgoing('n1')), page(['m2'], false, true), 'm2')
+        expect(nonces(data)).toEqual(['n1'])
+    })
+
+    it('starts one for a channel never opened', () => {
+        expect(ids(openAround(undefined, page(['m2'], false, false), 'm2'))).toEqual(['m2'])
+    })
+
+    it('stops short only while newer messages are left to read', () => {
+        expect(stopsShort(history({ ids: ['m1'] }))).toBe(false)
+        expect(stopsShort(history({ ids: ['m1'], after: true }, { ids: ['m2'] }))).toBe(false)
+        expect(stopsShort(history({ ids: ['m1'] }, { ids: ['m2'], after: true }))).toBe(true)
+    })
+})
+
+describe('Whether a message is gone from the history (REQ-MSG-05)', () => {
+    it('is not while the history holds it', () => {
+        expect(isGoneFrom(history({ ids: ['m2', 'm3'] }), 'm3')).toBe(false)
+    })
+
+    it('is when it is missing where the history reads every message', () => {
+        expect(isGoneFrom(history({ ids: ['m2', 'm4'], before: true }), 'm3')).toBe(true)
+        expect(isGoneFrom(history({ ids: ['m2', 'm4'], before: true }), 'm5')).toBe(true)
+        expect(isGoneFrom(history({ ids: [] }), 'm5')).toBe(true)
+    })
+
+    it('is not when it lies outside what the history holds: elsewhere in the channel', () => {
+        expect(isGoneFrom(history({ ids: ['m2', 'm4'], before: true }), 'm1')).toBe(false)
+        expect(isGoneFrom(history({ ids: ['m2', 'm4'], after: true }), 'm5')).toBe(false)
     })
 })
 
