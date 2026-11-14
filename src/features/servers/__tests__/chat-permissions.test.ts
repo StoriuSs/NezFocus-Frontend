@@ -15,7 +15,8 @@ describe('What the chat may offer, from the channel’s bits (REQ-MSG-05, SRS 1.
             deleteOwn: true,
             react: true,
             addReactions: false,
-            mentionEveryone: false
+            mentionEveryone: false,
+            attachFiles: false
         })
     })
 
@@ -26,7 +27,8 @@ describe('What the chat may offer, from the channel’s bits (REQ-MSG-05, SRS 1.
             deleteOwn: true,
             react: true,
             addReactions: false,
-            mentionEveryone: false
+            mentionEveryone: false,
+            attachFiles: false
         })
     })
 
@@ -38,7 +40,8 @@ describe('What the chat may offer, from the channel’s bits (REQ-MSG-05, SRS 1.
             deleteOwn: false,
             react: false,
             addReactions: false,
-            mentionEveryone: false
+            mentionEveryone: false,
+            attachFiles: false
         })
         expect(chatPermissions(timedOut, viewOnly, new Date('2026-10-18T15:31:00Z'))).toMatchObject({
             deleteOwn: true,
@@ -67,5 +70,16 @@ describe('What the chat may offer, from the channel’s bits (REQ-MSG-05, SRS 1.
             chatPermissions(free, { permissions: bits('VIEW_CHANNEL', 'MENTION_EVERYONE') }, NOW).mentionEveryone
         ).toBe(true)
         expect(chatPermissions(free, { permissions: bits('VIEW_CHANNEL') }, NOW).mentionEveryone).toBe(false)
+    })
+
+    it('offers files with SEND_MESSAGES and ATTACH_FILES only, and none while timed out (REQ-ROLE-03)', () => {
+        const both = { permissions: bits('VIEW_CHANNEL', 'SEND_MESSAGES', 'ATTACH_FILES') }
+        expect(chatPermissions(free, both, NOW).attachFiles).toBe(true)
+        expect(chatPermissions(free, { permissions: bits('VIEW_CHANNEL', 'ATTACH_FILES') }, NOW).attachFiles).toBe(
+            false
+        )
+        expect(chatPermissions(free, { permissions: bits('VIEW_CHANNEL', 'SEND_MESSAGES') }, NOW).attachFiles).toBe(
+            false
+        )
     })
 })

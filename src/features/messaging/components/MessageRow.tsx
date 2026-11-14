@@ -1,6 +1,7 @@
 import { memo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from 'react'
 import { CircleAlert, Clock, CornerUpRight, WifiOff } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import '@/i18n/messaging'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { PopoverAnchor } from '@/components/ui/popover'
@@ -22,6 +23,7 @@ import {
 import { EmojiPicker } from './EmojiPicker'
 import { HoverToolbar } from './HoverToolbar'
 import type { ContentMentions } from './MentionChip'
+import { MessageAttachments, OutgoingAttachments } from './attachments/MessageAttachments'
 import { MessageContent } from './MessageContent'
 import { MessageEditor } from './MessageEditor'
 import { MessageMenu, type MenuAnchor } from './MessageMenu'
@@ -264,6 +266,8 @@ export const MessageRow = memo(function MessageRow({
                         }
                     />
                 )}
+                {saved?.attachments.length ? <MessageAttachments files={saved.attachments} /> : null}
+                {outgoing?.files?.length ? <OutgoingAttachments ids={outgoing.files} /> : null}
                 {saved && !editor ? (
                     <ReactionBar message={saved} handlers={handlers} onAdd={(button) => openPicker(button)} />
                 ) : null}
@@ -360,16 +364,26 @@ function ReplyLine({
                 {name}
             </span>
             <span className='truncate'>
-                {plainText(quoted.content, (part) =>
-                    mentionName(
-                        part,
-                        { users: quoted.mentionUsers, roles: quoted.mentionRoles, channel: source.channel },
-                        words
-                    )
-                )}
+                {quoted.content
+                    ? plainText(quoted.content, (part) =>
+                          mentionName(
+                              part,
+                              { users: quoted.mentionUsers, roles: quoted.mentionRoles, channel: source.channel },
+                              words
+                          )
+                      )
+                    : // Files alone: what was sent, as the inbox says it (06 › nội dung).
+                      sentLine(quoted.files, t)}
             </span>
         </button>
     )
+}
+
+/** A message of files alone, on a reply line: "Đã gửi một ảnh", "Đã gửi 3 tệp" (06 › nội dung). */
+function sentLine({ count, images }: RepliedMessage['files'], t: TFunction<'messaging'>): string {
+    const all = images === count
+    if (count === 1) return t(all ? 'attach.sentImage' : 'attach.sentFile')
+    return t(all ? 'attach.sentImages' : 'attach.sentFiles', { count })
 }
 
 /** What happened to a message not saved yet (C-10 `failed`, `rate-limited`; S-CHAT-01 "Sẽ gửi khi có mạng"). */

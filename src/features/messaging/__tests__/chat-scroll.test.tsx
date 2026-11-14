@@ -18,6 +18,7 @@ const TARGET = { key: 'm010', offsetTop: 600 }
 const person = { id: 'binh', username: 'binh.tran', displayName: 'Bình', avatarUrl: null }
 /** Message `n`, one a minute from 20:00 the same day, so all share one date line. */
 const message = (n: number, who = person): Message => ({
+    attachments: [],
     id: `m${String(n).padStart(3, '0')}`,
     channelId: 'hoi-dap',
     type: 'regular',

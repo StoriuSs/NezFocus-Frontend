@@ -5,6 +5,7 @@ import type { BareMessage, PinnedMessage } from '../types'
 const tuan = { id: 'tuan', username: 'tuan.le', displayName: 'Tuấn', avatarUrl: null }
 
 const pinned = (id: string): PinnedMessage => ({
+    attachments: [],
     id,
     channelId: 'hoi-dap',
     type: 'regular',

@@ -22,6 +22,7 @@ const SECRET = '0190a0b0-0000-7000-8000-0000000000c2'
 const person = (id: string, name: string) => ({ id, username: name.toLowerCase(), displayName: name, avatarUrl: null })
 
 const message = (over: Partial<Message> = {}): Message => ({
+    attachments: [],
     id: 'm1',
     channelId: 'hoi-dap',
     type: 'regular',
@@ -102,7 +103,8 @@ describe('A message about the one reading it (C-10 `related`, D-39, D-172)', () 
             content: 'Ok',
             deleted: false,
             mentionUsers: [],
-            mentionRoles: []
+            mentionRoles: [],
+            files: { count: 0, images: 0 }
         }
         expect(isRelated(message({ replyTo }), an)).toBe(true)
     })

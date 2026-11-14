@@ -3,6 +3,7 @@ import { allowedActions } from '../lib/message-permissions'
 import type { ChatPermissions, Message } from '../types'
 
 const message = (authorId: string): Message => ({
+    attachments: [],
     id: 'm1',
     channelId: 'hoi-dap',
     type: 'regular',
@@ -23,6 +24,7 @@ const message = (authorId: string): Message => ({
 })
 
 const MEMBER: ChatPermissions = {
+    attachFiles: true,
     send: true,
     manage: false,
     deleteOwn: true,
@@ -31,6 +33,7 @@ const MEMBER: ChatPermissions = {
     mentionEveryone: false
 }
 const MANAGERS_ONLY: ChatPermissions = {
+    attachFiles: true,
     send: false,
     manage: false,
     deleteOwn: true,
@@ -39,6 +42,7 @@ const MANAGERS_ONLY: ChatPermissions = {
     mentionEveryone: false
 }
 const TIMED_OUT: ChatPermissions = {
+    attachFiles: true,
     send: false,
     manage: false,
     deleteOwn: false,
@@ -47,6 +51,7 @@ const TIMED_OUT: ChatPermissions = {
     mentionEveryone: false
 }
 const MODERATOR: ChatPermissions = {
+    attachFiles: true,
     send: true,
     manage: true,
     deleteOwn: true,

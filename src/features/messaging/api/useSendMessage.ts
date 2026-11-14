@@ -3,9 +3,12 @@ import { hashKey, useQueryClient } from '@tanstack/react-query'
 import { onRealtimeEvent } from '@/features/realtime'
 import { useIdempotentMutation } from '@/hooks/useIdempotentMutation'
 import { getApiErrorType, NETWORK_ERROR, retryAfterSeconds } from '@/lib/api-error'
-import { addOutgoing, addSaved, dropOutgoing, setOutgoingState } from '../lib/message-cache'
+import { useUploads } from '../attachment-tray.store'
+import { addOutgoing, addSaved, dropOutgoing, setOutgoingFiles, setOutgoingState } from '../lib/message-cache'
+import { goneFiles } from '../lib/upload-file'
 import type { ChannelMessages, MessageAuthor, OutgoingMessage, OutgoingState, RepliedMessage } from '../types'
 import { messageKeys } from './keys'
+import { markGone, removeUpload, retryUpload, whenUploaded } from './attachmentUploads'
 import { sendMessage } from './messages.api'
 
 type OutgoingMentions = Pick<OutgoingMessage, 'mentionUsers' | 'mentionRoles' | 'mentionEveryone'>
@@ -30,6 +33,12 @@ const ON_ITS_WAY = new Set<OutgoingState>(['sending', 'queued', 'waiting', 'rate
  * never overtakes one waiting out the limit.
  * The row itself says what happened, so no error toast. A reply carries the
  * message it answers, quoted at once as the saved one will be (REQ-MSG-05).
+ *
+ * Files (D-93): the tray's go with the message, which shows `sending` until
+ * every one is uploaded and checked, and is sent then; one that fails makes
+ * it `failed`, and "Try again" uploads only the files that failed, with the
+ * same nonce. A file the backend no longer has (gone after 24 hours) fails
+ * the same way. Discarding the message lets its files go.
  */
 export function useSendMessage(channelId: string, author: MessageAuthor | undefined) {
     const client = useQueryClient()
@@ -40,8 +49,10 @@ export function useSendMessage(channelId: string, author: MessageAuthor | undefi
         [client, key]
     )
     const { mutateAsync } = useIdempotentMutation({
-        mutationFn: (body: { content: string; nonce: string; replyToId?: string }, idempotencyKey: string) =>
-            sendMessage(channelId, body, idempotencyKey),
+        mutationFn: (
+            body: { content: string; nonce: string; replyToId?: string; attachmentIds?: string[] },
+            idempotencyKey: string
+        ) => sendMessage(channelId, body, idempotencyKey),
         meta: { errorToast: false }
     })
 
@@ -54,11 +65,24 @@ export function useSendMessage(channelId: string, author: MessageAuthor | undefi
     const next = useRef<() => void>(() => undefined)
 
     const deliver = useCallback(
-        async ({ nonce, content, replyTo }: OutgoingMessage) => {
+        async ({ nonce, content, replyTo, files }: OutgoingMessage) => {
             update((history) => setOutgoingState(history, nonce, 'sending'))
+            // Every file uploaded and checked first; one that fails fails the message (D-93).
+            const attachments = files?.length ? await whenUploaded(files) : []
+            if (!attachments) {
+                update((history) => setOutgoingState(history, nonce, 'failed'))
+                next.current()
+                return
+            }
             try {
-                const saved = await mutateAsync({ content, nonce, ...(replyTo ? { replyToId: replyTo.id } : {}) })
+                const saved = await mutateAsync({
+                    content,
+                    nonce,
+                    ...(replyTo ? { replyToId: replyTo.id } : {}),
+                    ...(attachments.length ? { attachmentIds: attachments.map((file) => file.id) } : {})
+                })
                 update((history) => addSaved(history, saved, nonce))
+                for (const id of files ?? []) useUploads.getState().drop(id)
             } catch (error) {
                 const wait = retryAfterSeconds(error)
                 const type = getApiErrorType(error)
@@ -66,7 +90,12 @@ export function useSendMessage(channelId: string, author: MessageAuthor | undefi
                     update((history) => setOutgoingState(history, nonce, 'waiting'))
                 } else if (type === 'NOT_FOUND_ERROR') {
                     // Saved, then deleted before this retry's answer (REQ-MSG-10): nothing to show.
+                    for (const id of files ?? []) removeUpload(id)
                     update((history) => dropOutgoing(history, nonce))
+                } else if (type === 'UPLOAD_FILE_NOT_FOUND') {
+                    // Gone after 24 hours: those files upload again on "Try again".
+                    markGone(goneFiles(error))
+                    update((history) => setOutgoingState(history, nonce, 'failed'))
                 } else if (wait) {
                     update((history) => setOutgoingState(history, nonce, 'rate-limited', Date.now() + wait * 1000))
                 } else {
@@ -130,22 +159,27 @@ export function useSendMessage(channelId: string, author: MessageAuthor | undefi
     }, [outgoing, deliver])
 
     /**
-     * Whether the message was taken: not when blank, or before the history
-     * (where it shows) is loaded. `mentions`: as the composer named them,
-     * drawn until the saved message names them (REQ-MSG-03).
+     * Whether the message was taken: not when it has no text and no file, or
+     * before the history (where it shows) is loaded. `mentions`: as the
+     * composer named them, drawn until the saved message names them
+     * (REQ-MSG-03). The channel's tray goes with it.
      */
     const send = useCallback(
         (text: string, replyTo?: RepliedMessage | null, mentions?: OutgoingMentions): boolean => {
             const content = text.trim()
-            if (!content || !author || !client.getQueryData<ChannelMessages>(key)) return false
+            const withFiles = (useUploads.getState().trays[channelId]?.length ?? 0) > 0
+            if ((!content && !withFiles) || !author || !client.getQueryData<ChannelMessages>(key)) return false
+            const nonce = crypto.randomUUID()
+            const files = withFiles ? useUploads.getState().take(channelId) : []
             const message: OutgoingMessage = {
-                nonce: crypto.randomUUID(),
+                nonce,
                 channelId,
                 content,
                 author,
                 createdAt: new Date().toISOString(),
                 ...(replyTo ? { replyTo } : {}),
                 ...mentions,
+                ...(files.length ? { files } : {}),
                 state: outgoing().some((item) => ON_ITS_WAY.has(item.state))
                     ? 'queued'
                     : navigator.onLine
@@ -162,17 +196,30 @@ export function useSendMessage(channelId: string, author: MessageAuthor | undefi
     const retry = useCallback(
         async (nonce: string) => {
             const message = outgoing().find((item) => item.nonce === nonce)
-            if (message) await deliver(message)
+            if (!message) return
+            // A file refused for its content can never be sent: it leaves the message (D-93).
+            const { uploads } = useUploads.getState()
+            const files = (message.files ?? []).filter((id) => uploads[id] && uploads[id].state !== 'rejected')
+            // Nothing it could still send: it stays failed, its files showing why, for "Discard".
+            if (!message.content && !files.length) return
+            for (const id of message.files ?? []) if (!files.includes(id)) removeUpload(id)
+            if (files.length !== (message.files?.length ?? 0))
+                update((history) => setOutgoingFiles(history, nonce, files))
+            // Only the files that failed upload again.
+            for (const id of files) retryUpload(id)
+            await deliver({ ...message, files })
         },
-        [outgoing, deliver]
+        [outgoing, deliver, update]
     )
 
     const discard = useCallback(
         (nonce: string) => {
+            const message = outgoing().find((item) => item.nonce === nonce)
+            for (const id of message?.files ?? []) removeUpload(id)
             update((history) => dropOutgoing(history, nonce))
             next.current()
         },
-        [update]
+        [outgoing, update]
     )
 
     return { send, retry, discard }

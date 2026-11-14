@@ -40,6 +40,7 @@ const today = (time: string) => {
 }
 /** Message `n` at 20:0n today. */
 const message = (n: number, author = BINH): Message => ({
+    attachments: [],
     id: `m${String(n).padStart(2, '0')}`,
     channelId: 'hoi-dap',
     type: 'regular',
@@ -90,6 +91,7 @@ function renderChat(state: ReadState, client = new QueryClient({ defaultOptions:
                         channelId='hoi-dap'
                         channelName='hoi-dap'
                         permissions={{
+                            attachFiles: true,
                             send: true,
                             manage: false,
                             deleteOwn: true,

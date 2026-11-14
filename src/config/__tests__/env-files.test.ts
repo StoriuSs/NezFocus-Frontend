@@ -55,7 +55,9 @@ describe('configuration stays in sync', () => {
                 services: { app: { environment: Record<string, string> } }
             }
         ).services.app.environment
-        expect([...schemaKeys, 'CSP_IMG_SRC'].filter((key) => environment[key] === undefined)).toEqual([])
+        expect(
+            [...schemaKeys, 'CSP_IMG_SRC', 'CSP_STORAGE_SRC'].filter((key) => environment[key] === undefined)
+        ).toEqual([])
         // `${NAME:?…}`: compose stops with the message rather than starting a
         // container that would refuse to serve anyway.
         for (const key of requiredKeys) expect(environment[key]).toMatch(new RegExp(`^\\\${${key}:\\?`))

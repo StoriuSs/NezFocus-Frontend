@@ -55,7 +55,8 @@ describe('the Content-Security-Policy template', () => {
             "'self'",
             PLACEHOLDERS.api,
             PLACEHOLDERS.apiSocket,
-            PLACEHOLDERS.errorTracking
+            PLACEHOLDERS.errorTracking,
+            PLACEHOLDERS.storage
         ])
         expect(directive(policy, 'img-src')).toContain(PLACEHOLDERS.images)
         expect(policy).not.toMatch(/https?:\/\/(?!__)/)

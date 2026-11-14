@@ -24,6 +24,7 @@ const state = (channelId: string, more: Partial<ReadState> = {}): ReadState => (
 })
 
 const message = (n: number, more: Partial<BareMessage> = {}): BareMessage => ({
+    attachments: [],
     id: id(n),
     channelId: 'hoi-dap',
     type: 'regular',
@@ -90,7 +91,15 @@ describe('A message heard on the socket', () => {
         const reply = hearMessage(
             held,
             message(11, {
-                replyTo: { id: id(5), author: an, content: 'x', deleted: false, mentionUsers: [], mentionRoles: [] }
+                replyTo: {
+                    files: { count: 0, images: 0 },
+                    id: id(5),
+                    author: an,
+                    content: 'x',
+                    deleted: false,
+                    mentionUsers: [],
+                    mentionRoles: []
+                }
             }),
             'an'
         )
@@ -148,7 +157,15 @@ describe('A message heard on the socket', () => {
 
     it('asks for the list again for a reply to a deleted message: whose it was is the server’s to say (D-172)', () => {
         const reply = message(11, {
-            replyTo: { id: id(5), author: null, content: '', deleted: true, mentionUsers: [], mentionRoles: [] }
+            replyTo: {
+                files: { count: 0, images: 0 },
+                id: id(5),
+                author: null,
+                content: '',
+                deleted: true,
+                mentionUsers: [],
+                mentionRoles: []
+            }
         })
         expect(hearMessage(held, reply, 'an')).toMatchObject({ refetch: true })
     })

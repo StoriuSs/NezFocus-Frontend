@@ -471,6 +471,73 @@ test('who is online and who is typing reach the other browser: the member panel,
     await binh.context.close()
 })
 
+/** A real PNG of 480 × 300, drawn by the browser itself: for the storage, the check and the thumbnail to go through for real. */
+async function drawnPng(page: Page): Promise<Buffer> {
+    const url = await page.evaluate(() => {
+        const canvas = document.createElement('canvas')
+        canvas.width = 480
+        canvas.height = 300
+        const context = canvas.getContext('2d')!
+        const fill = context.createLinearGradient(0, 0, 480, 300)
+        fill.addColorStop(0, '#f6f1e3')
+        fill.addColorStop(1, '#d9cfb8')
+        context.fillStyle = fill
+        context.fillRect(0, 0, 480, 300)
+        context.fillStyle = '#2b3a67'
+        context.font = '28px serif'
+        context.fillText('∫∫ f(x, y) dA = 20 sin θ', 40, 160)
+        return canvas.toDataURL('image/png')
+    })
+    return Buffer.from(url.split(',')[1]!, 'base64')
+}
+
+test('files go from the browser to the storage, are checked, and reach the other browser; one not what its name says is refused before sending (REQ-MSG-04, D-93, D-165)', async ({
+    browser
+}) => {
+    test.setTimeout(90_000)
+    const an = await openAs(browser, anEmail)
+    const binh = await openAs(browser, binhEmail)
+    const tray = an.page.getByRole('list', { name: 'Files to send' })
+
+    await an.page.locator('input[type=file]').setInputFiles([
+        { name: 'cau4.png', mimeType: 'image/png', buffer: await drawnPng(an.page) },
+        { name: 'de-giua-ky.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n%nezfocus e2e\n') }
+    ])
+    await expect(tray.getByRole('listitem')).toHaveCount(2)
+    // Uploaded to the storage and checked: the line under the tray goes.
+    await expect(an.page.getByText(/^Uploading \d\/2$/)).toHaveCount(0, { timeout: 30_000 })
+    await shoot(an.page, 'chat04-ready')
+    await say(an.page, 'Bài giải câu 4')
+
+    const image = log(binh.page).getByRole('img', { name: 'Image cau4.png' })
+    await expect(image).toBeVisible({ timeout: 15_000 })
+    // The thumbnail loads from the storage, through its signed link.
+    await expect
+        .poll(() => image.evaluate((img: HTMLImageElement) => img.naturalWidth), { timeout: 15_000 })
+        .toBeGreaterThan(0)
+    await expect(log(binh.page).getByRole('button', { name: 'Download de-giua-ky.pdf' })).toBeVisible()
+    await shoot(binh.page, 'chat04-sent')
+
+    // Named .png, but not an image: refused after the upload, before any message.
+    await an.page.locator('input[type=file]').setInputFiles({
+        name: 'cong-thuc.png',
+        mimeType: 'image/png',
+        buffer: Buffer.from('MZ this is not an image')
+    })
+    await expect(tray.getByText("Can't send", { exact: true })).toBeVisible({ timeout: 30_000 })
+    await say(an.page, 'Gửi thử')
+    await expect(
+        an.page.getByRole('alert').filter({ hasText: 'Remove or retry the files in error to send' })
+    ).toBeVisible()
+    await shoot(an.page, 'chat04-content-mismatch')
+    await expect(log(binh.page).getByText('Gửi thử', { exact: true })).toHaveCount(0)
+
+    expect(an.problems).toEqual([])
+    expect(binh.problems).toEqual([])
+    await an.context.close()
+    await binh.context.close()
+})
+
 test('messages past 5 in 5 seconds wait, then go by themselves, each once and in order', async ({ browser }) => {
     test.setTimeout(60_000)
     const an = await openAs(browser, anEmail)

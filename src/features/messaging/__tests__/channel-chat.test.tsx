@@ -37,6 +37,7 @@ const today = (time: string) => {
     return new Date(`${day}T${time}:00+07:00`).toISOString()
 }
 const message = (id: string, author: typeof BINH, content: string, createdAt: string): Message => ({
+    attachments: [],
     id,
     channelId: 'hoi-dap',
     type: 'regular',
@@ -77,6 +78,7 @@ function renderChat(
                         channelId={channelId}
                         channelName={channelId}
                         permissions={{
+                            attachFiles: true,
                             send: true,
                             manage: false,
                             deleteOwn: true,

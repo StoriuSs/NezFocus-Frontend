@@ -37,7 +37,9 @@ export const PLACEHOLDERS = {
     // The same host as ws:// or wss://, for the socket (SRS 5.2).
     apiSocket: '__API_SOCKET_ORIGIN__',
     errorTracking: '__SENTRY_ORIGIN__',
-    images: '__EXTRA_IMAGE_ORIGINS__'
+    images: '__EXTRA_IMAGE_ORIGINS__',
+    // Where the browser uploads message files itself (D-165): the bucket.
+    storage: '__STORAGE_ORIGINS__'
 }
 
 /**
@@ -52,12 +54,13 @@ export function cspTemplate(pages) {
         apiSocket: PLACEHOLDERS.apiSocket,
         errorTracking: [PLACEHOLDERS.errorTracking],
         extraImages: [PLACEHOLDERS.images],
+        storage: [PLACEHOLDERS.storage],
         pages
     })
 }
 
 /** The policy from origins that are already resolved (or placeholders). */
-function policy({ api, apiSocket, errorTracking, extraImages, pages }) {
+function policy({ api, apiSocket, errorTracking, extraImages, storage, pages }) {
     const hashes = pages
         .flatMap(inlineScripts)
         .map((body) => `'sha256-${createHash('sha256').update(body, 'utf8').digest('base64')}'`)
@@ -78,8 +81,9 @@ function policy({ api, apiSocket, errorTracking, extraImages, pages }) {
         `img-src ${unique("'self'", 'data:', 'blob:', 'https:', api, ...extraImages)}`,
         "font-src 'self' data:",
         // The socket's origin on its own: an https: source does not cover
-        // wss:, and only 'self' stretches to ws/wss (CSP3).
-        `connect-src ${unique("'self'", api, apiSocket, ...errorTracking)}`,
+        // wss:, and only 'self' stretches to ws/wss (CSP3). The storage: message
+        // files are posted to the bucket by the browser itself (D-165).
+        `connect-src ${unique("'self'", api, apiSocket, ...errorTracking, ...storage)}`,
         // No frames. Something that needs one (a payment form) adds its
         // origin here, not a wildcard.
         "frame-src 'none'",

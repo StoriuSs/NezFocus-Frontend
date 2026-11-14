@@ -25,6 +25,7 @@ const state = (channelId: string, more: Partial<ReadState> = {}): ReadState => (
     ...more
 })
 const message = (n: number, more: Partial<BareMessage> = {}): BareMessage => ({
+    attachments: [],
     id: id(n),
     channelId: 'hoi-dap',
     type: 'regular',

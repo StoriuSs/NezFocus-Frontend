@@ -22,6 +22,10 @@ export type Reactors = ApiModel<'ReactorsResponseDto'>
 export type PinnedMessage = ApiModel<'PinnedMessageResponseDto'>
 /** The message a reply answers, as its reply line shows it; only its id once deleted (REQ-MSG-05). */
 export type RepliedMessage = ApiModel<'RepliedMessageResponseDto'>
+/** A checked file (REQ-MSG-04): in a message, or in the tray; its links last an hour. */
+export type Attachment = ApiModel<'AttachmentResponseDto'>
+/** An upload waiting for its file: the form to post it with (D-165). */
+export type UploadTicket = ApiModel<'UploadTicketResponseDto'>
 /** A page of history, oldest first. */
 export type MessagePage = ApiModel<'MessagePageResponseDto'>
 /** A person a message's <@id> token names, as they are now; both names null once the account is deleted (D-171). */
@@ -69,6 +73,11 @@ export interface OutgoingMessage {
     mentionUsers?: MentionedUser[]
     mentionRoles?: MentionedRole[]
     mentionEveryone?: boolean
+    /**
+     * Its files, by their place in the uploads store (`attachment-tray.store.ts`),
+     * in the order they go: sent once every one is uploaded and checked (D-93).
+     */
+    files?: string[]
 }
 
 /** A page as kept in the cache: the last one also holds the messages not saved yet. */
@@ -101,6 +110,8 @@ export interface ChatPermissions {
     addReactions: boolean
     /** MENTION_EVERYONE: @everyone, and any role (REQ-MSG-03). */
     mentionEveryone: boolean
+    /** ATTACH_FILES: (+), pasting and dropping files (REQ-ROLE-03). */
+    attachFiles: boolean
 }
 
 /**

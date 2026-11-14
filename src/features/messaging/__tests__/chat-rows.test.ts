@@ -7,6 +7,7 @@ const person = (id: string) => ({ id, username: id, displayName: id, avatarUrl: 
 
 /** A message of `who` at `time` (local, 18/10/2026 unless `day` says otherwise). */
 const at = (who: string | null, time: string, day = '2026-10-18'): Message => ({
+    attachments: [],
     id: `${day}T${time}-${who}`,
     channelId: 'hoi-dap',
     type: who ? 'regular' : 'system',

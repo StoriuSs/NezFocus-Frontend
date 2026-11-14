@@ -9,6 +9,8 @@ export const messageKeys = {
     reactors: (messageId: string, emoji: string) => [...messageKeys.all, 'reactors', messageId, emoji] as const,
     /** How far the reader has read every text channel they may view (REQ-MSG-09), kept live by the socket. */
     readStates: () => [...messageKeys.all, 'read-states'] as const,
+    /** New read links of one file, asked for when the ones held ended (they last an hour). */
+    attachmentLinks: (attachmentId: string) => [...messageKeys.all, 'attachment-links', attachmentId] as const,
     /** The emoji picker's emoji in one language, read once (C-12). */
     emoji: (language: string) => [...messageKeys.all, 'emoji', language] as const
 }

@@ -16,6 +16,7 @@ const { emitRealtimeEvent } = await import('@/features/realtime/lib/realtime-eve
 
 const me = { id: 'an', username: 'an.nguyen', displayName: 'An', avatarUrl: null }
 const savedFrom = (body: { content: string }, id = 'm9'): Message => ({
+    attachments: [],
     id,
     channelId: 'hoi-dap',
     type: 'regular',

@@ -24,6 +24,7 @@ a few small Zustand stores, or in a component.**
 | Which servers dialog is open, and on what (create a server, a channel or category dialog, invite friends, join from an invite, leave, hand over or delete a server) | `useCreateServerDialog`, `useChannelDialogs`, `useInviteDialogs`, `useMembershipDialogs` (`src/features/servers/*.store.ts`); the AppShell draws the dialogs | `useCreateServerDialog((s) => s.show)` |
 | A channel's history, and the messages typed there not saved yet (`sending`, `waiting`, `rate-limited`, `failed`) | TanStack Query, key `messageKeys.channel(id)`: the not-yet-saved ones on the last page (`outgoing`), matched by nonce when the saved copy comes (ARCHITECTURE 10.2) | `useChannelMessages`, `useSendMessage` in `src/features/messaging/api/` |
 | What is typed in a channel's composer | `sessionStorage`, one key per channel, until the tab closes (C-12) | `useDraft` (`src/features/messaging/hooks/`) |
+| The files chosen for messages: each channel's tray, the files of messages on their way, how far each upload is (S-CHAT-04) | `useUploads`, `src/features/messaging/attachment-tray.store.ts`, filled by `api/attachmentUploads.ts` | `useAttachmentTray(channelId)` |
 | The tab's connection: the socket's state, the browser online or not (S-SHELL-01) | `useRealtimeStore`, `src/features/realtime/realtime.store.ts`, kept by `useRealtimeConnection` in the AppShell | `useConnectionBanner()`, which Banner the page shows |
 | Whether a dialog its own component opens is open, a tab, a hover | `useState` in the component | — |
 
@@ -89,6 +90,15 @@ query cache (`useOwnPresence`), others' comes with the member lists (D-175). UI 
 (ARCHITECTURE 10.2), not here. `useConnectionBanner()` turns it into the
 Banner a page shows: `offline` without a network, `reconnecting` once the
 socket has been down 3 seconds, nothing otherwise.
+
+**The uploads store** (`useUploads`, `src/features/messaging/`): the files
+chosen in each channel's tray and those of messages on their way, with how far
+each upload is and why one was refused. Client state: it holds `File`s and the
+pictures made from them, which the query cache cannot keep, and a file must
+go on uploading when its tray is no longer drawn (`api/attachmentUploads.ts`
+runs the uploads outside React, three at a time). What the backend answers
+for a checked file is kept with it until the message is sent; the messages'
+files then come back with the messages, in the query cache.
 
 **The servers dialog stores** (`useCreateServerDialog`, `useChannelDialogs`,
 `useInviteDialogs`, `useMembershipDialogs`, in `src/features/servers/`):

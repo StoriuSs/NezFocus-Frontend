@@ -97,6 +97,7 @@ In development they come from `.env.development` instead.
 | Variable | Default | Read by | What it is |
 | --- | --- | --- | --- |
 | `CSP_IMG_SRC` | empty | `nginx/40-runtime-config.sh` (container start) | Extra origins avatars may load from, space-separated. Only for a bucket served over plain `http` (local RustFS, say): images from the API and from any `https://` host are already allowed |
+| `CSP_STORAGE_SRC` | empty | `nginx/40-runtime-config.sh` (container start) | The bucket's origin(s), space-separated, added to `connect-src`: browsers post message files straight to it (D-165). Empty: no file can be sent in a message, and the container says so at start |
 | `FRONTEND_PORT` | `8081` | `docker-compose.prod.yaml` | The host port the container is published on, always bound to `127.0.0.1` for the host's nginx to proxy to. Inside the container nginx listens on 8080 |
 | `DEPLOY_IMAGE_SOURCE` | `build` | `deploy.sh` | `build`: the server builds the image. `registry`: it pulls the one CI published for the commit ([deploy.md](./deploy.md)) |
 | `DEPLOY_IMAGE` | `react-starter-auth-prod-app` | `deploy.sh`, `docker-compose.prod.yaml` (image name) | The image name, without a tag. In `registry` mode the registry path, lowercase: `ghcr.io/<owner>/<repository>` |

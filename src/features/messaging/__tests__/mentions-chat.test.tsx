@@ -42,6 +42,7 @@ const binh = person(BINH, 'Bình', 'binh.tran')
 const PEOPLE: MentionPerson[] = [an, binh, person(CHI, 'Chi', 'chi.le'), person(MAI, 'Mai', 'mai.tran')]
 
 const message = (id: string, author: typeof an, content: string, extra: Partial<Message> = {}): Message => ({
+    attachments: [],
     id,
     channelId: HOI_DAP,
     type: 'regular',
@@ -91,6 +92,7 @@ const SOURCE: MentionSource = {
 }
 
 const PERMISSIONS: ChatPermissions = {
+    attachFiles: true,
     send: true,
     manage: false,
     deleteOwn: true,
@@ -205,7 +207,15 @@ describe('Mentions in a message (REQ-MSG-03, C-10)', () => {
             page([
                 message('m15', binh, `<@${AN}> ơi`, {
                     mentionUsers: [{ id: AN, username: 'an.nguyen', displayName: 'An' }],
-                    replyTo: { id: 'm14', author: null, content: '', deleted: true, mentionUsers: [], mentionRoles: [] }
+                    replyTo: {
+                        files: { count: 0, images: 0 },
+                        id: 'm14',
+                        author: null,
+                        content: '',
+                        deleted: true,
+                        mentionUsers: [],
+                        mentionRoles: []
+                    }
                 })
             ])
         )
@@ -253,6 +263,7 @@ describe('Mentions in a message (REQ-MSG-03, C-10)', () => {
                 mine,
                 message('m21', binh, 'Mình giữ chỗ cạnh An rồi nè', {
                     replyTo: {
+                        files: { count: 0, images: 0 },
                         id: 'm20',
                         author: an,
                         content: mine.content,
@@ -282,6 +293,7 @@ describe('Mentions in a message (REQ-MSG-03, C-10)', () => {
                 quoted,
                 message('m31', person(CHI, 'Chi', 'chi.le'), 'Ừ', {
                     replyTo: {
+                        files: { count: 0, images: 0 },
                         id: 'm30',
                         author: binh,
                         content: quoted.content,

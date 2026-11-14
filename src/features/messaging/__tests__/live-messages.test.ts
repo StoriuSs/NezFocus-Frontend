@@ -12,6 +12,7 @@ const { listenForMessages } = await import('../api/liveMessages')
 const { messageKeys } = await import('../api/keys')
 
 const saved = (id: string, channelId = 'hoi-dap'): Message => ({
+    attachments: [],
     id,
     channelId,
     type: 'regular',

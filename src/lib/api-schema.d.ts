@@ -1045,6 +1045,66 @@ export interface paths {
         patch?: never
         trace?: never
     }
+    '/api/v1/attachments': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        /**
+         * A form to upload one file for a channel, valid 15 minutes. Needs
+         *     SEND_MESSAGES and ATTACH_FILES there (a timeout says until when); the
+         *     name's extension must be of a type sent (UPLOAD_INVALID_TYPE, D-92,
+         *     D-177), the size at most 25 MB (UPLOAD_FILE_TOO_LARGE).
+         */
+        post: operations['AttachmentController_request_v1']
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/attachments/{attachmentId}/complete': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        /**
+         * The upload is done: its content is checked (D-93). Not what its name
+         *     says: the file is deleted (UPLOAD_INVALID_TYPE). Nothing uploaded yet:
+         *     UPLOAD_FILE_NOT_FOUND. Done once, it answers the same again.
+         */
+        post: operations['AttachmentController_complete_v1']
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/attachments/{attachmentId}/url': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        /** New links to a file whose links ended: one in a channel the person views, or their own not sent yet. */
+        get: operations['AttachmentController_links_v1']
+        put?: never
+        post?: never
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
 }
 export type webhooks = Record<string, never>
 export interface components {
@@ -1725,6 +1785,10 @@ export interface components {
             id: string
             name: string
         }
+        RepliedFilesResponseDto: {
+            count: number
+            images: number
+        }
         RepliedMessageResponseDto: {
             /** @description Null once that message is deleted. */
             author: components['schemas']['MessageAuthorResponseDto'] | null
@@ -1732,11 +1796,34 @@ export interface components {
             mention_users: components['schemas']['MentionedUserResponseDto'][]
             /** @description The roles it mentions in effect, as named now (D-171); empty once deleted. */
             mention_roles: components['schemas']['MentionedRoleResponseDto'][]
+            /** @description How many files it has, and how many are images; none once deleted. */
+            files: components['schemas']['RepliedFilesResponseDto']
             id: string
             /** @description Its text as it is now (edits show); empty once deleted. */
             content: string
             /** @description The reply line says "the original message was deleted" (REQ-MSG-05). */
             deleted: boolean
+        }
+        AttachmentResponseDto: {
+            /** @description An image's size, upright, to keep its place before it loads (C-10); null for other files. */
+            width: number | null
+            height: number | null
+            /** @description An image's thumbnail (WebP, at most 720 x 640), for as long as `url`; null for other files. */
+            thumbnail_url: string | null
+            id: string
+            filename: string
+            /** @description In bytes. */
+            size: number
+            /** @description What its content was checked to be (D-93); text files are `text/plain; charset=utf-8` (D-177). */
+            content_type: string
+            /**
+             * @description Reads the file for an hour: shown in the browser for an image, a PDF,
+             *     video or sound, downloaded for anything else (D-94). Past that,
+             *     `GET /attachments/{id}/url` gives new links.
+             */
+            url: string
+            /** @description Saves the file under its name, for as long as `url`: `url` itself for a file that is only downloaded. */
+            download_url: string
         }
         ReactionSummaryResponseDto: {
             emoji: string
@@ -1773,6 +1860,8 @@ export interface components {
              * @description Shown as "edited"; null if never edited.
              */
             edited_at: string | null
+            /** @description Its files, in the order sent (REQ-MSG-04): images first is the client's to draw (C-10). */
+            attachments: components['schemas']['AttachmentResponseDto'][]
             reactions: components['schemas']['ReactionSummaryResponseDto'][]
             id: string
             channel_id: string
@@ -1824,6 +1913,8 @@ export interface components {
              * @description Shown as "edited"; null if never edited.
              */
             edited_at: string | null
+            /** @description Its files, in the order sent (REQ-MSG-04): images first is the client's to draw (C-10). */
+            attachments: components['schemas']['AttachmentResponseDto'][]
             id: string
             channel_id: string
             /**
@@ -1839,7 +1930,7 @@ export interface components {
             created_at: string
         }
         SendMessageRequestDto: {
-            /** @description 1-2000 characters, an emoji counting as one, once the blank around it is dropped. */
+            /** @description At most 2000 characters, an emoji counting as one, once the blank around it is dropped; empty only with files. */
             content: string
             /**
              * @description Chosen by the client for this message and kept across its retries: the
@@ -1853,6 +1944,13 @@ export interface components {
              * @description The message this one answers: a regular message of the same channel, deleted or not (REQ-MSG-05).
              */
             reply_to_id?: string
+            /**
+             * @description Checked uploads of the sender's (`POST /attachments/{id}/complete`), in
+             *     the order they show: at most 10, each once (REQ-MSG-04). One that cannot
+             *     be sent (not checked, sent already, older than 24 hours) is named in
+             *     UPLOAD_FILE_NOT_FOUND's `attachment_ids`.
+             */
+            attachment_ids?: string[]
         }
         EditMessageRequestDto: {
             /** @description 1-2000 characters, an emoji counting as one, once the blank around it is dropped. */
@@ -1896,6 +1994,8 @@ export interface components {
              * @description Shown as "edited"; null if never edited.
              */
             edited_at: string | null
+            /** @description Its files, in the order sent (REQ-MSG-04): images first is the client's to draw (C-10). */
+            attachments: components['schemas']['AttachmentResponseDto'][]
             reactions: components['schemas']['ReactionSummaryResponseDto'][]
             id: string
             channel_id: string
@@ -1942,6 +2042,37 @@ export interface components {
              *     mark only moves forward (D-173).
              */
             message_id?: string
+        }
+        UploadFieldResponseDto: {
+            name: string
+            value: string
+        }
+        UploadFormResponseDto: {
+            fields: components['schemas']['UploadFieldResponseDto'][]
+            url: string
+        }
+        UploadTicketResponseDto: {
+            upload: components['schemas']['UploadFormResponseDto']
+            attachment_id: string
+            /**
+             * Format: date-time
+             * @description The form is refused after this (15 minutes): ask for another.
+             */
+            expires_at: string
+        }
+        RequestUploadRequestDto: {
+            /**
+             * Format: uuid
+             * @description The channel the file is for: sending files there needs ATTACH_FILES (REQ-ROLE-03).
+             */
+            channel_id: string
+            /**
+             * @description The file's name; its extension says its type (D-92, D-177). Kept without
+             *     folders or control characters, at most 255 characters.
+             */
+            filename: string
+            /** @description In bytes: at most 25 MB (UPLOAD_FILE_TOO_LARGE), which the storage keeps too. */
+            size: number
         }
     }
     responses: never
@@ -4083,6 +4214,80 @@ export interface operations {
                     'application/json': {
                         meta: components['schemas']['ApiResponseMetaDto']
                         data: components['schemas']['ReadStateResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    AttachmentController_request_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['RequestUploadRequestDto']
+            }
+        }
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['UploadTicketResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    AttachmentController_complete_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                attachmentId: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['AttachmentResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    AttachmentController_links_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                attachmentId: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['AttachmentResponseDto']
                     }
                 }
             }

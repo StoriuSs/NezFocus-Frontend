@@ -46,6 +46,14 @@ export function setOutgoingState(
     }))
 }
 
+/** The files a message on its way still sends (one refused for its content leaves it before a retry, D-93). */
+export function setOutgoingFiles(data: ChannelMessages, nonce: string, files: string[]): ChannelMessages {
+    return changeLast(data, (page) => ({
+        ...page,
+        outgoing: page.outgoing?.map((item) => (item.nonce === nonce ? { ...item, files } : item))
+    }))
+}
+
 /** "Discard": a message that failed leaves the list. */
 export function dropOutgoing(data: ChannelMessages, nonce: string): ChannelMessages {
     return changeLast(data, (page) => withoutNonce(page, nonce))
@@ -222,7 +230,15 @@ export function removeSaved(data: ChannelMessages, id: string): ChannelMessages 
         data,
         id,
         (items) => (items.some((item) => item.id === id) ? items.filter((item) => item.id !== id) : items),
-        () => ({ id, author: null, content: '', deleted: true, mentionUsers: [], mentionRoles: [] })
+        () => ({
+            id,
+            author: null,
+            content: '',
+            deleted: true,
+            mentionUsers: [],
+            mentionRoles: [],
+            files: { count: 0, images: 0 }
+        })
     )
 }
 

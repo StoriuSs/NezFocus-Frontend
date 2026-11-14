@@ -62,6 +62,7 @@ SENTRY_DSN=${VITE_SENTRY_DSN:-}
 [ -z "$SENTRY_DSN" ] || SENTRY_DSN=$(sentry_dsn "$SENTRY_DSN")
 SENTRY_RELEASE=${VITE_SENTRY_RELEASE:-}
 IMAGE_ORIGINS=${CSP_IMG_SRC:-}
+STORAGE_ORIGINS=${CSP_STORAGE_SRC:-}
 
 # ─── The browser's settings ──────────────────────────────────────────────────
 {
@@ -81,12 +82,21 @@ for value in $IMAGE_ORIGINS; do
 	image_origins="$image_origins $(origin CSP_IMG_SRC "$value")"
 done
 
+# Message files are posted by the browser straight to the bucket (D-165):
+# without its origin here, every upload is blocked.
+storage_origins=''
+for value in $STORAGE_ORIGINS; do
+	storage_origins="$storage_origins $(origin CSP_STORAGE_SRC "$value")"
+done
+[ -n "$storage_origins" ] || echo "runtime-config: CSP_STORAGE_SRC is empty: files cannot be sent in messages" >&2
+
 # The socket (SRS 5.2) connects to the same host over ws:// or wss://.
 API_SOCKET_ORIGIN=$(origin VITE_API_URL "$API_URL" | sed -E 's#^http#ws#')
 
 sed -e "s#__API_SOCKET_ORIGIN__#$API_SOCKET_ORIGIN#g" 	-e "s#__API_ORIGIN__#$(origin VITE_API_URL "$API_URL")#g" \
 	-e "s#__SENTRY_ORIGIN__#$([ -z "$SENTRY_DSN" ] || origin VITE_SENTRY_DSN "$SENTRY_DSN")#g" \
 	-e "s#__EXTRA_IMAGE_ORIGINS__#${image_origins# }#g" \
+	-e "s#__STORAGE_ORIGINS__#${storage_origins# }#g" \
 	-e 's/  */ /g' \
 	"$CSP_TEMPLATE" > "$CSP_FILE"
 

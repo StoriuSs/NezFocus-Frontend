@@ -10,6 +10,7 @@ import { can } from './permissions'
  * ADD_REACTIONS and MANAGE_MESSAGES away; deleting one's own message and
  * clicking an emoji already on a message (SRS 1.71) also need to know of it.
  * MENTION_EVERYONE: @everyone and any role in the suggestions (REQ-MSG-03).
+ * ATTACH_FILES with SEND_MESSAGES: files in the composer (REQ-MSG-04).
  */
 export function chatPermissions(
     server: Pick<Server, 'timeoutUntil'>,
@@ -25,6 +26,8 @@ export function chatPermissions(
         deleteOwn: free,
         react: free,
         addReactions: can(channel.permissions, 'ADD_REACTIONS'),
-        mentionEveryone: can(channel.permissions, 'MENTION_EVERYONE')
+        mentionEveryone: can(channel.permissions, 'MENTION_EVERYONE'),
+        // A timeout leaves only VIEW_CHANNEL, so it takes this away too.
+        attachFiles: can(channel.permissions, 'SEND_MESSAGES') && can(channel.permissions, 'ATTACH_FILES')
     }
 }

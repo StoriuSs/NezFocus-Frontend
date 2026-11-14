@@ -38,6 +38,7 @@ const AN = person('an', 'An')
 const CHI = person('chi', 'Chi')
 const GIANG = person('giang', 'Giang')
 const message = (id: string, author: typeof AN, content: string, extra: Partial<Message> = {}): Message => ({
+    attachments: [],
     id,
     channelId: 'hoi-dap',
     type: 'regular',
@@ -102,6 +103,7 @@ function renderChat({ target, client = newClient() }: { target?: ChatTarget; cli
                                         channelId='hoi-dap'
                                         channelName='hoi-dap'
                                         permissions={{
+                                            attachFiles: true,
                                             send: true,
                                             manage: false,
                                             deleteOwn: true,
@@ -267,6 +269,7 @@ describe('Message links (REQ-MSG-05, D-48)', () => {
     it('goes to the original of a reply, and lights it up', async () => {
         const reply = message('m45', AN, 'Cảm ơn Chi, mình ra 8π/3 rồi', {
             replyTo: {
+                files: { count: 0, images: 0 },
                 id: 'm04',
                 author: CHI,
                 content: SOLUTION.content,
@@ -352,6 +355,7 @@ describe('Message links (REQ-MSG-05, D-48)', () => {
         const mine = message('m44', AN, 'Mình làm ra 8π/3')
         const reply = message('m45', AN, 'Cảm ơn Chi', {
             replyTo: {
+                files: { count: 0, images: 0 },
                 id: 'm04',
                 author: CHI,
                 content: SOLUTION.content,
@@ -377,6 +381,7 @@ describe('Message links (REQ-MSG-05, D-48)', () => {
     it('moves focus to the message gone to from the list', async () => {
         const reply = message('m45', AN, 'Cảm ơn Chi', {
             replyTo: {
+                files: { count: 0, images: 0 },
                 id: 'm04',
                 author: CHI,
                 content: SOLUTION.content,
@@ -398,6 +403,7 @@ describe('Message links (REQ-MSG-05, D-48)', () => {
     it('keeps the message gone to when older messages read meanwhile come in', async () => {
         const reply = message('m45', AN, 'Cảm ơn Chi', {
             replyTo: {
+                files: { count: 0, images: 0 },
                 id: 'm04',
                 author: CHI,
                 content: SOLUTION.content,

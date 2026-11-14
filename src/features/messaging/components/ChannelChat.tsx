@@ -49,7 +49,11 @@ const quote = (message: Message): RepliedMessage => ({
     content: message.content,
     deleted: false,
     mentionUsers: message.mentionUsers,
-    mentionRoles: message.mentionRoles
+    mentionRoles: message.mentionRoles,
+    files: {
+        count: message.attachments.length,
+        images: message.attachments.filter((file) => file.width !== null).length
+    }
 })
 
 /**
@@ -230,9 +234,9 @@ export default function ChannelChat({
             cancel: stopEditing,
             save: (text: string) => {
                 const content = text.trim()
-                // Saved empty: "Delete message?" (S-CHAT-01 `edit-mode`; no files before L8).
-                if (!content) return setDeletingId(editingMessage.id)
                 if (content === editingMessage.content) return stopEditing()
+                // Saved empty: "Delete message?", unless it has files: then it is files alone (S-CHAT-01 `edit-mode`).
+                if (!content && !editingMessage.attachments.length) return setDeletingId(editingMessage.id)
                 edit.mutate({ messageId: editingMessage.id, content }, { onSuccess: stopEditing })
             }
         }
@@ -309,6 +313,7 @@ export default function ChannelChat({
                 onSend={sendReply}
                 source={mentions}
                 mentionEveryone={permissions.mentionEveryone}
+                attachFiles={permissions.attachFiles}
             />
             {deleting ? (
                 <DeleteMessageDialog

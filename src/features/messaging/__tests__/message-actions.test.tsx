@@ -46,6 +46,7 @@ const at = (time: string) => {
     return new Date(`${day}T${time}:00+07:00`).toISOString()
 }
 const message = (id: string, author: typeof AN, content: string, time: string): Message => ({
+    attachments: [],
     id,
     channelId: 'hoi-dap',
     type: 'regular',
@@ -68,6 +69,7 @@ const MINE = message('m1', AN, 'Ok, mình vào sớm giữ chỗ', '20:11')
 const THEIRS = message('m2', TUAN, 'Câu 4 đổi cận thế nào vậy mọi người?', '21:45')
 
 const MEMBER: ChatPermissions = {
+    attachFiles: true,
     send: true,
     manage: false,
     deleteOwn: true,
@@ -76,6 +78,7 @@ const MEMBER: ChatPermissions = {
     mentionEveryone: false
 }
 const MODERATOR: ChatPermissions = {
+    attachFiles: true,
     send: true,
     manage: true,
     deleteOwn: true,
@@ -84,6 +87,7 @@ const MODERATOR: ChatPermissions = {
     mentionEveryone: false
 }
 const TIMED_OUT: ChatPermissions = {
+    attachFiles: true,
     send: false,
     manage: false,
     deleteOwn: false,
@@ -442,6 +446,7 @@ describe('Replying (S-CHAT-01 reply-mode, C-10 reply)', () => {
         messagesApi.sendMessage.mockImplementation(async (_channel, body) => ({
             ...message('m3', AN, body.content, '21:47'),
             replyTo: {
+                files: { count: 0, images: 0 },
                 id: 'm2',
                 author: TUAN,
                 content: THEIRS.content,
@@ -491,6 +496,7 @@ describe('Replying (S-CHAT-01 reply-mode, C-10 reply)', () => {
                 {
                     ...message('m3', AN, 'Đổi sang tọa độ cực', '21:46'),
                     replyTo: {
+                        files: { count: 0, images: 0 },
                         id: 'm2',
                         author: TUAN,
                         content: THEIRS.content,
@@ -521,6 +527,7 @@ describe('Replying (S-CHAT-01 reply-mode, C-10 reply)', () => {
                 {
                     ...message('m3', TUAN, 'Mình giữ chỗ rồi', '21:46'),
                     replyTo: {
+                        files: { count: 0, images: 0 },
                         id: 'm1',
                         author: AN,
                         content: MINE.content,

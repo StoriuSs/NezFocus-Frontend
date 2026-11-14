@@ -21,6 +21,7 @@ import type { ChannelMessages, Message, MessagePage, OutgoingMessage } from '../
 const binh = { id: 'binh', username: 'binh.tran', displayName: 'Bình', avatarUrl: null }
 
 const saved = (id: string): Message => ({
+    attachments: [],
     id,
     channelId: 'hoi-dap',
     type: 'regular',
@@ -177,6 +178,7 @@ describe('Edits and deletions in the cache (REQ-MSG-05)', () => {
     const answering = (id: string, original: Message): Message => ({
         ...saved(id),
         replyTo: {
+            files: { count: 0, images: 0 },
             id: original.id,
             author: original.author,
             content: original.content,
@@ -188,6 +190,7 @@ describe('Edits and deletions in the cache (REQ-MSG-05)', () => {
     const outgoingAnswer = (nonce: string, original: Message): OutgoingMessage => ({
         ...outgoing(nonce),
         replyTo: {
+            files: { count: 0, images: 0 },
             id: original.id,
             author: original.author,
             content: original.content,
@@ -253,7 +256,15 @@ describe('Edits and deletions in the cache (REQ-MSG-05)', () => {
         const data = removeSaved(withReplies(), 'm1')
 
         expect(ids(data)).toEqual(['m2'])
-        const deleted = { id: 'm1', author: null, content: '', deleted: true, mentionUsers: [], mentionRoles: [] }
+        const deleted = {
+            id: 'm1',
+            author: null,
+            content: '',
+            deleted: true,
+            mentionUsers: [],
+            mentionRoles: [],
+            files: { count: 0, images: 0 }
+        }
         expect(data.pages[1]!.items[0]!.replyTo).toEqual(deleted)
         expect(data.pages[1]!.outgoing![0]!.replyTo).toEqual(deleted)
     })

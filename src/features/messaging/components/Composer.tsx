@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { useEffect, useRef, useState, type KeyboardEvent, type RefObject } from 'react'
-import { CircleAlert, Smile } from 'lucide-react'
+import { useEffect, useRef, useState, type ClipboardEvent, type KeyboardEvent, type RefObject } from 'react'
+import { CircleAlert, CirclePlus, Smile } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import '@/i18n/messaging'
 import { IconButton } from '@/components/ui/icon-button'
@@ -8,6 +8,8 @@ import { PopoverAnchor, PopoverTrigger } from '@/components/ui/popover'
 import { WithTooltip } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { settingsCache } from '@/features/users'
+import { useAttachmentTray } from '../api/useAttachmentTray'
+import { useChooseFiles } from '../hooks/useChooseFiles'
 import { useComposerFocus } from '../hooks/useComposerFocus'
 import { useDraft } from '../hooks/useDraft'
 import { useReportTyping } from '../hooks/useTyping'
@@ -15,6 +17,7 @@ import { useMentionBox } from '../hooks/useMentionBox'
 import { replaceShown, type ComposerNames } from '../lib/mention-text'
 import { lengthNotice } from '../lib/message-length'
 import type { MentionSource, RepliedMessage } from '../types'
+import { AttachmentTray } from './attachments/AttachmentTray'
 import { EmojiPicker } from './EmojiPicker'
 import { MentionSuggest } from './MentionSuggest'
 import { ReplyBar } from './ReplyBar'
@@ -33,6 +36,12 @@ import { ReplyBar } from './ReplyBar'
  * (☺) at its right opens the emoji picker above the box; the emoji picked
  * goes where the cursor was, and the cursor after it.
  *
+ * (+) at its left opens the browser's file chooser (several at once); an
+ * image pasted goes in too. Files go into the tray above the box and upload
+ * at once (S-CHAT-04, D-93); a message may be files alone. With a file in
+ * error in the tray, Enter sends nothing and says to take it out or try it
+ * again.
+ *
  * @ or # opens the mention suggestions above the box (`useMentionBox`): a
  * mention picked shows as its name and is sent as its token, the draft
  * keeping the names; one typed by hand is words (owner, 14/11/2026). The
@@ -49,7 +58,8 @@ export function Composer({
     onEditLast,
     onSend,
     source,
-    mentionEveryone
+    mentionEveryone,
+    attachFiles
 }: {
     /** The box itself: the chat puts the cursor back in it. */
     box: RefObject<HTMLTextAreaElement | null>
@@ -73,6 +83,8 @@ export function Composer({
     source: MentionSource
     /** MENTION_EVERYONE: @everyone among the suggestions. */
     mentionEveryone: boolean
+    /** ATTACH_FILES: (+) shows, and pasted files go in (REQ-ROLE-03). */
+    attachFiles: boolean
 }) {
     const { t } = useTranslation('messaging')
     const [draft, setDraft] = useDraft(userId, channelId)
@@ -103,10 +115,24 @@ export function Composer({
     const caret = useRef<number | null>(null)
     /** A message waiting to be taken: Enter sends nothing more meanwhile. */
     const waiting = useRef(false)
+    const tray = useAttachmentTray(channelId)
+    const choose = useChooseFiles(tray.add, tray.uploads.length, attachFiles)
+    const picker = useRef<HTMLInputElement>(null)
+    /**
+     * Enter pressed with a file in error: says why nothing was sent, under the
+     * tray (C-12), until a file is taken out or tried again. Kept by channel:
+     * the composer stays as the channel changes.
+     */
+    const [held, setHeld] = useState<string | null>(null)
     const notice = lengthNotice(text)
     const tooLong = notice !== null && notice.left < 0
     const replyId = `composer-reply-${channelId}`
     const tooLongId = `composer-too-long-${channelId}`
+    const holding = held === channelId && tray.blocked
+    const release = (act: (id: string) => void) => (id: string) => {
+        setHeld(null)
+        act(id)
+    }
 
     useComposerFocus(box, channelId)
 
@@ -123,7 +149,11 @@ export function Composer({
         }
         if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) return
         event.preventDefault()
-        if (tooLong || !text.trim() || waiting.current) return
+        if (tooLong || (!text.trim() && !tray.uploads.length) || waiting.current) return
+        if (tray.blocked) {
+            setHeld(channelId)
+            return
+        }
         const taken = onSend(text, names)
         if (typeof taken === 'boolean') {
             if (taken) setText('', {})
@@ -144,6 +174,18 @@ export function Composer({
         setText(replaceShown(text, names, start, end, emoji))
         caret.current = start + emoji.length
     }
+    /**
+     * Files pasted (an image copied): into the tray. A copy that holds text
+     * too (cells of a sheet, a paragraph of Word, which add a picture of it)
+     * pastes as text.
+     */
+    const paste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
+        const files = [...event.clipboardData.files]
+        if (!files.length || event.clipboardData.getData('text/plain')) return
+        event.preventDefault()
+        choose(files)
+    }
+
     const backToBox = () => {
         const field = box.current
         if (!field) return
@@ -159,63 +201,105 @@ export function Composer({
                 <PopoverAnchor asChild>
                     <div
                         className={cn(
-                            'flex items-end rounded-input border bg-surface-1 px-4',
+                            'rounded-input border bg-surface-1 px-4',
                             focused
                                 ? 'border-primary shadow-[inset_0_0_0_1px_rgb(var(--primary))]'
                                 : 'border-border-input',
                             tooLong && 'border-danger shadow-[inset_0_0_0_1px_rgb(var(--danger))]'
                         )}
                     >
-                        <textarea
-                            ref={box}
-                            rows={1}
-                            value={mention.value}
-                            onChange={mention.change}
-                            onSelect={mention.select}
-                            onKeyDown={keyDown}
-                            onFocus={() => setFocused(true)}
-                            onBlur={() => {
-                                setFocused(false)
-                                mention.leave()
-                            }}
-                            {...mention.aria}
-                            placeholder={t('composer.placeholder', { channel: channelName })}
-                            aria-label={t('composer.placeholder', { channel: channelName })}
-                            aria-invalid={tooLong || undefined}
-                            aria-describedby={
-                                [replyingTo && replyId, tooLong && tooLongId].filter(Boolean).join(' ') || undefined
-                            }
-                            // At most half the window high, then it scrolls (C-12). Inline: a one-off size,
-                            // not worth a class in the stylesheet loaded first.
-                            style={{ maxHeight: '50vh' }}
-                            className='min-h-12 flex-1 resize-none bg-transparent py-3 text-body text-text-primary [field-sizing:content] placeholder:text-text-tertiary focus:outline-none'
-                        />
-                        {notice ? (
-                            <span
-                                className={cn(
-                                    'shrink-0 py-3 pl-2 text-label',
-                                    tooLong ? 'font-semibold text-danger' : 'text-text-tertiary'
-                                )}
-                            >
-                                {tooLong ? `−${-notice.left}` : t('composer.left', { count: notice.left })}
-                            </span>
+                        {tray.uploads.length ? (
+                            <AttachmentTray
+                                uploads={tray.uploads}
+                                done={tray.done}
+                                held={holding}
+                                onRemove={release(tray.remove)}
+                                onRetry={release(tray.retry)}
+                                onEmptied={() => box.current?.focus()}
+                            />
                         ) : null}
-                        <EmojiPicker
-                            open={picking}
-                            onOpenChange={setPicking}
-                            onPick={insert}
-                            userId={userId}
-                            side='top'
-                            returnFocus={backToBox}
-                        >
-                            <WithTooltip label={t('emoji.insert')}>
-                                <PopoverTrigger asChild>
-                                    <IconButton label={t('emoji.insert')} className='mb-2 shrink-0'>
-                                        <Smile aria-hidden='true' />
-                                    </IconButton>
-                                </PopoverTrigger>
-                            </WithTooltip>
-                        </EmojiPicker>
+                        <div className='flex items-end'>
+                            {attachFiles ? (
+                                <>
+                                    <WithTooltip label={t('attach.add')}>
+                                        <IconButton
+                                            label={t('attach.add')}
+                                            className='mb-2 shrink-0'
+                                            // Its icon lines up with the text's edge (C-12): a one-off nudge, inline.
+                                            style={PLUS}
+                                            onClick={() => picker.current?.click()}
+                                        >
+                                            <CirclePlus aria-hidden='true' />
+                                        </IconButton>
+                                    </WithTooltip>
+                                    <input
+                                        ref={picker}
+                                        type='file'
+                                        multiple
+                                        hidden
+                                        tabIndex={-1}
+                                        onChange={(event) => {
+                                            choose([...(event.target.files ?? [])])
+                                            // The same file may be chosen again.
+                                            event.target.value = ''
+                                        }}
+                                    />
+                                </>
+                            ) : null}
+                            <textarea
+                                ref={box}
+                                rows={1}
+                                value={mention.value}
+                                onChange={mention.change}
+                                onSelect={mention.select}
+                                onKeyDown={keyDown}
+                                onPaste={paste}
+                                onFocus={() => setFocused(true)}
+                                onBlur={() => {
+                                    setFocused(false)
+                                    mention.leave()
+                                }}
+                                {...mention.aria}
+                                placeholder={t('composer.placeholder', { channel: channelName })}
+                                aria-label={t('composer.placeholder', { channel: channelName })}
+                                aria-invalid={tooLong || undefined}
+                                aria-describedby={
+                                    [replyingTo && replyId, tooLong && tooLongId, holding && `tray-held-${channelId}`]
+                                        .filter(Boolean)
+                                        .join(' ') || undefined
+                                }
+                                // At most half the window high, then it scrolls (C-12). Inline: a one-off size,
+                                // not worth a class in the stylesheet loaded first.
+                                style={{ maxHeight: '50vh' }}
+                                className='min-h-12 flex-1 resize-none bg-transparent py-3 text-body text-text-primary [field-sizing:content] placeholder:text-text-tertiary focus:outline-none'
+                            />
+                            {notice ? (
+                                <span
+                                    className={cn(
+                                        'shrink-0 py-3 pl-2 text-label',
+                                        tooLong ? 'font-semibold text-danger' : 'text-text-tertiary'
+                                    )}
+                                >
+                                    {tooLong ? `−${-notice.left}` : t('composer.left', { count: notice.left })}
+                                </span>
+                            ) : null}
+                            <EmojiPicker
+                                open={picking}
+                                onOpenChange={setPicking}
+                                onPick={insert}
+                                userId={userId}
+                                side='top'
+                                returnFocus={backToBox}
+                            >
+                                <WithTooltip label={t('emoji.insert')}>
+                                    <PopoverTrigger asChild>
+                                        <IconButton label={t('emoji.insert')} className='mb-2 shrink-0'>
+                                            <Smile aria-hidden='true' />
+                                        </IconButton>
+                                    </PopoverTrigger>
+                                </WithTooltip>
+                            </EmojiPicker>
+                        </div>
                     </div>
                 </PopoverAnchor>
             </MentionSuggest>
@@ -228,3 +312,5 @@ export function Composer({
         </div>
     )
 }
+
+const PLUS = { marginLeft: -8, marginRight: 4 }

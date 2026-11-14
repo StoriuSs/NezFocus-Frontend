@@ -78,6 +78,7 @@ const message = (
     time: string,
     more: Partial<Message> = {}
 ): Message => ({
+    attachments: [],
     id,
     channelId: 'hoi-dap',
     type: 'regular',
@@ -117,6 +118,7 @@ const PINNED_NOTICE = message('m3', AN, '', '21:46', {
 })
 
 const MEMBER: ChatPermissions = {
+    attachFiles: true,
     send: true,
     manage: false,
     deleteOwn: true,
@@ -127,6 +129,7 @@ const MEMBER: ChatPermissions = {
 const MODERATOR: ChatPermissions = { ...MEMBER, manage: true }
 const NO_NEW: ChatPermissions = { ...MEMBER, addReactions: false }
 const TIMED_OUT: ChatPermissions = {
+    attachFiles: true,
     send: false,
     manage: false,
     deleteOwn: false,
