@@ -20,7 +20,9 @@
 // From M2 L4a (13/11/2026) the chat's classes are a stylesheet of their own,
 // loaded with its chunk (tailwind.messaging.config.js): "Chat CSS" below,
 // 321 B when it began (only the chat's own classes, none the main file has),
-// limit with the same 0.5% tolerance.
+// limit with the same 0.5% tolerance. Raised to 511 B after M2 L4b
+// (13/11/2026, 508 B: message formatting, message link chips and the
+// `highlight` keyframes).
 // Raise them
 // only as CONSTRAINTS.md says: the owner decides, in a commit of its own.
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
@@ -81,5 +83,5 @@ if (shared.length)
 export default [
     { name: 'Initial JS (gzip)', path: js, gzip: true, limit: '246.75 kB' },
     { name: 'Initial CSS (gzip)', path: css, gzip: true, limit: '8.80 kB' },
-    { name: 'Chat CSS (gzip)', path: chatCss, gzip: true, limit: '323 B' }
+    { name: 'Chat CSS (gzip)', path: chatCss, gzip: true, limit: '511 B' }
 ]
