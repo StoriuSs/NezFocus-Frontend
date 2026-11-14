@@ -5,7 +5,16 @@ class FakeSocket {
     handlers = new Map<string, ((...args: unknown[]) => void)[]>()
     anyHandlers: ((event: string, data: unknown) => void)[] = []
     active = true
+    connected = false
     connects = 0
+    emitted: [string, unknown][] = []
+    /** The Manager (`socket.io`): its own events, as the ping. */
+    managerHandlers = new Map<string, (() => void)[]>()
+    io = {
+        on: (event: string, handler: () => void) => {
+            this.managerHandlers.set(event, [...(this.managerHandlers.get(event) ?? []), handler])
+        }
+    }
     disconnected = false
     options: { auth: (send: (data: object) => void) => void; transports: string[] }
     url: string
@@ -27,6 +36,9 @@ class FakeSocket {
     disconnect() {
         this.disconnected = true
     }
+    emit(event: string, data: unknown) {
+        this.emitted.push([event, data])
+    }
     /** As if the server sent `event`. */
     fire(event: string, ...args: unknown[]) {
         for (const handler of this.handlers.get(event) ?? []) handler(...args)
@@ -42,18 +54,21 @@ vi.mock('socket.io-client', () => ({
 const { openSocket, retryDelay } = await import('../socket')
 
 function open(stillSignedIn = false) {
-    const calls = { status: [] as string[], ended: 0, events: [] as [string, unknown][] }
-    const close = openSocket({
+    const calls = { status: [] as string[], ready: [] as unknown[], ended: 0, events: [] as [string, unknown][] }
+    const { close, send } = openSocket({
         url: 'http://api.test',
         getTicket: async () => 'ticket-1',
-        onStatus: (status) => calls.status.push(status),
+        onStatus: (status, ready) => {
+            calls.status.push(status)
+            if (ready) calls.ready.push(ready)
+        },
         onSessionEnded: async () => {
             calls.ended++
             return stillSignedIn
         },
         onEvent: (event, data) => calls.events.push([event, data])
     })
-    return { calls, close }
+    return { calls, close, send }
 }
 
 const refused = (type: string) => Object.assign(new Error('refused'), { data: { type } })
@@ -87,6 +102,37 @@ describe('The tab socket', () => {
         socket.fire('ready', { server_time: 'now' })
         socket.fire('disconnect', 'transport close')
         expect(calls.status).toEqual(['connected', 'down'])
+    })
+
+    it('says when the server pings: the heartbeat goes with it (ARCHITECTURE 3.3)', () => {
+        const onPing = vi.fn()
+        openSocket({
+            url: 'http://api.test',
+            getTicket: async () => 't',
+            onStatus: () => undefined,
+            onSessionEnded: async () => false,
+            onPing
+        })
+        for (const handler of socket.managerHandlers.get('ping') ?? []) handler()
+        expect(onPing).toHaveBeenCalledTimes(1)
+    })
+
+    it('hands on what ready says, in camelCase: the presence the person shows (REQ-AUTH-07)', () => {
+        const { calls } = open()
+        socket.fire('ready', { server_time: 'now', status: 'idle' })
+        expect(calls.ready).toEqual([{ serverTime: 'now', status: 'idle' }])
+    })
+
+    it('sends a light signal in snake_case while connected, and drops it while not (SRS 5.2)', () => {
+        const { send } = open()
+        send('typing.start', { channelId: 'c1' })
+        socket.connected = true
+        send('typing.start', { channelId: 'c1' })
+        send('heartbeat')
+        expect(socket.emitted).toEqual([
+            ['typing.start', { channel_id: 'c1' }],
+            ['heartbeat', undefined]
+        ])
     })
 
     it('tries again with a new ticket after a refused handshake, waiting longer each time', () => {

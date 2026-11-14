@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { act, render, renderHook, screen, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import type { ReactNode } from 'react'
 import '@/i18n'
 import { ShellPage } from '@/components/shell/ShellPage'
 import { ShellContext } from '@/components/shell/shell-context'
@@ -9,10 +11,11 @@ import type { SocketOptions } from '@/lib/socket'
 
 let opened: SocketOptions | undefined
 const closeSocket = vi.fn()
+const sendSignal = vi.fn()
 vi.mock('@/lib/socket', () => ({
     openSocket: (options: SocketOptions) => {
         opened = options
-        return closeSocket
+        return { close: closeSocket, send: sendSignal }
     }
 }))
 const fetchRealtimeTicket = vi.fn(async () => 'ticket-1')
@@ -24,7 +27,15 @@ const { useRealtimeConnection } = await import('../hooks/useRealtimeConnection')
 const { endSession } = await import('../lib/session-end')
 const { useConnectionBanner } = await import('../hooks/useConnectionBanner')
 const { useRealtimeStore } = await import('../realtime.store')
-const { onRealtimeEvent } = await import('../lib/realtime-events')
+const { emitRealtimeEvent, onRealtimeEvent } = await import('../lib/realtime-events')
+const { sendRealtimeSignal } = await import('../lib/signals')
+const { useOwnPresence } = await import('../hooks/useOwnPresence')
+
+/** One query client for the shell and what reads it, new for each test. */
+let client = new QueryClient()
+const wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={client}>{children}</QueryClientProvider>
+)
 
 function Shell() {
     useRealtimeConnection()
@@ -42,11 +53,12 @@ describe('The AppShell socket', () => {
         auth.refreshToken.mockClear()
         auth.isAuthenticated = true
         useRealtimeStore.getState().reset()
+        client = new QueryClient()
     })
     afterEach(() => vi.useRealTimers())
 
     it('opens after the first paint, at the API origin, buying tickets over REST; closes when the shell goes', async () => {
-        const { unmount } = render(<Shell />)
+        const { unmount } = render(<Shell />, { wrapper })
         expect(opened).toBeUndefined()
 
         await afterFirstPaint()
@@ -65,7 +77,7 @@ describe('The AppShell socket', () => {
         const created = vi.fn()
         const ready = vi.fn()
         const stops = [onRealtimeEvent('message.created', created), onRealtimeEvent('ready', ready)]
-        render(<Shell />)
+        render(<Shell />, { wrapper })
         await afterFirstPaint()
 
         act(() => opened!.onStatus('connected'))
@@ -77,8 +89,32 @@ describe('The AppShell socket', () => {
         expect(ready).toHaveBeenCalledTimes(2)
         stops.forEach((stop) => stop())
     })
+    it('keeps the presence the person shows, from ready then from presence.updated about them (REQ-AUTH-07)', async () => {
+        const { result } = renderHook(() => useOwnPresence('an'), { wrapper })
+        render(<Shell />, { wrapper })
+        await afterFirstPaint()
+
+        act(() => opened!.onStatus('connected', { serverTime: 'now', status: 'online' }))
+        await waitFor(() => expect(result.current).toBe('online'))
+        act(() => emitRealtimeEvent('presence.updated', { userId: 'binh', status: 'dnd' }))
+        act(() => emitRealtimeEvent('presence.updated', { userId: 'an', status: 'idle' }))
+        await waitFor(() => expect(result.current).toBe('idle'))
+    })
+
+    it('sends what features ask through the socket while it is open, and nothing once closed (SRS 5.2)', async () => {
+        const { unmount } = render(<Shell />, { wrapper })
+        await afterFirstPaint()
+        sendSignal.mockClear()
+
+        sendRealtimeSignal('typing.start', { channelId: 'c1' })
+        unmount()
+        sendRealtimeSignal('typing.start', { channelId: 'c1' })
+
+        expect(sendSignal.mock.calls).toEqual([['typing.start', { channelId: 'c1' }]])
+    })
+
     it('shows reconnecting once the socket has been down 3 seconds, and nothing once it is back', async () => {
-        render(<Shell />)
+        render(<Shell />, { wrapper })
         await afterFirstPaint()
 
         vi.useFakeTimers()
@@ -92,7 +128,7 @@ describe('The AppShell socket', () => {
     })
 
     it('shows offline while the browser has no network', async () => {
-        render(<Shell />)
+        render(<Shell />, { wrapper })
         act(() => void window.dispatchEvent(new Event('offline')))
         expect(screen.getByRole('status')).toHaveTextContent('offline')
         act(() => void window.dispatchEvent(new Event('online')))

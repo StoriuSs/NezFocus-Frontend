@@ -230,7 +230,7 @@ src/
 ├── features/       # ← most new code goes here
 │   ├── auth/       # Session store, the auth pages, Google, route and role guards
 │   ├── servers/    # Servers, channels, invites, server settings: api/ · components/ · hooks/ · lib/ · pages/ · routes.tsx
-│   ├── realtime/   # The tab's socket and its connection Banner: api/ · hooks/ · lib/ · realtime.store.ts
+│   ├── realtime/   # The tab's socket, its connection Banner, signals (typing, presence): api/ · hooks/ · lib/ · realtime.store.ts
 │   ├── messaging/  # A text channel's chat (mentions included) and its pins, lazy; how far the reader has read (unread, mentions, marking read): api/ · components/ · hooks/ · lib/ · types.ts
 │   └── users/      # api/ · components/ · hooks/ · lib/ · pages/ · routes.tsx · types.ts
 ├── hooks/          # Shared hooks

@@ -115,6 +115,7 @@ export const MessageRow = memo(function MessageRow({
     const mentions: ContentMentions = {
         names: { users: message.mentionUsers ?? [], roles: message.mentionRoles ?? [], channel: source.channel },
         everyone: message.mentionEveryone ?? false,
+        here: saved?.mentionHereUserIds ?? [],
         me: handlers.me,
         roleIds: source.roleIds
     }

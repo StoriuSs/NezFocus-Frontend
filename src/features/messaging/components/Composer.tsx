@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query'
 import { useEffect, useRef, useState, type KeyboardEvent, type RefObject } from 'react'
 import { CircleAlert, Smile } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -6,8 +7,10 @@ import { IconButton } from '@/components/ui/icon-button'
 import { PopoverAnchor, PopoverTrigger } from '@/components/ui/popover'
 import { WithTooltip } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
+import { settingsCache } from '@/features/users'
 import { useComposerFocus } from '../hooks/useComposerFocus'
 import { useDraft } from '../hooks/useDraft'
+import { useReportTyping } from '../hooks/useTyping'
 import { useMentionBox } from '../hooks/useMentionBox'
 import { replaceShown, type ComposerNames } from '../lib/mention-text'
 import { lengthNotice } from '../lib/message-length'
@@ -74,7 +77,12 @@ export function Composer({
     const { t } = useTranslation('messaging')
     const [draft, setDraft] = useDraft(userId, channelId)
     const { text, names } = draft
-    const setText = (next: string, nextNames: ComposerNames = names) => setDraft({ text: next, names: nextNames })
+    const reportTyping = useReportTyping(channelId, useQuery(settingsCache).data?.presence === 'invisible')
+    const setText = (next: string, nextNames: ComposerNames = names) => {
+        setDraft({ text: next, names: nextNames })
+        // Others see "… is typing" (REQ-MSG-06).
+        reportTyping(next)
+    }
     const mention = useMentionBox({
         box,
         text,

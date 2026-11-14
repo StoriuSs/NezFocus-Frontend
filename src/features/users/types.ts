@@ -15,3 +15,6 @@ export type UserSettings = ApiModel<'UserSettingsResponseDto'>
 
 /** PATCH /users/me/settings: only what changed. */
 export type SettingsChanges = ApiModel<'UpdateSettingsRequestDto'>
+
+/** The status chosen in one's menu (REQ-AUTH-07, D-78). */
+export type ChosenPresence = UserSettings['presence']

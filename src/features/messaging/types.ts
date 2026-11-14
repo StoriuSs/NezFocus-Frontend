@@ -1,3 +1,4 @@
+import type { Presence } from '@/components/ui/presence-dot'
 import type { InfiniteData } from '@tanstack/react-query'
 import type { ApiModel } from '@/lib/api-types'
 
@@ -141,6 +142,8 @@ export interface MentionPerson {
     username: string | null
     displayName: string | null
     avatarUrl: string | null
+    /** What others see of them (REQ-AUTH-07): the dot on their avatar. */
+    presence?: Presence
 }
 
 /** A role to suggest after @: one people may mention, or any for MENTION_EVERYONE (D-171). */

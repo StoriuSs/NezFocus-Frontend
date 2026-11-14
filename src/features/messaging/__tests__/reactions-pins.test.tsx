@@ -86,6 +86,7 @@ const message = (
     mentionUsers: [],
     mentionRoles: [],
     mentionEveryone: false,
+    mentionHereUserIds: [],
     systemEvent: null,
     systemData: null,
     systemUser: null,
@@ -109,6 +110,7 @@ const PINNED_NOTICE = message('m3', AN, '', '21:46', {
     mentionUsers: [],
     mentionRoles: [],
     mentionEveryone: false,
+    mentionHereUserIds: [],
     systemEvent: 'message_pinned',
     systemData: { userId: 'an', messageId: 'm2' },
     systemUser: AN

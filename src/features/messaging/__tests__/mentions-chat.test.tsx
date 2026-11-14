@@ -50,6 +50,7 @@ const message = (id: string, author: typeof an, content: string, extra: Partial<
     mentionUsers: [],
     mentionRoles: [],
     mentionEveryone: false,
+    mentionHereUserIds: [],
     systemEvent: null,
     systemData: null,
     systemUser: null,
@@ -226,6 +227,21 @@ describe('Mentions in a message (REQ-MSG-03, C-10)', () => {
 
         expect(within(await row('22:30 chữa đề')).getByText('@everyone')).toHaveClass('bg-surface-3')
         expect(within(await row(/cho vui/)).queryByText('@everyone')).toBeNull()
+    })
+
+    it('draws @here as a mention only when it reached someone, one’s own when it reached oneself (D-166)', async () => {
+        messagesApi.fetchMessages.mockResolvedValue(
+            page([
+                message('m14', binh, '@here họp nhóm', { mentionHereUserIds: [AN] }),
+                message('m15', binh, '@here ai còn thức', { mentionHereUserIds: [CHI] }),
+                message('m16', binh, 'gõ @here thôi')
+            ])
+        )
+        renderChat()
+
+        expect(within(await row('họp nhóm')).getByText('@here')).toHaveClass('bg-surface-3')
+        expect(within(await row('ai còn thức')).getByText('@here')).toHaveClass('bg-surface-2')
+        expect(within(await row(/thôi/)).queryByText('@here')).toBeNull()
     })
 
     it('marks the messages about oneself, never one’s own (C-10 `related`, D-39, D-172)', async () => {
@@ -430,6 +446,15 @@ describe('Suggestions after @ and # in the composer (C-12 › MentionSuggest)', 
         renderChat({ permissions: { ...PERMISSIONS, mentionEveryone: true } })
         await userEvent.type(composer(), '@ev')
         await waitFor(async () => expect(options(await suggestions()).at(-1)).toMatch(/^@everyone/))
+    })
+
+    it('offers @here with MENTION_EVERYONE, saying whom it reaches (D-166)', async () => {
+        messagesApi.fetchMessages.mockResolvedValue(page([]))
+        renderChat({ permissions: { ...PERMISSIONS, mentionEveryone: true } })
+        await userEvent.type(composer(), '@he')
+        await waitFor(async () =>
+            expect(options(await suggestions()).at(-1)).toBe('@here, Những người đang trực tuyến xem được kênh này')
+        )
     })
 
     it('says when nothing matches, and Enter still sends', async () => {

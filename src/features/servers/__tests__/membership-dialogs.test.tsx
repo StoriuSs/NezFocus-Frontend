@@ -53,6 +53,7 @@ const CG = server('cg', 'Cờ vua Giải trí')
 
 const member = (userId: string, name: string, extra: Partial<ServerMember> = {}): ServerMember => ({
     userId,
+    status: 'offline',
     username: `${userId}.tran`,
     displayName: name,
     avatarUrl: null,

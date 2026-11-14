@@ -18,7 +18,7 @@ export function findMentions(content: string): FoundMentions {
     const walk = (parts: Inline[]) => {
         for (const part of parts) {
             if (part.type === 'mention') found[part.kind].add(part.id)
-            else if (part.type === 'everyone') everyone = true
+            else if (part.type === 'everyone') everyone ||= !part.here
             else if ('children' in part) walk(part.children)
         }
     }
@@ -56,7 +56,7 @@ export interface MentionWords {
  * a channel one cannot see: "#can't view".
  */
 export function mentionName(part: MentionPart, names: MentionNames, words: MentionWords): string {
-    if (part.type === 'everyone') return '@everyone'
+    if (part.type === 'everyone') return part.here ? '@here' : '@everyone'
     switch (part.kind) {
         case 'user': {
             const user = names.users.find((candidate) => candidate.id === part.id)

@@ -20,6 +20,7 @@ const saved = (id: string, channelId = 'hoi-dap'): Message => ({
     mentionUsers: [],
     mentionRoles: [],
     mentionEveryone: false,
+    mentionHereUserIds: [],
     systemEvent: null,
     systemData: null,
     systemUser: null,
@@ -270,6 +271,7 @@ describe('Keeping reactions and pins live (REQ-MSG-05, REQ-MSG-07, SRS 1.71)', (
                 mentionUsers: [],
                 mentionRoles: [],
                 mentionEveryone: false,
+                mentionHereUserIds: [],
                 systemEvent: 'message_pinned',
                 systemData: { userId: 'an', messageId: 'm1' }
             },

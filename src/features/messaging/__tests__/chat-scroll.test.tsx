@@ -26,6 +26,7 @@ const message = (n: number, who = person): Message => ({
     mentionUsers: [],
     mentionRoles: [],
     mentionEveryone: false,
+    mentionHereUserIds: [],
     systemEvent: null,
     systemData: null,
     systemUser: null,

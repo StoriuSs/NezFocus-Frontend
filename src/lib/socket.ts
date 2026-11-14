@@ -1,5 +1,5 @@
 import { io, type Socket } from 'socket.io-client'
-import { toCamelCase } from './case-transform'
+import { toCamelCase, toSnakeCase } from './case-transform'
 
 /**
  * The one socket.io connection of a tab (SRS 5.2, ARCHITECTURE 3.1). Loaded
@@ -14,8 +14,8 @@ export interface SocketOptions {
     url: string
     /** A fresh ticket (POST /realtime/ticket), bought before every attempt: each is spent once. */
     getTicket: () => Promise<string>
-    /** `ready` came: live. `down`: lost, or never got in; trying again. */
-    onStatus: (status: 'connected' | 'down') => void
+    /** `ready` came: live, with what it says (camelCase). `down`: lost, or never got in; trying again. */
+    onStatus: (status: 'connected' | 'down', ready?: unknown) => void
     /**
      * This session ended (`session.revoked`, or a handshake refused as
      * AUTH_TOKEN_REVOKED). Resolves whether the person is still signed in
@@ -26,6 +26,18 @@ export interface SocketOptions {
     onSessionEnded: () => Promise<boolean>
     /** Every other event, its data in camelCase like the REST client's. */
     onEvent?: (event: string, data: unknown) => void
+    /**
+     * The server's ping came (every ~25 s while connected). A network event,
+     * not a timer: a background tab's timers are slowed, this is not.
+     */
+    onPing?: () => void
+}
+
+/** An open connection: the way to close it, and to send it a light signal (SRS 5.2). */
+export interface SocketHandle {
+    close: () => void
+    /** Data in camelCase, sent in snake_case; dropped while not connected (never queued: a late heartbeat says nothing). */
+    send: (event: string, data?: object) => void
 }
 
 /** How long to wait before trying again after a refused handshake: doubling, up to 30 s. */
@@ -40,7 +52,7 @@ export const retryDelay = (attempt: number) => Math.min(1000 * 2 ** attempt, 30_
  * Websocket only, no long-polling: with several API instances, polling needs
  * sticky sessions at the load balancer, a websocket does not.
  */
-export function openSocket(options: SocketOptions): () => void {
+export function openSocket(options: SocketOptions): SocketHandle {
     let retry: ReturnType<typeof setTimeout> | undefined
     let attempt = 0
     let closed = false
@@ -77,9 +89,10 @@ export function openSocket(options: SocketOptions): () => void {
         }
     })
 
-    socket.on('ready', () => {
+    socket.io.on('ping', () => options.onPing?.())
+    socket.on('ready', (ready: unknown) => {
         attempt = 0
-        options.onStatus('connected')
+        options.onStatus('connected', toCamelCase(ready))
     })
     socket.on('disconnect', (reason: string) => {
         options.onStatus('down')
@@ -100,9 +113,16 @@ export function openSocket(options: SocketOptions): () => void {
         options.onEvent?.(event, toCamelCase(data))
     })
 
-    return () => {
-        closed = true
-        clearTimeout(retry)
-        socket.disconnect()
+    return {
+        close: () => {
+            closed = true
+            clearTimeout(retry)
+            socket.disconnect()
+        },
+        send: (event, data) => {
+            if (!socket.connected) return
+            if (data === undefined) socket.emit(event)
+            else socket.emit(event, toSnakeCase(data))
+        }
     }
 }

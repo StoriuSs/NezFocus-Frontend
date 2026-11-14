@@ -45,6 +45,7 @@ const message = (id: string, author: typeof BINH, content: string, createdAt: st
     mentionUsers: [],
     mentionRoles: [],
     mentionEveryone: false,
+    mentionHereUserIds: [],
     systemEvent: null,
     systemData: null,
     systemUser: null,

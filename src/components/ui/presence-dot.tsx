@@ -26,7 +26,7 @@ export function PresenceDot({
     className
 }: {
     presence: Presence
-    size?: 10 | 14
+    size?: 8 | 10 | 14
     cutout?: string
     className?: string
 }) {

@@ -13,6 +13,7 @@ const pinned = (id: string): PinnedMessage => ({
     mentionUsers: [],
     mentionRoles: [],
     mentionEveryone: false,
+    mentionHereUserIds: [],
     systemEvent: null,
     systemData: null,
     systemUser: null,

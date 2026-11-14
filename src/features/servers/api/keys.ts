@@ -16,6 +16,10 @@ export const serverKeys = {
     members: (serverId: string) => [...serverKeys.all, 'members', serverId] as const,
     /** One page of one search. */
     memberPage: (serverId: string, query: MemberQuery) => [...serverKeys.members(serverId), query] as const,
+    /** The member panel of one server (D-175): its two groups. */
+    memberPanels: (serverId: string) => [...serverKeys.members(serverId), 'panel'] as const,
+    memberPanel: (serverId: string, group: 'online' | 'offline') =>
+        [...serverKeys.memberPanels(serverId), group] as const,
     /** The people suggested after @ for what was typed (C-12 › MentionSuggest). */
     mentionMembers: (serverId: string, query: string) => [...serverKeys.members(serverId), 'mention', query] as const,
     /** The ban list of one server, any page (S-SET-04). */

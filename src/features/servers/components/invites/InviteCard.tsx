@@ -1,6 +1,7 @@
 import '@/i18n/servers'
 import { useTranslation } from 'react-i18next'
 import { Hash, LampDesk, Volume2 } from 'lucide-react'
+import { PresenceDot } from '@/components/ui/presence-dot'
 import { cn } from '@/lib/utils'
 import { ServerIcon } from '../ServerIcon'
 import type { InvitePreview } from '../../types'
@@ -8,13 +9,15 @@ import type { InvitePreview } from '../../types'
 /**
  * InviteCard (C-38): the server's picture at 72, its name, its members, and
  * the channel the link leads to when someone joining may see it (SRV-04: the
- * name only, never who is in a room). Online counts come with presence (M2,
- * D-143). On `bg` it is `surface-1`; in a dialog, `surface-2`.
+ * name only, never who is in a room), with how many are online now (Q15:
+ * someone invisible is not counted). On `bg` it is `surface-1`; in a dialog,
+ * `surface-2`.
  */
 export function InviteCard({ preview, inDialog = false }: { preview: InvitePreview; inDialog?: boolean }) {
     const { t, i18n } = useTranslation('servers')
     const { server, channel } = preview
-    const members = new Intl.NumberFormat(i18n.language === 'vi' ? 'vi-VN' : 'en-US').format(server.memberCount)
+    const number = new Intl.NumberFormat(i18n.language === 'vi' ? 'vi-VN' : 'en-US')
+    const members = number.format(server.memberCount)
     const TargetIcon = channel?.isStudyRoom ? LampDesk : channel?.type === 'voice' ? Volume2 : Hash
     const targetLead = channel?.isStudyRoom ? 'studyRoom' : channel?.type === 'voice' ? 'voice' : 'text'
 
@@ -33,8 +36,13 @@ export function InviteCard({ preview, inDialog = false }: { preview: InvitePrevi
                 />
                 <div className='grid min-w-0 gap-1'>
                     <p className='line-clamp-2 text-title-2 font-semibold text-text-primary'>{server.name}</p>
-                    <p className='text-label text-text-secondary'>
-                        {t('join.members', { count: server.memberCount, members })}
+                    <p className='flex flex-wrap items-center gap-x-1 text-label text-text-secondary'>
+                        <span>{t('join.members', { count: server.memberCount, members })}</span>
+                        <span aria-hidden='true'>·</span>
+                        <PresenceDot presence='online' size={8} />
+                        <span>
+                            {t('join.online', { count: server.onlineCount, online: number.format(server.onlineCount) })}
+                        </span>
                     </p>
                 </div>
             </div>

@@ -176,7 +176,12 @@ describe('parseMessage, mentions (REQ-MSG-03, D-172)', () => {
         expect(inline('(@everyone!)')).toEqual([text('('), { type: 'everyone' }, text('!)')])
     })
 
-    it('leaves @here and ill-formed tokens as words', () => {
-        expect(inline('@here <@123> <@&not-an-id> <#>')).toEqual([text('@here <@123> <@&not-an-id> <#>')])
+    it('leaves ill-formed tokens as words', () => {
+        expect(inline('<@123> <@&not-an-id> <#>')).toEqual([text('<@123> <@&not-an-id> <#>')])
+    })
+
+    it('takes @here as a word of its own, like @everyone (D-166)', () => {
+        expect(inline('(@here!)')).toEqual([text('('), { type: 'everyone', here: true }, text('!)')])
+        expect(inline('@hereby mail@here.example')).toEqual([text('@hereby mail@here.example')])
     })
 })

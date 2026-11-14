@@ -12,7 +12,7 @@
  * so `javascript:` stays words (REQ-MSG-02).
  *
  * Mentions are tokens in the text (REQ-MSG-03, D-164): <@id> a person, <@&id>
- * a role, <#id> a channel, and @everyone as a word of its own. They count
+ * a role, <#id> a channel, and @everyone or @here as a word of its own. They count
  * only in the text, never in code or a link (D-172): the backend reads them
  * with a copy of this parser (`messaging/domain/message-markdown.ts`) and
  * the same patterns, so a chip is drawn exactly where a mention counts.
@@ -26,8 +26,10 @@ export type Inline =
     | { type: 'link'; href: string }
     | MentionPart
 
-/** A mention in the text: a token, or @everyone. */
-export type MentionPart = { type: 'mention'; kind: 'user' | 'role' | 'channel'; id: string } | { type: 'everyone' }
+/** A mention in the text: a token, or @everyone (`here`: @here, D-166). */
+export type MentionPart =
+    | { type: 'mention'; kind: 'user' | 'role' | 'channel'; id: string }
+    | { type: 'everyone'; here?: true }
 
 export type Block =
     | { type: 'paragraph'; children: Inline[] }
@@ -46,8 +48,8 @@ const WORD = /[\p{L}\p{N}]/u
 const ID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
 /** A token, as the backend's `mention.rules.ts` writes it. */
 export const MENTION_TOKEN = new RegExp(`<(@&|@|#)(${ID})>`, 'g')
-/** @everyone as a word of its own (the backend's `EVERYONE`): not inside an address or a longer word. */
-const EVERYONE = /(?<![\p{L}\p{N}_@.])@everyone(?![\p{L}\p{N}_])/u
+/** @everyone or @here as a word of its own (the backend's `EVERYONE`, `HERE`): not inside an address or a longer word. */
+const EVERYONE = /(?<![\p{L}\p{N}_@.])@(?:everyone|here)(?![\p{L}\p{N}_])/u
 const MENTION = new RegExp(`${MENTION_TOKEN.source}|${EVERYONE.source}`, 'gu')
 const KINDS = { '@': 'user', '@&': 'role', '#': 'channel' } as const
 
@@ -166,7 +168,13 @@ function mentionsIn(text: string): Inline[] {
     for (const match of text.matchAll(MENTION)) {
         if (match.index > from) parts.push({ type: 'text', text: text.slice(from, match.index) })
         const kind = match[1] as keyof typeof KINDS | undefined
-        parts.push(kind ? { type: 'mention', kind: KINDS[kind], id: match[2]! } : { type: 'everyone' })
+        parts.push(
+            kind
+                ? { type: 'mention', kind: KINDS[kind], id: match[2]! }
+                : match[0] === '@here'
+                  ? { type: 'everyone', here: true }
+                  : { type: 'everyone' }
+        )
         from = match.index + match[0].length
     }
     if (from < text.length) parts.push({ type: 'text', text: text.slice(from) })
@@ -176,7 +184,9 @@ function mentionsIn(text: string): Inline[] {
 /** A mention as written in the text. */
 export const tokenOf = (part: MentionPart): string =>
     part.type === 'everyone'
-        ? '@everyone'
+        ? part.here
+            ? '@here'
+            : '@everyone'
         : `<${part.kind === 'user' ? '@' : part.kind === 'role' ? '@&' : '#'}${part.id}>`
 
 /** Inline code opening at `at`: a run of one or two backticks, closed by the same run. */

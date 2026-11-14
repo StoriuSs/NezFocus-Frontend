@@ -40,7 +40,8 @@ export function useMentionSource(
                 queryFn: async () => {
                     const page = await fetchMembers(serverId, {
                         ...(query ? { q: query } : {}),
-                        sort: 'name',
+                        // Those online first (02 S-CHAT-01 `mention-suggest`).
+                        sort: 'presence',
                         order: 'asc',
                         limit: PEOPLE
                     })
@@ -48,7 +49,8 @@ export function useMentionSource(
                         id: member.userId,
                         username: member.username,
                         displayName: member.displayName,
-                        avatarUrl: member.avatarUrl
+                        avatarUrl: member.avatarUrl,
+                        presence: member.status
                     }))
                 },
                 staleTime: FRESH

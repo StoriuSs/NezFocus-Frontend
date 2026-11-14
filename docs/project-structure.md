@@ -98,7 +98,10 @@ react-starter/
     │   ├── realtime/          # The tab's socket (SRS 5.2): api/realtime.api.ts (the ticket),
     │   │                      #   hooks/ (useRealtimeConnection, useConnectionBanner), lib/ (which
     │   │                      #   Banner shows, what to do when the session ends, realtime-events.ts:
-    │   │                      #   onRealtimeEvent for the features keeping data), realtime.store.ts
+    │   │                      #   onRealtimeEvent for the features keeping data; signals.ts:
+    │   │                      #   sendRealtimeSignal for typing; presence-signals.ts: heartbeat and
+    │   │                      #   "unused for 10 minutes", sent at each ping), keys.ts,
+    │   │                      #   useOwnPresence (one's own presence, query cache), realtime.store.ts
     │   ├── messaging/         # A text channel's chat (S-CHAT-01) and its pins (S-CHAT-02), lazy
     │   │                      #   (index.ts: ChannelChat, PinsPanel from the same chunk), and how far
     │   │                      #   the reader has read, not lazy (index.ts: useChannelReadState,

@@ -420,6 +420,57 @@ test('a mention in another channel is a badge on the channel, the server and the
     await binh.context.close()
 })
 
+test('who is online and who is typing reach the other browser: the member panel, invisible, the typing line, @here (REQ-AUTH-07, MSG-06, D-166, D-175)', async ({
+    browser
+}) => {
+    test.setTimeout(120_000)
+    const an = await openAs(browser, anEmail)
+    const binh = await openAs(browser, binhEmail)
+    const panel = an.page.getByRole('complementary', { name: 'Members' })
+    const onlineGroup = panel.getByRole('region', { name: /^Online — / })
+    const offlineGroup = panel.getByRole('region', { name: /^Offline — / })
+
+    // Open at 1440 (S-SHELL-01): Bình, connected, is online for An.
+    await expect(onlineGroup.getByText('Bình', { exact: true })).toBeVisible({ timeout: 15_000 })
+    await shoot(an.page, 'shell01-member-panel')
+    // The pins hide the members while open; closed, the members are back (one panel at a time, C-08).
+    const pins = an.page.getByRole('button', { name: 'Pinned messages' })
+    await pins.click()
+    await expect(panel).toHaveCount(0)
+    await pins.click()
+    await expect(panel).toBeVisible()
+
+    // Bình types: An sees it under the messages within a moment, gone once the message comes.
+    const typing = an.page.getByText('Bình is typing…')
+    await binh.page.getByRole('combobox', { name: `Message #${channelName}` }).pressSequentially('Ai còn thức')
+    await expect(typing).toBeVisible({ timeout: 5_000 })
+    await shoot(an.page, 'chat01-typing')
+    await binh.page.keyboard.press('Enter')
+    await seenOnce(an.page, 'Ai còn thức')
+    await expect(typing).toHaveCount(0)
+
+    // Bình goes invisible: offline for An, at once; then online again.
+    const statusOf = async (status: string) => {
+        await binh.page.getByRole('button', { name: /^Bình, .* — open your menu$/ }).click()
+        await binh.page.getByRole('menuitem', { name: /^(Online|Away|Do not disturb|Invisible)/ }).click()
+        await binh.page.getByRole('menuitemradio', { name: new RegExp(`^${status}`) }).click()
+    }
+    await statusOf('Invisible')
+    await expect(offlineGroup.getByText('Bình', { exact: true })).toBeVisible({ timeout: 5_000 })
+    await expect(binh.page.getByRole('button', { name: 'Bình, Invisible — open your menu' })).toBeVisible()
+    await statusOf('Online')
+    await expect(onlineGroup.getByText('Bình', { exact: true })).toBeVisible({ timeout: 5_000 })
+
+    // An, the owner, may use @here: it reaches Bình, online, and marks the message for them.
+    await say(an.page, '@here họp nhóm 21:00')
+    const article = log(binh.page).getByRole('article', { name: /@here họp nhóm 21:00$/ })
+    await expect(article).toHaveAttribute('data-related', 'true', { timeout: 15_000 })
+
+    expect([...an.problems, ...binh.problems]).toEqual([])
+    await an.context.close()
+    await binh.context.close()
+})
+
 test('messages past 5 in 5 seconds wait, then go by themselves, each once and in order', async ({ browser }) => {
     test.setTimeout(60_000)
     const an = await openAs(browser, anEmail)

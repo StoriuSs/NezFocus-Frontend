@@ -30,6 +30,7 @@ const message = (over: Partial<Message> = {}): Message => ({
     mentionUsers: [],
     mentionRoles: [],
     mentionEveryone: false,
+    mentionHereUserIds: [],
     systemEvent: null,
     systemData: null,
     systemUser: null,
@@ -71,7 +72,7 @@ describe('Finding the mentions of a message, as the backend does (REQ-MSG-03, D-
         expect(findMentions('(@everyone!)').everyone).toBe(true)
     })
 
-    it('leaves @here as words until it comes with presence (M2 L7)', () => {
+    it('does not take @here for @everyone (D-166)', () => {
         expect(findMentions('@here')).toEqual({ userIds: [], roleIds: [], channelIds: [], everyone: false })
     })
 
@@ -82,6 +83,11 @@ describe('Finding the mentions of a message, as the backend does (REQ-MSG-03, D-
 
 describe('A message about the one reading it (C-10 `related`, D-39, D-172)', () => {
     const an = { id: AN, roleIds: [LEADS] }
+
+    it('is one whose @here reached them, not one that reached only others (D-166)', () => {
+        expect(isRelated(message({ content: '@here', mentionHereUserIds: [AN] }), an)).toBe(true)
+        expect(isRelated(message({ content: '@here', mentionHereUserIds: [BINH] }), an)).toBe(false)
+    })
 
     it('is one that mentions them, @everyone in effect, or a role they hold', () => {
         expect(isRelated(message({ mentionUsers: [{ id: AN, username: 'an', displayName: 'An' }] }), an)).toBe(true)
@@ -106,6 +112,7 @@ describe('A message about the one reading it (C-10 `related`, D-39, D-172)', () 
             author: person(AN, 'An'),
             mentionUsers: [{ id: AN, username: 'an', displayName: 'An' }],
             mentionEveryone: true,
+            mentionHereUserIds: [],
             mentionRoles: [{ id: LEADS, name: 'Trưởng nhóm' }]
         })
         expect(isRelated(own, an)).toBe(false)

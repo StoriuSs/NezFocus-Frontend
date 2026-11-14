@@ -53,11 +53,13 @@ export type PageSize = 10 | 50 | 100
 export interface MemberQuery {
     q?: string
     roleId?: string
-    /** D-89: `asc` is A to Z, lowest role first, oldest first. */
-    sort?: MemberSort
+    /** D-89: `asc` is A to Z, lowest role first, oldest first; `presence`: those online first, then by name (D-175, the people suggested after @). */
+    sort?: MemberSort | 'presence'
     order?: SortOrder
     page?: number
     limit?: PageSize
+    /** Only those online, or only those offline, to others now (D-175). */
+    presence?: 'online' | 'offline'
     /** The owner's "who may take it" (S-SET-07, D-161): without themselves and accounts waiting to be deleted. */
     transferable?: boolean
 }

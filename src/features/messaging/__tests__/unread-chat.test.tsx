@@ -48,6 +48,7 @@ const message = (n: number, author = BINH): Message => ({
     mentionUsers: [],
     mentionRoles: [],
     mentionEveryone: false,
+    mentionHereUserIds: [],
     systemEvent: null,
     systemData: null,
     systemUser: null,

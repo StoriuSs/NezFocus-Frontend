@@ -1298,6 +1298,11 @@ export interface components {
             language: 'vi' | 'en'
             /** @enum {string} */
             theme: 'light' | 'dark' | 'system'
+            /**
+             * @description The status chosen in their menu (D-78); what others see may differ (idle when every tab is unused).
+             * @enum {string}
+             */
+            presence: 'online' | 'idle' | 'dnd' | 'invisible'
             /** @description An IANA zone name, in ICU's letter case (asia/tokyo is stored as Asia/Tokyo). */
             timezone: string
             /**
@@ -1337,6 +1342,11 @@ export interface components {
             allow_server_member_messages?: boolean
             /** @description "Show study activity" (D-79). */
             show_study_activity?: boolean
+            /**
+             * @description The status chosen in their menu (REQ-AUTH-07, D-78); others see it within 2 seconds.
+             * @enum {string}
+             */
+            presence?: 'online' | 'idle' | 'dnd' | 'invisible'
         }
         ServerRoleResponseDto: {
             id: string
@@ -1565,6 +1575,8 @@ export interface components {
             /** @description Null: show the initials. */
             icon_url: string | null
             member_count: number
+            /** @description Members not offline to others now; an invisible one is not counted (S-SRV-03 Q15, REQ-AUTH-07). */
+            online_count: number
         }
         InviteTargetResponseDto: {
             id: string
@@ -1632,6 +1644,11 @@ export interface components {
             user_ids: string[]
         }
         MemberResponseDto: {
+            /**
+             * @description What others see of them now (REQ-AUTH-07): someone invisible is offline.
+             * @enum {string}
+             */
+            status: 'online' | 'idle' | 'dnd' | 'offline'
             user_id: string
             username: string | null
             display_name: string | null
@@ -1735,6 +1752,8 @@ export interface components {
             type: 'regular' | 'system'
             /** @description Null on a system message (D-168). */
             author: components['schemas']['MessageAuthorResponseDto'] | null
+            /** @description Whom @here reached as it was sent (D-166): those not offline who saw the channel. The client marks it for them. */
+            mention_here_user_ids: string[]
             /** @description The people its <@id> tokens name, as they are now (D-171); an id of no account is left out. */
             mention_users: components['schemas']['MentionedUserResponseDto'][]
             /** @description The roles it mentions in effect, as named now; a role deleted since is left out (D-171). */
@@ -1784,6 +1803,8 @@ export interface components {
             type: 'regular' | 'system'
             /** @description Null on a system message (D-168). */
             author: components['schemas']['MessageAuthorResponseDto'] | null
+            /** @description Whom @here reached as it was sent (D-166): those not offline who saw the channel. The client marks it for them. */
+            mention_here_user_ids: string[]
             /** @description The people its <@id> tokens name, as they are now (D-171); an id of no account is left out. */
             mention_users: components['schemas']['MentionedUserResponseDto'][]
             /** @description The roles it mentions in effect, as named now; a role deleted since is left out (D-171). */
@@ -1854,6 +1875,8 @@ export interface components {
             type: 'regular' | 'system'
             /** @description Null on a system message (D-168). */
             author: components['schemas']['MessageAuthorResponseDto'] | null
+            /** @description Whom @here reached as it was sent (D-166): those not offline who saw the channel. The client marks it for them. */
+            mention_here_user_ids: string[]
             /** @description The people its <@id> tokens name, as they are now (D-171); an id of no account is left out. */
             mention_users: components['schemas']['MentionedUserResponseDto'][]
             /** @description The roles it mentions in effect, as named now; a role deleted since is left out (D-171). */
@@ -3538,8 +3561,10 @@ export interface operations {
                  *     themselves, not an account waiting to be deleted. Owner only.
                  */
                 transferable?: boolean
-                /** @description name (default), role or joined_at (D-89). */
-                sort?: 'name' | 'role' | 'joined_at'
+                /** @description online or offline to others now: the member panel's two groups (D-175). */
+                presence?: 'online' | 'offline'
+                /** @description name (default), role, joined_at (D-89), or presence: those online first (D-175). */
+                sort?: 'name' | 'role' | 'joined_at' | 'presence'
                 /** @description asc (default): A to Z, lowest role first, oldest first. */
                 order?: 'asc' | 'desc'
                 /** @description Display name or username, ignoring case and accents. */

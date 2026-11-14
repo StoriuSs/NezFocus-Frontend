@@ -83,7 +83,8 @@ stays in the profile page's chunk.
 
 **The connection store** (`useRealtimeStore`, `src/features/realtime/`):
 whether the socket is connected, down (and since when), or not opened yet,
-and whether the browser is online. UI state only: the socket itself lives in
+and whether the browser is online. Presence is not here: one's own is in the
+query cache (`useOwnPresence`), others' comes with the member lists (D-175). UI state only: the socket itself lives in
 `src/lib/socket.ts`, and the data its events carry goes into the query cache
 (ARCHITECTURE 10.2), not here. `useConnectionBanner()` turns it into the
 Banner a page shows: `offline` without a network, `reconnecting` once the

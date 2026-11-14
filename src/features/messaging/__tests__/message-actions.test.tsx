@@ -54,6 +54,7 @@ const message = (id: string, author: typeof AN, content: string, time: string): 
     mentionUsers: [],
     mentionRoles: [],
     mentionEveryone: false,
+    mentionHereUserIds: [],
     systemEvent: null,
     systemData: null,
     systemUser: null,

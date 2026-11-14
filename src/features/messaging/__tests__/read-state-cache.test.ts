@@ -32,6 +32,7 @@ const message = (n: number, more: Partial<BareMessage> = {}): BareMessage => ({
     mentionUsers: [],
     mentionRoles: [],
     mentionEveryone: false,
+    mentionHereUserIds: [],
     systemEvent: null,
     systemData: null,
     systemUser: null,

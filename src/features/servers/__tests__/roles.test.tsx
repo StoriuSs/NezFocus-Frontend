@@ -72,6 +72,7 @@ const binh: Server = {
 
 const member = (userId: string, displayName: string, roleIds: string[], isOwner = false): ServerMember => ({
     userId,
+    status: 'offline',
     username: displayName.toLowerCase(),
     displayName,
     avatarUrl: null,

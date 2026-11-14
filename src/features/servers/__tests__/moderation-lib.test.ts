@@ -27,6 +27,7 @@ const viewer = (permissions: string, topRolePosition: number, isOwner = false) =
 
 const member = (userId: string, roleIds: string[] = [], extra: Partial<ServerMember> = {}): ServerMember => ({
     userId,
+    status: 'offline',
     username: userId,
     displayName: userId,
     avatarUrl: null,

@@ -80,7 +80,9 @@
       "title": "Members",
       "online": "Online — {{count}}",
       "offline": "Offline — {{count}}",
-      "owner": "Owner"
+      "owner": "Owner",
+      "failed": "Could not load the members",
+      "loading": "Loading the members…"
     },
     "me": {
       "trigger": "{{name}}, {{status}} — open your menu",
@@ -94,7 +96,8 @@
         },
         "idle": {
           "name": "Away",
-          "detail": "Turns on by itself after 10 minutes of not using NezFocus"
+          "detail": "Turns on by itself after 10 minutes of not using NezFocus",
+          "auto": "Away · automatic"
         },
         "dnd": {
           "name": "Do not disturb",
@@ -104,7 +107,8 @@
           "name": "Invisible",
           "detail": "Everyone sees you as offline"
         }
-      }
+      },
+      "statusNotSaved": "Status not changed"
     },
     "noServer": {
       "title": "No servers yet",

@@ -15,6 +15,7 @@ const at = (who: string | null, time: string, day = '2026-10-18'): Message => ({
     mentionUsers: [],
     mentionRoles: [],
     mentionEveryone: false,
+    mentionHereUserIds: [],
     systemEvent: who ? null : 'member_joined',
     systemData: null,
     systemUser: null,

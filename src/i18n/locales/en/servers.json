@@ -245,6 +245,8 @@
     "titleAnonymous": "You're invited to",
     "members_one": "{{members}} member",
     "members_other": "{{members}} members",
+    "online_one": "{{online}} online",
+    "online_other": "{{online}} online",
     "target": {
       "studyRoom": "Invited to study in",
       "voice": "Invited to",

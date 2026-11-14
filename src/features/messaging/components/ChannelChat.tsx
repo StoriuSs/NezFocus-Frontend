@@ -17,6 +17,7 @@ import { useCanSee } from '../hooks/useCanSee'
 import { useJumpToMessage } from '../hooks/useJumpToMessage'
 import { useMentionWords } from '../hooks/useMentionWords'
 import { useUnreadMarker } from '../hooks/useUnreadMarker'
+import { useTyping } from '../hooks/useTyping'
 import { authorFrom, chatMessages } from '../lib/chat-messages'
 import { chatRows } from '../lib/chat-rows'
 import { outgoingMentions, type ComposerNames } from '../lib/mention-text'
@@ -33,6 +34,7 @@ import type {
     RepliedMessage
 } from '../types'
 import { Composer } from './Composer'
+import { TypingLine } from './TypingLine'
 import { DeleteMessageDialog } from './DeleteMessageDialog'
 import { MessageList } from './MessageList'
 import { NewMessagesBar } from './NewMessagesBar'
@@ -51,8 +53,9 @@ const quote = (message: Message): RepliedMessage => ({
 })
 
 /**
- * A text channel's chat (S-CHAT-01): the messages, the typing line's place
- * (24 high, kept empty so the list never jumps; C-10), and the composer.
+ * A text channel's chat (S-CHAT-01): the messages, the typing line (24
+ * high, kept when empty so the list never jumps; C-10, REQ-MSG-06), and the
+ * composer.
  * Mounted once per channel (`key`), so scrolling starts afresh in each.
  *
  * Holds what is being done to a message (S-CHAT-01 `reply-mode`,
@@ -184,6 +187,7 @@ export default function ChannelChat({
         [t]
     )
     const me = author?.id
+    const typing = useTyping(channelId, me)
     const handlers = useMemo<MessageHandlers>(
         () => ({
             me,
@@ -293,7 +297,7 @@ export default function ChannelChat({
                 holdNew={!canSee}
                 onSeen={canSee && unread.unreadHeld > 0 ? unread.seen : undefined}
             />
-            <div className='h-6 shrink-0' aria-hidden='true' />
+            <TypingLine names={typing} />
             <Composer
                 box={composer}
                 userId={me}

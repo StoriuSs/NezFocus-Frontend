@@ -245,6 +245,8 @@
     "titleAnonymous": "Bạn được mời vào",
     "members_one": "{{members}} thành viên",
     "members_other": "{{members}} thành viên",
+    "online_one": "{{online}} đang trực tuyến",
+    "online_other": "{{online}} đang trực tuyến",
     "target": {
       "studyRoom": "Mời vào học ở",
       "voice": "Mời vào",

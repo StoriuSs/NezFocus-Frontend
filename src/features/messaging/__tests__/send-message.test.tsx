@@ -24,6 +24,7 @@ const savedFrom = (body: { content: string }, id = 'm9'): Message => ({
     mentionUsers: [],
     mentionRoles: [],
     mentionEveryone: false,
+    mentionHereUserIds: [],
     systemEvent: null,
     systemData: null,
     systemUser: null,

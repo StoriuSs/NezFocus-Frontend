@@ -14,6 +14,8 @@ export interface ContentMentions {
     names: MentionNames
     /** @everyone in effect (the message's `mention_everyone`): otherwise the words are only words. */
     everyone: boolean
+    /** Whom its @here reached (`mention_here_user_ids`, D-166): none, and the words are only words. */
+    here: readonly string[]
     me: string | undefined
     roleIds: readonly string[]
 }
@@ -26,7 +28,8 @@ const MINE = 'bg-surface-3 text-text-primary'
 /**
  * A mention in a message (C-10 › Nội dung đặc biệt): a person or a role as
  * "@name" on `surface-2` in `primary` 600, one's own (oneself, a role one
- * holds, @everyone in effect) on `surface-3`; a channel as the same chip,
+ * holds, @everyone in effect, an @here that reached them) on `surface-3`;
+ * @here that reached others only as theirs; a channel as the same chip,
  * leading to it, the server named first when it is another one, or the
  * message link's "Can't view" chip that says so on a click. A token naming no one is words in
  * `text-secondary`, and @everyone without effect plain words (owner,
@@ -38,6 +41,10 @@ export function MentionChip({ part, mentions }: { part: MentionPart; mentions: C
     const { names, me, roleIds } = mentions
     const name = mentionName(part, names, words)
 
+    if (part.type === 'everyone' && part.here) {
+        if (mentions.here.length === 0) return name
+        return <span className={cn(MENTION, me && mentions.here.includes(me) ? MINE : THEIRS)}>{name}</span>
+    }
     if (part.type === 'everyone') {
         return mentions.everyone ? <span className={cn(MENTION, MINE)}>{name}</span> : name
     }

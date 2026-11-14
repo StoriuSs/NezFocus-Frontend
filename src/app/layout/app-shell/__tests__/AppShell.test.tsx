@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { Toaster } from 'sonner'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { focusManager } from '@tanstack/react-query'
 import userEvent from '@testing-library/user-event'
@@ -31,7 +32,7 @@ vi.mock('@/features/auth/auth.store', () => mockAuthStore(authState))
 vi.mock('@/features/users/api/useProfile', () => ({ useProfile: () => ({ data: profile }) }))
 vi.mock('@/features/servers/api/servers.api', () => serversApi)
 // The shell opens its socket after the first paint: no network here.
-vi.mock('@/lib/socket', () => ({ openSocket: () => () => undefined }))
+vi.mock('@/lib/socket', () => ({ openSocket: () => ({ close: () => undefined, send: () => undefined }) }))
 vi.mock('@/features/realtime/api/realtime.api', () => ({ fetchRealtimeTicket: vi.fn() }))
 // A text channel's chat reads its history: an empty one, never the network.
 const messagesApi = vi.hoisted(() => ({
@@ -46,14 +47,42 @@ const pinsApi = vi.hoisted(() => ({
     unpinMessage: vi.fn()
 }))
 vi.mock('@/features/messaging/api/pins.api', () => pinsApi)
+// The member panel's lists: nobody, unless a test says otherwise.
+vi.mock('@/features/servers/api/roles.api', async (original) => ({
+    ...(await original<typeof import('@/features/servers/api/roles.api')>()),
+    fetchMembers: vi.fn(async () => ({
+        items: [],
+        meta: {
+            currentPage: 1,
+            itemsPerPage: 100,
+            totalItems: 0,
+            totalPages: 0,
+            hasNextPage: false,
+            hasPreviousPage: false
+        }
+    }))
+}))
 // How far one has read: nothing unread, unless a test says otherwise.
 const readStatesApi = vi.hoisted(() => ({
     fetchReadStates: vi.fn(async (): Promise<unknown[]> => []),
     ackChannel: vi.fn()
 }))
 vi.mock('@/features/messaging/api/readStates.api', () => readStatesApi)
+// The account's settings, kept here: the status chosen in the menu saves to them (S-ME-01).
+const settingsApi = vi.hoisted(() => {
+    const held = { presence: 'online', theme: 'system', language: 'en' } as Record<string, unknown>
+    return {
+        held,
+        fetchSettings: vi.fn(async () => ({ ...held })),
+        updateSettings: vi.fn(async (changes: Record<string, unknown>) => Object.assign(held, changes) && { ...held }),
+        settingsQuery: { queryKey: ['users', 'settings'], queryFn: async () => ({ ...held }), staleTime: 60_000 }
+    }
+})
+vi.mock('@/features/users/api/settings.api', () => settingsApi)
 
 const { default: AppShell } = await import('@/app/layout/app-shell/AppShell')
+const { emitRealtimeEvent } = await import('@/features/realtime/lib/realtime-events')
+const { useRealtimeStore } = await import('@/features/realtime/realtime.store')
 const { default: ChannelPage } = await import('@/features/servers/pages/ChannelPage')
 const { default: Study } = await import('@/pages/Study')
 const { default: ServerSettingsPage } = await import('@/features/servers/pages/ServerSettingsPage')
@@ -535,6 +564,7 @@ describe('AppShell (S-SHELL-01)', () => {
                     mentionUsers: [],
                     mentionRoles: [],
                     mentionEveryone: false,
+                    mentionHereUserIds: [],
                     systemEvent: null,
                     systemData: null,
                     systemUser: null,
@@ -557,6 +587,7 @@ describe('AppShell (S-SHELL-01)', () => {
                         mentionUsers: [],
                         mentionRoles: [],
                         mentionEveryone: false,
+                        mentionHereUserIds: [],
                         systemEvent: null,
                         systemData: null,
                         systemUser: null,
@@ -593,6 +624,25 @@ describe('AppShell (S-SHELL-01)', () => {
             }))
         })
 
+        it('shows one right panel at a time: the pins close the members, the members the pins (D-175)', async () => {
+            renderAt('/channels/ot/hoi-dap')
+            const members = await screen.findByRole('button', { name: 'Members' })
+            const pins = screen.getByRole('button', { name: 'Pinned messages' })
+
+            await userEvent.click(members)
+            expect(await screen.findByRole('complementary', { name: 'Members' })).toBeInTheDocument()
+            expect(members).toHaveAttribute('aria-pressed', 'true')
+
+            await userEvent.click(pins)
+            expect(await screen.findByRole('complementary', { name: 'Pinned messages' })).toBeInTheDocument()
+            expect(screen.queryByRole('complementary', { name: 'Members' })).not.toBeInTheDocument()
+            expect(members).toHaveAttribute('aria-pressed', 'false')
+
+            await userEvent.click(members)
+            expect(await screen.findByRole('complementary', { name: 'Members' })).toBeInTheDocument()
+            expect(screen.queryByRole('complementary', { name: 'Pinned messages' })).not.toBeInTheDocument()
+        })
+
         it('lets a moderator unpin from a card of the sheet; Esc closes the card menu, not the sheet', async () => {
             const manage = String(BigInt(MEMBER) | (1n << 14n))
             serversApi.fetchServers.mockResolvedValue([
@@ -614,6 +664,7 @@ describe('AppShell (S-SHELL-01)', () => {
                     mentionUsers: [],
                     mentionRoles: [],
                     mentionEveryone: false,
+                    mentionHereUserIds: [],
                     systemEvent: null,
                     systemData: null,
                     systemUser: null,
@@ -711,6 +762,54 @@ describe('AppShell (S-SHELL-01)', () => {
             ])
             await userEvent.click(statuses[3]!)
             expect(await screen.findByRole('button', { name: 'An, Invisible — open your menu' })).toBeInTheDocument()
+            expect(settingsApi.updateSettings).toHaveBeenCalledWith({ presence: 'invisible' })
+        })
+
+        it('shows "Away · automatic" once every tab went unused, the ✓ staying on Online (REQ-AUTH-07)', async () => {
+            settingsApi.held.presence = 'online'
+            renderAt('/study')
+            await screen.findByRole('button', { name: 'An, Online — open your menu' })
+
+            act(() => emitRealtimeEvent('presence.updated', { userId: profile.id, status: 'idle' }))
+
+            try {
+                await userEvent.click(
+                    await screen.findByRole('button', { name: 'An, Away · automatic — open your menu' })
+                )
+                const menu = await screen.findByRole('menu')
+                await userEvent.click(within(menu).getByRole('menuitem', { name: 'Away · automatic' }))
+                expect(await screen.findByRole('menuitemradio', { name: /^Online/ })).toHaveAttribute(
+                    'aria-checked',
+                    'true'
+                )
+            } finally {
+                act(() => useRealtimeStore.getState().reset())
+            }
+        })
+
+        it('keeps do not disturb on the avatar though every tab went unused: away is only for online', async () => {
+            settingsApi.held.presence = 'dnd'
+            renderAt('/study')
+            await screen.findByRole('button', { name: 'An, Do not disturb — open your menu' })
+
+            act(() => emitRealtimeEvent('presence.updated', { userId: profile.id, status: 'idle' }))
+            await new Promise((resolve) => setTimeout(resolve, 50))
+
+            expect(screen.getByRole('button', { name: 'An, Do not disturb — open your menu' })).toBeInTheDocument()
+            settingsApi.held.presence = 'online'
+        })
+
+        it('puts the old status back and says so when it could not be saved', async () => {
+            settingsApi.held.presence = 'online'
+            settingsApi.updateSettings.mockRejectedValueOnce(new Error('offline'))
+            render(<Toaster />)
+            renderAt('/study')
+            const menu = await openMenu()
+            await userEvent.click(within(menu).getByRole('menuitem', { name: 'Online' }))
+            await userEvent.click((await screen.findAllByRole('menuitemradio'))[2]!)
+
+            expect(await screen.findByText('Status not changed')).toBeInTheDocument()
+            expect(await screen.findByRole('button', { name: 'An, Online — open your menu' })).toBeInTheDocument()
         })
     })
 })

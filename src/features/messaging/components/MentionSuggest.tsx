@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import '@/i18n/messaging'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Popover, PopoverContent } from '@/components/ui/popover'
+import { PresenceDot } from '@/components/ui/presence-dot'
 import { cn } from '@/lib/utils'
 import type { SuggestRow, SuggestState } from '../hooks/useMentionBox'
 
@@ -72,7 +73,7 @@ export function MentionSuggest({ state, children }: { state: SuggestState; child
                             key={group.name}
                             role='group'
                             {...(group.name === 'everyone'
-                                ? { 'aria-label': '@everyone' }
+                                ? { 'aria-label': group.rows.map(({ row }) => row.shown).join(', ') }
                                 : { 'aria-labelledby': `${headingId}-${group.name}` })}
                         >
                             {group.name === 'everyone' ? null : (
@@ -107,7 +108,7 @@ function Option({ row, index, state }: { row: SuggestRow; index: number; state: 
             : row.kind === 'role'
               ? [row.role.name, t('mention.roleMembers', { count: row.role.memberCount })]
               : row.kind === 'everyone'
-                ? ['@everyone', t('mention.everyone')]
+                ? [row.shown, t(row.key === 'here' ? 'mention.here' : 'mention.everyone')]
                 : [row.name, null]
     const label = row.kind === 'channel' ? row.shown : detail ? `${name}, ${detail}` : name
 
@@ -129,12 +130,22 @@ function Option({ row, index, state }: { row: SuggestRow; index: number; state: 
             className={cn('flex h-10 cursor-pointer items-center rounded-input px-2', chosen && 'bg-surface-2')}
         >
             {row.kind === 'member' ? (
-                <Avatar className='size-6'>
-                    <AvatarImage src={row.person.avatarUrl ?? undefined} alt='' className='object-cover' />
-                    <AvatarFallback className='bg-surface-3 text-micro font-semibold text-text-primary'>
-                        {name.slice(0, 1).toUpperCase()}
-                    </AvatarFallback>
-                </Avatar>
+                <span className='relative shrink-0'>
+                    <Avatar className='size-6'>
+                        <AvatarImage src={row.person.avatarUrl ?? undefined} alt='' className='object-cover' />
+                        <AvatarFallback className='bg-surface-3 text-micro font-semibold text-text-primary'>
+                            {name.slice(0, 1).toUpperCase()}
+                        </AvatarFallback>
+                    </Avatar>
+                    {row.person.presence ? (
+                        <PresenceDot
+                            presence={row.person.presence}
+                            // The cutout is the colour behind it (C-03): the row chosen is `surface-2`.
+                            cutout={chosen ? 'ring-surface-2' : 'ring-surface-1'}
+                            className='absolute -bottom-0.5 -right-0.5'
+                        />
+                    ) : null}
+                </span>
             ) : (
                 <span className='flex size-6 shrink-0 items-center justify-center rounded-full bg-surface-2 text-text-secondary'>
                     {row.kind === 'channel' ? (

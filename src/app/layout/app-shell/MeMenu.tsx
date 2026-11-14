@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { LogOut, Pencil, Settings } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -18,6 +18,9 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { PresenceDot, type Presence } from '@/components/ui/presence-dot'
 import { AUTH_PATHS, useAuthStore } from '@/features/auth'
+import { useOwnPresence } from '@/features/realtime'
+import { settingsCache } from '@/features/users/api/settingsCache'
+import { useChoosePresence } from '@/features/users/api/useChoosePresence'
 import { useProfile } from '@/features/users/api/useProfile'
 import { useAvatarErrorRefresh } from '@/features/users/hooks/useAvatarErrorRefresh'
 import { USERS_PATHS } from '@/features/users'
@@ -48,8 +51,10 @@ function MyAvatar({ name, url, onError }: { name: string; url?: string | null; o
  * Your menu (S-ME-01), from your avatar at the foot of the rail: who you are
  * (opens your profile), your status, Settings, Sign out.
  *
- * M0: the status is chosen here and shown on your avatar, in this tab only;
- * it reaches other people when presence is built.
+ * The status chosen is your settings' (saved at once, every tab and browser
+ * follows; others see it through presence, REQ-AUTH-07). Every tab unused
+ * for 10 minutes while online shows "Away · automatic" with the away dot,
+ * the ✓ staying on Online (S-ME-01 › Tương tác).
  */
 export function MeMenu() {
     const { t } = useTranslation()
@@ -57,12 +62,16 @@ export function MeMenu() {
     const logout = useAuthStore((state) => state.logout)
     const authUser = useAuthStore((state) => state.user)
     const { data: profile } = useProfile(true)
-    const [status, setStatus] = useState<Status>('online')
+    const status: Status = useQuery(settingsCache).data?.presence ?? 'online'
+    const choose = useChoosePresence()
+    const shown = useOwnPresence(profile?.id ?? authUser?.id)
+    const away = status === 'online' && shown === 'idle'
+    const dot = away ? 'idle' : DOT[status]
 
     const name = profile?.displayName || profile?.username || authUser?.username || authUser?.email || ''
     const username = profile?.username || authUser?.username
     const refreshAvatar = useAvatarErrorRefresh(profile?.avatarUrl)
-    const statusName = t(`shell.me.status.${status}.name`)
+    const statusName = away ? t('shell.me.status.idle.auto') : t(`shell.me.status.${status}.name`)
 
     return (
         <DropdownMenu>
@@ -71,7 +80,7 @@ export function MeMenu() {
                 className='relative mt-2 rounded-full'
             >
                 <MyAvatar name={name} url={profile?.avatarUrl} onError={refreshAvatar} />
-                <PresenceDot presence={DOT[status]} cutout='ring-bg' className='absolute -bottom-0.5 -right-0.5' />
+                <PresenceDot presence={dot} cutout='ring-bg' className='absolute -bottom-0.5 -right-0.5' />
             </DropdownMenuTrigger>
             <DropdownMenuContent side='right' align='end' sideOffset={12} className='w-[280px]'>
                 <DropdownMenuItem
@@ -82,7 +91,7 @@ export function MeMenu() {
                     <span className='relative'>
                         <MyAvatar name={name} url={profile?.avatarUrl} onError={refreshAvatar} />
                         <PresenceDot
-                            presence={DOT[status]}
+                            presence={dot}
                             cutout='ring-surface-1 group-focus:ring-surface-2'
                             className='absolute -bottom-0.5 -right-0.5'
                         />
@@ -101,11 +110,14 @@ export function MeMenu() {
                 <DropdownMenuSeparator />
                 <DropdownMenuSub>
                     <DropdownMenuSubTrigger>
-                        <PresenceDot presence={DOT[status]} />
+                        <PresenceDot presence={dot} />
                         {statusName}
                     </DropdownMenuSubTrigger>
                     <DropdownMenuSubContent sideOffset={4} className='w-[284px]'>
-                        <DropdownMenuRadioGroup value={status} onValueChange={(value) => setStatus(value as Status)}>
+                        <DropdownMenuRadioGroup
+                            value={status}
+                            onValueChange={(value) => value !== status && choose.mutate(value as Status)}
+                        >
                             {STATUSES.map((option) => (
                                 <DropdownMenuRadioItem key={option} value={option} className='items-start'>
                                     <PresenceDot presence={DOT[option]} className='mt-[5px]' />

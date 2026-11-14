@@ -153,6 +153,7 @@
     "roleMembers_one": "{{count}} member",
     "roleMembers_other": "{{count}} members",
     "everyone": "Everyone who can see this channel",
+    "here": "Everyone online who can see this channel",
     "none": "No results"
   },
   "unread": {
@@ -161,5 +162,10 @@
     "since_other": "{{count}} new messages since {{time}}",
     "sinceMany": "99+ new messages since {{time}}",
     "markRead": "Mark as read"
+  },
+  "typing": {
+    "one": "{{name}} is typing…",
+    "two": "{{first}} and {{second}} are typing…",
+    "many": "Several people are typing…"
   }
 }

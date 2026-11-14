@@ -80,7 +80,9 @@
       "title": "Thành viên",
       "online": "Trực tuyến — {{count}}",
       "offline": "Ngoại tuyến — {{count}}",
-      "owner": "Chủ server"
+      "owner": "Chủ server",
+      "failed": "Không tải được danh sách thành viên",
+      "loading": "Đang tải danh sách thành viên…"
     },
     "me": {
       "trigger": "{{name}}, {{status}} — mở menu của bạn",
@@ -94,7 +96,8 @@
         },
         "idle": {
           "name": "Vắng mặt",
-          "detail": "Tự bật sau 10 phút không dùng"
+          "detail": "Tự bật sau 10 phút không dùng",
+          "auto": "Vắng mặt · tự động"
         },
         "dnd": {
           "name": "Không làm phiền",
@@ -104,7 +107,8 @@
           "name": "Ẩn",
           "detail": "Mọi người thấy bạn ngoại tuyến"
         }
-      }
+      },
+      "statusNotSaved": "Chưa đổi được trạng thái"
     },
     "noServer": {
       "title": "Chưa có server nào",

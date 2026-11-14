@@ -119,6 +119,9 @@ export function useMentionBox({
         }
         if (mentionEveryone && startsAWord('everyone', query))
             found.push({ kind: 'everyone', key: 'everyone', token: '@everyone', shown: '@everyone' })
+        // Those online who see the channel (D-166).
+        if (mentionEveryone && startsAWord('here', query))
+            found.push({ kind: 'everyone', key: 'here', token: '@here', shown: '@here' })
         return found
     }, [open, typed?.trigger, query, source.channels, suggested.people, suggested.roles, me, mentionEveryone])
 

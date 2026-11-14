@@ -429,6 +429,18 @@ messages with "This message was deleted". A message being edited or replied
 to counts as deleted only when missing from the part of the channel the
 history holds (`isGoneFrom`), not when the list went elsewhere.
 
+The member panel (`useMemberPanel`, `src/features/servers/api/`, D-175)
+reads two lists: everyone online, page after page in one query, and the
+offline ones as an infinite query of 100. `presence.updated` patches a dot
+in place while the member stays online; one moving between the groups (or
+not listed yet) has both read again, once, a second after the first change
+of a burst, and so does each `ready` and each opening of the panel
+(`staleTime: 0`: it heard nothing while closed). One's own presence
+(`useOwnPresence`, `src/features/realtime/`) is cached data never fetched
+(`skipToken`): `ready` writes it, `presence.updated` about oneself changes
+it. Who is typing is not cached data:
+`useTyping` keeps it in component state for 10 seconds per person.
+
 ## A server one is no longer in
 
 Until M2 brings live updates, the app learns that someone was kicked, banned,

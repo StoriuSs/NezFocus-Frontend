@@ -87,7 +87,7 @@ const invite = (extra: Partial<Invite> = {}): Invite => ({
 
 const preview = (extra: Partial<InvitePreview> = {}): InvitePreview => ({
     code: 'B4tRw9Lz',
-    server: { id: 'nd', name: 'Nhóm đồ án Mobile', iconUrl: null, memberCount: 5 },
+    server: { id: 'nd', name: 'Nhóm đồ án Mobile', iconUrl: null, memberCount: 5, onlineCount: 3 },
     inviterName: 'Bình',
     channel: { id: 'hoi-dap', name: 'hoi-dap', type: 'text', isStudyRoom: false },
     ...extra
@@ -352,6 +352,7 @@ describe('The invite page (S-SRV-03)', () => {
         expect(await screen.findByRole('heading', { level: 1, name: 'Bình invited you to' })).toBeInTheDocument()
         expect(screen.getByText('Nhóm đồ án Mobile')).toBeInTheDocument()
         expect(screen.getByText('5 members')).toBeInTheDocument()
+        expect(screen.getByText('3 online')).toBeInTheDocument()
         expect(screen.getByText('#hoi-dap')).toBeInTheDocument()
         expect(invitesApi.fetchInvitePreview).toHaveBeenCalledWith('B4tRw9Lz', 'hoi-dap')
         expect(document.title).toBe('Nhóm đồ án Mobile · NezFocus')

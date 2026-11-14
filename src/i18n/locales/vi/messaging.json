@@ -153,6 +153,7 @@
     "roleMembers_one": "{{count}} thành viên",
     "roleMembers_other": "{{count}} thành viên",
     "everyone": "Mọi người xem được kênh này",
+    "here": "Những người đang trực tuyến xem được kênh này",
     "none": "Không có kết quả"
   },
   "unread": {
@@ -161,5 +162,10 @@
     "since_other": "{{count}} tin nhắn mới từ {{time}}",
     "sinceMany": "99+ tin nhắn mới từ {{time}}",
     "markRead": "Đánh dấu đã đọc"
+  },
+  "typing": {
+    "one": "{{name}} đang nhập…",
+    "two": "{{first}} và {{second}} đang nhập…",
+    "many": "Nhiều người đang nhập…"
   }
 }

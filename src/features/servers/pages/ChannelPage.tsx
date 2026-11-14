@@ -1,6 +1,6 @@
 import { Suspense, useCallback, useMemo } from 'react'
 import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { Hash, LampDesk, Pin, Volume2 } from 'lucide-react'
+import { Hash, LampDesk, Pin, Users, Volume2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import '@/i18n/servers'
 import { PageLoader } from '@/components/PageLoader'
@@ -12,6 +12,7 @@ import { IconButton } from '@/components/ui/icon-button'
 import { WithTooltip } from '@/components/ui/tooltip'
 import { ChannelChat, PinsPanel } from '@/features/messaging'
 import { useMentionSource } from '../api/useMentionSource'
+import { MemberPanel } from '../components/member-panel/MemberPanel'
 import { useServers } from '../api/useServers'
 import { linkedServers, readAppLink, type LinkedServer } from '../lib/app-links'
 import { chatPermissions } from '../lib/chat-permissions'
@@ -84,12 +85,23 @@ export default function ChannelPage() {
  * [📌] in the Header opens the pins (S-CHAT-02) in the right panel, closed
  * at first and remembered as a column (SRS 1.71); a card opens its message's
  * link, closing the panel when it covers the chat (a sheet below 1280),
- * focus then on the message.
+ * focus then on the message. [👥] opens the members (S-SHELL-01, D-175),
+ * open at first as a column. One panel at a time: opening one closes the
+ * other (S-CHAT-02 › Mở từ).
  */
 function TextChannel({ server, channel, messageId }: { server: Server; channel: ServerChannel; messageId?: string }) {
     const { t } = useTranslation('servers')
+    const { t: common } = useTranslation()
     const navigate = useNavigate()
     const [pins, pinsButton] = usePanel('pins', { startClosed: true })
+    const [members, membersButton] = usePanel('members')
+    const showMembers = members.open && !pins.open
+    // The pins hide the members while open; closed, the members come back as they were.
+    const togglePins = pins.toggle
+    const toggleMembers = () => {
+        if (!showMembers && pins.open) pins.close()
+        if (!members.open || showMembers) members.toggle()
+    }
     const { id: serverId, timeoutUntil } = server
     const { id: channelId, permissions: bits } = channel
     const permissions = useMemo(
@@ -120,23 +132,41 @@ function TextChannel({ server, channel, messageId }: { server: Server; channel: 
             composer
             bodyClassName='flex flex-col overflow-y-hidden'
             actions={
-                <WithTooltip label={t('channel.pins')} side='bottom'>
-                    <IconButton ref={pinsButton} label={t('channel.pins')} on={pins.open} onClick={pins.toggle}>
-                        <Pin />
-                    </IconButton>
-                </WithTooltip>
+                <>
+                    <WithTooltip label={t('channel.pins')} side='bottom'>
+                        <IconButton ref={pinsButton} label={t('channel.pins')} on={pins.open} onClick={togglePins}>
+                            <Pin />
+                        </IconButton>
+                    </WithTooltip>
+                    <WithTooltip label={common('shell.members.title')} side='bottom'>
+                        <IconButton
+                            ref={membersButton}
+                            label={common('shell.members.title')}
+                            on={showMembers}
+                            onClick={toggleMembers}
+                        >
+                            <Users />
+                        </IconButton>
+                    </WithTooltip>
+                </>
             }
             panel={
-                <RightPanel state={pins} buttonRef={pinsButton} title={t('channel.pins')}>
-                    <Suspense fallback={<PageLoader className='min-h-0 py-6' />}>
-                        <PinsPanel
-                            channelId={channelId}
-                            manage={permissions.manage}
-                            onOpen={openPinned}
-                            channel={mentions.channel}
-                        />
-                    </Suspense>
-                </RightPanel>
+                showMembers ? (
+                    <RightPanel state={members} buttonRef={membersButton} title={common('shell.members.title')}>
+                        <MemberPanel serverId={serverId} />
+                    </RightPanel>
+                ) : (
+                    <RightPanel state={pins} buttonRef={pinsButton} title={t('channel.pins')}>
+                        <Suspense fallback={<PageLoader className='min-h-0 py-6' />}>
+                            <PinsPanel
+                                channelId={channelId}
+                                manage={permissions.manage}
+                                onOpen={openPinned}
+                                channel={mentions.channel}
+                            />
+                        </Suspense>
+                    </RightPanel>
+                )
             }
         >
             <Suspense fallback={<PageLoader className='min-h-0 flex-1' />}>

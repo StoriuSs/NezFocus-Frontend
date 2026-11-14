@@ -18,7 +18,7 @@ vi.mock('@/lib/api', () => ({ default: api }))
 const sound = vi.hoisted(() => ({ playPhaseSound: vi.fn() }))
 vi.mock('@/lib/phase-sound', () => sound)
 // The shell opens its socket after the first paint: no network here.
-vi.mock('@/lib/socket', () => ({ openSocket: () => () => undefined }))
+vi.mock('@/lib/socket', () => ({ openSocket: () => ({ close: () => undefined, send: () => undefined }) }))
 
 const { default: Appearance } = await import('@/features/users/pages/Appearance')
 const { default: Notifications } = await import('@/features/users/pages/Notifications')
@@ -38,7 +38,8 @@ const saved: UserSettings = {
     notifyPhaseChanges: true,
     notificationPromptDismissed: false,
     allowServerMemberMessages: true,
-    showStudyActivity: true
+    showStudyActivity: true,
+    presence: 'online'
 }
 
 /** The AppShell's part: it keeps the tab on the account's theme and language. */
