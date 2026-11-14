@@ -2,6 +2,7 @@ import { Fragment, useState, type KeyboardEvent } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import { useMentionedChannels } from '@/features/messaging'
 import {
     closestCenter,
     DndContext,
@@ -47,6 +48,7 @@ export function ChannelList({ server }: { server: Server }) {
     const moveInLayout = useMoveInLayout()
     const showDialog = useChannelDialogs((state) => state.show)
     const { folded, setFolded } = useFoldedCategories(server.id)
+    const mentioned = useMentionedChannels(server.id)
     const [dragged, setDragged] = useState<Dragged | null>(null)
     const [target, setTarget] = useState<Target | null>(null)
     const [byKeyboard, setByKeyboard] = useState(false)
@@ -273,9 +275,12 @@ export function ChannelList({ server }: { server: Server }) {
                 {categories.map((category) => {
                     const channels = groupChannels(server, category.id)
                     const isFolded = folded.has(category.id)
-                    // Folded, it still shows the open channel.
+                    // Folded, it still shows the open channel, and those with mentions of the reader (C-06).
                     const shown = isFolded
-                        ? channels.filter((channel) => pathname === channelPath(server.id, channel.id))
+                        ? channels.filter(
+                              (channel) =>
+                                  pathname === channelPath(server.id, channel.id) || mentioned.includes(channel.id)
+                          )
                         : channels
                     const listId = `category-${server.id}-${category.id}`
                     const into =

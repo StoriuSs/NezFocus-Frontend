@@ -154,5 +154,12 @@
     "roleMembers_other": "{{count}} members",
     "everyone": "Everyone who can see this channel",
     "none": "No results"
+  },
+  "unread": {
+    "divider": "New",
+    "since_one": "{{count}} new message since {{time}}",
+    "since_other": "{{count}} new messages since {{time}}",
+    "sinceMany": "99+ new messages since {{time}}",
+    "markRead": "Mark as read"
   }
 }

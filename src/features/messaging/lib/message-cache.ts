@@ -114,6 +114,10 @@ export function openAround(data: ChannelMessages | undefined, around: MessagePag
     return { pages: [{ ...around, ...(outgoing?.length ? { outgoing } : {}) }], pageParams: [{ around: id }] }
 }
 
+/** Whether the history holds a message. */
+export const holds = (history: ChannelMessages, id: string): boolean =>
+    history.pages.some((page) => page.items.some((item) => item.id === id))
+
 /** Whether the history stops before the newest messages (opened at an older one): newer ones are read on scrolling down. */
 export const stopsShort = (data: ChannelMessages): boolean => !!data.pages.at(-1)?.hasMoreAfter
 

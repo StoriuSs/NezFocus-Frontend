@@ -14,7 +14,9 @@ import {
     type LucideIcon
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { CountBadge } from '@/components/ui/count-badge'
 import { WithTooltip } from '@/components/ui/tooltip'
+import { useChannelReadState } from '@/features/messaging'
 import { cn } from '@/lib/utils'
 import { categoryDropId, channelDropId } from '../../lib/drop-target'
 import { channelPath } from '../../lib/paths'
@@ -76,6 +78,11 @@ export function DropLine({ blocked }: { blocked?: boolean }) {
  * the whole row is the handle to drag it (S-SRV-06: press and move 4 px; a
  * plain click still opens it), Space lifts it from the keyboard, and ⚙ on
  * hover opens its settings (S-SET-05).
+ *
+ * A text channel with unread messages has its name in 600 `text-primary`,
+ * and the mentions of the reader still unread as a badge at the end, open or
+ * not (REQ-MSG-09, C-06 `unread`, `mention`); a screen reader hears it after
+ * the name (and "Private channel").
  */
 export function ChannelRow({
     server,
@@ -100,6 +107,16 @@ export function ChannelRow({
     const { setNodeRef: dragRef, listeners } = useDraggable({ id, disabled: !manages })
     const { setNodeRef: dropRef } = useDroppable({ id, disabled: !acceptsDrops })
     const locked = channel.type === 'voice' && !can(channel.permissions, 'CONNECT')
+    const read = useChannelReadState(channel.id)
+    const mentions = read?.mentionCount ?? 0
+    const unread = mentions > 0 || (read?.unreadCount ?? 0) > 0
+    // Said after the name in one label: hidden text beside the name reads with a stray space in browsers.
+    const label = unread
+        ? t('shell.unread.label', {
+              name: channel.isPrivate ? `${channel.name} ${t('shell.channels.private')}` : channel.name,
+              state: mentions > 0 ? t('shell.unread.mentions', { count: mentions }) : t('shell.unread.messages')
+          })
+        : undefined
 
     const path = channelPath(server.id, channel.id)
     // Strings, not NavLink's functions: a locked room's Tooltip (Radix Slot)
@@ -111,6 +128,7 @@ export function ChannelRow({
             ref={dragRef}
             to={path}
             draggable={false}
+            aria-label={label}
             {...listeners}
             onKeyDown={onKeyDown}
             className={cn(
@@ -121,7 +139,11 @@ export function ChannelRow({
                     ? 'bg-surface-3 font-semibold text-text-primary'
                     : cn(
                           'hover:bg-surface-2',
-                          locked ? 'font-medium text-text-tertiary' : 'font-medium text-text-secondary'
+                          locked
+                              ? 'font-medium text-text-tertiary'
+                              : unread
+                                ? 'font-semibold text-text-primary'
+                                : 'font-medium text-text-secondary'
                       )
             )}
         >
@@ -136,6 +158,7 @@ export function ChannelRow({
             ) : channel.isPrivate ? (
                 <SmallLock label={t('shell.channels.private')} />
             ) : null}
+            <CountBadge count={mentions} className='ml-auto' />
         </NavLink>
     )
 

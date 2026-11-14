@@ -1,12 +1,9 @@
 import { useCallback } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { openAround, startOver, stopsShort } from '../lib/message-cache'
+import { holds, openAround, startOver, stopsShort } from '../lib/message-cache'
 import type { ChannelMessages, MessageCursor } from '../types'
 import { messageKeys } from './keys'
 import { fetchMessages } from './messages.api'
-
-const holds = (history: ChannelMessages, id: string) =>
-    history.pages.some((page) => page.items.some((item) => item.id === id))
 
 const isAround = (cursor: MessageCursor, id: string) => !!cursor && 'around' in cursor && cursor.around === id
 
@@ -23,6 +20,10 @@ const isAround = (cursor: MessageCursor, id: string) => !!cursor && 'around' in 
  * `toPresent`: a history that stops short (opened at an older message)
  * becomes the newest page, as when it was first opened; one already there
  * stays as it is.
+ *
+ * `openAt`: the page around an id, whether or not a message has it (the
+ * reader's mark may be where they joined, D-170): opening a channel at its
+ * first unread message (REQ-MSG-09).
  *
  * Both stop a page still being read first (older on scrolling up, newer on
  * scrolling down): it was read for the history as it was, and would put it
@@ -63,5 +64,15 @@ export function useMessageJump(channelId: string) {
         [client, channelId, toPresent]
     )
 
-    return { show, toPresent }
+    const openAt = useCallback(
+        async (id: string) => {
+            const key = messageKeys.channel(channelId)
+            const around = await fetchMessages(channelId, { around: id })
+            await client.cancelQueries({ queryKey: key })
+            client.setQueryData<ChannelMessages>(key, (history) => openAround(history, around, id))
+        },
+        [client, channelId]
+    )
+
+    return { show, toPresent, openAt }
 }

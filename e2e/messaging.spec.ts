@@ -23,6 +23,7 @@ let anEmail: string
 let binhEmail: string
 let channelPath: string
 let channelName: string
+let otherPath: string
 
 async function ok(method: string, path: string, body?: object, token?: string, key?: string) {
     const response = await fetch(`${apiUrl}/${path}`, {
@@ -81,9 +82,10 @@ test.beforeAll(async ({ browserName }) => {
         )
     ).data
     await ok('POST', `invites/${invite.code}/accept`, {}, binh)
-    const text = server.channels.find((channel) => channel.type === 'text')!
-    channelPath = `/channels/${server.id}/${text.id}`
-    channelName = text.name
+    const [text, other] = server.channels.filter((channel) => channel.type === 'text')
+    channelPath = `/channels/${server.id}/${text!.id}`
+    channelName = text!.name
+    otherPath = `/channels/${server.id}/${other!.id}`
 })
 
 const shoot = async (page: Page, name: string) => {
@@ -357,6 +359,61 @@ test('a mention picked from the suggestions reaches the other browser, the messa
     await expect(article(an.page)).not.toHaveAttribute('data-related')
     await expect(article(an.page).getByText('@Bình', { exact: true })).toBeVisible()
     await shoot(binh.page, 'chat01-related-to-me')
+
+    expect([...an.problems, ...binh.problems]).toEqual([])
+    await an.context.close()
+    await binh.context.close()
+})
+
+test('a mention in another channel is a badge on the channel, the server and the tab title; reading it in one tab clears it in the other (REQ-MSG-09, D-46)', async ({
+    browser
+}) => {
+    test.setTimeout(120_000)
+    const an = await openAs(browser, anEmail)
+    const binh = await openAs(browser, binhEmail)
+    // An reads another channel, in two tabs.
+    await an.page.goto(otherPath)
+    const second = await an.context.newPage()
+    await second.goto(otherPath)
+    const channels = (page: Page) => page.getByRole('navigation', { name: /^Channels of / })
+    const servers = (page: Page) => page.getByRole('navigation', { name: 'Servers' })
+
+    const box = binh.page.getByRole('combobox', { name: `Message #${channelName}` })
+    await box.pressSequentially('Mai ôn chương 3 nhé @an')
+    await expect(
+        binh.page.getByRole('listbox', { name: 'Mention suggestions' }).getByRole('option', { name: /^An, / })
+    ).toBeVisible({ timeout: 15_000 })
+    await binh.page.keyboard.press('Enter')
+    await binh.page.keyboard.press('Enter')
+
+    for (const page of [an.page, second]) {
+        await expect(channels(page).getByRole('link', { name: `${channelName}, 1 unread mention of you` })).toBeVisible(
+            {
+                timeout: 15_000
+            }
+        )
+        await expect(
+            servers(page).getByRole('link', { name: 'Ôn thi Giải tích 2, 1 unread mention of you' })
+        ).toBeVisible()
+        await expect(page).toHaveTitle(/^\(1\) /)
+    }
+    await shoot(an.page, 'shell01-mention-badge')
+
+    // An opens it in the first tab: "New" above Bình's message, read once seen.
+    await an.page.bringToFront()
+    await channels(an.page)
+        .getByRole('link', { name: new RegExp(`^${channelName}, `) })
+        .click()
+    await expect(log(an.page).getByRole('separator', { name: /New$/ })).toBeVisible({ timeout: 15_000 })
+    await expect(log(an.page).getByText('Mai ôn chương 3 nhé', { exact: false })).toBeVisible()
+    await shoot(an.page, 'chat01-new-divider')
+
+    // The other tab loses the badge within 2 seconds of the read (REQ-MSG-09); the title its number.
+    await expect(channels(second).getByRole('link', { name: channelName, exact: true })).toBeVisible({ timeout: 4_000 })
+    await expect(second).not.toHaveTitle(/^\(/)
+    await expect(an.page).not.toHaveTitle(/^\(/)
+    // "New" stays until An leaves the channel (C-10).
+    await expect(log(an.page).getByRole('separator', { name: /New$/ })).toBeVisible()
 
     expect([...an.problems, ...binh.problems]).toEqual([])
     await an.context.close()

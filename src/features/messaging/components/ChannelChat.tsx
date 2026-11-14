@@ -10,10 +10,13 @@ import { useDeleteMessage } from '../api/useDeleteMessage'
 import { useEditMessage } from '../api/useEditMessage'
 import { usePinMessage } from '../api/usePinMessage'
 import { useReactions } from '../api/useReactions'
+import { useChannelReadState } from '../api/useReadStates'
 import { useSendMessage } from '../api/useSendMessage'
 import { useBrowserOnline } from '../hooks/useBrowserOnline'
+import { useCanSee } from '../hooks/useCanSee'
 import { useJumpToMessage } from '../hooks/useJumpToMessage'
 import { useMentionWords } from '../hooks/useMentionWords'
+import { useUnreadMarker } from '../hooks/useUnreadMarker'
 import { authorFrom, chatMessages } from '../lib/chat-messages'
 import { chatRows } from '../lib/chat-rows'
 import { outgoingMentions, type ComposerNames } from '../lib/mention-text'
@@ -32,6 +35,7 @@ import type {
 import { Composer } from './Composer'
 import { DeleteMessageDialog } from './DeleteMessageDialog'
 import { MessageList } from './MessageList'
+import { NewMessagesBar } from './NewMessagesBar'
 import '../messaging.css'
 
 // The pins panel (S-CHAT-02), shown by the servers feature's channel page: in this chunk, with the chat's stylesheet.
@@ -68,6 +72,11 @@ const quote = (message: Message): RepliedMessage => ({
  * Mentions (REQ-MSG-03): the page hands the server's side of them
  * (`mentions`, the MentionSource port); "Copy text" gives their names
  * (owner, 14/11/2026).
+ *
+ * Unread messages (REQ-MSG-09, D-46): opened with some, the history starts
+ * around the reader's mark and the list at "New" (`useUnreadMarker`), with
+ * the new messages bar above it; what comes into view is read only while
+ * the reader can see the page.
  */
 export default function ChannelChat({
     channelId,
@@ -97,7 +106,13 @@ export default function ChannelChat({
     const timeZone = useQuery(settingsCache).data?.timezone
     const now = useMinuteClock()
     const online = useBrowserOnline()
-    const history = useChannelMessages(channelId, target?.messageId)
+    const canSee = useCanSee()
+    const readState = useChannelReadState(channelId)
+    // Opened with unread messages (the mark known already): the history starts around the mark.
+    const [startAt] = useState(() =>
+        !target && readState && readState.unreadCount > 0 ? readState.lastReadId : undefined
+    )
+    const history = useChannelMessages(channelId, target?.messageId ?? startAt)
     const author = useMemo(() => authorFrom(profile), [profile])
     const { send, retry, discard } = useSendMessage(channelId, author)
     const edit = useEditMessage(channelId)
@@ -111,10 +126,20 @@ export default function ChannelChat({
     const [replyingTo, setReplyingTo] = useState<RepliedMessage | null>(null)
     const [editingId, setEditingId] = useState<string | null>(null)
     const [deletingId, setDeletingId] = useState<string | null>(null)
-    const jump = useJumpToMessage(channelId, target, history.data)
+    const jump = useJumpToMessage(channelId, target, history.data, { atUnread: startAt !== undefined })
 
     const pages = history.data?.pages
     const messages = useMemo(() => chatMessages(pages), [pages])
+    const unread = useUnreadMarker({
+        channelId,
+        state: readState,
+        history: history.data,
+        messages,
+        me: profile?.id,
+        canSee,
+        linked: !!target,
+        jump
+    })
     const rows = useMemo(() => chatRows(messages, timeZone), [messages, timeZone])
     const saved = useMemo(
         () => new Map(pages?.flatMap((page) => page.items.map((item) => [item.id, item] as const))),
@@ -237,6 +262,14 @@ export default function ChannelChat({
 
     return (
         <>
+            {unread.bar ? (
+                <NewMessagesBar
+                    count={unread.bar.count}
+                    since={messageTime(new Date(unread.bar.since), now, timeZone, t)}
+                    onShow={() => void unread.toDivider()}
+                    onMarkRead={unread.markAllRead}
+                />
+            ) : null}
             <MessageList
                 channelName={channelName}
                 rows={rows}
@@ -255,6 +288,10 @@ export default function ChannelChat({
                 onDiscard={discard}
                 handlers={handlers}
                 editing={editing}
+                newFrom={unread.dividerAt}
+                unreadHeld={unread.unreadHeld}
+                holdNew={!canSee}
+                onSeen={canSee && unread.unreadHeld > 0 ? unread.seen : undefined}
             />
             <div className='h-6 shrink-0' aria-hidden='true' />
             <Composer

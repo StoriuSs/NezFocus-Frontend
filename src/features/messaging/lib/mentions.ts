@@ -1,6 +1,6 @@
 import { folded } from '@/lib/utils'
 import { MENTION_TOKEN, parseMessage, type Inline, type MentionPart } from './markdown'
-import type { MentionChannel, MentionedRole, MentionedUser, Message } from '../types'
+import type { MentionChannel, MentionedRole, MentionedUser } from '../types'
 
 /** The mentions written in a message where they count: never in code or a link (D-172). */
 export interface FoundMentions {
@@ -31,28 +31,8 @@ export function findMentions(content: string): FoundMentions {
     }
 }
 
-/** Who reads the chat, as `isRelated` needs them: their roles in the server. */
-export interface Reader {
-    id: string | undefined
-    roleIds: readonly string[]
-}
-
-/**
- * Is the message about the one reading it (C-10 `related`, D-39): it mentions
- * them, a role they hold or @everyone in effect, or answers one of their
- * messages. One's own message never is (D-172). A reply to a message deleted
- * since is not shown as one: the line no longer says whose it was, though
- * the backend still counts it for its author.
- */
-export function isRelated(message: Message, { id, roleIds }: Reader): boolean {
-    if (!id || message.type !== 'regular' || message.author?.id === id) return false
-    return (
-        message.mentionEveryone ||
-        message.mentionUsers.some((user) => user.id === id) ||
-        message.mentionRoles.some((role) => roleIds.includes(role.id)) ||
-        (message.replyTo !== null && !message.replyTo.deleted && message.replyTo.author?.id === id)
-    )
-}
+// Its own file: the read states (in the first download) need it without the markdown parser.
+export { isRelated, type Reader } from './related'
 
 /** The names a message's tokens read with: those it carries (D-171), and the channels one sees. */
 export interface MentionNames {

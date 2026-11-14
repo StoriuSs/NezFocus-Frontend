@@ -27,6 +27,12 @@ export type MessagePage = ApiModel<'MessagePageResponseDto'>
 export type MentionedUser = ApiModel<'MentionedUserResponseDto'>
 /** A role a message mentions in effect, as named now (D-171). */
 export type MentionedRole = ApiModel<'MentionedRoleResponseDto'>
+/**
+ * How far the reader has read one text channel (REQ-MSG-09): the last
+ * message read, how many after it are unread and how many of those are
+ * about them, each counted up to 100 (D-173).
+ */
+export type ReadState = ApiModel<'ReadStateResponseDto'>
 
 /** Where a history page starts: the newest messages when null (SRS 5.1). */
 export type MessageCursor = { before: string } | { after: string } | { around: string } | null

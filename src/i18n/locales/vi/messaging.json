@@ -154,5 +154,12 @@
     "roleMembers_other": "{{count}} thành viên",
     "everyone": "Mọi người xem được kênh này",
     "none": "Không có kết quả"
+  },
+  "unread": {
+    "divider": "Mới",
+    "since_one": "{{count}} tin nhắn mới từ {{time}}",
+    "since_other": "{{count}} tin nhắn mới từ {{time}}",
+    "sinceMany": "99+ tin nhắn mới từ {{time}}",
+    "markRead": "Đánh dấu đã đọc"
   }
 }

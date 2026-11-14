@@ -161,6 +161,12 @@
       "body": "The link may be wrong, or what it led to was deleted or isn't yours to see.",
       "home": "Back to home",
       "tab": "Page not found"
+    },
+    "unread": {
+      "label": "{{name}}, {{state}}",
+      "mentions_one": "{{count}} unread mention of you",
+      "mentions_other": "{{count}} unread mentions of you",
+      "messages": "unread messages"
     }
   },
   "timeZone": {

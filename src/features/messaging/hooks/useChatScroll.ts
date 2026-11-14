@@ -7,16 +7,20 @@ import { isOutgoing } from '../types'
 const AT_BOTTOM_PX = 48
 /** Within this many pixels of the top, older messages are read; of the end, newer ones (a history that stops short). */
 const LOAD_OLDER_PX = 300
+/** Above the first unread message: a little of the message read before it, then its "New" line, 70 down (S-CHAT-01 `new-messages`). */
+const ABOVE_FIRST_UNREAD_PX = 110
 
 type Paging = { has: boolean; loading: boolean; load: () => void }
 const NO_PAGING: Paging = { has: false, loading: false, load: () => undefined }
 
 /**
- * Where to go once: the row of a message a link opened (D-48), or the bottom
- * (`key` null) once the history has its newest messages back. `token`
- * changes each time, so the same message is gone to again.
+ * Where to go once: the row of a message a link opened (D-48), a third of
+ * the way down; the first unread message (`align: 'top'`, REQ-MSG-09), near
+ * the top under its "New" line; or the bottom (`key` null) once the history
+ * has its newest messages back. `token` changes each time, so the same
+ * message is gone to again.
  */
-export type ScrollTarget = { key: string | null; token: string }
+export type ScrollTarget = { key: string | null; token: string; align?: 'top' }
 
 /** The oldest message's key: a date line above it stays the same when older messages of its day arrive. */
 const firstMessageKey = (rows: ChatRow[]) => rows.find((row) => row.kind === 'message')?.key
@@ -49,16 +53,20 @@ function newestSavedId(rows: ChatRow[]): string | undefined {
  * - near the top, older messages are read; the message being read stays
  *   where it was as they (and their skeletons) appear above it;
  * - a link's message (`target`), once in the list, sits a third of the way
- *   down (S-CHAT-01 `highlight`), each time the link is opened; the bottom
+ *   down (S-CHAT-01 `highlight`), each time the link is opened; the first
+ *   unread message sits near the top, its "New" line in view; the bottom
  *   (`target` without a key) is gone to once the newest messages are back;
  * - a history that stops short of the newest messages (opened at an older
  *   one) reads `newer` ones near its end, and never counts as at the bottom:
- *   what comes in is not followed down.
+ *   what comes in is not followed down;
+ * - `hold` (the "New" line's message, while the reader cannot see the page):
+ *   following the newest down stops with it near the top, so coming back
+ *   shows the first unread message, not only the last (D-46).
  */
 export function useChatScroll(
     rows: ChatRow[],
     older: Paging,
-    { newer = NO_PAGING, target }: { newer?: Paging; target?: ScrollTarget } = {}
+    { newer = NO_PAGING, target, hold }: { newer?: Paging; target?: ScrollTarget; hold?: string } = {}
 ) {
     const list = useRef<HTMLDivElement>(null)
     const atBottom = useRef(true)
@@ -93,13 +101,20 @@ export function useChatScroll(
         const row = pending?.key ? rowOf(element, pending.key) : null
         if (row || (pending && pending.key === null && !newer.has)) {
             shown.current = pending!.token
-            element.scrollTop = row ? row.offsetTop - Math.round(element.clientHeight / 3) : element.scrollHeight
+            const above = pending!.align === 'top' ? ABOVE_FIRST_UNREAD_PX : Math.round(element.clientHeight / 3)
+            element.scrollTop = row ? row.offsetTop - above : element.scrollHeight
             atBottom.current = isAtBottom(element) && !newer.has
             setAway(!atBottom.current)
             setSeen(undefined)
         }
+        const held = hold && atBottom.current && !mine ? rowOf(element, hold) : null
+        if (held && element.scrollTop > held.offsetTop - ABOVE_FIRST_UNREAD_PX) {
+            element.scrollTop = held.offsetTop - ABOVE_FIRST_UNREAD_PX
+            atBottom.current = false
+            setAway(true)
+        }
         before.current = { first, last, loading: older.loading, height: element.scrollHeight }
-    }, [rows, first, last, lastRow, older.loading, target, newer.has])
+    }, [rows, first, last, lastRow, older.loading, target, newer.has, hold])
 
     // The list got shorter or taller (the composer grew, the window changed): at the bottom, stay there.
     useEffect(() => {

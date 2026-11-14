@@ -1006,6 +1006,45 @@ export interface paths {
         patch?: never
         trace?: never
     }
+    '/api/v1/me/read-states': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        /** Every text channel the reader may view, with its unread and mentions counted up to 100. */
+        get: operations['ReadStateController_list_v1']
+        put?: never
+        post?: never
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/channels/{channelId}/ack': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        /**
+         * Mark the channel read up to a message of it, or its newest; never back.
+         *     A channel one may not view, or a message not of it, is NOT_FOUND. Two
+         *     marks close together may be told back out of order: a client keeps the
+         *     state whose `last_read_id` is not behind the one it has (D-173).
+         */
+        post: operations['ReadStateController_ack_v1']
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
 }
 export type webhooks = Record<string, never>
 export interface components {
@@ -1853,6 +1892,33 @@ export interface components {
         }
         PinListResponseDto: {
             items: components['schemas']['PinnedMessageResponseDto'][]
+        }
+        ReadStateResponseDto: {
+            server_id: string
+            channel_id: string
+            /**
+             * @description The last message read: an id to compare others with, or to open the
+             *     channel around (`around`); maybe of a deleted message, or no message at
+             *     all when the reader never marked the channel and stands where they
+             *     joined the server (D-170).
+             */
+            last_read_id: string
+            /** @description Live messages after it not sent by the reader, counted up to 100 (D-173): over 99 shows as "99+". */
+            unread_count: number
+            /** @description Those of them about the reader (D-39, D-164, D-172), counted up to 100. */
+            mention_count: number
+        }
+        ReadStateListResponseDto: {
+            items: components['schemas']['ReadStateResponseDto'][]
+        }
+        AckChannelRequestDto: {
+            /**
+             * Format: uuid
+             * @description The newest message of the channel the reader has seen (D-46), deleted
+             *     or not. Left out: the channel's newest message ("Mark as read"). The
+             *     mark only moves forward (D-173).
+             */
+            message_id?: string
         }
     }
     responses: never
@@ -3942,6 +4008,56 @@ export interface operations {
                     'application/json': {
                         meta: components['schemas']['ApiResponseMetaDto']
                         data: null
+                    }
+                }
+            }
+        }
+    }
+    ReadStateController_list_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['ReadStateListResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    ReadStateController_ack_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                channelId: string
+            }
+            cookie?: never
+        }
+        requestBody?: {
+            content: {
+                'application/json': components['schemas']['AckChannelRequestDto']
+            }
+        }
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['ReadStateResponseDto']
                     }
                 }
             }

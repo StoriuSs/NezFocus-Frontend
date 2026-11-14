@@ -27,10 +27,11 @@ const rowOf = (messageId: string) =>
 export function useJumpToMessage(
     channelId: string,
     target: ChatTarget | undefined,
-    history: ChannelMessages | undefined
+    history: ChannelMessages | undefined,
+    { atUnread = false }: { atUnread?: boolean } = {}
 ) {
     const { t } = useTranslation('messaging')
-    const { show: jumpTo, toPresent } = useMessageJump(channelId)
+    const { show: jumpTo, toPresent, openAt } = useMessageJump(channelId)
     const [scrollTarget, setScrollTarget] = useState<ScrollTarget>()
     const [highlighted, setHighlighted] = useState<string>()
 
@@ -74,16 +75,22 @@ export function useJumpToMessage(
         void showMessage(target.messageId, target.key, target.focus)
     }, [target, loaded, showMessage])
 
-    // Opened without a link on a history left at an older message: the newest, once.
+    // Opened without a link on a history left at an older message: the newest, once
+    // (opened at the first unread message, that is where it stays).
     const checked = useRef(false)
     useEffect(() => {
         if (checked.current || !history) return
         checked.current = true
-        if (!target && stopsShort(history)) void backToPresent()
-    }, [history, target, backToPresent])
+        if (!target && !atUnread && stopsShort(history)) void backToPresent()
+    }, [history, target, atUnread, backToPresent])
 
     const show = useCallback((messageId: string) => void showMessage(messageId, crypto.randomUUID()), [showMessage])
     const endHighlight = useCallback(() => setHighlighted(undefined), [])
+    /** The first unread message near the top, under its "New" line (REQ-MSG-09), not lit up. */
+    const showFirstUnread = useCallback(
+        (messageId: string) => setScrollTarget({ key: messageId, token: crypto.randomUUID(), align: 'top' }),
+        []
+    )
 
-    return { scrollTarget, highlighted, endHighlight, show, backToPresent }
+    return { scrollTarget, highlighted, endHighlight, show, backToPresent, showFirstUnread, openAt }
 }

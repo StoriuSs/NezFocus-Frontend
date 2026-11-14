@@ -100,16 +100,21 @@ react-starter/
     │   │                      #   Banner shows, what to do when the session ends, realtime-events.ts:
     │   │                      #   onRealtimeEvent for the features keeping data), realtime.store.ts
     │   ├── messaging/         # A text channel's chat (S-CHAT-01) and its pins (S-CHAT-02), lazy
-    │   │                      #   (index.ts: ChannelChat, PinsPanel from the same chunk):
+    │   │                      #   (index.ts: ChannelChat, PinsPanel from the same chunk), and how far
+    │   │                      #   the reader has read, not lazy (index.ts: useChannelReadState,
+    │   │                      #   useServerReadState, useMentionTotal for the rail, channel list, title):
     │   │                      #   api/ (history, sending, editing and deleting, going to a message,
-    │   │                      #   reactions, reactors, pins, liveMessages: socket events into the
-    │   │                      #   cache), components/ (list, row, system row, text and its link chips,
+    │   │                      #   reactions, reactors, pins, read states and marking read,
+    │   │                      #   liveMessages / liveReadStates: socket events into the cache),
+    │   │                      #   components/ (list, row, system row, text and its link chips,
     │   │                      #   mention chips and suggestions, reaction bar and chip, emoji picker,
-    │   │                      #   toolbar and menu, editor, delete dialog, composer, pins panel), hooks/
-    │   │                      #   (scrolling, going to a message, drafts, a box that writes mentions,
-    │   │                      #   their words), lib/ (formatting and mention tokens, mentions read and
-    │   │                      #   written, cache changes, pins in the cache, emoji data, grid moves and
-    │   │                      #   recent picks, tooltip words, rows, times),
+    │   │                      #   toolbar and menu, editor, delete dialog, composer, pins panel, "New"
+    │   │                      #   line, new messages bar), hooks/ (scrolling, going to a message,
+    │   │                      #   drafts, a box that writes mentions, their words, whether the reader
+    │   │                      #   can see the page, messages seen, unread in the open channel), lib/
+    │   │                      #   (formatting and mention tokens, mentions read and written, cache
+    │   │                      #   changes, pins and read states in the cache, where "New" goes, emoji
+    │   │                      #   data, grid moves and recent picks, tooltip words, rows, times),
     │   │                      #   messaging.css (the chat's classes)
     │   └── users/             # The profile and the account's settings
     │       ├── api/           # users.api.ts (fetchProfile, removeAvatar),

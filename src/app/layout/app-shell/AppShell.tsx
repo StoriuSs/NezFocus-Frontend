@@ -15,6 +15,9 @@ import { useServerGoneWatch } from '@/features/servers/hooks/useServerGoneWatch'
 import { serverOwnership } from '@/features/servers/api/serverOwnership'
 import { connectServerOwnership } from '@/features/auth'
 import { useConnectionBanner, useRealtimeConnection } from '@/features/realtime'
+import { useMentionTotal } from '@/features/messaging'
+import { useServers } from '@/features/servers'
+import { useTitleCount } from '@/hooks/useDocumentTitle'
 import { cn } from '@/lib/utils'
 import { ListColumn } from './ListColumn'
 import { Rail } from './Rail'
@@ -69,6 +72,11 @@ export default function AppShell() {
     // The tab's socket (SRS 5.2), opened after this first paint; and the Banner it shows when lost.
     useRealtimeConnection()
     const connection = useConnectionBanner()
+    // The tab title starts with every mention still unread, whatever the page (REQ-MSG-09, X-01):
+    // in the channels the server list shows (a server left, a channel deleted, no longer counts).
+    const servers = useServers().data
+    const listed = useMemo(() => servers?.flatMap((server) => server.channels.map((channel) => channel.id)), [servers])
+    useTitleCount(useMentionTotal(listed ?? []))
 
     const toggleNav = useCallback(() => setNavOpen((open) => !open), [])
     const shell = useMemo<ShellContextValue>(

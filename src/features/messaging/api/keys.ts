@@ -7,6 +7,8 @@ export const messageKeys = {
     pins: (channelId: string) => [...messageKeys.all, 'pins', channelId] as const,
     /** The first people to give one emoji to one message (the chip's Tooltip). */
     reactors: (messageId: string, emoji: string) => [...messageKeys.all, 'reactors', messageId, emoji] as const,
+    /** How far the reader has read every text channel they may view (REQ-MSG-09), kept live by the socket. */
+    readStates: () => [...messageKeys.all, 'read-states'] as const,
     /** The emoji picker's emoji in one language, read once (C-12). */
     emoji: (language: string) => [...messageKeys.all, 'emoji', language] as const
 }

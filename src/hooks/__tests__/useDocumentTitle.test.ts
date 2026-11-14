@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { renderHook } from '@testing-library/react'
-import { useDocumentTitle } from '../useDocumentTitle'
+import { useDocumentTitle, useTitleCount } from '../useDocumentTitle'
 
 describe('useDocumentTitle (X-01)', () => {
     it('shows the page with the product after it, and the product alone once the page closes', () => {
@@ -17,5 +17,21 @@ describe('useDocumentTitle (X-01)', () => {
         expect(document.title).toBe('NezFocus')
         rerender({ title: 'Nhóm đồ án Mobile' })
         expect(document.title).toBe('Nhóm đồ án Mobile · NezFocus')
+    })
+
+    it('starts with the unread number while there is one, whatever the page (REQ-MSG-09, X-01)', () => {
+        const count = renderHook(({ n }: { n: number }) => useTitleCount(n), { initialProps: { n: 3 } })
+        expect(document.title).toBe('(3) NezFocus')
+
+        const page = renderHook(() => useDocumentTitle('Page not found'))
+        expect(document.title).toBe('(3) Page not found · NezFocus')
+        page.unmount()
+
+        count.rerender({ n: 0 })
+        expect(document.title).toBe('NezFocus')
+        count.rerender({ n: 124 })
+        expect(document.title).toBe('(99+) NezFocus')
+        count.unmount()
+        expect(document.title).toBe('NezFocus')
     })
 })

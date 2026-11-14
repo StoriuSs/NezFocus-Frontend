@@ -1,8 +1,9 @@
-import { useRef, useState, type ReactNode } from 'react'
+import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Bell, GraduationCap, ListChecks, MessageCircle, Plus, type LucideIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
+import { CountBadge } from '@/components/ui/count-badge'
 import { WithTooltip } from '@/components/ui/tooltip'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import {
@@ -14,6 +15,7 @@ import {
     useServers,
     type Server
 } from '@/features/servers'
+import { useServerReadState } from '@/features/messaging'
 import { cn } from '@/lib/utils'
 import { MeMenu } from './MeMenu'
 
@@ -23,6 +25,7 @@ function Indicator({ kind }: { kind?: 'selected' | 'unread' }) {
     return (
         <span
             aria-hidden='true'
+            data-unread={kind === 'unread' || undefined}
             className={cn(
                 'absolute left-0 top-1/2 w-1 -translate-y-1/2 rounded-r-full bg-text-primary',
                 kind === 'selected' ? 'h-10' : 'h-2'
@@ -36,11 +39,18 @@ const SQUIRCLE =
 
 /**
  * A server: its icon or initials; where you are (its channels or its
- * settings, 04 › Khung) has the long bar. Unread arrives with messages (M2).
- * Right-click or Shift+F10 opens the server menu (C-05, S-SRV-04) 8 to the
- * right of the picture ("Leave server" is always in it).
+ * settings, 04 › Khung) has the long bar, a server with unread messages the
+ * short one, and the mentions of the reader still unread are a badge at the
+ * picture's corner, wherever you are (REQ-MSG-09, C-05). Right-click or
+ * Shift+F10 opens the server menu (C-05, S-SRV-04) 8 to the right of the
+ * picture ("Leave server" is always in it).
  */
 function ServerItem({ server }: { server: Server }) {
+    const { t } = useTranslation()
+    const channelIds = useMemo(() => server.channels.map((channel) => channel.id), [server.channels])
+    const { unread, mentions } = useServerReadState(server.id, channelIds)
+    const state =
+        mentions > 0 ? t('shell.unread.mentions', { count: mentions }) : unread ? t('shell.unread.messages') : null
     const { pathname } = useLocation()
     const isActive = pathname.startsWith(channelPath(server.id)) || pathname.startsWith(serverSettingsPath(server.id))
     const [menuOpen, setMenuOpen] = useState(false)
@@ -48,12 +58,12 @@ function ServerItem({ server }: { server: Server }) {
 
     return (
         <li className='relative flex w-full justify-center'>
-            <Indicator kind={isActive ? 'selected' : undefined} />
+            <Indicator kind={isActive ? 'selected' : unread ? 'unread' : undefined} />
             <WithTooltip label={server.name} side='right'>
                 <Link
                     ref={link}
                     to={channelPath(server.id)}
-                    aria-label={server.name}
+                    aria-label={state ? t('shell.unread.label', { name: server.name, state }) : server.name}
                     aria-current={isActive ? 'page' : undefined}
                     aria-haspopup='menu'
                     className={cn(SQUIRCLE, 'overflow-hidden')}
@@ -71,6 +81,8 @@ function ServerItem({ server }: { server: Server }) {
                     <ServerIcon name={server.name} iconUrl={server.iconUrl} className='size-full' />
                 </Link>
             </WithTooltip>
+            {/* On the picture's lower right corner, cut out of it by a ring of the rail's colour (C-03). */}
+            <CountBadge count={mentions} cutout='ring-bg' className='pointer-events-none absolute bottom-0 right-4' />
             <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
                 {/* Where the menu hangs: the picture's right edge. Never clicked itself. */}
                 <DropdownMenuTrigger

@@ -161,6 +161,12 @@
       "body": "Đường dẫn có thể đã sai, hoặc nội dung đã bị xóa hay bạn không có quyền xem.",
       "home": "Về trang chính",
       "tab": "Không tìm thấy trang"
+    },
+    "unread": {
+      "label": "{{name}}, {{state}}",
+      "mentions_one": "{{count}} lượt nhắc tới bạn chưa đọc",
+      "mentions_other": "{{count}} lượt nhắc tới bạn chưa đọc",
+      "messages": "có tin chưa đọc"
     }
   },
   "timeZone": {

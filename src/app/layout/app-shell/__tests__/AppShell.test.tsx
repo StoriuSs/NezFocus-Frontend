@@ -46,6 +46,12 @@ const pinsApi = vi.hoisted(() => ({
     unpinMessage: vi.fn()
 }))
 vi.mock('@/features/messaging/api/pins.api', () => pinsApi)
+// How far one has read: nothing unread, unless a test says otherwise.
+const readStatesApi = vi.hoisted(() => ({
+    fetchReadStates: vi.fn(async (): Promise<unknown[]> => []),
+    ackChannel: vi.fn()
+}))
+vi.mock('@/features/messaging/api/readStates.api', () => readStatesApi)
 
 const { default: AppShell } = await import('@/app/layout/app-shell/AppShell')
 const { default: ChannelPage } = await import('@/features/servers/pages/ChannelPage')
@@ -174,6 +180,8 @@ describe('AppShell (S-SHELL-01)', () => {
         authState.logout.mockReset()
         localStorage.clear()
         serversApi.fetchServers.mockResolvedValue([OT, ND])
+        // Nothing unread, unless a test says otherwise.
+        readStatesApi.fetchReadStates.mockResolvedValue([])
         // One dialog for the whole app: a test that opened it must not leave it over the next.
         useCreateServerDialog.getState().hide()
     })
@@ -366,6 +374,74 @@ describe('AppShell (S-SHELL-01)', () => {
             renderAt('/channels/ot/hoi-dap')
             await screen.findByRole('heading', { level: 1, name: 'hoi-dap' })
             await expectNoA11yViolations()
+        })
+    })
+
+    describe('unread and mentions (REQ-MSG-09, C-05, C-06, X-01)', () => {
+        const readState = (serverId: string, channelId: string, unreadCount: number, mentionCount: number) => ({
+            serverId,
+            channelId,
+            lastReadId: '0190a000-0000-7000-8000-000000000010',
+            unreadCount,
+            mentionCount
+        })
+        beforeEach(() => {
+            serversApi.fetchServers.mockResolvedValue([OT, { ...ND, channels: [channel('hoi-dap-nd')] }])
+            readStatesApi.fetchReadStates.mockResolvedValue([
+                readState('ot', 'hoi-dap', 3, 2),
+                readState('ot', 'chao-mung', 1, 0),
+                readState('nd', 'hoi-dap-nd', 5, 0)
+            ])
+        })
+
+        it('gives a server its mentions as a badge, or says it has unread messages', async () => {
+            renderAt('/channels/ot/ban-can-su')
+            const ot = await within(rail()).findByRole('link', { name: 'Ôn thi Giải tích 2, 2 unread mentions of you' })
+            expect(within(ot.closest('li')!).getByText('2')).toBeInTheDocument()
+            const nd = within(rail()).getByRole('link', { name: 'Nhóm đồ án Mobile, unread messages' })
+            expect(nd.closest('li')?.querySelector('[data-unread]')).not.toBeNull()
+        })
+
+        it('puts an unread channel in bold, with its mentions as a badge', async () => {
+            renderAt('/channels/ot/ban-can-su')
+            const channels = await screen.findByRole('navigation', { name: 'Channels of Ôn thi Giải tích 2' })
+            const hoiDap = await within(channels).findByRole('link', { name: 'hoi-dap, 2 unread mentions of you' })
+            expect(hoiDap).toHaveClass('font-semibold', 'text-text-primary')
+            expect(within(hoiDap).getByText('2')).toBeInTheDocument()
+            expect(within(channels).getByRole('link', { name: 'chao-mung, unread messages' })).toHaveClass(
+                'font-semibold'
+            )
+            expect(within(channels).getByRole('link', { name: 'Phòng học im lặng' })).not.toHaveClass('font-semibold')
+            await expectNoA11yViolations()
+        })
+
+        it('starts the tab title with every mention still unread', async () => {
+            renderAt('/channels/ot/ban-can-su')
+            await waitFor(() => expect(document.title).toBe('(2) NezFocus'))
+        })
+
+        it('counts only channels still listed: one deleted, or of a server left, no longer counts (owner, 14/11/2026)', async () => {
+            readStatesApi.fetchReadStates.mockResolvedValue([
+                readState('ot', 'hoi-dap', 3, 2),
+                readState('ot', 'deleted-channel', 4, 4),
+                readState('left-server', 'chung', 7, 7)
+            ])
+            renderAt('/channels/ot/ban-can-su')
+            expect(
+                await within(rail()).findByRole('link', { name: 'Ôn thi Giải tích 2, 2 unread mentions of you' })
+            ).toBeInTheDocument()
+            await waitFor(() => expect(document.title).toBe('(2) NezFocus'))
+        })
+
+        it('a folded category still shows a channel with mentions of the reader (C-06)', async () => {
+            renderAt('/channels/ot/ban-can-su')
+            const channels = await screen.findByRole('navigation', { name: 'Channels of Ôn thi Giải tích 2' })
+            await within(channels).findByRole('link', { name: 'hoi-dap, 2 unread mentions of you' })
+            await userEvent.click(within(channels).getByRole('button', { name: 'Thông tin' }))
+            expect(
+                within(channels).getByRole('link', { name: 'hoi-dap, 2 unread mentions of you' })
+            ).toBeInTheDocument()
+            expect(within(channels).queryByRole('link', { name: /chao-mung/ })).not.toBeInTheDocument()
         })
     })
 

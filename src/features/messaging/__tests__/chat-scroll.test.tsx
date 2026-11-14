@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
-import { useChatScroll } from '../hooks/useChatScroll'
+import { useChatScroll, type ScrollTarget } from '../hooks/useChatScroll'
 import { chatRows } from '../lib/chat-rows'
 import type { ChatMessage, Message, OutgoingMessage } from '../types'
 
@@ -53,15 +53,17 @@ function Harness({
     messages,
     loading = false,
     newer = none,
-    target
+    target,
+    hold
 }: {
     messages: ChatMessage[]
     loading?: boolean
     newer?: typeof none
-    target?: { key: string | null; token: string }
+    target?: ScrollTarget
+    hold?: string
 }) {
     const rows = chatRows(messages, 'Asia/Ho_Chi_Minh')
-    const { list, onScroll, away, newCount } = useChatScroll(rows, { ...older, loading }, { newer, target })
+    const { list, onScroll, away, newCount } = useChatScroll(rows, { ...older, loading }, { newer, target, hold })
     return (
         <div ref={list} onScroll={onScroll} data-testid='list'>
             <output>{`${away ? 'away' : 'bottom'} ${newCount}`}</output>
@@ -153,6 +155,23 @@ describe('How the message list scrolls (C-10 › Cuộn)', () => {
 
         expect(metrics.top).toBe(1040)
         expect(screen.getByRole('status')).toHaveTextContent('bottom 0')
+    })
+
+    it('following new messages down while the reader cannot see them, stops with "New" near the top (D-46)', () => {
+        const view = render(<Harness messages={range(1, 9)} />)
+        expect(metrics.top).toBe(1000)
+
+        // m010 came while the tab was hidden and has "New"; many more followed it.
+        metrics.height = 1500
+        view.rerender(<Harness messages={range(1, 20)} hold={TARGET.key} />)
+
+        expect(metrics.top).toBe(TARGET.offsetTop - 110)
+        expect(screen.getByRole('status')).toHaveTextContent(/^away/)
+    })
+
+    it('opens at the first unread message near the top, its "New" line and a little before it in view', () => {
+        render(<Harness messages={range(1, 50)} target={{ key: TARGET.key, token: 't1', align: 'top' }} />)
+        expect(metrics.top).toBe(TARGET.offsetTop - 110)
     })
 
     it('opens at the message of a link, a third of the way down the list (D-48)', () => {

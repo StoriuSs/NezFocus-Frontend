@@ -374,6 +374,26 @@ one's own click comes back and changes nothing more. Pinning
 (`usePinMessage`) waits for the answer; who reacted (`useReactors`) is read
 each time a chip's Tooltip opens.
 
+How far the reader has read (REQ-MSG-09, D-173) is one query for every
+text channel they may view (`useReadStates`, `GET /me/read-states`), read
+once and kept live the same way (`liveReadStates.ts`, pure changes in
+`lib/read-state-cache.ts`). A message from someone else after the mark adds
+one unread, and one mention when it is about the reader; one's own, and a
+system message about oneself, add nothing (the backend marks one's own as
+read, D-173). What the client cannot count (a role mention: whose roles are
+the server's to say; a deletion after the mark; a channel with no state
+yet) reads the list again a second later, once for a burst, and so does
+each `ready`. A state, from `read_state.updated` (the reader's other tabs),
+an ack's answer or the list read again, is kept only when its mark is not
+behind the one held: two marks close together may come back out of order.
+The rail, the channel list and the tab title select their share of it.
+
+Marking read (`useAckChannel`, D-46) moves the mark in the cache at once
+(and clears the counts when it reached the newest message), sends one mark
+at a time with only the newest waiting, and takes the backend's counts when
+it answers. A failure puts the mark back and reads the list again, without
+a toast: the next message seen tries again.
+
 Sending (`useSendMessage`) puts the message in the cache at once with a
 nonce and swaps it for the saved copy (the answer or the event, whichever
 comes first, taken in once). One at a time per channel, in the order typed;
