@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { MoreHorizontal, Reply } from 'lucide-react'
+import { MoreHorizontal, Reply, SmilePlus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import '@/i18n/messaging'
 import { IconButton } from '@/components/ui/icon-button'
@@ -12,18 +12,22 @@ import type { Message, MessageHandlers } from '../types'
  * message's top right, 14 above it. Shown on hover, or while the message
  * holds the keyboard's focus (not a click's). Out of the Tab order: Tab
  * reaches one message, and the same actions are in its menu (Shift+F10).
- * Reply only to who may post; the reaction button comes with reactions (L5).
+ * Add reaction (☺+) only with ADD_REACTIONS, Reply only to who may post.
  */
 export function HoverToolbar({
     message,
     handlers,
     menuOpen,
-    onMore
+    onMore,
+    onReact
 }: {
     message: Message
     handlers: MessageHandlers
+    /** The menu or the emoji picker is open: the toolbar stays. */
     menuOpen: boolean
     onMore: (button: HTMLButtonElement) => void
+    /** Opens the emoji picker under the toolbar. */
+    onReact: () => void
 }) {
     const { t } = useTranslation('messaging')
     const more = useRef<HTMLButtonElement>(null)
@@ -39,6 +43,13 @@ export function HoverToolbar({
                 (menuOpen ? '' : 'opacity-0 group-hover:opacity-100 group-has-[:focus-visible]:opacity-100')
             }
         >
+            {can.react ? (
+                <WithTooltip label={t('actions.react')}>
+                    <IconButton label={t('actions.react')} tabIndex={-1} className={button} onClick={onReact}>
+                        <SmilePlus aria-hidden='true' />
+                    </IconButton>
+                </WithTooltip>
+            ) : null}
             {can.reply ? (
                 <WithTooltip label={t('actions.reply')}>
                     <IconButton

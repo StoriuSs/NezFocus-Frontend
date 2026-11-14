@@ -356,6 +356,24 @@ history missed with `after=<newest id>`; more than 100 missed and the
 history starts over from the newest page. The changes themselves are pure
 functions (`lib/message-cache.ts`), tested without React.
 
+Reactions and pins (SRS 1.71) are kept live the same way. A history page
+holds each message's reactions as this person sees them (`me`); events and
+the send / edit answers do not carry them, so an edit keeps the reactions
+and the pin the list holds. `reaction.added` / `reaction.removed` count an
+emoji on its message (the reader's own marked as theirs), `pins.updated`
+marks the message and, for a new pin, reads the channel's pins again
+(`messageKeys.pins`, its card needs the message as the reader sees it); an
+unpin, an edit or a deletion changes the pins in place (`lib/pin-cache.ts`).
+Each `ready` reads the pins again: pins and unpins may have been missed.
+
+Giving an emoji (`useReactions`) shows at once. The requests of a channel go
+one after another (a mutation `scope`), and once all the clicks on one
+emoji have answered, its chip is set to what the server has, as far as the
+answers tell: a refusal puts that back, not the click before. The event of
+one's own click comes back and changes nothing more. Pinning
+(`usePinMessage`) waits for the answer; who reacted (`useReactors`) is read
+each time a chip's Tooltip opens.
+
 Sending (`useSendMessage`) puts the message in the cache at once with a
 nonce and swaps it for the saved copy (the answer or the event, whichever
 comes first, taken in once). One at a time per channel, in the order typed;

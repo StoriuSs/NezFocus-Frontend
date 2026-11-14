@@ -44,6 +44,9 @@ const message = (id: string, author: typeof AN, content: string, time: string): 
     content,
     systemEvent: null,
     systemData: null,
+    systemUser: null,
+    pinned: false,
+    reactions: [],
     replyTo: null,
     editedAt: null,
     createdAt: at(time)
@@ -51,9 +54,9 @@ const message = (id: string, author: typeof AN, content: string, time: string): 
 const MINE = message('m1', AN, 'Ok, mình vào sớm giữ chỗ', '20:11')
 const THEIRS = message('m2', TUAN, 'Câu 4 đổi cận thế nào vậy mọi người?', '21:45')
 
-const MEMBER: ChatPermissions = { send: true, manage: false, deleteOwn: true }
-const MODERATOR: ChatPermissions = { send: true, manage: true, deleteOwn: true }
-const TIMED_OUT: ChatPermissions = { send: false, manage: false, deleteOwn: false }
+const MEMBER: ChatPermissions = { send: true, manage: false, deleteOwn: true, react: true, addReactions: true }
+const MODERATOR: ChatPermissions = { send: true, manage: true, deleteOwn: true, react: true, addReactions: true }
+const TIMED_OUT: ChatPermissions = { send: false, manage: false, deleteOwn: false, react: false, addReactions: false }
 
 function renderChat(permissions: ChatPermissions = MEMBER) {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
@@ -107,14 +110,26 @@ describe('The actions on a message (S-CHAT-03, C-11)', () => {
 
         const menu = await openMenu(MINE.content)
 
-        expect(items(menu)).toEqual(['Sửa↑', 'Trả lời', 'Sao chép chữ', 'Sao chép link tin', 'Xóa tin nhắn'])
+        expect(items(menu)).toEqual([
+            'Sửa↑',
+            'Trả lời',
+            'Thêm cảm xúc',
+            'Sao chép chữ',
+            'Sao chép link tin',
+            'Xóa tin nhắn'
+        ])
         await expectNoA11yViolations()
         await expectNoA11yViolations(container)
     })
 
     it("offers on someone else's message no Edit, and Delete only with MANAGE_MESSAGES", async () => {
         renderChat()
-        expect(items(await openMenu(THEIRS.content))).toEqual(['Trả lời', 'Sao chép chữ', 'Sao chép link tin'])
+        expect(items(await openMenu(THEIRS.content))).toEqual([
+            'Trả lời',
+            'Thêm cảm xúc',
+            'Sao chép chữ',
+            'Sao chép link tin'
+        ])
     })
 
     it("lets a moderator delete someone else's message", async () => {

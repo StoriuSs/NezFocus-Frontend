@@ -1,17 +1,21 @@
 import { Suspense, useCallback, useMemo } from 'react'
-import { Navigate, useLocation, useParams } from 'react-router-dom'
-import { Hash, LampDesk, Volume2 } from 'lucide-react'
+import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { Hash, LampDesk, Pin, Volume2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import '@/i18n/servers'
 import { PageLoader } from '@/components/PageLoader'
+import { RightPanel, usePanel } from '@/components/shell/RightPanel'
 import { ShellNotFound } from '@/components/shell/ShellNotFound'
 import { ShellPage } from '@/components/shell/ShellPage'
 import { EmptyState } from '@/components/ui/empty-state'
-import { ChannelChat } from '@/features/messaging'
+import { IconButton } from '@/components/ui/icon-button'
+import { WithTooltip } from '@/components/ui/tooltip'
+import { ChannelChat, PinsPanel } from '@/features/messaging'
 import { useServers } from '../api/useServers'
 import { linkedServers, readAppLink, type LinkedServer } from '../lib/app-links'
 import { chatPermissions } from '../lib/chat-permissions'
 import { firstTextChannel } from '../lib/channel-list'
-import { channelPath, isId, messageLink } from '../lib/paths'
+import { channelPath, isId, messageLink, messagePath } from '../lib/paths'
 import type { Server, ServerChannel } from '../types'
 
 /**
@@ -71,8 +75,16 @@ export default function ChannelPage() {
  * the servers one is in). All kept from one render to the next while they
  * stay the same, so the chat's rows do not draw again. Opened at a message,
  * the chat goes to it, again each time a link to it is opened.
+ *
+ * [📌] in the Header opens the pins (S-CHAT-02) in the right panel, closed
+ * at first and remembered as a column (SRS 1.71); a card opens its message's
+ * link, closing the panel when it covers the chat (a sheet below 1280),
+ * focus then on the message.
  */
 function TextChannel({ server, channel, messageId }: { server: Server; channel: ServerChannel; messageId?: string }) {
+    const { t } = useTranslation('servers')
+    const navigate = useNavigate()
+    const [pins, pinsButton] = usePanel('pins', { startClosed: true })
     const { id: serverId, timeoutUntil } = server
     const { id: channelId, permissions: bits } = channel
     const permissions = useMemo(
@@ -85,11 +97,37 @@ function TextChannel({ server, channel, messageId }: { server: Server; channel: 
         const servers = JSON.parse(linked) as LinkedServer[]
         return (href: string) => readAppLink(href, { origin: window.location.origin, servers, serverId })
     }, [linked, serverId])
-    const { key } = useLocation()
-    const target = useMemo(() => (messageId ? { messageId, key } : undefined), [messageId, key])
+    const { key, state } = useLocation()
+    // From the pins sheet, which closes with the focus in it: focus goes to the message.
+    const focus = (state as { focusMessage?: boolean } | null)?.focusMessage === true
+    const target = useMemo(() => (messageId ? { messageId, key, focus } : undefined), [messageId, key, focus])
+    const openPinned = (pinnedId: string) => {
+        // As a column the panel stays, focus on its card; as a sheet it closes, focus to the message.
+        void navigate(messagePath(serverId, channelId, pinnedId), { state: { focusMessage: !pins.docked } })
+        if (!pins.docked) pins.close()
+    }
 
     return (
-        <ShellPage title={channel.name} icon={Hash} composer bodyClassName='flex flex-col overflow-y-hidden'>
+        <ShellPage
+            title={channel.name}
+            icon={Hash}
+            composer
+            bodyClassName='flex flex-col overflow-y-hidden'
+            actions={
+                <WithTooltip label={t('channel.pins')} side='bottom'>
+                    <IconButton ref={pinsButton} label={t('channel.pins')} on={pins.open} onClick={pins.toggle}>
+                        <Pin />
+                    </IconButton>
+                </WithTooltip>
+            }
+            panel={
+                <RightPanel state={pins} buttonRef={pinsButton} title={t('channel.pins')}>
+                    <Suspense fallback={<PageLoader className='min-h-0 py-6' />}>
+                        <PinsPanel channelId={channelId} manage={permissions.manage} onOpen={openPinned} />
+                    </Suspense>
+                </RightPanel>
+            }
+        >
             <Suspense fallback={<PageLoader className='min-h-0 flex-1' />}>
                 <ChannelChat
                     channelId={channelId}

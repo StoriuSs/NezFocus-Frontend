@@ -16,7 +16,7 @@ const rowOf = (messageId: string) =>
  * link opened the page on (`target`, again each time the link is opened), or
  * one asked for from the list (`show`: the original of a reply). Once the
  * history holds it, the list scrolls it a third of the way down and it lights
- * up for a moment; asked from the list, focus goes to it. Gone: the channel's
+ * up for a moment; asked from the list (or a target that says so), focus goes to it. Gone: the channel's
  * newest messages, and a Toast "This message was deleted".
  *
  * `backToPresent`: from a history that stops short (opened at an older
@@ -35,8 +35,8 @@ export function useJumpToMessage(
     const [highlighted, setHighlighted] = useState<string>()
 
     const showMessage = useCallback(
-        async (messageId: string, token: string) => {
-            const fromList = !!document.activeElement?.closest('[role="log"]')
+        async (messageId: string, token: string, focus = false) => {
+            const fromList = focus || !!document.activeElement?.closest('[role="log"]')
             try {
                 if ((await jumpTo(messageId)) === 'gone') {
                     toast(t('message.gone'))
@@ -71,7 +71,7 @@ export function useJumpToMessage(
     useEffect(() => {
         if (!target || !loaded || opened.current === target.key) return
         opened.current = target.key
-        void showMessage(target.messageId, target.key)
+        void showMessage(target.messageId, target.key, target.focus)
     }, [target, loaded, showMessage])
 
     // Opened without a link on a history left at an older message: the newest, once.

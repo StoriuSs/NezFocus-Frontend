@@ -39,6 +39,13 @@ const messagesApi = vi.hoisted(() => ({
     sendMessage: vi.fn()
 }))
 vi.mock('@/features/messaging/api/messages.api', () => messagesApi)
+// Its pins: none, unless a test says otherwise.
+const pinsApi = vi.hoisted(() => ({
+    fetchPins: vi.fn(async (..._: unknown[]) => [] as unknown[]),
+    pinMessage: vi.fn(),
+    unpinMessage: vi.fn()
+}))
+vi.mock('@/features/messaging/api/pins.api', () => pinsApi)
 
 const { default: AppShell } = await import('@/app/layout/app-shell/AppShell')
 const { default: ChannelPage } = await import('@/features/servers/pages/ChannelPage')
@@ -437,6 +444,119 @@ describe('AppShell (S-SHELL-01)', () => {
             await userEvent.keyboard('{Escape}')
             expect(screen.queryByRole('complementary', { name: 'Members' })).not.toBeInTheDocument()
             expect(button).toHaveFocus()
+        })
+    })
+
+    describe('the pins of a text channel (S-CHAT-02)', () => {
+        it('opens from [📌] in the Header; a card opens its message and closes the sheet', async () => {
+            pinsApi.fetchPins.mockResolvedValueOnce([
+                {
+                    id: '0190a0b0-0000-7000-8000-000000000001',
+                    channelId: 'hoi-dap',
+                    type: 'regular',
+                    author: { id: 'tuan', username: 'tuan.le', displayName: 'Tuấn', avatarUrl: null },
+                    content: 'Đề cương ôn tập giữa kỳ',
+                    systemEvent: null,
+                    systemData: null,
+                    systemUser: null,
+                    replyTo: null,
+                    editedAt: null,
+                    pinned: true,
+                    reactions: [],
+                    createdAt: '2026-10-16T13:30:00.000Z',
+                    pinnedAt: '2026-10-18T14:00:00.000Z'
+                }
+            ])
+            messagesApi.fetchMessages.mockImplementation(async (..._: unknown[]) => ({
+                items: [
+                    {
+                        id: '0190a0b0-0000-7000-8000-000000000001',
+                        channelId: 'hoi-dap',
+                        type: 'regular',
+                        author: { id: 'tuan', username: 'tuan.le', displayName: 'Tuấn', avatarUrl: null },
+                        content: 'Đề cương ôn tập giữa kỳ',
+                        systemEvent: null,
+                        systemData: null,
+                        systemUser: null,
+                        replyTo: null,
+                        editedAt: null,
+                        pinned: true,
+                        reactions: [],
+                        createdAt: '2026-10-16T13:30:00.000Z'
+                    }
+                ] as never[],
+                hasMoreBefore: false,
+                hasMoreAfter: false
+            }))
+            // Already at a message: the page stays the same one, only its target changes.
+            const router = renderAt('/channels/ot/hoi-dap/0190a0b0-0000-7000-8000-000000000001')
+            const button = await screen.findByRole('button', { name: 'Pinned messages' })
+            // Closed at first (SRS 1.71).
+            expect(button).toHaveAttribute('aria-pressed', 'false')
+
+            await userEvent.click(button)
+            const panel = await screen.findByRole('complementary', { name: 'Pinned messages' })
+            await userEvent.click(await within(panel).findByRole('button', { name: /Đề cương ôn tập giữa kỳ/ }))
+
+            await waitFor(() =>
+                expect(router.state.location.pathname).toBe('/channels/ot/hoi-dap/0190a0b0-0000-7000-8000-000000000001')
+            )
+            expect(screen.queryByRole('complementary', { name: 'Pinned messages' })).not.toBeInTheDocument()
+            // Not lost with the sheet: on the message, lit up.
+            await waitFor(() => expect(screen.getByRole('article', { name: /Đề cương ôn tập giữa kỳ/ })).toHaveFocus())
+            messagesApi.fetchMessages.mockImplementation(async (..._: unknown[]) => ({
+                items: [],
+                hasMoreBefore: false,
+                hasMoreAfter: false
+            }))
+        })
+
+        it('lets a moderator unpin from a card of the sheet; Esc closes the card menu, not the sheet', async () => {
+            const manage = String(BigInt(MEMBER) | (1n << 14n))
+            serversApi.fetchServers.mockResolvedValue([
+                {
+                    ...OT,
+                    channels: OT.channels.map((item) =>
+                        item.id === 'hoi-dap' ? { ...item, permissions: manage } : item
+                    )
+                },
+                ND
+            ])
+            pinsApi.fetchPins.mockResolvedValueOnce([
+                {
+                    id: '0190a0b0-0000-7000-8000-000000000002',
+                    channelId: 'hoi-dap',
+                    type: 'regular',
+                    author: { id: 'ha', username: 'ha.vu', displayName: 'Hà', avatarUrl: null },
+                    content: 'Tổng hợp công thức chương 3',
+                    systemEvent: null,
+                    systemData: null,
+                    systemUser: null,
+                    replyTo: null,
+                    editedAt: null,
+                    pinned: true,
+                    reactions: [],
+                    createdAt: '2026-10-15T14:12:00.000Z',
+                    pinnedAt: '2026-10-18T14:00:00.000Z'
+                }
+            ])
+            pinsApi.unpinMessage.mockResolvedValue(undefined)
+            renderAt('/channels/ot/hoi-dap')
+            await userEvent.click(await screen.findByRole('button', { name: 'Pinned messages' }))
+            const panel = await screen.findByRole('complementary', { name: 'Pinned messages' })
+
+            await userEvent.click(await within(panel).findByRole('button', { name: 'Pinned message options' }))
+            await userEvent.keyboard('{Escape}')
+            expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+            expect(screen.getByRole('complementary', { name: 'Pinned messages' })).toBeInTheDocument()
+
+            await userEvent.click(within(panel).getByRole('button', { name: 'Pinned message options' }))
+            await userEvent.click(await screen.findByRole('menuitem', { name: 'Unpin' }))
+
+            await waitFor(() =>
+                expect(pinsApi.unpinMessage).toHaveBeenCalledWith('hoi-dap', '0190a0b0-0000-7000-8000-000000000002')
+            )
+            expect(screen.getByRole('complementary', { name: 'Pinned messages' })).toBeInTheDocument()
         })
     })
 

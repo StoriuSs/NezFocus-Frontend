@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { QueryClient } from '@tanstack/react-query'
 import { apiError } from '@/test/helpers'
-import type { ChannelMessages, Message, MessageCursor, MessagePage } from '../types'
+import { userKeys } from '@/features/users'
+import type { ChannelMessages, Message, MessageCursor, MessagePage, PinnedMessage } from '../types'
 
 const fetchMessages = vi.fn<(channelId: string, cursor: MessageCursor, limit?: number) => Promise<MessagePage>>()
 vi.mock('../api/messages.api', () => ({ fetchMessages }))
@@ -18,6 +19,9 @@ const saved = (id: string, channelId = 'hoi-dap'): Message => ({
     content: `Tin ${id}`,
     systemEvent: null,
     systemData: null,
+    systemUser: null,
+    pinned: false,
+    reactions: [],
     replyTo: null,
     editedAt: null,
     createdAt: '2026-10-18T13:02:00.000Z'
@@ -217,5 +221,76 @@ describe('Keeping open histories live (ARCHITECTURE 3.4, 10.2)', () => {
 
         await vi.waitFor(() => expect(fetchMessages).toHaveBeenCalled())
         expect(ids()).toEqual(['m1'])
+    })
+})
+describe('Keeping reactions and pins live (REQ-MSG-05, REQ-MSG-07, SRS 1.71)', () => {
+    beforeEach(() => {
+        client = new QueryClient()
+        stopListening = listenForMessages(client)
+        client.setQueryData(userKeys.profile(), { id: 'an' })
+        client.setQueryData(messageKeys.channel('hoi-dap'), cached(['m1', 'm2']))
+    })
+    afterEach(() => stopListening())
+
+    const reactions = (id = 'm1') => history()?.pages[0]?.items.find((item) => item.id === id)?.reactions
+    const pins = () => client.getQueryData<PinnedMessage[]>(messageKeys.pins('hoi-dap'))
+    const pin = (id: string): PinnedMessage => ({ ...saved(id), pinned: true, pinnedAt: '2026-10-18T14:00:00.000Z' })
+    const event = (emoji: string, userId: string) => ({ channelId: 'hoi-dap', messageId: 'm1', emoji, userId })
+
+    it('counts an emoji given or taken back by anyone, the reader’s own marked as theirs', () => {
+        emitRealtimeEvent('reaction.added', event('👍', 'binh'))
+        emitRealtimeEvent('reaction.added', event('👍', 'an'))
+        expect(reactions()).toEqual([{ emoji: '👍', count: 2, me: true }])
+
+        emitRealtimeEvent('reaction.removed', event('👍', 'an'))
+        expect(reactions()).toEqual([{ emoji: '👍', count: 1, me: false }])
+    })
+
+    it('marks a message pinned and reads the pins again; an unpinned one leaves them at once', () => {
+        client.setQueryData(messageKeys.pins('hoi-dap'), [pin('m2')])
+
+        emitRealtimeEvent('pins.updated', { channelId: 'hoi-dap', messageId: 'm1', pinned: true })
+        expect(history()?.pages[0]?.items[0]?.pinned).toBe(true)
+        expect(client.getQueryState(messageKeys.pins('hoi-dap'))?.isInvalidated).toBe(true)
+
+        emitRealtimeEvent('pins.updated', { channelId: 'hoi-dap', messageId: 'm2', pinned: false })
+        expect(history()?.pages[0]?.items[1]?.pinned).toBe(false)
+        expect(pins()).toEqual([])
+    })
+
+    it('adds the "pinned a message" notice, which comes with no nonce', () => {
+        emitRealtimeEvent('message.created', {
+            message: {
+                ...saved('m3'),
+                type: 'system',
+                author: null,
+                systemEvent: 'message_pinned',
+                systemData: { userId: 'an', messageId: 'm1' }
+            },
+            nonce: null
+        })
+        expect(ids()).toEqual(['m1', 'm2', 'm3'])
+        expect(reactions('m3')).toEqual([])
+    })
+
+    it('reads the pins again once the socket is live again: pins and unpins may have been missed', () => {
+        client.setQueryData(messageKeys.pins('hoi-dap'), [pin('m2')])
+        fetchMessages.mockResolvedValue(page([]))
+
+        emitRealtimeEvent('ready', undefined)
+
+        expect(client.getQueryState(messageKeys.pins('hoi-dap'))?.isInvalidated).toBe(true)
+    })
+
+    it('shows an edit on its pinned card, and drops the card of a deleted message', () => {
+        client.setQueryData(messageKeys.pins('hoi-dap'), [pin('m1'), pin('m2')])
+
+        emitRealtimeEvent('message.updated', {
+            message: { ...saved('m1'), content: 'Đã sửa', editedAt: '2026-10-18T13:05:00.000Z' }
+        })
+        expect(pins()?.[0]).toMatchObject({ content: 'Đã sửa', pinnedAt: '2026-10-18T14:00:00.000Z' })
+
+        emitRealtimeEvent('message.deleted', { id: 'm2', channelId: 'hoi-dap' })
+        expect(pins()?.map((item) => item.id)).toEqual(['m1'])
     })
 })

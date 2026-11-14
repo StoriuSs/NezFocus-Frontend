@@ -1,6 +1,6 @@
 import api from '@/lib/api'
 import type { ApiEnvelope } from '@/lib/api-types'
-import type { Message, MessageCursor, MessagePage } from '../types'
+import type { BareMessage, MessageCursor, MessagePage } from '../types'
 
 /** A page of history (SRS 5.1): oldest first, at most `limit` (1-100). */
 export async function fetchMessages(channelId: string, cursor: MessageCursor, limit = 50): Promise<MessagePage> {
@@ -19,16 +19,16 @@ export async function sendMessage(
     channelId: string,
     body: { content: string; nonce: string; replyToId?: string },
     idempotencyKey: string
-): Promise<Message> {
-    const response = await api.post<ApiEnvelope<Message>>(`/channels/${channelId}/messages`, body, {
+): Promise<BareMessage> {
+    const response = await api.post<ApiEnvelope<BareMessage>>(`/channels/${channelId}/messages`, body, {
         headers: { 'Idempotency-Key': idempotencyKey }
     })
     return response.data.data
 }
 
 /** PATCH /messages/{id} (REQ-MSG-05): one's own message, the message as it now is back (D-169). */
-export async function editMessage(messageId: string, content: string): Promise<Message> {
-    const response = await api.patch<ApiEnvelope<Message>>(`/messages/${messageId}`, { content })
+export async function editMessage(messageId: string, content: string): Promise<BareMessage> {
+    const response = await api.patch<ApiEnvelope<BareMessage>>(`/messages/${messageId}`, { content })
     return response.data.data
 }
 

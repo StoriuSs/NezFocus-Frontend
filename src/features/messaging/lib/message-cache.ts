@@ -1,10 +1,12 @@
 import type {
+    BareMessage,
     CachedPage,
     ChannelMessages,
     Message,
     MessagePage,
     OutgoingMessage,
     OutgoingState,
+    Reaction,
     RepliedMessage
 } from '../types'
 
@@ -56,8 +58,10 @@ export function dropOutgoing(data: ChannelMessages, nonce: string): ChannelMessa
  * (opened around a link) gets no new message at its end: that would hide the
  * ones in between.
  */
-export function addSaved(data: ChannelMessages, message: Message, nonce?: string): ChannelMessages {
-    const known = data.pages.some((page) => page.items.some((item) => item.id === message.id))
+export function addSaved(data: ChannelMessages, bare: BareMessage, nonce?: string): ChannelMessages {
+    const known = data.pages.some((page) => page.items.some((item) => item.id === bare.id))
+    // Nobody has reacted to a message just saved.
+    const message: Message = { ...bare, reactions: [] }
     return changeLast(data, (page) => {
         const left = withoutNonce(page, nonce)
         if (known || page.hasMoreAfter) return left
@@ -164,23 +168,31 @@ function changeEverywhere(
     return changed ? { ...data, pages } : data
 }
 
-/** Whether `edit` is older than what the list holds: events of two edits may cross. */
-const olderThan = (edit: Message, held: Message) => !!held.editedAt && (!edit.editedAt || edit.editedAt < held.editedAt)
+/** Whether `edit` is older than what is held: events of two edits may cross. */
+export const olderThan = (edit: { editedAt: string | null }, held: { editedAt: string | null }) =>
+    !!held.editedAt && (!edit.editedAt || edit.editedAt < held.editedAt)
 
 /**
  * `message.updated`, or the answer to one's own edit: the message in its
  * place, and the reply lines quoting it (they show its text as it now is).
+ * Its reactions and its pin stay as held: an edit does not carry the first
+ * and does not change the second, which only their own events change.
  * An edit older than the one held is late and changes nothing; neither does
  * one of a message already deleted here (`message.deleted` came first), so a
  * reply line that says "deleted" stays so.
  */
-export function replaceSaved(data: ChannelMessages, message: Message): ChannelMessages {
+export function replaceSaved(data: ChannelMessages, message: BareMessage): ChannelMessages {
     const held = data.pages.flatMap((page) => page.items).find((item) => item.id === message.id)
     if (held && olderThan(message, held)) return data
     return changeEverywhere(
         data,
         message.id,
-        (items) => (held ? items.map((item) => (item.id === message.id ? message : item)) : items),
+        (items) =>
+            held
+                ? items.map((item) =>
+                      item.id === message.id ? { ...message, reactions: held.reactions, pinned: held.pinned } : item
+                  )
+                : items,
         (replyTo) =>
             replyTo.deleted ? replyTo : { ...replyTo, author: message.author, content: message.content, deleted: false }
     )
@@ -198,4 +210,70 @@ export function removeSaved(data: ChannelMessages, id: string): ChannelMessages 
         (items) => (items.some((item) => item.id === id) ? items.filter((item) => item.id !== id) : items),
         () => ({ id, author: null, content: '', deleted: true })
     )
+}
+
+/**
+ * Message `id` changed by `change`, the same object back when it gives the
+ * same message back or the history does not hold it, so nothing draws again.
+ */
+function changeMessage(data: ChannelMessages, id: string, change: (message: Message) => Message): ChannelMessages {
+    let changed = false
+    const pages = data.pages.map((page) => {
+        if (!page.items.some((item) => item.id === id)) return page
+        const items = page.items.map((item) => {
+            if (item.id !== id) return item
+            const next = change(item)
+            if (next !== item) changed = true
+            return next
+        })
+        return { ...page, items }
+    })
+    return changed ? { ...data, pages } : data
+}
+
+/**
+ * One more person gave `emoji` (`reaction.added`, or one's own click before
+ * the answer): a new emoji goes at the end of the row, as the server orders
+ * them. `mine` when that person is the one reading. One's own emoji given
+ * already changes nothing: one's click shows at once, and its event coming
+ * back is not counted twice; a page read meanwhile that dropped the click
+ * is set right by that event.
+ */
+export function addReaction(data: ChannelMessages, messageId: string, emoji: string, mine: boolean): ChannelMessages {
+    return changeMessage(data, messageId, (message) => {
+        const chip = message.reactions.find((item) => item.emoji === emoji)
+        if (!chip) return { ...message, reactions: [...message.reactions, { emoji, count: 1, me: mine }] }
+        if (mine && chip.me) return message
+        const more: Reaction = { emoji, count: chip.count + 1, me: chip.me || mine }
+        return { ...message, reactions: message.reactions.map((item) => (item === chip ? more : item)) }
+    })
+}
+
+/**
+ * One person took `emoji` back (`reaction.removed`, or one's own click): the
+ * chip goes once nobody is left on it. One's own emoji not given changes
+ * nothing, as for `addReaction`.
+ */
+export function removeReaction(
+    data: ChannelMessages,
+    messageId: string,
+    emoji: string,
+    mine: boolean
+): ChannelMessages {
+    return changeMessage(data, messageId, (message) => {
+        const chip = message.reactions.find((item) => item.emoji === emoji)
+        if (!chip || (mine && !chip.me)) return message
+        const reactions =
+            chip.count <= 1
+                ? message.reactions.filter((item) => item !== chip)
+                : message.reactions.map((item) =>
+                      item === chip ? { emoji, count: chip.count - 1, me: mine ? false : chip.me } : item
+                  )
+        return { ...message, reactions }
+    })
+}
+
+/** `pins.updated`, or one's own pin or unpin: whether the message is in the channel's pins (REQ-MSG-07). */
+export function setPinned(data: ChannelMessages, messageId: string, pinned: boolean): ChannelMessages {
+    return changeMessage(data, messageId, (message) => (message.pinned === pinned ? message : { ...message, pinned }))
 }

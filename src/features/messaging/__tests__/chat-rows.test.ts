@@ -14,6 +14,9 @@ const at = (who: string | null, time: string, day = '2026-10-18'): Message => ({
     content: '',
     systemEvent: who ? null : 'member_joined',
     systemData: null,
+    systemUser: null,
+    pinned: false,
+    reactions: [],
     replyTo: null,
     editedAt: null,
     createdAt: new Date(`${day}T${time}:00+07:00`).toISOString()

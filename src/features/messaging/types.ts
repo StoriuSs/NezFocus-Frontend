@@ -1,9 +1,24 @@
 import type { InfiniteData } from '@tanstack/react-query'
 import type { ApiModel } from '@/lib/api-types'
 
-/** A saved message, as history pages, the send route and `message.created` give it. */
-export type Message = ApiModel<'MessageResponseDto'>
+/**
+ * A saved message as the list holds it: with its reactions as this person
+ * sees them (`me`), read with history pages and pins (SRS 1.71).
+ */
+export type Message = ApiModel<'ReadMessageResponseDto'>
+/**
+ * A saved message without its reactions, as the send and edit routes and the
+ * `message.*` events give it: reactions depend on who reads, so they change
+ * only by their own events (`reaction.added`, `reaction.removed`).
+ */
+export type BareMessage = ApiModel<'MessageResponseDto'>
 export type MessageAuthor = ApiModel<'MessageAuthorResponseDto'>
+/** One emoji on a message: how many gave it, and whether this person did (REQ-MSG-05). */
+export type Reaction = ApiModel<'ReactionSummaryResponseDto'>
+/** The first people to give an emoji, and how many did: the chip's Tooltip (SRS 1.71). */
+export type Reactors = ApiModel<'ReactorsResponseDto'>
+/** A message in the channel's pins, with when it was pinned (REQ-MSG-07). */
+export type PinnedMessage = ApiModel<'PinnedMessageResponseDto'>
 /** The message a reply answers, as its reply line shows it; only its id once deleted (REQ-MSG-05). */
 export type RepliedMessage = ApiModel<'RepliedMessageResponseDto'>
 /** A page of history, oldest first. */
@@ -65,6 +80,10 @@ export interface ChatPermissions {
     manage: boolean
     /** Not timed out: delete one's own messages. */
     deleteOwn: boolean
+    /** Not timed out: click an emoji already on a message, giving or taking back one's own (SRS 1.71). */
+    react: boolean
+    /** ADD_REACTIONS: give an emoji the message does not have yet. */
+    addReactions: boolean
 }
 
 /**
@@ -89,6 +108,8 @@ export type AppLink =
 export interface ChatTarget {
     messageId: string
     key: string
+    /** Focus goes to it too: opened from a place that left with the focus (the pins sheet). */
+    focus?: boolean
 }
 
 export const isOutgoing = (message: ChatMessage): message is OutgoingMessage => 'state' in message
@@ -103,7 +124,12 @@ export interface MessageHandlers {
     askDelete: (message: Message) => void
     copyText: (message: Message) => void
     copyLink: (message: Message) => void
-    /** A message of this channel shown and lit up: the original of a reply (S-CHAT-01). */
+    /** A chip gives the emoji or takes one's own back (`toggle`); the picker only gives (`add`). */
+    react: (message: Message, emoji: string, how?: 'toggle' | 'add') => void
+    /** MANAGE_MESSAGES: into the channel's pins, or out of them (REQ-MSG-07). */
+    pin: (message: Message) => void
+    unpin: (message: Message) => void
+    /** A message of this channel shown and lit up: the original of a reply, a pinned one (S-CHAT-01). */
     show: (messageId: string) => void
     /** How a link in a message shows: null for another site. */
     readLink: (href: string) => AppLink | null

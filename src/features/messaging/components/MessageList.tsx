@@ -5,11 +5,12 @@ import '@/i18n/messaging'
 import { Button } from '@/components/ui/button'
 import { useChatScroll, type ScrollTarget } from '../hooks/useChatScroll'
 import type { ChatRow } from '../lib/chat-rows'
-import { isOutgoing, type MessageHandlers } from '../types'
+import { isOutgoing, type ChatMessage, type MessageHandlers } from '../types'
 import { dayLabel } from '../lib/message-time'
 import { ChannelIntro } from './ChannelIntro'
 import { DateDivider } from './DateDivider'
 import { MessageRow, type EditorState } from './MessageRow'
+import { isShownSystem, SystemMessageRow } from './SystemMessageRow'
 import { MessageSkeletons } from './MessageSkeletons'
 
 interface MessageListProps {
@@ -74,10 +75,9 @@ export function MessageList({
     const { t } = useTranslation('messaging')
     const { list, onScroll, away, newCount, toBottom } = useChatScroll(rows, older, { newer, target })
     const [focused, setFocused] = useState<string>()
-    // The messages drawn: a system message is not one yet (it draws nothing before L10).
-    const keys = rows.flatMap((row) =>
-        row.kind === 'message' && (isOutgoing(row.message) || row.message.type === 'regular') ? [row.key] : []
-    )
+    // The messages drawn: a system message only when its words are known.
+    const shown = (message: ChatMessage) => isOutgoing(message) || message.type === 'regular' || isShownSystem(message)
+    const keys = rows.flatMap((row) => (row.kind === 'message' && shown(row.message) ? [row.key] : []))
     const tabbable = focused && keys.includes(focused) ? focused : keys.at(-1)
 
     const focusIn = (event: FocusEvent<HTMLElement>) => {
@@ -127,6 +127,16 @@ export function MessageList({
                             {rows.map((row) =>
                                 row.kind === 'date' ? (
                                     <DateDivider key={row.key} label={dayLabel(row.at, now, timeZone, t)} />
+                                ) : !isOutgoing(row.message) && row.message.type === 'system' ? (
+                                    <SystemMessageRow
+                                        key={row.key}
+                                        rowKey={row.key}
+                                        message={row.message}
+                                        now={now}
+                                        timeZone={timeZone}
+                                        tabbable={row.key === tabbable}
+                                        onShow={handlers.show}
+                                    />
                                 ) : (
                                     <MessageRow
                                         key={row.key}

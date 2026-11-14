@@ -94,7 +94,8 @@
     "deleteWelcome": "The server will send no welcome messages until you choose another channel.",
     "typeToConfirm": "Type {{name}} to confirm",
     "deleted": "Deleted #{{name}}",
-    "roomDeleted": "Deleted {{name}}"
+    "roomDeleted": "Deleted {{name}}",
+    "pins": "Pinned messages"
   },
   "category": {
     "createTitle": "Create a category",

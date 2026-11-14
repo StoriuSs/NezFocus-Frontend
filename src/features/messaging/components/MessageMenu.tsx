@@ -1,5 +1,5 @@
 import { useRef, type CSSProperties } from 'react'
-import { Copy, Link, Pencil, Reply, Trash2 } from 'lucide-react'
+import { Copy, Link, Pencil, Pin, PinOff, Reply, SmilePlus, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import '@/i18n/messaging'
 import {
@@ -17,14 +17,15 @@ import type { Message, MessageHandlers } from '../types'
 export type MenuAnchor = { x: number; y: number } | null
 
 /**
- * The message menu (S-CHAT-03): Edit (own, `↑`), Reply — Copy text, Copy
- * message link — Delete (`danger`). Opened from ⋯, a right-click (at the
+ * The message menu (S-CHAT-03): Edit (own, `↑`), Reply, Add reaction, Pin
+ * or Unpin (MANAGE_MESSAGES) — Copy text, Copy message link — Delete
+ * (`danger`). Opened from ⋯, a right-click (at the
  * pointer) or Shift+F10 on the message, the same menu each way, hung from a
  * trigger never clicked itself (like the rail's, C-05). Closing it puts focus
  * back where it was opened from. A row that moves focus on (the composer for
  * Reply, the editor for Edit, the dialog for Delete) runs once the menu has
  * closed: while open, the menu keeps focus inside it.
- * Reactions, pins and reports join it in L5 and M7.
+ * Reports join it in M7.
  */
 export function MessageMenu({
     message,
@@ -32,7 +33,8 @@ export function MessageMenu({
     open,
     anchor,
     onOpenChange,
-    returnFocus
+    returnFocus,
+    onReact
 }: {
     message: Message
     handlers: MessageHandlers
@@ -40,6 +42,8 @@ export function MessageMenu({
     anchor: MenuAnchor
     onOpenChange: (open: boolean) => void
     returnFocus: () => void
+    /** Opens the emoji picker, once the menu has closed. */
+    onReact: () => void
 }) {
     const { t } = useTranslation('messaging')
     const can = allowedActions(handlers.me, handlers.permissions, message)
@@ -83,7 +87,25 @@ export function MessageMenu({
                         {t('actions.reply')}
                     </DropdownMenuItem>
                 ) : null}
-                {can.edit || can.reply ? <DropdownMenuSeparator /> : null}
+                {can.react ? (
+                    <DropdownMenuItem onSelect={() => later(onReact)}>
+                        <SmilePlus aria-hidden='true' />
+                        {t('actions.react')}
+                    </DropdownMenuItem>
+                ) : null}
+                {can.pin ? (
+                    <DropdownMenuItem onSelect={() => handlers.pin(message)}>
+                        <Pin aria-hidden='true' />
+                        {t('actions.pin')}
+                    </DropdownMenuItem>
+                ) : null}
+                {can.unpin ? (
+                    <DropdownMenuItem onSelect={() => handlers.unpin(message)}>
+                        <PinOff aria-hidden='true' />
+                        {t('actions.unpin')}
+                    </DropdownMenuItem>
+                ) : null}
+                {can.edit || can.reply || can.react || can.pin || can.unpin ? <DropdownMenuSeparator /> : null}
                 <DropdownMenuItem onSelect={() => handlers.copyText(message)}>
                     <Copy aria-hidden='true' />
                     {t('actions.copyText')}

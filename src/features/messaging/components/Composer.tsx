@@ -1,12 +1,16 @@
 import { useRef, useState, type KeyboardEvent, type RefObject } from 'react'
-import { CircleAlert } from 'lucide-react'
+import { CircleAlert, Smile } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import '@/i18n/messaging'
+import { IconButton } from '@/components/ui/icon-button'
+import { PopoverTrigger } from '@/components/ui/popover'
+import { WithTooltip } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { useComposerFocus } from '../hooks/useComposerFocus'
 import { useDraft } from '../hooks/useDraft'
 import { lengthNotice } from '../lib/message-length'
 import type { RepliedMessage } from '../types'
+import { EmojiPicker } from './EmojiPicker'
 import { ReplyBar } from './ReplyBar'
 
 /**
@@ -19,6 +23,9 @@ import { ReplyBar } from './ReplyBar'
  * Replying, a strip above the box says to whom ("Replying to **Tuấn**" ✕),
  * or that the message was deleted meanwhile (it still sends); Esc stops
  * replying. ↑ in the empty box edits one's last message (C-12 › Luật).
+ *
+ * (☺) at its right opens the emoji picker above the box; the emoji picked
+ * goes where the cursor was, and the cursor after it.
  */
 export function Composer({
     box,
@@ -52,6 +59,9 @@ export function Composer({
     const { t } = useTranslation('messaging')
     const [text, setText] = useDraft(userId, channelId)
     const [focused, setFocused] = useState(false)
+    const [picking, setPicking] = useState(false)
+    /** Where the cursor goes once the picker closes. */
+    const caret = useRef<number | null>(null)
     /** A message waiting to be taken: Enter sends nothing more meanwhile. */
     const waiting = useRef(false)
     const notice = lengthNotice(text)
@@ -84,6 +94,21 @@ export function Composer({
             waiting.current = false
             if (sent && box.current?.value === text) setText('')
         })
+    }
+
+    /** The emoji in place of what was selected, the cursor after it. */
+    const insert = (emoji: string) => {
+        const start = box.current?.selectionStart ?? text.length
+        const end = box.current?.selectionEnd ?? text.length
+        setText(text.slice(0, start) + emoji + text.slice(end))
+        caret.current = start + emoji.length
+    }
+    const backToBox = () => {
+        const field = box.current
+        if (!field) return
+        field.focus()
+        if (caret.current !== null) field.setSelectionRange(caret.current, caret.current)
+        caret.current = null
     }
 
     return (
@@ -125,6 +150,22 @@ export function Composer({
                         {tooLong ? `−${-notice.left}` : t('composer.left', { count: notice.left })}
                     </span>
                 ) : null}
+                <EmojiPicker
+                    open={picking}
+                    onOpenChange={setPicking}
+                    onPick={insert}
+                    userId={userId}
+                    side='top'
+                    returnFocus={backToBox}
+                >
+                    <WithTooltip label={t('emoji.insert')}>
+                        <PopoverTrigger asChild>
+                            <IconButton label={t('emoji.insert')} className='mb-2 shrink-0'>
+                                <Smile aria-hidden='true' />
+                            </IconButton>
+                        </PopoverTrigger>
+                    </WithTooltip>
+                </EmojiPicker>
             </div>
             {tooLong ? (
                 <p id={tooLongId} className='mt-1 flex items-center gap-1.5 text-label text-danger'>

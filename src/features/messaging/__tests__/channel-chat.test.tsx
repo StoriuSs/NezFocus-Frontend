@@ -35,6 +35,9 @@ const message = (id: string, author: typeof BINH, content: string, createdAt: st
     content,
     systemEvent: null,
     systemData: null,
+    systemUser: null,
+    pinned: false,
+    reactions: [],
     replyTo: null,
     editedAt: null,
     createdAt
@@ -59,7 +62,7 @@ function renderChat(
                         readLink={() => null}
                         channelId={channelId}
                         channelName={channelId}
-                        permissions={{ send: true, manage: false, deleteOwn: true }}
+                        permissions={{ send: true, manage: false, deleteOwn: true, react: true, addReactions: true }}
                     />
                 </div>
             </TooltipProvider>

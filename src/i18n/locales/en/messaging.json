@@ -57,7 +57,10 @@
     "copyLink": "Copy message link",
     "delete": "Delete message",
     "copied": "Copied",
-    "copyFailed": "Couldn't copy"
+    "copyFailed": "Couldn't copy",
+    "react": "Add reaction",
+    "pin": "Pin",
+    "unpin": "Unpin"
   },
   "edit": {
     "label": "Edit message",
@@ -78,5 +81,61 @@
     "message": "Message",
     "hidden": "Can't view",
     "hiddenMessage": "You can't view this message"
+  },
+  "reactions": {
+    "label": "Reactions",
+    "by": "{{names}} reacted with {{emoji}}",
+    "others_one": "{{count}} other",
+    "others_other": "{{count}} others",
+    "count_one": "{{count}} person reacted with {{emoji}}",
+    "count_other": "{{count}} people reacted with {{emoji}}",
+    "you": "You",
+    "chip_one": "{{emoji}}, {{count}} person",
+    "chip_other": "{{emoji}}, {{count}} people",
+    "inMessage_one": "{{count}} reaction",
+    "inMessage_other": "{{count}} reactions",
+    "full": "This message already has 20 different reactions",
+    "listTwo": "{{first}} and {{last}}",
+    "listMany": "{{head}}, and {{last}}"
+  },
+  "emoji": {
+    "picker": "Pick an emoji",
+    "insert": "Insert emoji",
+    "search": "Search emoji",
+    "recent": "Recently used",
+    "results": "Results",
+    "noResults": "No emoji found",
+    "loading": "Loading emoji…",
+    "loadError": "Couldn't load the emoji",
+    "retry": "Try again",
+    "groups": {
+      "smileys-emotion": "Smileys & emotion",
+      "people-body": "People & body",
+      "animals-nature": "Animals & nature",
+      "food-drink": "Food & drink",
+      "travel-places": "Travel & places",
+      "activities": "Activities",
+      "objects": "Objects",
+      "symbols": "Symbols",
+      "flags": "Flags"
+    }
+  },
+  "pins": {
+    "emptyTitle": "No pinned messages yet",
+    "emptyBody": "Moderators pin important messages so the whole channel can find them.",
+    "loading": "Loading pinned messages…",
+    "loadError": "Couldn't load the pinned messages",
+    "retry": "Try again",
+    "more": "Pinned message options",
+    "unpinned": "Unpinned",
+    "full": "This channel has 50 pinned messages · unpin one first",
+    "card": "{{name}}, {{time}}: {{content}}"
+  },
+  "system": {
+    "pinned": "<0>{{name}}</0> pinned a message",
+    "joined": "<0>{{name}}</0> joined the server",
+    "view": "View",
+    "viewLabel": "View the pinned message",
+    "label": "{{text}}, {{time}}"
   }
 }

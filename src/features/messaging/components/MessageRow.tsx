@@ -1,18 +1,21 @@
-import { memo, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react'
+import { memo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from 'react'
 import { CircleAlert, Clock, CornerUpRight, WifiOff } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import '@/i18n/messaging'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { PopoverAnchor } from '@/components/ui/popover'
 import { WithTooltip } from '@/components/ui/tooltip'
 import { useCountdown } from '@/hooks/useCountdown'
 import { cn } from '@/lib/utils'
 import { plainText } from '../lib/markdown'
 import { messageTime, messageTimeInFull } from '../lib/message-time'
 import { isOutgoing, type ChatMessage, type MessageHandlers, type OutgoingMessage, type RepliedMessage } from '../types'
+import { EmojiPicker } from './EmojiPicker'
 import { HoverToolbar } from './HoverToolbar'
 import { MessageContent } from './MessageContent'
 import { MessageEditor } from './MessageEditor'
 import { MessageMenu, type MenuAnchor } from './MessageMenu'
+import { ReactionBar } from './ReactionBar'
 
 /** The open editor of the message being edited (C-10 `editing`). */
 export interface EditorState {
@@ -46,13 +49,15 @@ interface MessageRowProps {
 /**
  * One message (C-10 MessageRow): a flat row, avatar 40, name and time, the
  * line of the message it answers (a click goes to it), the text with its
- * formatting (line breaks kept) and "(edited)". A saved message has its toolbar on hover or focus (C-11), and
- * its menu there, on a right-click or on Shift+F10 (S-CHAT-03). A message not
+ * formatting (line breaks kept), "(edited)" and its reactions. A saved
+ * message has its toolbar on hover or focus (C-11), and its menu there, on
+ * a right-click or on Shift+F10 (S-CHAT-03); the emoji picker opens under
+ * the toolbar (☺+, "Add reaction") or under the ☺+ after the reactions. A message not
  * saved yet is faded while it is sent, and says what went wrong under it
  * otherwise. Read out as "who, when: what", the formatting's markers left
- * out. Opened by a link, its background blinks `surface-2` twice and goes
- * back (`highlight`). System messages are drawn once the app writes them
- * (REQ-MSG-08).
+ * out, then how many reactions. Opened by a link, its background fades to
+ * `surface-2` twice and back (`highlight`). System messages are the
+ * list's `SystemMessageRow`.
  */
 export const MessageRow = memo(function MessageRow({
     rowKey,
@@ -71,7 +76,9 @@ export const MessageRow = memo(function MessageRow({
 }: MessageRowProps) {
     const { t } = useTranslation('messaging')
     const [menu, setMenu] = useState<{ anchor: MenuAnchor } | null>(null)
+    const [picker, setPicker] = useState<{ anchor: MenuAnchor } | null>(null)
     const openedFrom = useRef<HTMLElement | null>(null)
+    const self = useRef<HTMLElement>(null)
     if (!isOutgoing(message) && message.type === 'system') return null
 
     const at = new Date(message.createdAt)
@@ -94,7 +101,9 @@ export const MessageRow = memo(function MessageRow({
     const label =
         (message.replyTo
             ? t(message.replyTo.deleted ? 'message.labelReplyDeleted' : 'message.labelReply', read)
-            : t('message.label', read)) + (saved?.editedAt ? ` ${t('message.edited')}` : '')
+            : t('message.label', read)) +
+        (saved?.editedAt ? ` ${t('message.edited')}` : '') +
+        (saved?.reactions.length ? `, ${t('reactions.inMessage', { count: saved.reactions.length })}` : '')
     // Queued behind another: shown as sending, or as waiting for the network while offline.
     const state = outgoing?.state === 'queued' ? (online ? 'sending' : 'waiting') : outgoing?.state
     const onItsWay = state === 'sending'
@@ -102,6 +111,18 @@ export const MessageRow = memo(function MessageRow({
     const openMenu = (anchor: MenuAnchor, from: HTMLElement) => {
         openedFrom.current = from
         setMenu({ anchor })
+    }
+    /** The picker under the toolbar (null), or under the ☺+ after the reactions. */
+    const openPicker = (from: HTMLElement | null) => {
+        const row = from?.closest('article')
+        if (from && row) {
+            const box = from.getBoundingClientRect()
+            const rowBox = row.getBoundingClientRect()
+            openedFrom.current = row as HTMLElement
+            setPicker({ anchor: { x: box.left - rowBox.left, y: box.bottom - rowBox.top } })
+        } else {
+            setPicker({ anchor: null })
+        }
     }
     const contextMenu = (event: MouseEvent<HTMLElement>) => {
         if (!saved || editor) return
@@ -126,6 +147,7 @@ export const MessageRow = memo(function MessageRow({
 
     return (
         <article
+            ref={self}
             data-row-key={rowKey}
             tabIndex={tabbable ? 0 : -1}
             aria-label={label}
@@ -140,7 +162,7 @@ export const MessageRow = memo(function MessageRow({
                 'group relative flex gap-3 px-4 hover:bg-surface-1',
                 'focus-visible:bg-surface-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary',
                 grouped ? 'py-0.5' : 'mt-2 py-1',
-                (menu || editor) && 'bg-surface-1',
+                (menu || picker || editor) && 'bg-surface-1',
                 onItsWay && 'opacity-50',
                 highlighted && 'animate-highlight'
             )}
@@ -193,6 +215,9 @@ export const MessageRow = memo(function MessageRow({
                         }
                     />
                 )}
+                {saved && !editor ? (
+                    <ReactionBar message={saved} handlers={handlers} onAdd={(button) => openPicker(button)} />
+                ) : null}
                 {onItsWay ? <span className='sr-only'>{t('message.sending')}</span> : null}
                 {outgoing && !onItsWay ? (
                     <OutgoingLine
@@ -207,8 +232,13 @@ export const MessageRow = memo(function MessageRow({
                     <HoverToolbar
                         message={saved}
                         handlers={handlers}
-                        menuOpen={menu !== null}
+                        menuOpen={menu !== null || picker !== null}
                         onMore={(button) => openMenu(null, button)}
+                        onReact={() => {
+                            // Back to the message once it closes: the toolbar hides without hover.
+                            openedFrom.current = self.current
+                            openPicker(null)
+                        }}
                     />
                     <MessageMenu
                         message={saved}
@@ -217,12 +247,33 @@ export const MessageRow = memo(function MessageRow({
                         anchor={menu?.anchor ?? null}
                         onOpenChange={(open) => !open && setMenu(null)}
                         returnFocus={() => openedFrom.current?.focus()}
+                        onReact={() => openPicker(null)}
                     />
+                    <EmojiPicker
+                        open={picker !== null}
+                        onOpenChange={(open) => !open && setPicker(null)}
+                        onPick={(emoji) => handlers.react(saved, emoji, 'add')}
+                        userId={handlers.me}
+                        align={picker?.anchor ? 'start' : 'end'}
+                        returnFocus={() => openedFrom.current?.focus()}
+                    >
+                        <PopoverAnchor asChild>
+                            <span
+                                aria-hidden='true'
+                                className='pointer-events-none absolute size-0'
+                                style={hangAt(picker?.anchor ?? null)}
+                            />
+                        </PopoverAnchor>
+                    </EmojiPicker>
                 </>
             ) : null}
         </article>
     )
 })
+
+/** Where a picker hangs: under the ☺+ it was opened from, else under the toolbar (C-11). */
+const hangAt = (anchor: MenuAnchor): CSSProperties =>
+    anchor ? { left: anchor.x, top: anchor.y } : { right: 16, top: 14 }
 
 /**
  * The message a reply answers (C-10 `reply`): who wrote it and its text

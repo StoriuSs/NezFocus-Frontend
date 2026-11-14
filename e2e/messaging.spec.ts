@@ -267,6 +267,70 @@ test('a message link opens the message for someone else, lit up; one they cannot
     await binh.context.close()
 })
 
+test('a reaction and a pin reach the other browser at once, with the pinned notice and the pins panel (REQ-MSG-05, 07, 08)', async ({
+    browser
+}) => {
+    test.setTimeout(120_000)
+    const an = await openAs(browser, anEmail)
+    const binh = await openAs(browser, binhEmail)
+    const text = 'Đề cương ôn tập giữa kỳ: chương 1 tới 4'
+    const article = (page: Page) => page.getByRole('article', { name: new RegExp(`^An, .*: ${text}`) })
+    const chip = (page: Page) => article(page).getByRole('button', { name: /^👍,/ })
+
+    await say(an.page, text)
+    await seenOnce(binh.page, text)
+
+    // Bình adds 👍 from the toolbar's picker, found by its name; An sees it at once.
+    await article(binh.page).hover()
+    await article(binh.page).getByRole('button', { name: 'Add reaction' }).first().click()
+    const picker = binh.page.getByRole('dialog', { name: 'Pick an emoji' })
+    await expect(picker.getByRole('searchbox', { name: 'Search emoji' })).toBeFocused()
+    await expect(picker.getByRole('button', { name: 'grinning face', exact: true })).toBeVisible({ timeout: 15_000 })
+    await shoot(binh.page, 'chat03-emoji-picker')
+    await picker.getByRole('searchbox', { name: 'Search emoji' }).fill('thumbs up')
+    await picker.getByRole('button', { name: 'thumbs up', exact: true }).first().click()
+    await expect(chip(an.page)).toHaveAccessibleName('👍, 1 person', { timeout: 15_000 })
+    await expect(chip(an.page)).toHaveAttribute('aria-pressed', 'false')
+
+    // An clicks the chip: 2 on both sides, and Bình's tooltip names them.
+    await chip(an.page).click()
+    await expect(chip(an.page)).toHaveAttribute('aria-pressed', 'true')
+    await expect(chip(binh.page)).toHaveAccessibleName('👍, 2 people', { timeout: 15_000 })
+    await chip(binh.page).hover()
+    await expect(binh.page.getByRole('tooltip')).toHaveText('You and An reacted with 👍', { timeout: 15_000 })
+    await shoot(binh.page, 'c10-reaction-chips')
+
+    // An (the owner) pins it: both see "An pinned a message · View"; Bình's pins show it.
+    await article(an.page).hover()
+    await article(an.page).getByRole('button', { name: 'More' }).click()
+    await an.page.getByRole('menuitem', { name: 'Pin' }).click()
+    const notice = (page: Page) => log(page).getByRole('article', { name: /^An pinned a message/ })
+    await expect(notice(binh.page)).toBeVisible({ timeout: 15_000 })
+    await expect(notice(an.page)).toBeVisible()
+    await binh.page.getByRole('button', { name: 'Pinned messages' }).click()
+    const pins = (page: Page) => page.getByRole('complementary', { name: 'Pinned messages' })
+    await expect(pins(binh.page).getByRole('button', { name: new RegExp(text) })).toBeVisible({ timeout: 15_000 })
+    await shoot(binh.page, 'chat02-pins')
+
+    // View goes to the pinned message, lit up.
+    await notice(binh.page).getByRole('button', { name: 'View the pinned message' }).click()
+    await expect(article(binh.page)).toHaveAttribute('data-highlight', 'true')
+
+    // An unpins it from a card of the panel: it leaves Bình's panel at once.
+    await an.page.getByRole('button', { name: 'Pinned messages' }).click()
+    const card = pins(an.page).getByRole('listitem').filter({ hasText: text })
+    await card.hover()
+    await card.getByRole('button', { name: 'Pinned message options' }).click()
+    await an.page.getByRole('menuitem', { name: 'Unpin' }).click()
+    await expect(an.page.getByText('Unpinned')).toBeVisible()
+    await expect(pins(binh.page).getByText('No pinned messages yet')).toBeVisible({ timeout: 15_000 })
+    await shoot(binh.page, 'chat02-pins-empty')
+
+    expect([...an.problems, ...binh.problems]).toEqual([])
+    await an.context.close()
+    await binh.context.close()
+})
+
 test('messages past 5 in 5 seconds wait, then go by themselves, each once and in order', async ({ browser }) => {
     test.setTimeout(60_000)
     const an = await openAs(browser, anEmail)

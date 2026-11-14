@@ -12,7 +12,9 @@ describe('What the chat may offer, from the channel’s bits (REQ-MSG-05, SRS 1.
         expect(chatPermissions(free, { permissions: bits('VIEW_CHANNEL', 'SEND_MESSAGES') }, NOW)).toEqual({
             send: true,
             manage: false,
-            deleteOwn: true
+            deleteOwn: true,
+            react: true,
+            addReactions: false
         })
     })
 
@@ -20,17 +22,40 @@ describe('What the chat may offer, from the channel’s bits (REQ-MSG-05, SRS 1.
         expect(chatPermissions(free, { permissions: bits('VIEW_CHANNEL') }, NOW)).toEqual({
             send: false,
             manage: false,
-            deleteOwn: true
+            deleteOwn: true,
+            react: true,
+            addReactions: false
         })
     })
 
     it('leaves someone timed out nothing, until the timeout ends', () => {
         const viewOnly = { permissions: bits('VIEW_CHANNEL') }
-        expect(chatPermissions(timedOut, viewOnly, NOW)).toEqual({ send: false, manage: false, deleteOwn: false })
-        expect(chatPermissions(timedOut, viewOnly, new Date('2026-10-18T15:31:00Z')).deleteOwn).toBe(true)
+        expect(chatPermissions(timedOut, viewOnly, NOW)).toEqual({
+            send: false,
+            manage: false,
+            deleteOwn: false,
+            react: false,
+            addReactions: false
+        })
+        expect(chatPermissions(timedOut, viewOnly, new Date('2026-10-18T15:31:00Z'))).toMatchObject({
+            deleteOwn: true,
+            react: true
+        })
     })
 
     it('gives MANAGE_MESSAGES deleting anyone’s message', () => {
         expect(chatPermissions(free, { permissions: bits('VIEW_CHANNEL', 'MANAGE_MESSAGES') }, NOW).manage).toBe(true)
+    })
+
+    it('gives ADD_REACTIONS new emoji; without it, only those already on a message (SRS 1.71)', () => {
+        expect(chatPermissions(free, { permissions: bits('VIEW_CHANNEL', 'ADD_REACTIONS') }, NOW)).toMatchObject({
+            react: true,
+            addReactions: true
+        })
+    })
+
+    it('lets a timed out moderator keep reacting, as the server does (appendix B, step 1)', () => {
+        const moderator = { permissions: bits('VIEW_CHANNEL', 'MANAGE_MESSAGES', 'ADD_REACTIONS') }
+        expect(chatPermissions(timedOut, moderator, NOW)).toMatchObject({ react: true, addReactions: true })
     })
 })

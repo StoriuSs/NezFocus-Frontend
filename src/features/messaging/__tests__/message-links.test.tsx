@@ -36,6 +36,9 @@ const message = (id: string, author: typeof AN, content: string, extra: Partial<
     content,
     systemEvent: null,
     systemData: null,
+    systemUser: null,
+    pinned: false,
+    reactions: [],
     replyTo: null,
     editedAt: null,
     createdAt: new Date(Date.UTC(2026, 10, 13, 13, Number(id.slice(1)))).toISOString(),
@@ -85,7 +88,13 @@ function renderChat({ target, client = newClient() }: { target?: ChatTarget; cli
                                     <ChannelChat
                                         channelId='hoi-dap'
                                         channelName='hoi-dap'
-                                        permissions={{ send: true, manage: false, deleteOwn: true }}
+                                        permissions={{
+                                            send: true,
+                                            manage: false,
+                                            deleteOwn: true,
+                                            react: true,
+                                            addReactions: true
+                                        }}
                                         linkTo={(id) => `${ORIGIN}/channels/ot/hoi-dap/${id}`}
                                         readLink={readLink}
                                         target={target}

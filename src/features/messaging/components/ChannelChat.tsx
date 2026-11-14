@@ -8,6 +8,8 @@ import { useMinuteClock } from '@/hooks/useMinuteClock'
 import { useChannelMessages } from '../api/useChannelMessages'
 import { useDeleteMessage } from '../api/useDeleteMessage'
 import { useEditMessage } from '../api/useEditMessage'
+import { usePinMessage } from '../api/usePinMessage'
+import { useReactions } from '../api/useReactions'
 import { useSendMessage } from '../api/useSendMessage'
 import { useBrowserOnline } from '../hooks/useBrowserOnline'
 import { useJumpToMessage } from '../hooks/useJumpToMessage'
@@ -20,6 +22,9 @@ import { Composer } from './Composer'
 import { DeleteMessageDialog } from './DeleteMessageDialog'
 import { MessageList } from './MessageList'
 import '../messaging.css'
+
+// The pins panel (S-CHAT-02), shown by the servers feature's channel page: in this chunk, with the chat's stylesheet.
+export { PinsPanel } from './PinsPanel'
 
 const quote = (message: Message): RepliedMessage => ({
     id: message.id,
@@ -76,6 +81,8 @@ export default function ChannelChat({
     const { send, retry, discard } = useSendMessage(channelId, author)
     const edit = useEditMessage(channelId)
     const remove = useDeleteMessage(channelId)
+    const react = useReactions(channelId)
+    const { pin, unpin } = usePinMessage(channelId)
     const composer = useRef<HTMLTextAreaElement>(null)
     /** The message one deleted oneself: its going is no news. */
     const deletedHere = useRef<string | null>(null)
@@ -144,10 +151,13 @@ export default function ChannelChat({
             askDelete: (message) => setDeletingId(message.id),
             copyText: (message) => copy(message.content),
             copyLink: (message) => copy(linkTo(message.id)),
+            react: (message, emoji, how) => react(message.id, emoji, how),
+            pin: (message) => pin(message.id),
+            unpin: (message) => unpin(message.id),
             show: jump.show,
             readLink
         }),
-        [me, permissions, backToComposer, copy, linkTo, jump.show, readLink]
+        [me, permissions, backToComposer, copy, linkTo, react, pin, unpin, jump.show, readLink]
     )
 
     const stopEditing = useCallback(() => {

@@ -94,7 +94,8 @@
     "deleteWelcome": "Server sẽ không gửi tin chào mừng tới khi bạn chọn kênh khác.",
     "typeToConfirm": "Gõ {{name}} để xác nhận",
     "deleted": "Đã xóa #{{name}}",
-    "roomDeleted": "Đã xóa {{name}}"
+    "roomDeleted": "Đã xóa {{name}}",
+    "pins": "Tin đã ghim"
   },
   "category": {
     "createTitle": "Tạo danh mục",

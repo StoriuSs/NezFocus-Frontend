@@ -925,6 +925,70 @@ export interface paths {
         patch: operations['MessageController_edit_v1']
         trace?: never
     }
+    '/api/v1/messages/{messageId}/reactions/{emoji}': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        /** The reaction's tooltip: the first three people to give the emoji, and how many did (SRS 1.71). */
+        get: operations['MessageController_reactors_v1']
+        /**
+         * Give an emoji (one standard emoji, URL-encoded) to the message, told to
+         *     the channel as `reaction.added`; giving it again changes nothing. A new
+         *     emoji needs ADD_REACTIONS and room under 20; a timeout refuses
+         *     (SRS 1.71).
+         */
+        put: operations['MessageController_react_v1']
+        post?: never
+        /** Take one's own emoji off, told as `reaction.removed`; one not given changes nothing. */
+        delete: operations['MessageController_unreact_v1']
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/channels/{channelId}/pins': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        /** The pinned messages, the latest pinned first, with their reactions as the reader sees them. */
+        get: operations['PinController_list_v1']
+        put?: never
+        post?: never
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/channels/{channelId}/pins/{messageId}': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        /**
+         * Pin a regular message of the channel: told as `pins.updated`, with the
+         *     system message "<who> pinned a message" as `message.created`
+         *     (REQ-MSG-08). Pinning it again changes nothing; a 51st pin is
+         *     MAX_PINS_REACHED.
+         */
+        put: operations['PinController_pin_v1']
+        post?: never
+        /** Unpin it, told as `pins.updated`; no system message (SRS 1.71). */
+        delete: operations['PinController_unpin_v1']
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
 }
 export type webhooks = Record<string, never>
 export interface components {
@@ -1579,6 +1643,52 @@ export interface components {
             /** @description The reply line says "the original message was deleted" (REQ-MSG-05). */
             deleted: boolean
         }
+        ReactionSummaryResponseDto: {
+            emoji: string
+            count: number
+            /** @description The reader gave it: the chip shows so, and clicking takes it off. */
+            me: boolean
+        }
+        ReadMessageResponseDto: {
+            /**
+             * @description `system`: made by the app (REQ-MSG-08), with no author.
+             * @enum {string}
+             */
+            type: 'regular' | 'system'
+            /** @description Null on a system message (D-168). */
+            author: components['schemas']['MessageAuthorResponseDto'] | null
+            /** @description What a system message reports (`member_joined`, `message_pinned`); null on a regular one. */
+            system_event: string | null
+            /** @description Whom a system message is about (`{ user_id }`, `{ user_id, message_id }`, D-168); null on a regular one. */
+            system_data: {
+                [key: string]: unknown
+            } | null
+            /** @description That person, named and pictured like an author; null on a regular message, or one naming no one. */
+            system_user: components['schemas']['MessageAuthorResponseDto'] | null
+            /** @description The message this one answers; null if none (REQ-MSG-05). */
+            reply_to: components['schemas']['RepliedMessageResponseDto'] | null
+            /**
+             * Format: date-time
+             * @description Shown as "edited"; null if never edited.
+             */
+            edited_at: string | null
+            reactions: components['schemas']['ReactionSummaryResponseDto'][]
+            id: string
+            channel_id: string
+            /** @description Plain text; empty on a system message. */
+            content: string
+            /** @description In the channel's pins (REQ-MSG-07). */
+            pinned: boolean
+            /** Format: date-time */
+            created_at: string
+        }
+        MessagePageResponseDto: {
+            items: components['schemas']['ReadMessageResponseDto'][]
+            /** @description Older messages exist: ask with `before` = the first id. */
+            has_more_before: boolean
+            /** @description Newer messages exist: ask with `after` = the last id. */
+            has_more_after: boolean
+        }
         MessageResponseDto: {
             /**
              * @description `system`: made by the app (REQ-MSG-08), with no author.
@@ -1589,10 +1699,12 @@ export interface components {
             author: components['schemas']['MessageAuthorResponseDto'] | null
             /** @description What a system message reports (`member_joined`, `message_pinned`); null on a regular one. */
             system_event: string | null
-            /** @description Whom a system message is about (`{ user_id }`, D-168); null on a regular one. */
+            /** @description Whom a system message is about (`{ user_id }`, `{ user_id, message_id }`, D-168); null on a regular one. */
             system_data: {
                 [key: string]: unknown
             } | null
+            /** @description That person, named and pictured like an author; null on a regular message, or one naming no one. */
+            system_user: components['schemas']['MessageAuthorResponseDto'] | null
             /** @description The message this one answers; null if none (REQ-MSG-05). */
             reply_to: components['schemas']['RepliedMessageResponseDto'] | null
             /**
@@ -1604,15 +1716,10 @@ export interface components {
             channel_id: string
             /** @description Plain text; empty on a system message. */
             content: string
+            /** @description In the channel's pins (REQ-MSG-07). */
+            pinned: boolean
             /** Format: date-time */
             created_at: string
-        }
-        MessagePageResponseDto: {
-            items: components['schemas']['MessageResponseDto'][]
-            /** @description Older messages exist: ask with `before` = the first id. */
-            has_more_before: boolean
-            /** @description Newer messages exist: ask with `after` = the last id. */
-            has_more_after: boolean
         }
         SendMessageRequestDto: {
             /** @description 1-2000 characters, an emoji counting as one, once the blank around it is dropped. */
@@ -1633,6 +1740,53 @@ export interface components {
         EditMessageRequestDto: {
             /** @description 1-2000 characters, an emoji counting as one, once the blank around it is dropped. */
             content: string
+        }
+        ReactorResponseDto: {
+            id: string
+            username: string | null
+            display_name: string | null
+        }
+        ReactorsResponseDto: {
+            users: components['schemas']['ReactorResponseDto'][]
+            count: number
+        }
+        PinnedMessageResponseDto: {
+            /**
+             * @description `system`: made by the app (REQ-MSG-08), with no author.
+             * @enum {string}
+             */
+            type: 'regular' | 'system'
+            /** @description Null on a system message (D-168). */
+            author: components['schemas']['MessageAuthorResponseDto'] | null
+            /** @description What a system message reports (`member_joined`, `message_pinned`); null on a regular one. */
+            system_event: string | null
+            /** @description Whom a system message is about (`{ user_id }`, `{ user_id, message_id }`, D-168); null on a regular one. */
+            system_data: {
+                [key: string]: unknown
+            } | null
+            /** @description That person, named and pictured like an author; null on a regular message, or one naming no one. */
+            system_user: components['schemas']['MessageAuthorResponseDto'] | null
+            /** @description The message this one answers; null if none (REQ-MSG-05). */
+            reply_to: components['schemas']['RepliedMessageResponseDto'] | null
+            /**
+             * Format: date-time
+             * @description Shown as "edited"; null if never edited.
+             */
+            edited_at: string | null
+            reactions: components['schemas']['ReactionSummaryResponseDto'][]
+            id: string
+            channel_id: string
+            /** @description Plain text; empty on a system message. */
+            content: string
+            /** @description In the channel's pins (REQ-MSG-07). */
+            pinned: boolean
+            /** Format: date-time */
+            created_at: string
+            /** Format: date-time */
+            pinned_at: string
+        }
+        PinListResponseDto: {
+            items: components['schemas']['PinnedMessageResponseDto'][]
         }
     }
     responses: never
@@ -3534,6 +3688,170 @@ export interface operations {
                     'application/json': {
                         meta: components['schemas']['ApiResponseMetaDto']
                         data: components['schemas']['MessageResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    MessageController_reactors_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                messageId: string
+                /**
+                 * @description The longest standard emoji (a family with skin tones) is well under
+                 *     this. Checked before the handler, so a forged longer one is refused
+                 *     even from someone timed out.
+                 */
+                emoji: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['ReactorsResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    MessageController_react_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                messageId: string
+                /**
+                 * @description The longest standard emoji (a family with skin tones) is well under
+                 *     this. Checked before the handler, so a forged longer one is refused
+                 *     even from someone timed out.
+                 */
+                emoji: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: null
+                    }
+                }
+            }
+        }
+    }
+    MessageController_unreact_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                messageId: string
+                /**
+                 * @description The longest standard emoji (a family with skin tones) is well under
+                 *     this. Checked before the handler, so a forged longer one is refused
+                 *     even from someone timed out.
+                 */
+                emoji: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: null
+                    }
+                }
+            }
+        }
+    }
+    PinController_list_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                channelId: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['PinListResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    PinController_pin_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                channelId: string
+                messageId: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: null
+                    }
+                }
+            }
+        }
+    }
+    PinController_unpin_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                channelId: string
+                messageId: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: null
                     }
                 }
             }

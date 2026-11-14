@@ -57,7 +57,10 @@
     "copyLink": "Sao chép link tin",
     "delete": "Xóa tin nhắn",
     "copied": "Đã sao chép",
-    "copyFailed": "Không sao chép được"
+    "copyFailed": "Không sao chép được",
+    "react": "Thêm cảm xúc",
+    "pin": "Ghim",
+    "unpin": "Bỏ ghim"
   },
   "edit": {
     "label": "Sửa tin nhắn",
@@ -78,5 +81,61 @@
     "message": "Tin nhắn",
     "hidden": "Không xem được",
     "hiddenMessage": "Bạn không xem được tin nhắn này"
+  },
+  "reactions": {
+    "label": "Cảm xúc",
+    "by": "{{names}} đã thả {{emoji}}",
+    "others_one": "{{count}} người khác",
+    "others_other": "{{count}} người khác",
+    "count_one": "{{count}} người đã thả {{emoji}}",
+    "count_other": "{{count}} người đã thả {{emoji}}",
+    "you": "Bạn",
+    "chip_one": "{{emoji}}, {{count}} người",
+    "chip_other": "{{emoji}}, {{count}} người",
+    "inMessage_one": "{{count}} cảm xúc",
+    "inMessage_other": "{{count}} cảm xúc",
+    "full": "Tin này đã có 20 loại cảm xúc",
+    "listTwo": "{{first}} và {{last}}",
+    "listMany": "{{head}} và {{last}}"
+  },
+  "emoji": {
+    "picker": "Chọn emoji",
+    "insert": "Chèn emoji",
+    "search": "Tìm emoji",
+    "recent": "Dùng gần đây",
+    "results": "Kết quả",
+    "noResults": "Không tìm thấy emoji nào",
+    "loading": "Đang tải emoji…",
+    "loadError": "Không tải được bảng emoji",
+    "retry": "Thử lại",
+    "groups": {
+      "smileys-emotion": "Mặt cười & cảm xúc",
+      "people-body": "Người & cơ thể",
+      "animals-nature": "Động vật & thiên nhiên",
+      "food-drink": "Thức ăn & đồ uống",
+      "travel-places": "Du lịch & địa điểm",
+      "activities": "Hoạt động",
+      "objects": "Đồ vật",
+      "symbols": "Ký hiệu",
+      "flags": "Cờ"
+    }
+  },
+  "pins": {
+    "emptyTitle": "Chưa có tin ghim",
+    "emptyBody": "Người quản lý ghim tin quan trọng để cả kênh dễ tìm.",
+    "loading": "Đang tải tin ghim…",
+    "loadError": "Không tải được tin ghim",
+    "retry": "Thử lại",
+    "more": "Tùy chọn của tin ghim",
+    "unpinned": "Đã bỏ ghim",
+    "full": "Kênh đã có 50 tin ghim · bỏ ghim một tin trước",
+    "card": "{{name}}, {{time}}: {{content}}"
+  },
+  "system": {
+    "pinned": "<0>{{name}}</0> đã ghim một tin nhắn",
+    "joined": "<0>{{name}}</0> đã tham gia server",
+    "view": "Xem",
+    "viewLabel": "Xem tin đã ghim",
+    "label": "{{text}}, {{time}}"
   }
 }

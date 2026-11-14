@@ -10,15 +10,18 @@ const message = (authorId: string): Message => ({
     content: 'Câu 3?',
     systemEvent: null,
     systemData: null,
+    systemUser: null,
+    pinned: false,
+    reactions: [],
     replyTo: null,
     editedAt: null,
     createdAt: '2026-10-18T13:02:00.000Z'
 })
 
-const MEMBER: ChatPermissions = { send: true, manage: false, deleteOwn: true }
-const MANAGERS_ONLY: ChatPermissions = { send: false, manage: false, deleteOwn: true }
-const TIMED_OUT: ChatPermissions = { send: false, manage: false, deleteOwn: false }
-const MODERATOR: ChatPermissions = { send: true, manage: true, deleteOwn: true }
+const MEMBER: ChatPermissions = { send: true, manage: false, deleteOwn: true, react: true, addReactions: true }
+const MANAGERS_ONLY: ChatPermissions = { send: false, manage: false, deleteOwn: true, react: true, addReactions: true }
+const TIMED_OUT: ChatPermissions = { send: false, manage: false, deleteOwn: false, react: false, addReactions: false }
+const MODERATOR: ChatPermissions = { send: true, manage: true, deleteOwn: true, react: true, addReactions: true }
 
 describe('What one may do to a message (REQ-MSG-05, SRS 1.70)', () => {
     it("lets a member edit, reply to and delete their own message, only reply to someone else's", () => {
@@ -26,13 +29,19 @@ describe('What one may do to a message (REQ-MSG-05, SRS 1.70)', () => {
             own: true,
             edit: true,
             reply: true,
-            delete: true
+            delete: true,
+            react: true,
+            pin: false,
+            unpin: false
         })
         expect(allowedActions('an', MEMBER, message('tuan'))).toEqual({
             own: false,
             edit: false,
             reply: true,
-            delete: false
+            delete: false,
+            react: true,
+            pin: false,
+            unpin: false
         })
     })
 
@@ -58,5 +67,19 @@ describe('What one may do to a message (REQ-MSG-05, SRS 1.70)', () => {
 
     it('gives nothing of "own" before the profile is known', () => {
         expect(allowedActions(undefined, MEMBER, message('an')).own).toBe(false)
+    })
+
+    it('offers "Add reaction" only with ADD_REACTIONS (C-11)', () => {
+        expect(allowedActions('an', { ...MEMBER, addReactions: false }, message('tuan')).react).toBe(false)
+        expect(allowedActions('an', TIMED_OUT, message('tuan')).react).toBe(false)
+    })
+
+    it('offers MANAGE_MESSAGES "Pin", or "Unpin" once pinned (REQ-MSG-07)', () => {
+        expect(allowedActions('an', MODERATOR, message('tuan'))).toMatchObject({ pin: true, unpin: false })
+        expect(allowedActions('an', MODERATOR, { ...message('tuan'), pinned: true })).toMatchObject({
+            pin: false,
+            unpin: true
+        })
+        expect(allowedActions('an', MEMBER, { ...message('tuan'), pinned: true }).unpin).toBe(false)
     })
 })

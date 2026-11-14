@@ -204,7 +204,9 @@ after sign-in, behind `ProtectedRoute`:
 - **The page area.** A page draws its own header with `ShellPage`
   (`src/components/shell/ShellPage.tsx`): the 48-high header with the
   title and the page's actions, a scrolling body, and an optional right
-  panel (`RightPanel` + `usePanel`). Under the header, the connection
+  panel (`RightPanel` + `usePanel`; `usePanel(kind, { startClosed: true })`
+  for a panel that starts closed as a column, the pins). A menu opened from
+  a panel shown as a sheet counts as inside it. Under the header, the connection
   Banner when the AppShell has one (`ConnectionBanner`, C-16 `reconnecting`
   / `offline`); a page with a message box passes `composer`, so offline adds
   "Messages will send when you are back online".
@@ -310,7 +312,9 @@ label.
 `src/components/ui/empty-state.tsx` (C-17): what a page or a list shows when
 there is nothing in it. An optional `mascot`, a `title` (an `<h2>`),
 `children` (at most two lines of text), optional `actions` (buttons) and
-`className`; centred in what holds it. Used on the no-server page, a voice
+`className`; centred in what holds it. `size='inline'` (C-17 `inline`) is
+for one part of a page, no mascot: a `headline` title over `body-sm` text
+(the pins panel's "No pinned messages yet"). Used on the no-server page, a voice
 room not built yet, and the server settings lists (roles, members, invites,
 bans) when they are empty, match nothing, or could not load.
 

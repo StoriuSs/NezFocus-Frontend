@@ -159,6 +159,15 @@ as the chunk's own stylesheet; `tailwind.config.js` leaves that folder out,
 so the stylesheet loaded before the first screen does not grow with the chat
 (CONSTRAINTS.md, "Chat CSS" in `.size-limit.mjs`; owner's call at M2 L4a).
 
+The pins panel (S-CHAT-02) is in the same chunk: `index.ts` exports
+`PinsPanel` as `lazy(() => import('./components/ChannelChat').then((chat) =>
+({ default: chat.PinsPanel })))`, and `ChannelChat.tsx` re-exports it, so it
+comes with the chat's stylesheet and no second copy of the chat's code.
+The emoji picker's data, `emojibase-data` in the person's language (about 93
+kB gzipped each), is read with `import()` the first time the picker opens
+(`lib/emoji-data.ts`): two chunks of their own, never in the chat's. Vite
+warns that they are over 500 kB before gzip; they are data, read once.
+
 The chat's file holds only the classes the rest of the app does not use:
 its config blocks every class candidate of the other files, read with
 Tailwind's own extractor. It loads after the main file, and a class written

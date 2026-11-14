@@ -23,6 +23,9 @@ const savedFrom = (body: { content: string }, id = 'm9'): Message => ({
     content: body.content,
     systemEvent: null,
     systemData: null,
+    systemUser: null,
+    pinned: false,
+    reactions: [],
     replyTo: null,
     editedAt: null,
     createdAt: new Date().toISOString()

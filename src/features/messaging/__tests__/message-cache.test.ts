@@ -2,14 +2,17 @@ import { describe, expect, it } from 'vitest'
 import {
     addNewer,
     addOutgoing,
+    addReaction,
     addSaved,
     dropOutgoing,
     isGoneFrom,
     lastSavedId,
     openAround,
+    removeReaction,
     removeSaved,
     replaceSaved,
     setOutgoingState,
+    setPinned,
     startOver,
     stopsShort
 } from '../lib/message-cache'
@@ -25,6 +28,9 @@ const saved = (id: string): Message => ({
     content: `Tin ${id}`,
     systemEvent: null,
     systemData: null,
+    systemUser: null,
+    pinned: false,
+    reactions: [],
     replyTo: null,
     editedAt: null,
     createdAt: '2026-10-18T13:02:00.000Z'
@@ -222,5 +228,64 @@ describe('Edits and deletions in the cache (REQ-MSG-05)', () => {
     it('leaves a history that never held the deleted message as it was', () => {
         const data = history({ ids: ['m1'] })
         expect(removeSaved(data, 'm9')).toBe(data)
+    })
+})
+
+describe('Reactions and pins in the cache (REQ-MSG-05, REQ-MSG-07, SRS 1.71)', () => {
+    const chips = (data: ChannelMessages, id = 'm1') =>
+        data.pages.flatMap((page) => page.items).find((item) => item.id === id)?.reactions
+
+    it('gives a new emoji at the end of the row, and one more on an emoji already there', () => {
+        let data = addReaction(history({ ids: ['m1', 'm2'] }), 'm1', '👍', false)
+        data = addReaction(data, 'm1', '🎉', true)
+        data = addReaction(data, 'm1', '👍', true)
+        expect(chips(data)).toEqual([
+            { emoji: '👍', count: 2, me: true },
+            { emoji: '🎉', count: 1, me: true }
+        ])
+        expect(chips(data, 'm2')).toEqual([])
+    })
+
+    it('counts an emoji given here once: first here, then heard back as an event', () => {
+        const once = addReaction(history({ ids: ['m1'] }), 'm1', '👍', true)
+        expect(addReaction(once, 'm1', '👍', true)).toBe(once)
+        const gone = removeReaction(once, 'm1', '👍', true)
+        expect(removeReaction(gone, 'm1', '👍', true)).toBe(gone)
+    })
+
+    it('takes an emoji back, dropping the chip when nobody is left on it', () => {
+        let data = addReaction(addReaction(history({ ids: ['m1'] }), 'm1', '👍', true), 'm1', '👍', false)
+        data = removeReaction(data, 'm1', '👍', true)
+        expect(chips(data)).toEqual([{ emoji: '👍', count: 1, me: false }])
+        data = removeReaction(data, 'm1', '👍', false)
+        expect(chips(data)).toEqual([])
+    })
+
+    it('changes nothing for a message or emoji it does not hold', () => {
+        const data = history({ ids: ['m1'] })
+        expect(addReaction(data, 'm9', '👍', false)).toBe(data)
+        expect(removeReaction(data, 'm1', '👍', false)).toBe(data)
+        expect(setPinned(data, 'm9', true)).toBe(data)
+    })
+
+    it('marks a message pinned or not', () => {
+        const data = setPinned(history({ ids: ['m1', 'm2'] }), 'm2', true)
+        expect(data.pages[0]!.items.map((item) => item.pinned)).toEqual([false, true])
+        expect(setPinned(data, 'm2', true)).toBe(data)
+    })
+
+    it('keeps the reactions and the pin of a message when its edit comes without them', () => {
+        const data = setPinned(addReaction(history({ ids: ['m1'] }), 'm1', '👍', true), 'm1', true)
+        const { reactions: _, ...bare } = { ...saved('m1'), content: 'Đã sửa', editedAt: '2026-10-18T13:05:00.000Z' }
+        const edited = replaceSaved(data, { ...bare, pinned: false })
+        const held = edited.pages[0]!.items[0]!
+        expect(held.content).toBe('Đã sửa')
+        expect(held.reactions).toEqual([{ emoji: '👍', count: 1, me: true }])
+        expect(held.pinned).toBe(true)
+    })
+
+    it('starts a new message with no reactions', () => {
+        const { reactions: _, ...bare } = saved('m2')
+        expect(chips(addSaved(history({ ids: ['m1'] }), bare), 'm2')).toEqual([])
     })
 })
