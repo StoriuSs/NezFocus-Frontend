@@ -28,7 +28,9 @@
 // the main stylesheet has). Raised to 627 B after M2 L6a (14/11/2026, 624 B:
 // a message about the reader one step up on keyboard focus, as on hover,
 // once the slice's other new classes were swapped for ones the main
-// stylesheet has or set inline).
+// stylesheet has or set inline). Raised to 647 B after M2 L7 (14/11/2026,
+// 644 B: the presence dot's cutout in the colour of the suggestion row
+// chosen, `surface-2`, as C-03 asks, rather than the popover's).
 // Raise them
 // only as CONSTRAINTS.md says: the owner decides, in a commit of its own.
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
@@ -89,5 +91,5 @@ if (shared.length)
 export default [
     { name: 'Initial JS (gzip)', path: js, gzip: true, limit: '246.75 kB' },
     { name: 'Initial CSS (gzip)', path: css, gzip: true, limit: '8.80 kB' },
-    { name: 'Chat CSS (gzip)', path: chatCss, gzip: true, limit: '627 B' }
+    { name: 'Chat CSS (gzip)', path: chatCss, gzip: true, limit: '647 B' }
 ]
