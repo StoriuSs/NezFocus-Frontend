@@ -1,16 +1,17 @@
 import { useQuery, type QueryClient } from '@tanstack/react-query'
+import { forgetChannels } from '@/features/messaging'
 import { fetchServers } from './servers.api'
 import { serverKeys } from './keys'
 import type { Server } from '../types'
 
 /**
- * The servers of the rail and the channel list. Until M2 brings live updates
- * (D-143), the list is read again whenever the tab comes back into view, and
- * after each change one makes oneself. `'always'`: `true` would only read a
- * list older than the app's 5-minute stale time (L9b e2e, D-143).
+ * The servers of the rail and the channel list, kept live by socket events
+ * (`listenForServers`, D-178): each change reads its server again, and the
+ * whole list is read again when the socket is live again. Not on coming back
+ * to the tab, as M1 did (D-143): nothing is missed while the socket is up.
  */
 export function useServers() {
-    return useQuery({ queryKey: serverKeys.list(), queryFn: fetchServers, refetchOnWindowFocus: 'always' })
+    return useQuery({ queryKey: serverKeys.list(), queryFn: fetchServers })
 }
 
 /** Put a server one just made at the end of the rail (C-05), or update it in place. */
@@ -25,12 +26,24 @@ export function rememberServer(queryClient: QueryClient, server: Server) {
 
 /**
  * Take a server one left or deleted off the rail, and drop what was read
- * about it. `setQueryData` is marked manual, so useServerGoneWatch does not
- * say "You are no longer in" about it.
+ * about it, its channels' histories too (their trays stop with them).
+ * `setQueryData` is marked manual, so useServerGoneWatch does not say "You
+ * are no longer in" about it.
  */
 export function forgetServer(queryClient: QueryClient, serverId: string) {
+    const gone = queryClient.getQueryData<Server[]>(serverKeys.list())?.find((server) => server.id === serverId)
     queryClient.setQueryData<Server[]>(serverKeys.list(), (servers) =>
         servers?.filter((server) => server.id !== serverId)
+    )
+    forgetServerData(queryClient, gone ?? { id: serverId, channels: [] })
+}
+
+/** What was read about a server no longer listed: its lists, and its channels' histories. */
+export function forgetServerData(queryClient: QueryClient, server: Pick<Server, 'id' | 'channels'>) {
+    const serverId = server.id
+    forgetChannels(
+        queryClient,
+        server.channels.map((channel) => channel.id)
     )
     for (const key of [
         serverKeys.members(serverId),

@@ -88,12 +88,19 @@ export function useUpdateChannel(serverId: string) {
     })
 }
 
-/** "Delete #viec-nhom?" (S-SET-05 `delete-confirm`). */
-export function useDeleteChannel(serverId: string) {
+/**
+ * "Delete #viec-nhom?" (S-SET-05 `delete-confirm`). `moveAway` runs before the
+ * channel leaves the list: the page on it moves first, so it is not taken
+ * for a channel someone else deleted (02 `channel-removed`).
+ */
+export function useDeleteChannel(serverId: string, moveAway: (server: Server, channelId: string) => Promise<void>) {
     const queryClient = useQueryClient()
     return useMutation({
         mutationFn: (channelId: string) => deleteChannel(serverId, channelId),
-        onSuccess: (server) => rememberServer(queryClient, server),
+        onSuccess: async (server, channelId) => {
+            await moveAway(server, channelId)
+            rememberServer(queryClient, server)
+        },
         onError: (error) => readAgainIfGone(queryClient, error),
         meta: { errorToast: false }
     })

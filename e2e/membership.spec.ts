@@ -116,7 +116,7 @@ async function signIn(page: Page, email: string) {
     await page.waitForURL(/\/study$/)
 }
 
-test('someone kicked while the page is open hears it when the tab comes back (D-143)', async ({ page }) => {
+test('someone kicked while the page is open hears it at once, through the socket (D-178)', async ({ page }) => {
     test.setTimeout(60_000)
     const problems = await watchForProblems(page)
     await signIn(page, chiEmail)
@@ -129,9 +129,8 @@ test('someone kicked while the page is open hears it when the tab comes back (D-
     const chiId = members.items.find((member) => member.display_name === 'Chi')!.user_id
     await ok('DELETE', `servers/${otId}/members/${chiId}`, {}, anToken)
 
-    // The tab coming back into view reads the list again (no live updates until M2).
-    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange', { bubbles: true })))
-    await expect(page.getByText('You are no longer in Ôn thi Giải tích 2')).toBeVisible()
+    // No reload, no coming back to the tab: the server leaves the rail and they are told (dialog: L9b).
+    await expect(page.getByText('You are no longer in Ôn thi Giải tích 2')).toBeVisible({ timeout: 5000 })
     await page.waitForURL(/\/study$/)
     expect(problems.filter((problem) => !problem.includes('404'))).toEqual([])
 })

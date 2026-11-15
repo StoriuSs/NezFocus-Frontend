@@ -1,7 +1,8 @@
-import { Suspense, useCallback, useMemo } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Hash, LampDesk, Pin, Users, Volume2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import '@/i18n/servers'
 import { PageLoader } from '@/components/PageLoader'
 import { RightPanel, usePanel } from '@/components/shell/RightPanel'
@@ -14,6 +15,7 @@ import { ChannelChat, ChatDropZone, PinsPanel } from '@/features/messaging'
 import { useMentionSource } from '../api/useMentionSource'
 import { MemberPanel } from '../components/member-panel/MemberPanel'
 import { useServers } from '../api/useServers'
+import { useGoneServerPath } from '../hooks/useGoneServerPath'
 import { linkedServers, readAppLink, type LinkedServer } from '../lib/app-links'
 import { chatPermissions } from '../lib/chat-permissions'
 import { firstTextChannel } from '../lib/channel-list'
@@ -21,16 +23,21 @@ import { channelPath, isId, messageLink, messagePath } from '../lib/paths'
 import type { Server, ServerChannel } from '../types'
 
 /**
- * A channel of one of their servers. Opening a server without a channel, or a
- * channel they cannot see, lands on its first text channel (02 S-SHELL-01).
- * A server they are not in (any more) leads back to the Study page.
+ * A channel of one of their servers. Opening a server without a channel lands
+ * on its first text channel (02 S-SHELL-01); the address of a channel they
+ * cannot see is "We can't find this page" (02 S-CHAT-01 `forbidden`, 11
+ * S-MOD-06). A server they are not in leads back to the Study page.
+ *
+ * Live (D-178): the channel open here deleted, or no longer seen, goes to the
+ * first text channel with a Toast "This channel is no longer available" (02
+ * `channel-removed`); the server leaving the list goes to the next one on
+ * the rail (`useGoneServerPath`).
  *
  * A link to a message (`/channels/{s}/{c}/{m}`, D-48) opens its channel at
  * that message. One to a text channel they cannot see, in a server they are
  * not in, to anything but a text channel, or with an id that is not one, is
  * "We can't find this page"
  * (11 S-MOD-06), the URL kept, saying nothing of what is there (REQ-MSG-05).
- * Links to channels keep M1's way until L9 (plan M2 L4b).
  *
  * A text channel holds its chat (S-CHAT-01, the messaging feature's), a
  * chunk of its own; voice rooms come in M4 (D-144), which until then say so.
@@ -39,19 +46,30 @@ export default function ChannelPage() {
     const { t } = useTranslation()
     const { serverId, channelId, messageId } = useParams()
     const servers = useServers()
+    const goneTo = useGoneServerPath(serverId, servers.data)
+    const server = servers.data?.find((candidate) => candidate.id === serverId)
+    const channel = server?.channels.find((candidate) => candidate.id === channelId)
+    // The channel this page last showed: missing now, it was removed while open.
+    const here = `${serverId}/${channelId}`
+    const [shown, setShown] = useState<string | null>(null)
+    if (channel && shown !== here) setShown(here)
 
     if (servers.isPending) return <PageLoader className='min-h-0 flex-1' />
     // The page's error boundary offers to try again, only with nothing to
-    // show: a failed re-read (back to the tab, after a kick) keeps the last
+    // show: a failed re-read (the socket back, after a kick) keeps the last
     // list, so the page stays.
     if (servers.data === undefined) throw servers.error
 
-    const server = servers.data.find((candidate) => candidate.id === serverId)
-    const channel = server?.channels.find((candidate) => candidate.id === channelId)
+    if (goneTo) return <Navigate to={goneTo} replace />
+    if (server && !channel && shown === here) {
+        const first = firstTextChannel(server)
+        return <Removed to={channelPath(server.id, first?.id)} />
+    }
     if (messageId !== undefined && (channel?.type !== 'text' || !isId(messageId))) return <ShellNotFound />
     if (!server) return <Navigate to='/study' replace />
 
     if (!channel) {
+        if (channelId !== undefined) return <ShellNotFound />
         const first = firstTextChannel(server)
         if (first) return <Navigate to={channelPath(server.id, first.id)} replace />
         return <ShellPage title={server.name} />
@@ -68,6 +86,14 @@ export default function ChannelPage() {
     }
 
     return <TextChannel key={channel.id} server={server} channel={channel} messageId={messageId} />
+}
+
+/** The channel open here was deleted, or is no longer seen: said once, then elsewhere (02 `channel-removed`). */
+function Removed({ to }: { to: string }) {
+    const { t } = useTranslation()
+    const notice = t('shell.channelGone')
+    useEffect(() => void toast(notice, { id: 'channel-removed' }), [notice])
+    return <Navigate to={to} replace />
 }
 
 /**

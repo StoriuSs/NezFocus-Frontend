@@ -1,0 +1,276 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { QueryClient, QueryObserver } from '@tanstack/react-query'
+import { apiError } from '@/test/helpers'
+import { userKeys } from '@/features/users'
+import type { Server, ServerChannel } from '../types'
+
+const fetchServer = vi.fn<(serverId: string) => Promise<Server>>()
+vi.mock('../api/servers.api', () => ({ fetchServer }))
+
+const { emitRealtimeEvent } = await import('@/features/realtime/lib/realtime-events')
+const { listenForServers } = await import('../api/liveServers')
+const { serverKeys } = await import('../api/keys')
+
+const channel = (id: string): ServerChannel => ({
+    id,
+    categoryId: null,
+    type: 'text',
+    name: id,
+    position: 0,
+    isPrivate: false,
+    sendMode: 'everyone',
+    isStudyRoom: false,
+    taskBoardEnabled: false,
+    permissions: '1024',
+    viewRoleIds: null
+})
+const server = (id: string, channels: string[], name = id): Server => ({
+    id,
+    name,
+    iconUrl: null,
+    isOwner: false,
+    memberCount: 3,
+    permissions: '1024',
+    topRolePosition: 0,
+    roleIds: [],
+    roles: [],
+    timeoutUntil: null,
+    welcomeChannelId: null,
+    categories: [],
+    channels: channels.map(channel)
+})
+
+let client: QueryClient
+let stop: () => void
+const notices = { deleted: vi.fn(), removed: vi.fn() }
+const list = () => client.getQueryData<Server[]>(serverKeys.list())
+/** The read again waits up to 800 ms after the first event (300, plus up to 500 at random). */
+const settle = () => vi.advanceTimersByTimeAsync(800)
+const stale = (key: readonly unknown[]) => client.getQueryState(key)?.isInvalidated ?? false
+
+describe('Keeping the servers live from events (D-178)', () => {
+    beforeEach(() => {
+        vi.useFakeTimers()
+        vi.spyOn(Math, 'random').mockReturnValue(0.5)
+        fetchServer.mockReset()
+        notices.deleted.mockReset()
+        notices.removed.mockReset()
+        client = new QueryClient()
+        client.setQueryData(userKeys.profile(), { id: 'an' })
+        client.setQueryData(serverKeys.list(), [server('ot', ['chung', 'hoi-dap'], 'Ôn thi'), server('nd', ['chung'])])
+        stop = listenForServers(client, notices)
+    })
+    afterEach(() => {
+        stop()
+        vi.restoreAllMocks()
+        vi.useRealTimers()
+    })
+
+    it('reads a server again once for several events close together, and puts it in its place', async () => {
+        fetchServer.mockResolvedValue(server('ot', ['chung', 'hoi-dap', 'tai-lieu'], 'Ôn thi'))
+
+        emitRealtimeEvent('channel.created', { serverId: 'ot' })
+        emitRealtimeEvent('category.updated', { serverId: 'ot' })
+        emitRealtimeEvent('role.updated', { serverId: 'ot' })
+        await vi.advanceTimersByTimeAsync(500)
+        expect(fetchServer).not.toHaveBeenCalled()
+        await settle()
+
+        expect(fetchServer).toHaveBeenCalledTimes(1)
+        expect(fetchServer).toHaveBeenCalledWith('ot')
+        expect(list()?.map((one) => one.id)).toEqual(['ot', 'nd'])
+        expect(list()?.[0]?.channels.map((one) => one.id)).toEqual(['chung', 'hoi-dap', 'tai-lieu'])
+    })
+
+    it('reads again after a read already going, when another event came meanwhile', async () => {
+        let answer!: (value: Server) => void
+        fetchServer.mockImplementationOnce(() => new Promise((resolve) => (answer = resolve)))
+        fetchServer.mockResolvedValueOnce(server('ot', ['chung'], 'Ôn thi'))
+
+        emitRealtimeEvent('channel.updated', { serverId: 'ot' })
+        await settle()
+        emitRealtimeEvent('channel.deleted', { serverId: 'ot' })
+        answer(server('ot', ['chung', 'hoi-dap'], 'Ôn thi'))
+        await settle()
+
+        expect(fetchServer).toHaveBeenCalledTimes(2)
+        expect(list()?.[0]?.channels.map((one) => one.id)).toEqual(['chung'])
+    })
+
+    it('adds a server one made or joined in another tab', async () => {
+        fetchServer.mockResolvedValue(server('mt', ['chung'], 'Mới'))
+        emitRealtimeEvent('member.joined', { serverId: 'mt', userId: 'an' })
+        await settle()
+        expect(list()?.map((one) => one.id)).toEqual(['ot', 'nd', 'mt'])
+    })
+
+    it('takes a server off when reading it again says it is not one of theirs any more', async () => {
+        fetchServer.mockRejectedValue(apiError(404, 'NOT_FOUND_ERROR'))
+        emitRealtimeEvent('role.deleted', { serverId: 'ot' })
+        await settle()
+        expect(list()?.map((one) => one.id)).toEqual(['nd'])
+        expect(notices.removed).not.toHaveBeenCalled()
+    })
+
+    it('forgets the histories of channels no longer listed: deleted, or no longer seen', async () => {
+        client.setQueryData(['messages', 'channel', 'hoi-dap'], { pages: [], pageParams: [] })
+        client.setQueryData(['messages', 'pins', 'hoi-dap'], [])
+        client.setQueryData(['messages', 'channel', 'chung'], { pages: [], pageParams: [] })
+        fetchServer.mockResolvedValue(server('ot', ['chung'], 'Ôn thi'))
+
+        emitRealtimeEvent('channel.updated', { serverId: 'ot' })
+        await settle()
+
+        expect(client.getQueryData(['messages', 'channel', 'hoi-dap'])).toBeUndefined()
+        expect(client.getQueryData(['messages', 'pins', 'hoi-dap'])).toBeUndefined()
+        expect(client.getQueryData(['messages', 'channel', 'chung'])).toBeDefined()
+    })
+
+    it('marks the lists a change touches as old, so the open ones are read again', () => {
+        const keys = {
+            invites: serverKeys.invites('ot'),
+            members: serverKeys.memberPage('ot', { q: '', page: 1, limit: 10 } as never),
+            roles: serverKeys.roles('ot'),
+            bans: serverKeys.bans('ot'),
+            other: serverKeys.invites('nd')
+        }
+        for (const key of Object.values(keys)) client.setQueryData(key, [])
+
+        emitRealtimeEvent('invite.created', { serverId: 'ot' })
+        expect([stale(keys.invites), stale(keys.members), stale(keys.other)]).toEqual([true, false, false])
+
+        emitRealtimeEvent('member.updated', { serverId: 'ot', userId: 'binh' })
+        expect([stale(keys.members), stale(keys.roles), stale(keys.bans)]).toEqual([true, true, false])
+
+        emitRealtimeEvent('ban.deleted', { serverId: 'ot' })
+        expect(stale(keys.bans)).toBe(true)
+    })
+
+    it('marks the invites old when someone joins, so a link used up leaves the page', () => {
+        client.setQueryData(serverKeys.invites('ot'), [])
+        emitRealtimeEvent('member.joined', { serverId: 'ot', userId: 'binh' })
+        expect(stale(serverKeys.invites('ot'))).toBe(true)
+    })
+
+    it('takes a deleted server off at once and says so, with the name it had', () => {
+        emitRealtimeEvent('server.deleted', { serverId: 'ot' })
+        expect(list()?.map((one) => one.id)).toEqual(['nd'])
+        expect(notices.deleted).toHaveBeenCalledWith(expect.objectContaining({ id: 'ot', name: 'Ôn thi' }))
+        expect(fetchServer).not.toHaveBeenCalled()
+    })
+
+    it('takes a server off when one was kicked or banned from it and says so; leaving in another tab says nothing', () => {
+        client.setQueryData(['messages', 'channel', 'hoi-dap'], { pages: [], pageParams: [] })
+        emitRealtimeEvent('member.left', { serverId: 'ot', userId: 'an', removedBy: 'kick', reason: 'Spam' })
+        expect(list()?.map((one) => one.id)).toEqual(['nd'])
+        expect(notices.removed).toHaveBeenCalledWith(expect.objectContaining({ id: 'ot' }), 'kick', 'Spam')
+        expect(client.getQueryData(['messages', 'channel', 'hoi-dap'])).toBeUndefined()
+
+        emitRealtimeEvent('member.left', { serverId: 'nd', userId: 'an', removedBy: null, reason: null })
+        expect(list()).toEqual([])
+        expect(notices.removed).toHaveBeenCalledTimes(1)
+    })
+
+    it('reads someone else leaving as a change to the server', async () => {
+        fetchServer.mockResolvedValue(server('ot', ['chung', 'hoi-dap'], 'Ôn thi'))
+        emitRealtimeEvent('member.left', { serverId: 'ot', userId: 'binh' })
+        await settle()
+        expect(fetchServer).toHaveBeenCalledWith('ot')
+        expect(notices.removed).not.toHaveBeenCalled()
+    })
+
+    it('drops a read answered after the server went meanwhile: it never comes back to the rail', async () => {
+        let answer!: (value: Server) => void
+        fetchServer.mockImplementationOnce(() => new Promise((resolve) => (answer = resolve)))
+        emitRealtimeEvent('channel.updated', { serverId: 'ot' })
+        await settle()
+
+        emitRealtimeEvent('server.deleted', { serverId: 'ot' })
+        answer(server('ot', ['chung'], 'Ôn thi'))
+        await settle()
+
+        expect(list()?.map((one) => one.id)).toEqual(['nd'])
+        expect(fetchServer).toHaveBeenCalledTimes(1)
+    })
+
+    it('does not write a read answered after the list changed meanwhile (an own change): it reads again', async () => {
+        let answer!: (value: Server) => void
+        fetchServer.mockImplementationOnce(() => new Promise((resolve) => (answer = resolve)))
+        fetchServer.mockResolvedValueOnce(server('ot', ['chung', 'hoi-dap', 'moi'], 'Ôn thi'))
+        emitRealtimeEvent('channel.updated', { serverId: 'ot' })
+        await settle()
+
+        // A channel this tab just made, put in the list by its own answer.
+        client.setQueryData<Server[]>(serverKeys.list(), (servers) =>
+            servers?.map((one) => (one.id === 'ot' ? server('ot', ['chung', 'hoi-dap', 'moi'], 'Ôn thi') : one))
+        )
+        answer(server('ot', ['chung', 'hoi-dap'], 'Ôn thi'))
+        await vi.advanceTimersByTimeAsync(0)
+        expect(list()?.[0]?.channels.map((one) => one.id)).toEqual(['chung', 'hoi-dap', 'moi'])
+
+        await settle()
+        expect(fetchServer).toHaveBeenCalledTimes(2)
+        expect(list()?.[0]?.channels.map((one) => one.id)).toEqual(['chung', 'hoi-dap', 'moi'])
+    })
+
+    it('never makes a list of servers from an event: none is held (signed out)', async () => {
+        client.removeQueries({ queryKey: serverKeys.list() })
+        fetchServer.mockResolvedValue(server('ot', ['chung'], 'Ôn thi'))
+        emitRealtimeEvent('member.joined', { serverId: 'ot', userId: 'an' })
+        await settle()
+        expect(list()).toBeUndefined()
+    })
+
+    it('says nothing of a server this tab is deleting itself: its dialog says it', () => {
+        void client
+            .getMutationCache()
+            .build(client, { mutationKey: serverKeys.deleting('ot'), mutationFn: () => new Promise(() => undefined) })
+            .execute(undefined)
+
+        emitRealtimeEvent('server.deleted', { serverId: 'ot' })
+
+        expect(notices.deleted).not.toHaveBeenCalled()
+        expect(list()?.map((one) => one.id)).toEqual(['ot', 'nd'])
+    })
+
+    it('reads again a little later when the read failed for a while (no answer, 5xx, too many at once)', async () => {
+        fetchServer.mockRejectedValueOnce(apiError(503, 'SERVICE_UNAVAILABLE'))
+        fetchServer.mockResolvedValueOnce(server('ot', ['chung'], 'Ôn thi'))
+        emitRealtimeEvent('channel.deleted', { serverId: 'ot' })
+        await settle()
+        expect(list()?.[0]?.channels.map((one) => one.id)).toEqual(['chung', 'hoi-dap'])
+
+        await vi.advanceTimersByTimeAsync(2000)
+        expect(fetchServer).toHaveBeenCalledTimes(2)
+        expect(list()?.[0]?.channels.map((one) => one.id)).toEqual(['chung'])
+    })
+
+    it('marks the members old when the server changes hands: the owner shows there', () => {
+        const members = serverKeys.memberPage('ot', { q: '', page: 1, limit: 10 } as never)
+        client.setQueryData(members, [])
+        emitRealtimeEvent('server.updated', { serverId: 'ot' })
+        expect(stale(members)).toBe(true)
+    })
+
+    it('reads everything again once the socket is live again (ARCHITECTURE 3.4), but the member panel, which does so itself', () => {
+        client.setQueryData(serverKeys.roles('nd'), [])
+        client.setQueryData(serverKeys.memberPanel('nd', 'online'), [])
+        emitRealtimeEvent('ready', {})
+        expect(stale(serverKeys.list())).toBe(true)
+        expect(stale(serverKeys.roles('nd'))).toBe(true)
+        expect(stale(serverKeys.memberPanel('nd', 'online'))).toBe(false)
+    })
+
+    it('does not read the list twice when the socket is first live while the list is still read', async () => {
+        const reads = vi.fn(() => new Promise<Server[]>(() => undefined))
+        client.removeQueries({ queryKey: serverKeys.list() })
+        // The rail reading it, as the shell does on opening.
+        const unsubscribe = new QueryObserver(client, { queryKey: serverKeys.list(), queryFn: reads }).subscribe(
+            () => undefined
+        )
+        emitRealtimeEvent('ready', {})
+        await vi.advanceTimersByTimeAsync(0)
+        expect(reads).toHaveBeenCalledTimes(1)
+        unsubscribe()
+    })
+})

@@ -340,9 +340,8 @@ Queries retry once, and only for failures a retry can fix: no answer at all,
 `408`, `429` and `5xx` (`shouldRetryQuery` in `src/lib/query-client.ts`). A
 `401`, `403`, `404` or `422` fails the same way every time, so retrying only
 delays the error. Mutations don't retry by themselves. Queries are not
-refetched when the window regains focus (`refetchOnWindowFocus: false`), but
-the server list is, every time (`'always'` in `useServers`: `true` only
-reads a list older than the 5-minute stale time; see below).
+refetched when the window regains focus (`refetchOnWindowFocus: false`); the
+server list neither, since M2 keeps it live by the socket (see below, D-178).
 
 ## Kept live by the socket
 
@@ -448,12 +447,35 @@ of a burst, and so does each `ready` and each opening of the panel
 it. Who is typing is not cached data:
 `useTyping` keeps it in component state for 10 seconds per person.
 
+## The servers, kept live
+
+Socket events about a server (`server.*`, `channel.*`, `category.*`,
+`role.*`, `member.*`, `invite.*`, `ban.deleted`) name only the server
+(D-178): each person sees a server their own way (private channels, the
+permission bits the API works out), so `listenForServers`
+(`src/features/servers/api/liveServers.ts`) reads that one server again
+(`GET /servers/{id}`) into its place in the list, once for events close
+together and at a random moment within half a second, so a server's
+members do not all ask at once. The lists of that server the event touches
+(invites, roles, members, bans) are marked old, so the open ones are read
+again. Channels no longer listed take their histories with them
+(`forgetChannels` of messaging: their trays and messages on their way stop
+too). `ready` reads everything again.
+
+A server deleted, or one they were kicked or banned from (`member.left` on
+their own tabs, with `removed_by`), leaves at once and they are told; the
+page on it goes to the next server on the rail (`useGoneServerPath`). The
+channel open on a page, deleted or no longer seen, goes to the first text
+channel with a Toast (02 `channel-removed`).
+
 ## A server one is no longer in
 
-Until M2 brings live updates, the app learns that someone was kicked, banned,
-or saw their server deleted from requests (D-143).
+Besides the events, the app learns that someone was kicked, banned, or saw
+their server deleted from requests (D-143), and from the list read again
+once the socket is back (D-179, until the inbox of M3).
 `src/features/servers/hooks/useServerGoneWatch.ts`, run once by the AppShell,
-listens to the query cache and the mutation cache (`getQueryCache().subscribe`,
+starts `listenForServers` with the Toasts it shows, and listens to the query
+cache and the mutation cache (`getQueryCache().subscribe`,
 `getMutationCache().subscribe`):
 
 - a request under `/servers/{id}` refused with `NOT_FOUND_ERROR` reads the
@@ -461,8 +483,8 @@ listens to the query cache and the mutation cache (`getQueryCache().subscribe`,
   alone cannot say the server is gone: the API answers the same for a gone
   channel, role or member (NFR-SEC-05). The list decides;
 - a list read from the API that no longer has a server the last one had
-  gets a Toast "You are no longer in {server}"; the page on it already goes
-  to /study when its server is not in the list.
+  gets a Toast "You are no longer in {server}"; the page on it goes to the
+  next server on the rail.
 
 Leaving or deleting one oneself takes it out with `setQueryData`, which React
 Query marks `manual`: the watch moves on without that Toast. The order there

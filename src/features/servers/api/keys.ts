@@ -24,5 +24,7 @@ export const serverKeys = {
     mentionMembers: (serverId: string, query: string) => [...serverKeys.members(serverId), 'mention', query] as const,
     /** The ban list of one server, any page (S-SET-04). */
     bans: (serverId: string) => [...serverKeys.all, 'bans', serverId] as const,
-    banPage: (serverId: string, page: number, limit: PageSize) => [...serverKeys.bans(serverId), page, limit] as const
+    banPage: (serverId: string, page: number, limit: PageSize) => [...serverKeys.bans(serverId), page, limit] as const,
+    /** A mutation key: this tab deleting the server, which says so itself (liveServers says nothing then). */
+    deleting: (serverId: string) => [...serverKeys.all, 'deleting', serverId] as const
 }

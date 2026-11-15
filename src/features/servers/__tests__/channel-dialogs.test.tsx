@@ -354,6 +354,29 @@ describe('Channel settings (S-SET-05)', () => {
         expect(confirm).not.toBeInTheDocument()
         expect(router.state.location.pathname).toBe('/channels/ot/chao-mung')
     })
+
+    it('leaves the channel open here before it leaves the list: not taken for one someone else deleted (02 channel-removed)', async () => {
+        layoutApi.deleteChannel.mockResolvedValue({ ...OT, channels: OT.channels.filter((c) => c.id !== 'hoi-dap') })
+        const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        const whereWhenGone: string[] = []
+        useChannelDialogs.getState().show({ kind: 'channelSettings', serverId: 'ot', channelId: 'hoi-dap' })
+        const router = renderDialogs(OT, client)
+        client.getQueryCache().subscribe((event) => {
+            const servers = event.query.state.data as Server[] | undefined
+            if (
+                event.type === 'updated' &&
+                event.query.queryKey[1] === 'list' &&
+                servers?.[0]?.channels.every((c) => c.id !== 'hoi-dap')
+            ) {
+                whereWhenGone.push(router.state.location.pathname)
+            }
+        })
+        await userEvent.click(await screen.findByRole('button', { name: 'Delete channel' }))
+        await userEvent.type(await screen.findByRole('textbox', { name: 'Type hoi-dap to confirm' }), 'hoi-dap')
+        await userEvent.click(screen.getAllByRole('button', { name: 'Delete channel' }).at(-1)!)
+        expect(await screen.findByText('Deleted #hoi-dap')).toBeInTheDocument()
+        expect(whereWhenGone[0]).toBe('/channels/ot/chao-mung')
+    })
 })
 
 describe('Categories (S-SRV-05 `category`, S-SET-05 `category-edit`)', () => {

@@ -1,7 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { afterEach, describe, it, expect, vi, beforeEach } from 'vitest'
 import { Toaster } from 'sonner'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import { focusManager } from '@tanstack/react-query'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { Users } from 'lucide-react'
@@ -23,6 +22,7 @@ const profile = { ...authState.user, avatarUrl: null, bio: 'Ôn Giải tích 2 m
 
 const serversApi = {
     fetchServers: vi.fn(),
+    fetchServer: vi.fn(),
     createServer: vi.fn(),
     uploadServerIcon: vi.fn(),
     updateServer: vi.fn(),
@@ -296,15 +296,14 @@ describe('AppShell (S-SHELL-01)', () => {
             expect(within(channels).getByRole('link', { name: /ban-can-su/ })).toHaveAttribute('aria-current', 'page')
         })
 
-        it('keeps the channel shown when reading the servers again fails on coming back to the tab', async () => {
+        it('keeps the channel shown when reading the servers again fails once the socket is back', async () => {
             renderAt('/channels/ot/ban-can-su')
             expect(await screen.findByRole('heading', { level: 1, name: 'ban-can-su' })).toBeInTheDocument()
             const reads = serversApi.fetchServers.mock.calls.length
             serversApi.fetchServers.mockRejectedValue(new Error('offline'))
-            act(() => focusManager.setFocused(true))
+            act(() => emitRealtimeEvent('ready', {}))
             await waitFor(() => expect(serversApi.fetchServers.mock.calls.length).toBeGreaterThan(reads))
             await act(async () => {})
-            focusManager.setFocused(undefined)
             expect(screen.getByRole('heading', { level: 1, name: 'ban-can-su' })).toBeInTheDocument()
         })
 
@@ -346,6 +345,12 @@ describe('AppShell (S-SHELL-01)', () => {
             renderAt('/channels/ot/quiet')
             expect(await screen.findByRole('heading', { level: 1, name: 'Phòng học im lặng' })).toBeInTheDocument()
             expect(screen.getByRole('heading', { level: 2, name: 'Voice rooms come in a later version' })).toBeVisible()
+        })
+
+        it('says "Page not found" for the address of a channel one cannot see (02 S-CHAT-01 forbidden)', async () => {
+            const router = renderAt('/channels/ot/0195a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b')
+            expect(await screen.findByRole('heading', { name: "We can't find this page" })).toBeInTheDocument()
+            expect(router.state.location.pathname).toBe('/channels/ot/0195a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b')
         })
 
         it('goes back to the Study page from a server one is not in', async () => {
@@ -403,6 +408,100 @@ describe('AppShell (S-SHELL-01)', () => {
             renderAt('/channels/ot/hoi-dap')
             await screen.findByRole('heading', { level: 1, name: 'hoi-dap' })
             await expectNoA11yViolations()
+        })
+    })
+
+    describe('live changes to servers (D-178, D-179)', () => {
+        // A server is read again 300 ms after an event, plus up to 500 at random: none here.
+        beforeEach(() => void vi.spyOn(Math, 'random').mockReturnValue(0))
+        afterEach(() => vi.mocked(Math.random).mockRestore())
+
+        const without = (channelId: string): Server => ({
+            ...OT,
+            channels: OT.channels.filter((one) => one.id !== channelId)
+        })
+
+        it('shows a new channel a moment after it was made, reading only that server again', async () => {
+            serversApi.fetchServer.mockResolvedValue({
+                ...OT,
+                channels: [...OT.channels, channel('tai-lieu', { position: 2 })]
+            })
+            renderAt('/channels/ot/hoi-dap')
+            const channels = await screen.findByRole('navigation', { name: 'Channels of Ôn thi Giải tích 2' })
+            const reads = serversApi.fetchServers.mock.calls.length
+
+            act(() => emitRealtimeEvent('channel.created', { serverId: 'ot' }))
+
+            expect(
+                await within(channels).findByRole('link', { name: 'tai-lieu' }, { timeout: 2000 })
+            ).toBeInTheDocument()
+            expect(serversApi.fetchServer).toHaveBeenCalledWith('ot')
+            expect(serversApi.fetchServers.mock.calls.length).toBe(reads)
+        })
+
+        it('goes to the first text channel and says so when the open one is deleted or no longer seen (02 channel-removed)', async () => {
+            render(<Toaster />)
+            serversApi.fetchServer.mockResolvedValue(without('hoi-dap'))
+            const router = renderAt('/channels/ot/hoi-dap')
+            expect(await screen.findByRole('heading', { level: 1, name: 'hoi-dap' })).toBeInTheDocument()
+
+            act(() => emitRealtimeEvent('channel.deleted', { serverId: 'ot' }))
+
+            await waitFor(() => expect(router.state.location.pathname).toBe('/channels/ot/ban-can-su'), {
+                timeout: 2000
+            })
+            expect(await screen.findByText('This channel is no longer available')).toBeInTheDocument()
+        })
+
+        it('says a server was deleted, with its name, and opens the next one on the rail', async () => {
+            render(<Toaster />)
+            const router = renderAt('/channels/ot/hoi-dap')
+            expect(await screen.findByRole('heading', { level: 1, name: 'hoi-dap' })).toBeInTheDocument()
+
+            act(() => emitRealtimeEvent('server.deleted', { serverId: 'ot' }))
+
+            expect(await screen.findByText('Ôn thi Giải tích 2 was deleted')).toBeInTheDocument()
+            await waitFor(() => expect(router.state.location.pathname).toBe('/channels/nd/ban-can-su'))
+            expect(within(rail()).queryByRole('link', { name: 'Ôn thi Giải tích 2' })).not.toBeInTheDocument()
+        })
+
+        it('says one is no longer in a server they were kicked from, and opens the next one (dialog: L9b)', async () => {
+            render(<Toaster />)
+            const router = renderAt('/channels/nd/hoi-dap')
+            expect(await screen.findByRole('heading', { level: 1, name: 'hoi-dap' })).toBeInTheDocument()
+
+            act(() =>
+                emitRealtimeEvent('member.left', {
+                    serverId: 'nd',
+                    userId: 'user-1',
+                    removedBy: 'kick',
+                    reason: 'Spam'
+                })
+            )
+
+            expect(await screen.findByText('You are no longer in Nhóm đồ án Mobile')).toBeInTheDocument()
+            await waitFor(() => expect(router.state.location.pathname).toBe('/channels/ot/ban-can-su'))
+        })
+
+        it('goes to the Study page when the server deleted was the last one', async () => {
+            serversApi.fetchServers.mockResolvedValue([OT])
+            const router = renderAt('/channels/ot/hoi-dap')
+            expect(await screen.findByRole('heading', { level: 1, name: 'hoi-dap' })).toBeInTheDocument()
+
+            act(() => emitRealtimeEvent('server.deleted', { serverId: 'ot' }))
+
+            await waitFor(() => expect(router.state.location.pathname).toBe('/study'))
+        })
+
+        it('says a server gone while the socket was down, once it is back, until M3 says it in the inbox (D-179)', async () => {
+            render(<Toaster />)
+            renderAt('/channels/ot/hoi-dap')
+            expect(await screen.findByRole('heading', { level: 1, name: 'hoi-dap' })).toBeInTheDocument()
+            serversApi.fetchServers.mockResolvedValue([OT])
+
+            act(() => emitRealtimeEvent('ready', {}))
+
+            expect(await screen.findByText('You are no longer in Nhóm đồ án Mobile')).toBeInTheDocument()
         })
     })
 

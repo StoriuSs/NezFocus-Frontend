@@ -73,13 +73,15 @@ react-starter/
     │   │   ├── api/           # servers.api.ts, layout.api.ts, invites.api.ts, roles.api.ts, moderation.api.ts,
     │   │   │                  #   keys.ts; the hooks: useServers, useCreateServer, useChannelLayout, useInvites,
     │   │   │                  #   useRoles, useModeration, useServerSettings, useMembership; serverOwnership
-    │   │   │                  #   (auth's port), useMentionSource (the chat's MentionSource port)
+    │   │   │                  #   (auth's port), useMentionSource (the chat's MentionSource port),
+    │   │   │                  #   liveServers (socket events: each server read again, D-178)
     │   │   ├── components/    # CreateServerDialog, NoServers, ServerIcon, ServerMenuItems; channel-list/,
     │   │   │                  #   dialogs/ (channels, categories), invites/, membership/ (leave, hand over, delete),
     │   │   │                  #   settings/ (ServerNameForm, ServerIconSetting, WelcomeChannelSetting, OwnerSettings,
     │   │   │                  #   InvitesSettings, Pagination; members/, roles/)
     │   │   ├── hooks/         # useFoldedCategories (the categories folded, kept in this browser), useMoveAwayFrom,
-    │   │   │                  #   useServerGoneWatch (D-143, run by the AppShell)
+    │   │   │                  #   useServerGoneWatch (D-143, D-178: starts liveServers, run by the AppShell),
+    │   │   │                  #   useGoneServerPath (where a page of a server gone goes)
     │   │   ├── lib/           # paths (SERVERS_PATHS and channelPath, messagePath, messageLink, invitePath,
     │   │   │                  #   serverSettingsPath, roleEditPath, isId), app-links (how a link in a message
     │   │   │                  #   shows: a message chip, "can't view", a page of the app, D-117; and a channel
@@ -111,6 +113,7 @@ react-starter/
     │   │                      #   liveMessages / liveReadStates: socket events into the cache,
     │   │                      #   attachmentUploads: files uploading outside React, three at a time,
     │   │                      #   outgoingMessages: the messages on their way, outside React too,
+    │   │                      #   forgetChannels: the histories of channels no longer seen (servers calls it),
     │   │                      #   useAttachmentTray, useAttachmentLinks), attachment-tray.store.ts
     │   │                      #   (the files chosen, per channel),
     │   │                      #   components/ (list, row, system row, text and its link chips,

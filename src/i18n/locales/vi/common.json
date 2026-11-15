@@ -160,6 +160,8 @@
       "bans": "Danh sách cấm"
     },
     "serverGone": "Bạn không còn ở {{name}}",
+    "channelGone": "Kênh này không còn khả dụng",
+    "serverDeleted": "{{name}} đã bị xóa",
     "notFound": {
       "title": "Không tìm thấy trang này",
       "body": "Đường dẫn có thể đã sai, hoặc nội dung đã bị xóa hay bạn không có quyền xem.",

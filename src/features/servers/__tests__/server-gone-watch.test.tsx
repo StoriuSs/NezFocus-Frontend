@@ -13,7 +13,7 @@ vi.mock('sonner', () => ({ toast }))
 
 const { useServerGoneWatch } = await import('../hooks/useServerGoneWatch')
 
-const server = (id: string, name: string) => ({ id, name }) as Server
+const server = (id: string, name: string) => ({ id, name, channels: [{ id: `${id}-chung` }] }) as Server
 const OT = server('ot', 'Ôn thi Giải tích 2')
 const ND = server('nd', 'Nhóm Đề cương')
 
@@ -30,7 +30,7 @@ function setup() {
 const notFoundUnder = (url: string) =>
     apiError(404, 'NOT_FOUND_ERROR', { config: { url, headers: new AxiosHeaders() } })
 
-// D-143: no live updates until M2, so a server one is no longer in is noticed here.
+// D-143, D-179: a server one is no longer in, noticed from requests and from the list read again.
 describe('useServerGoneWatch', () => {
     beforeEach(async () => {
         await i18n.changeLanguage('en')
@@ -41,8 +41,20 @@ describe('useServerGoneWatch', () => {
     it('says so when a list read from the API no longer has a server', async () => {
         const { client } = setup()
         await client.fetchQuery({ queryKey: serverKeys.list(), queryFn: async () => [ND], staleTime: 0 })
-        expect(toast).toHaveBeenCalledWith('You are no longer in Ôn thi Giải tích 2', { id: 'server-gone-ot' })
+        expect(toast).toHaveBeenCalledWith(
+            'You are no longer in Ôn thi Giải tích 2',
+            expect.objectContaining({ id: 'server-gone-ot', icon: expect.anything() })
+        )
         expect(toast).toHaveBeenCalledTimes(1)
+    })
+
+    it('lets go of what was read about it: its lists and the histories of its channels (gone while offline)', async () => {
+        const { client } = setup()
+        client.setQueryData(serverKeys.roles('ot'), [])
+        client.setQueryData(['messages', 'channel', 'ot-chung'], { pages: [], pageParams: [] })
+        await client.fetchQuery({ queryKey: serverKeys.list(), queryFn: async () => [ND], staleTime: 0 })
+        expect(client.getQueryData(serverKeys.roles('ot'))).toBeUndefined()
+        expect(client.getQueryData(['messages', 'channel', 'ot-chung'])).toBeUndefined()
     })
 
     it('says nothing about one taken out by hand, as leaving or deleting does', async () => {

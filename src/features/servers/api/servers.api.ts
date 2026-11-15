@@ -8,6 +8,12 @@ export async function fetchServers(): Promise<Server[]> {
     return response.data.data.servers
 }
 
+/** GET /servers/{id}: one of them, as the list shows it, read again when an event says it changed (D-178). */
+export async function fetchServer(serverId: string): Promise<Server> {
+    const response = await api.get<ApiEnvelope<Server>>(`/servers/${serverId}`)
+    return response.data.data
+}
+
 /** POST /servers (S-SRV-01): the new server, as the list shows it. */
 export async function createServer(body: CreateServerRequest, idempotencyKey: string): Promise<Server> {
     const response = await api.post<ApiEnvelope<Server>>('/servers', body, {

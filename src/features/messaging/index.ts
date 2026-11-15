@@ -17,6 +17,7 @@ export const ChatDropZone = lazy(() =>
     import('./components/ChannelChat').then((chat) => ({ default: chat.ChatDropZone }))
 )
 export { useChannelReadState, useMentionedChannels, useMentionTotal, useServerReadState } from './api/useReadStates'
+export { forgetChannels } from './api/forgetChannels'
 export type {
     AppLink,
     ChatPermissions,

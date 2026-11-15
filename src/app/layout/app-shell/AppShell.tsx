@@ -67,7 +67,7 @@ export default function AppShell() {
     const membershipDialog = useMembershipDialogs((state) => state.open !== null)
     // The account's theme and language, here and in this browser's other tabs (REQ-AUTH-08).
     useAccountSettings()
-    // A server one is no longer in leaves the rail with a Toast (D-143).
+    // The servers kept live by the socket, and one no longer in leaving the rail with a Toast (D-178, D-143).
     useServerGoneWatch()
     // The tab's socket (SRS 5.2), opened after this first paint; and the Banner it shows when lost.
     useRealtimeConnection()

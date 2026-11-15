@@ -42,7 +42,11 @@ export function DeleteChannelDialog({
     const { t } = useTranslation('servers')
     const navigate = useNavigate()
     const { pathname } = useLocation()
-    const remove = useDeleteChannel(server.id)
+    // The page on it moves before the channel leaves the list, which would otherwise say "no longer available".
+    const remove = useDeleteChannel(server.id, async (updated, channelId) => {
+        if (pathname !== channelPath(server.id, channelId)) return
+        await navigate(channelPath(server.id, firstTextChannel(updated)?.id), { replace: true, flushSync: true })
+    })
     const [typed, setTyped] = useState('')
     const [deleting, setDeleting] = useState(false)
     const [failure, setFailure] = useState<{ text: string; icon?: 'wifi-off' } | null>(null)
@@ -56,11 +60,8 @@ export function DeleteChannelDialog({
         setDeleting(true)
         setFailure(null)
         try {
-            const updated = await remove.mutateAsync(channel.id)
+            await remove.mutateAsync(channel.id)
             onDeleted()
-            if (pathname === channelPath(server.id, channel.id)) {
-                void navigate(channelPath(server.id, firstTextChannel(updated)?.id), { replace: true })
-            }
             toast.success(t(room ? 'channel.roomDeleted' : 'channel.deleted', { name: channel.name }))
         } catch (error) {
             const described = describeFailure(t, error, {

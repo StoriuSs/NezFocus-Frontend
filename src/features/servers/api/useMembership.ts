@@ -47,6 +47,7 @@ export function useLeaveServer(serverId: string, moveAway: () => Promise<void>) 
 export function useDeleteServer(serverId: string, moveAway: () => Promise<void>) {
     const queryClient = useQueryClient()
     return useMutation({
+        mutationKey: serverKeys.deleting(serverId),
         mutationFn: (name: string) => outOfIt(deleteServer(serverId, name)),
         onSuccess: async () => {
             await moveAway()

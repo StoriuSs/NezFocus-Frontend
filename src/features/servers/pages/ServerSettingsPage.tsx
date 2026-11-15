@@ -6,6 +6,7 @@ import '@/i18n/servers'
 import { PageLoader } from '@/components/PageLoader'
 import { ShellPage } from '@/components/shell/ShellPage'
 import { useServers } from '../api/useServers'
+import { useGoneServerPath } from '../hooks/useGoneServerPath'
 import { channelPath, serverSettingsPath } from '../lib/paths'
 import { isSettingsSection, settingsSections } from '../lib/settings-sections'
 import { InvitesSettings } from '../components/settings/InvitesSettings'
@@ -39,15 +40,17 @@ export default function ServerSettingsPage() {
     const { t } = useTranslation()
     const { serverId, section, roleId } = useParams()
     const servers = useServers()
+    // Deleted, or one was removed, while open: the next server on the rail (04 S-SET Edge case).
+    const goneTo = useGoneServerPath(serverId, servers.data)
 
     if (servers.isPending) return <PageLoader className='min-h-0 flex-1' />
     // The page's error boundary offers to try again, only with nothing to
-    // show: a failed re-read (back to the tab, after a kick) keeps the last
+    // show: a failed re-read (the socket back, after a kick) keeps the last
     // list, so the page stays.
     if (servers.data === undefined) throw servers.error
 
     const server = servers.data.find((candidate) => candidate.id === serverId)
-    if (!server) return <Navigate to='/study' replace />
+    if (!server) return <Navigate to={goneTo ?? '/study'} replace />
 
     const sections = settingsSections(server)
     const first = sections[0]
