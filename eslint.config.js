@@ -86,6 +86,13 @@ export default defineConfig([
             ]
         }
     },
+    // Videos and sounds in messages are files people upload, with no caption
+    // file to give them (CONSTRAINTS.md › Exceptions, E4). Only that file,
+    // only that rule.
+    {
+        files: ['src/features/messaging/components/attachments/MediaPlayers.tsx'],
+        rules: { 'jsx-a11y/media-has-caption': 'off' }
+    },
     // Shared code knows no feature: the API client gets the session through
     // connectApiSession (main.tsx), not by importing the auth store.
     {
@@ -181,6 +188,13 @@ export default defineConfig([
     {
         files: ['src/features/servers/api/useCreateServer.ts'],
         rules: { 'no-restricted-imports': ['error', { patterns: otherFeatures('servers') }] }
+    },
+    // E3: the chat's queue of messages on their way runs outside React, so a
+    // message keeps going once its channel is left; each message keeps its
+    // key until saved (outgoingMessages.ts).
+    {
+        files: ['src/features/messaging/api/outgoingMessages.ts'],
+        rules: { 'no-restricted-imports': ['error', { patterns: otherFeatures('messaging') }] }
     },
     {
         files: ['**/__tests__/**', '**/*.test.{ts,tsx}'],
