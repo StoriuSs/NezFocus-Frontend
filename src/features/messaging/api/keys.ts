@@ -11,6 +11,8 @@ export const messageKeys = {
     readStates: () => [...messageKeys.all, 'read-states'] as const,
     /** New read links of one file, asked for when the ones held ended (they last an hour). */
     attachmentLinks: (attachmentId: string) => [...messageKeys.all, 'attachment-links', attachmentId] as const,
+    /** The links a PDF in the viewer was opened with, kept while it is open (C-42). */
+    attachmentFrame: (attachmentId: string) => [...messageKeys.all, 'attachment-frame', attachmentId] as const,
     /** The emoji picker's emoji in one language, read once (C-12). */
     emoji: (language: string) => [...messageKeys.all, 'emoji', language] as const
 }

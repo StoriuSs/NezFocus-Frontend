@@ -42,6 +42,12 @@ export function messageTime(at: Date, now: Date, timeZone: string | undefined, t
     return `${dateOf(at, timeZone)} ${time}`
 }
 
+/** A message's time with its day named: "Hôm nay 21:47" (C-42's top bar), else as `messageTime`. */
+export function timeWithDay(at: Date, now: Date, timeZone: string | undefined, t: MessagingT): string {
+    const today = dayNumber(now, timeZone) === dayNumber(at, timeZone)
+    return today ? `${t('time.today')} ${timeIn(timeZone, at)}` : messageTime(at, now, timeZone, t)
+}
+
 /** The whole moment, for the tooltip on a time. */
 export function messageTimeInFull(at: Date, timeZone: string | undefined, t: MessagingT): string {
     return t('time.full', {

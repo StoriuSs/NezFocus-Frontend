@@ -86,6 +86,47 @@ describe('uploading the files chosen (D-93, D-165)', () => {
         expect(states()).toEqual(['rejected', 'uploading'])
     })
 
+    it('waits for the network with files chosen offline, and uploads them once the browser is back online (C-41 offline)', async () => {
+        const online = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+        uploads.addToTray('c1', [file('cau4-2.jpg')])
+
+        expect(states()).toEqual(['offline'])
+        expect(requestUpload).not.toHaveBeenCalled()
+
+        online.mockReturnValue(true)
+        window.dispatchEvent(new Event('online'))
+        await waitFor(() => expect(posts).toHaveLength(1))
+        expect(states()).toEqual(['uploading'])
+    })
+
+    it('stops what is on its way when the browser goes offline, and uploads it again from the start once back online', async () => {
+        const online = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true)
+        uploads.addToTray('c1', [file('1.png'), file('2.png'), file('3.png'), file('4.png')])
+        await waitFor(() => expect(posts).toHaveLength(3))
+
+        online.mockReturnValue(false)
+        window.dispatchEvent(new Event('offline'))
+        await waitFor(() => expect(states()).toEqual(['offline', 'offline', 'offline', 'offline']))
+        expect(posts.every((post) => post.signal.aborted)).toBe(true)
+
+        online.mockReturnValue(true)
+        window.dispatchEvent(new Event('online'))
+        await waitFor(() => expect(posts).toHaveLength(6))
+        expect(states()).toEqual(['uploading', 'uploading', 'uploading', 'waiting'])
+        expect(useUploads.getState().uploads[ids()[0]!]!.progress).toBe(0)
+    })
+
+    it('waits for the network, not "Thử lại", when an upload is lost because the browser went offline', async () => {
+        const online = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true)
+        uploads.addToTray('c1', [file('mat-mang.png')])
+        await waitFor(() => expect(posts).toHaveLength(1))
+
+        online.mockReturnValue(false)
+        posts[0]!.reject(new UploadError('network'))
+
+        await waitFor(() => expect(states()).toEqual(['offline']))
+    })
+
     it('asks for a new form once when the storage refuses one past its 15 minutes', async () => {
         uploads.addToTray('c1', [file('cham.png')])
         await waitFor(() => expect(posts).toHaveLength(1))

@@ -10,6 +10,7 @@ vi.mock('../api/messages.api', () => ({ fetchMessages }))
 const { emitRealtimeEvent } = await import('@/features/realtime/lib/realtime-events')
 const { listenForMessages } = await import('../api/liveMessages')
 const { messageKeys } = await import('../api/keys')
+const { useUploads } = await import('../attachment-tray.store')
 
 const saved = (id: string, channelId = 'hoi-dap'): Message => ({
     attachments: [],
@@ -207,6 +208,41 @@ describe('Keeping open histories live (ARCHITECTURE 3.4, 10.2)', () => {
         expect(leave()).toBe(true)
         client.setQueryData(messageKeys.channel('hoi-dap'), withOutgoing('failed'))
         expect(leave()).toBe(false)
+    })
+
+    it('asks before leaving the page while a file of a tray is still on its way, not once all are done or failed (C-12)', () => {
+        const leave = () => {
+            const event = new Event('beforeunload', { cancelable: true })
+            window.dispatchEvent(event)
+            return event.defaultPrevented
+        }
+        const upload = (state: 'uploading' | 'offline' | 'done' | 'failed') =>
+            useUploads.setState({
+                trays: { 'hoi-dap': ['u1'] },
+                uploads: {
+                    u1: {
+                        id: 'u1',
+                        channelId: 'hoi-dap',
+                        file: new File(['x'], 'cau4.jpg'),
+                        kind: 'image',
+                        preview: null,
+                        state,
+                        progress: 0.6,
+                        attachment: null,
+                        refusal: null
+                    }
+                }
+            })
+
+        upload('uploading')
+        expect(leave()).toBe(true)
+        upload('offline')
+        expect(leave()).toBe(true)
+        upload('done')
+        expect(leave()).toBe(false)
+        upload('failed')
+        expect(leave()).toBe(false)
+        useUploads.setState({ uploads: {}, trays: {} })
     })
 
     it('forgets a history the person may no longer read', async () => {

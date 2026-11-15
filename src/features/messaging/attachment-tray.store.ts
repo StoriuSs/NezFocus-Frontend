@@ -8,10 +8,13 @@ import type { Attachment } from './types'
  * - `uploading`: on its way to the storage, `progress` 0 to 1;
  * - `checking`: uploaded, its content being checked (D-93), shown as 100%;
  * - `done`: checked, `attachment` its file;
- * - `failed`: lost on the way, or gone after 24 hours: "Thử lại" uploads it again;
+ * - `offline`: waiting for the network, the browser offline ("Chờ có mạng"):
+ *   uploads again from the start once it is back;
+ * - `failed`: lost on the way while the browser was online, or gone after 24
+ *   hours: "Thử lại" uploads it again;
  * - `rejected`: one that can never go (`refusal` says why): only taken out.
  */
-export type UploadState = 'waiting' | 'uploading' | 'checking' | 'done' | 'failed' | 'rejected'
+export type UploadState = 'waiting' | 'uploading' | 'checking' | 'offline' | 'done' | 'failed' | 'rejected'
 
 /**
  * Why a file can never go: its content is not what its name says (D-93), the

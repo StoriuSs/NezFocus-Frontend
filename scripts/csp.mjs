@@ -84,9 +84,12 @@ function policy({ api, apiSocket, errorTracking, extraImages, storage, pages }) 
         // wss:, and only 'self' stretches to ws/wss (CSP3). The storage: message
         // files are posted to the bucket by the browser itself (D-165).
         `connect-src ${unique("'self'", api, apiSocket, ...errorTracking, ...storage)}`,
-        // No frames. Something that needs one (a payment form) adds its
+        // A message's video and sound play from the bucket (C-10).
+        `media-src ${unique("'self'", ...storage)}`,
+        // The only frames: a message's PDF from the bucket, in the browser's
+        // own viewer (C-42, D-94). Something else that needs one adds its
         // origin here, not a wildcard.
-        "frame-src 'none'",
+        `frame-src ${unique(...storage)}`,
         "frame-ancestors 'self'",
         "form-action 'self'",
         "base-uri 'self'",

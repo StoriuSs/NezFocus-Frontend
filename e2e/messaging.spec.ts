@@ -538,6 +538,72 @@ test('files go from the browser to the storage, are checked, and reach the other
     await binh.context.close()
 })
 
+test('files dropped on the page go to the tray; an image and a PDF of a message open in the viewer, which closes back to them (S-CHAT-04, C-12, C-42)', async ({
+    browser
+}) => {
+    test.setTimeout(90_000)
+    const an = await openAs(browser, anEmail)
+    const tray = an.page.getByRole('list', { name: 'Files to send' })
+    // The content column: from the Header down to the composer.
+    const column = an.page.locator('section').filter({ has: log(an.page) })
+    // A drag of two files, as the browser makes one.
+    const files = await an.page.evaluateHandle(
+        (png) => {
+            const transfer = new DataTransfer()
+            const bytes = Uint8Array.from(atob(png), (character) => character.charCodeAt(0))
+            transfer.items.add(new File([bytes], 'cau4-2.png', { type: 'image/png' }))
+            transfer.items.add(new File(['%PDF-1.4\n%nezfocus e2e\n'], 'de-giua-ky.pdf', { type: 'application/pdf' }))
+            return transfer
+        },
+        (await drawnPng(an.page)).toString('base64')
+    )
+
+    await column.dispatchEvent('dragenter', { dataTransfer: files })
+    await expect(an.page.getByText(/^Drop files to send to #/)).toBeVisible()
+    await expect(an.page.getByText('Up to 10 files, 25 MB each')).toBeVisible()
+    await shoot(an.page, 'chat04-drop-target')
+    await column.dispatchEvent('drop', { dataTransfer: files })
+    await expect(an.page.getByText(/^Drop files to send to #/)).toBeHidden()
+    await expect(tray.getByRole('listitem')).toHaveCount(2)
+    await expect(an.page.getByText(/^Uploading \d\/2$/)).toHaveCount(0, { timeout: 30_000 })
+    await say(an.page, 'Kéo thả hai tệp')
+
+    const opener = log(an.page).getByRole('button', { name: 'Image cau4-2.png' })
+    await opener.click()
+    const viewer = an.page.getByRole('dialog', { name: /^Image cau4-2\.png from / })
+    await expect(viewer).toBeVisible()
+    // The image itself, from the storage through its signed link.
+    await expect
+        .poll(
+            () =>
+                viewer
+                    .getByRole('img', { name: 'Image cau4-2.png' })
+                    .evaluate((img: HTMLImageElement) => img.naturalWidth),
+            {
+                timeout: 15_000
+            }
+        )
+        .toBe(480)
+    await shoot(an.page, 'chat04-image-viewer')
+    await an.page.keyboard.press('Escape')
+    await expect(viewer).toBeHidden()
+    await expect(opener).toBeFocused()
+
+    await log(an.page).getByRole('button', { name: 'View de-giua-ky.pdf' }).click()
+    const fileViewer = an.page.getByRole('dialog', { name: /^File de-giua-ky\.pdf from / })
+    await expect(fileViewer).toBeVisible()
+    // The browser's PDF viewer, or what a browser without one says.
+    await expect(
+        fileViewer.locator('iframe').or(fileViewer.getByText("This browser can't show this file"))
+    ).toBeVisible()
+    await shoot(an.page, 'chat04-file-viewer')
+    await fileViewer.getByRole('button', { name: 'Close' }).click()
+    await expect(fileViewer).toBeHidden()
+
+    expect(an.problems).toEqual([])
+    await an.context.close()
+})
+
 test('messages past 5 in 5 seconds wait, then go by themselves, each once and in order', async ({ browser }) => {
     test.setTimeout(60_000)
     const an = await openAs(browser, anEmail)

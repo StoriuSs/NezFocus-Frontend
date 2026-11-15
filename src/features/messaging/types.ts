@@ -211,4 +211,6 @@ export interface MessageHandlers {
     readLink: (href: string) => AppLink | null
     /** The server's side of mentions: how a channel token shows, one's own roles (REQ-MSG-03). */
     mentions: MentionSource
+    /** An image or a PDF of a message in the viewer (C-42); `from` gets the focus back once it closes. */
+    openFile: (message: Message, file: Attachment, from: HTMLElement) => void
 }

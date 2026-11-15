@@ -1,6 +1,6 @@
 import { getApiErrorType } from '@/lib/api-error'
 import { useUploads, type Refusal, type Upload } from '../attachment-tray.store'
-import { kindOf, UPLOADS_AT_ONCE } from '../lib/attachment-rules'
+import { isUploading, kindOf, UPLOADS_AT_ONCE } from '../lib/attachment-rules'
 import { postFile, UploadError } from '../lib/upload-file'
 import type { Attachment } from '../types'
 import { completeUpload, requestUpload } from './attachments.api'
@@ -11,12 +11,56 @@ import { completeUpload, requestUpload } from './attachments.api'
  * from the API, the file posted with it straight to the storage, then its
  * content checked. Three at a time, the rest waiting in the order chosen.
  * A form whose 15 minutes ran out is asked for again once (S-CHAT-04).
+ *
+ * The browser offline (owner, 15/11/2026): every file not done waits for the
+ * network (`offline`, "Chờ có mạng"), those on their way stopped, and all
+ * upload again from the start once it is back (C-41). Lost on the way while
+ * the browser says it is online (the storage or the API not answering):
+ * `failed`, "Thử lại".
  */
 
 const working = new Map<string, AbortController>()
+let listening = false
+
+/** Once, for as long as the app runs: the browser going offline and coming back. */
+function listen(): void {
+    if (listening) return
+    listening = true
+    window.addEventListener('offline', waitForNetwork)
+    window.addEventListener('online', () => {
+        const { uploads, change } = useUploads.getState()
+        for (const upload of Object.values(uploads))
+            if (upload.state === 'offline') change(upload.id, { state: 'waiting', progress: 0 })
+        pump()
+    })
+}
+
+/** Every file not done yet waits for the network; those on their way stop. */
+function waitForNetwork(): void {
+    for (const controller of working.values()) controller.abort()
+    working.clear()
+    const { uploads, change } = useUploads.getState()
+    for (const upload of Object.values(uploads))
+        if (isUploading(upload.state)) change(upload.id, { state: 'offline', progress: 0 })
+}
+
+/**
+ * Every file of one channel, in its tray or in its messages on their way,
+ * stopped and let go: its history left the cache (signing out clears it; a
+ * channel one may no longer read is forgotten).
+ */
+export function dropChannelUploads(channelId: string): void {
+    for (const upload of Object.values(useUploads.getState().uploads))
+        if (upload.channelId === channelId) removeUpload(upload.id)
+}
+
+/** A file of a tray, or of a message, still on its way: leaving the page would lose it (C-12 › Luật). */
+export const uploadsOnTheWay = (): boolean =>
+    Object.values(useUploads.getState().uploads).some((upload) => isUploading(upload.state))
 
 /** Puts the files in the channel's tray and starts them. They were sorted first (`sortChosen`). */
 export function addToTray(channelId: string, files: File[]): void {
+    listen()
     useUploads.getState().put(
         files.map(
             (file): Upload => ({
@@ -112,6 +156,7 @@ function refusalOf(error: unknown, checking: boolean): Refusal | null {
 
 /** Starts the files waiting, oldest first, while fewer than 3 are on their way. */
 function pump(): void {
+    if (!navigator.onLine) return waitForNetwork()
     const waiting = Object.values(useUploads.getState().uploads).filter((upload) => upload.state === 'waiting')
     for (const upload of waiting) {
         if (working.size >= UPLOADS_AT_ONCE) return
@@ -152,7 +197,12 @@ async function run(upload: Upload): Promise<void> {
     } catch (error) {
         if (!here()) return
         const refusal = refusalOf(error, checking)
-        change(upload.id, refusal ? { state: 'rejected', refusal, progress: 0 } : { state: 'failed', progress: 0 })
+        change(
+            upload.id,
+            refusal
+                ? { state: 'rejected', refusal, progress: 0 }
+                : { state: navigator.onLine ? 'failed' : 'offline', progress: 0 }
+        )
     } finally {
         if (working.get(upload.id) === controller) working.delete(upload.id)
         pump()

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -42,6 +42,11 @@ import '../messaging.css'
 
 // The pins panel (S-CHAT-02), shown by the servers feature's channel page: in this chunk, with the chat's stylesheet.
 export { PinsPanel } from './PinsPanel'
+// Files dragged onto the channel's page (C-12 `drop-target`), drawn by that page over its content column.
+export { ChatDropZone } from './attachments/ChatDropZone'
+
+/** The viewer (C-42): fetched the first time a file is opened. */
+const MediaViewer = lazy(() => import('./attachments/MediaViewer'))
 
 const quote = (message: Message): RepliedMessage => ({
     id: message.id,
@@ -84,6 +89,10 @@ const quote = (message: Message): RepliedMessage => ({
  * around the reader's mark and the list at "New" (`useUnreadMarker`), with
  * the new messages bar above it; what comes into view is read only while
  * the reader can see the page.
+ *
+ * An image or a PDF opens in the viewer (C-42), focus going back to it once
+ * closed; its message deleted meanwhile, the viewer closes with a Toast
+ * "Tin nhắn này đã bị xóa" (S-CHAT-04 › Edge case).
  */
 export default function ChannelChat({
     channelId,
@@ -133,6 +142,12 @@ export default function ChannelChat({
     const [replyingTo, setReplyingTo] = useState<RepliedMessage | null>(null)
     const [editingId, setEditingId] = useState<string | null>(null)
     const [deletingId, setDeletingId] = useState<string | null>(null)
+    const [viewing, setViewing] = useState<{
+        messageId: string
+        fileId: string
+        from: HTMLElement
+        open: boolean
+    } | null>(null)
     const jump = useJumpToMessage(channelId, target, history.data, { atUnread: startAt !== undefined })
 
     const pages = history.data?.pages
@@ -165,6 +180,16 @@ export default function ChannelChat({
     useEffect(() => {
         if (deletingId && pages && !deleting) setDeletingId(null)
     }, [deletingId, deleting, pages])
+    const viewed = viewing ? saved.get(viewing.messageId) : undefined
+    const viewedFile = viewed?.attachments.find((file) => file.id === viewing?.fileId)
+    const viewingGone = viewing !== null && history.data !== undefined && isGoneFrom(history.data, viewing.messageId)
+    // Deleted: closed with a word. Only out of what the list holds (it started over): closed.
+    const viewingLost = viewing !== null && pages !== undefined && !viewedFile
+    useEffect(() => {
+        if (!viewingLost) return
+        if (viewingGone && deletedHere.current !== viewing?.messageId) toast(t('viewer.deleted'))
+        setViewing(null)
+    }, [viewingLost, viewingGone, viewing, t])
     const replyQuote =
         replyingTo && (!history.data || !isGoneFrom(history.data, replyingTo.id))
             ? replyingTo
@@ -217,7 +242,8 @@ export default function ChannelChat({
             unpin: (message) => unpin(message.id),
             show: jump.show,
             readLink,
-            mentions
+            mentions,
+            openFile: (message, file, from) => setViewing({ messageId: message.id, fileId: file.id, from, open: true })
         }),
         [me, permissions, backToComposer, copy, words, mentions, linkTo, react, pin, unpin, jump.show, readLink]
     )
@@ -333,6 +359,24 @@ export default function ChannelChat({
                         })
                     }}
                 />
+            ) : null}
+            {viewing && viewed && viewedFile ? (
+                <Suspense fallback={null}>
+                    <MediaViewer
+                        open={viewing.open}
+                        message={viewed}
+                        file={viewedFile}
+                        now={now}
+                        timeZone={timeZone}
+                        onMove={(fileId) => setViewing({ ...viewing, fileId })}
+                        // Faded out first (C-42), then gone.
+                        onClose={() => setViewing({ ...viewing, open: false })}
+                        onClosed={() => {
+                            ;(viewing.from.isConnected ? viewing.from : composer.current)?.focus()
+                            setViewing(null)
+                        }}
+                    />
+                </Suspense>
             ) : null}
         </>
     )

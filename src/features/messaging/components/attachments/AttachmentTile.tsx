@@ -1,5 +1,5 @@
 import { forwardRef, type KeyboardEvent } from 'react'
-import { Clock3, FileX, RotateCw, X } from 'lucide-react'
+import { Clock3, FileX, RotateCw, WifiOff, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import '@/i18n/messaging'
 import { WithTooltip } from '@/components/ui/tooltip'
@@ -14,7 +14,8 @@ import { UploadRing } from './UploadRing'
  * One file in the composer's tray (C-41), 120 × 120: an image shows its
  * picture from this device at once, any other file its icon, name cut in the
  * middle and size. Over it, while not done: waiting, the ring and percent,
- * "Thử lại" (failed: clicking the tile tries again), or "Không gửi được"
+ * "Chờ có mạng" (the browser offline: it goes on its own once back), "Thử
+ * lại" (failed: clicking the tile tries again), or "Không gửi được"
  * (refused for its content: only taken out). `x` takes it out; shown on hover
  * and focus, always on a tile in error. Keys (C-41): Delete / Backspace take
  * it out, Enter tries a failed one again; ← / → move along the tray.
@@ -48,7 +49,9 @@ export const AttachmentTile = forwardRef<
                 ? t('attach.retry')
                 : state === 'rejected'
                   ? t('attach.rejected')
-                  : t('attach.uploaded')
+                  : state === 'offline'
+                    ? t('attach.offline')
+                    : t('attach.uploaded')
 
     const keyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
         if (event.key === 'Delete' || event.key === 'Backspace') {
@@ -119,6 +122,8 @@ export const AttachmentTile = forwardRef<
                             <RotateCw className='size-5 text-text-primary' aria-hidden='true' />
                         ) : state === 'rejected' ? (
                             <FileX className='size-5 text-text-primary' aria-hidden='true' />
+                        ) : state === 'offline' ? (
+                            <WifiOff className='size-5 text-text-primary' aria-hidden='true' />
                         ) : (
                             <UploadRing progress={upload.progress} />
                         )}

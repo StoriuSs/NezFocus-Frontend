@@ -27,7 +27,14 @@ describe('the Content-Security-Policy template', () => {
         ])
         expect(policy).not.toMatch(/script-src[^;]*unsafe-inline/)
         expect(directive(policy, 'object-src')).toEqual(["'none'"])
-        expect(directive(policy, 'frame-src')).toEqual(["'none'"])
+        // The only frames: a message's PDF from the bucket, in the viewer (D-94).
+        expect(directive(policy, 'frame-src')).toEqual([PLACEHOLDERS.storage])
+    })
+
+    it("lets the browser play a message's video and sound, and show its PDF, from the bucket (C-10, C-42)", () => {
+        const policy = cspTemplate([])
+        expect(directive(policy, 'media-src')).toEqual(["'self'", PLACEHOLDERS.storage])
+        expect(directive(policy, 'frame-src')).toEqual([PLACEHOLDERS.storage])
     })
 
     it('lets WebAssembly compile (Rive draws the mascot with it), never eval', () => {

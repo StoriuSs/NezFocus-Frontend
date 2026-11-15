@@ -221,7 +221,9 @@ One exception: an attempt that runs after its component has closed, like the
 "Try again" in the toast left by a server picture that failed to save
 (`useCreateServer.ts` › `saveNewServerIcon`). There the key is made once and
 handed to each retry in the closure, since the hook went with the dialog
-(`CONSTRAINTS.md` › Ngoại lệ E1).
+(`CONSTRAINTS.md` › Ngoại lệ E1). The chat's messages on their way are
+the other (`outgoingMessages.ts`, E3): they are sent once their channel's
+page has closed.
 
 ### Optimistic saves
 
@@ -394,13 +396,18 @@ at a time with only the newest waiting, and takes the backend's counts when
 it answers. A failure puts the mark back and reads the list again, without
 a toast: the next message seen tries again.
 
-Sending (`useSendMessage`) puts the message in the cache at once with a
-nonce and swaps it for the saved copy (the answer or the event, whichever
-comes first, taken in once). One at a time per channel, in the order typed;
-a 429 waits out `Retry-After` and goes again by itself, no network waits for
-the browser to be back online, anything else is `failed` with "Try again"
-(the same nonce, so never twice) and "Discard". The row says what happened,
-so the mutation opts out of the error toast.
+Sending (`useSendMessage`, over `api/outgoingMessages.ts`) puts the message
+in the cache at once with a nonce and swaps it for the saved copy (the
+answer or the event, whichever comes first, taken in once). One at a time
+per channel, in the order typed; a 429 waits out `Retry-After` and goes
+again by itself, no network waits for the browser to be back online (or the
+socket to be live again), anything else is `failed` with "Try again" (the
+same nonce, so never twice) and "Discard". The row says what happened, so
+there is no error toast. The queue runs outside React, so a message keeps
+going once its channel is left (S-CHAT-04): its files uploading, a limit
+waited out, the network waited for. With no hook left to hold it, each
+message keeps its own Idempotency-Key until saved, a new one when its body
+changes (CONSTRAINTS.md › E3).
 
 Editing and deleting (`useEditMessage`, `useDeleteMessage`) change the
 cache with the answer, then the event brings the same change, which changes

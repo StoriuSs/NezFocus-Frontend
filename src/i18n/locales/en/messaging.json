@@ -211,6 +211,25 @@
       "audio": "a sound file",
       "text": "a text file"
     },
-    "failed": "Couldn't upload"
+    "failed": "Couldn't upload",
+    "offline": "Waiting for network",
+    "dropTitle": "Drop files to send to #{{channel}}",
+    "dropLimits": "Up to 10 files, 25 MB each",
+    "noSend": "You don't have permission to send messages in this server",
+    "view": "View",
+    "unplayable": "This browser can't play this video",
+    "video": "Video {{name}}",
+    "audio": "Audio {{name}}"
+  },
+  "viewer": {
+    "newTab": "Open in new tab",
+    "previous": "Previous image",
+    "next": "Next image",
+    "close": "Close",
+    "count": "{{at}} / {{total}}",
+    "image": "Image {{name}} from {{author}}",
+    "file": "File {{name}} from {{author}}",
+    "noPdf": "This browser can't show this file",
+    "deleted": "This message was deleted"
   }
 }

@@ -10,7 +10,7 @@ import { ShellPage } from '@/components/shell/ShellPage'
 import { EmptyState } from '@/components/ui/empty-state'
 import { IconButton } from '@/components/ui/icon-button'
 import { WithTooltip } from '@/components/ui/tooltip'
-import { ChannelChat, PinsPanel } from '@/features/messaging'
+import { ChannelChat, ChatDropZone, PinsPanel } from '@/features/messaging'
 import { useMentionSource } from '../api/useMentionSource'
 import { MemberPanel } from '../components/member-panel/MemberPanel'
 import { useServers } from '../api/useServers'
@@ -82,6 +82,9 @@ export default function ChannelPage() {
  * (`useMentionSource`): whom to suggest, how a channel token shows, the
  * roles one holds.
  *
+ * Files dragged onto the page go to the chat's tray (`ChatDropZone`, C-12
+ * `drop-target`), over the whole content column.
+ *
  * [📌] in the Header opens the pins (S-CHAT-02) in the right panel, closed
  * at first and remembered as a column (SRS 1.71); a card opens its message's
  * link, closing the panel when it covers the chat (a sheet below 1280),
@@ -131,6 +134,16 @@ function TextChannel({ server, channel, messageId }: { server: Server; channel: 
             icon={Hash}
             composer
             bodyClassName='flex flex-col overflow-y-hidden'
+            overlay={
+                <Suspense fallback={null}>
+                    <ChatDropZone
+                        key={channelId}
+                        channelId={channelId}
+                        channelName={channel.name}
+                        permissions={permissions}
+                    />
+                </Suspense>
+            }
             actions={
                 <>
                     <WithTooltip label={t('channel.pins')} side='bottom'>

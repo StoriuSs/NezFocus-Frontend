@@ -19,7 +19,9 @@ import { IconButton } from '@/components/ui/icon-button'
  * Under the Header, the connection Banner when the AppShell has one (C-16).
  * `composer`: the page has a message box, so offline says messages will be
  * sent later. `bare`: no Header from 1024 up, and below only its ☰ (11
- * S-MOD-06), the title left to screen readers.
+ * S-MOD-06), the title left to screen readers. `overlay`: drawn inside the
+ * content column, which it may cover from the Header down (the chat's cover
+ * for dropped files, C-12 `drop-target`); the right panel stays uncovered.
  */
 export function ShellPage({
     title,
@@ -29,7 +31,8 @@ export function ShellPage({
     children,
     bodyClassName,
     composer = false,
-    bare = false
+    bare = false,
+    overlay
 }: {
     title: string
     icon?: LucideIcon
@@ -39,13 +42,14 @@ export function ShellPage({
     bodyClassName?: string
     composer?: boolean
     bare?: boolean
+    overlay?: ReactNode
 }) {
     const { t } = useTranslation()
     const shell = useContext(ShellContext)
 
     return (
         <>
-            <section className='flex min-w-0 flex-1 flex-col'>
+            <section className={cn('flex min-w-0 flex-1 flex-col', overlay !== undefined && 'relative')}>
                 <header className={cn('flex h-12 shrink-0 items-center gap-2 border-b px-4', bare && 'lg:hidden')}>
                     {shell ? (
                         <WithTooltip label={t('shell.openNav')} side='bottom'>
@@ -73,6 +77,7 @@ export function ShellPage({
                 </header>
                 {shell?.connection ? <ConnectionBanner status={shell.connection} composer={composer} /> : null}
                 <div className={cn('min-h-0 flex-1 overflow-y-auto', bodyClassName)}>{children}</div>
+                {overlay}
             </section>
             {panel}
         </>

@@ -266,7 +266,12 @@ export const MessageRow = memo(function MessageRow({
                         }
                     />
                 )}
-                {saved?.attachments.length ? <MessageAttachments files={saved.attachments} /> : null}
+                {saved?.attachments.length ? (
+                    <MessageAttachments
+                        files={saved.attachments}
+                        onOpen={(file, from) => handlers.openFile(saved, file, from)}
+                    />
+                ) : null}
                 {outgoing?.files?.length ? <OutgoingAttachments ids={outgoing.files} /> : null}
                 {saved && !editor ? (
                     <ReactionBar message={saved} handlers={handlers} onAdd={(button) => openPicker(button)} />

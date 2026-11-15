@@ -66,8 +66,9 @@ export function kindOfContent(contentType: string, name: string): FileKind | nul
     return kindOf(name)
 }
 
-/** Still on its way to being checked: what "Đang tải lên x/y" waits for (C-12). */
-export const isUploading = (state: string) => state === 'waiting' || state === 'uploading' || state === 'checking'
+/** Still on its way to being checked: what "Đang tải lên x/y" waits for (C-12), the network too. */
+export const isUploading = (state: string) =>
+    state === 'waiting' || state === 'uploading' || state === 'checking' || state === 'offline'
 
 /** Why a file chosen never went into the tray (S-CHAT-04 › Toast). */
 export type Refusal = 'too-large' | 'unsupported' | 'empty'

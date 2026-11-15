@@ -211,6 +211,25 @@
       "audio": "âm thanh",
       "text": "chữ"
     },
-    "failed": "Tải lên lỗi"
+    "failed": "Tải lên lỗi",
+    "offline": "Chờ có mạng",
+    "dropTitle": "Thả tệp để gửi vào #{{channel}}",
+    "dropLimits": "Tối đa 10 tệp, mỗi tệp 25 MB",
+    "noSend": "Bạn chưa có quyền gửi tin trong server này",
+    "view": "Xem",
+    "unplayable": "Trình duyệt không phát được video này",
+    "video": "Video {{name}}",
+    "audio": "Âm thanh {{name}}"
+  },
+  "viewer": {
+    "newTab": "Mở tab mới",
+    "previous": "Ảnh trước",
+    "next": "Ảnh sau",
+    "close": "Đóng",
+    "count": "{{at}} / {{total}}",
+    "image": "Ảnh {{name}} của {{author}}",
+    "file": "Tệp {{name}} của {{author}}",
+    "noPdf": "Trình duyệt không xem được tệp này",
+    "deleted": "Tin nhắn này đã bị xóa"
   }
 }

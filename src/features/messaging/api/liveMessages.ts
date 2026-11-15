@@ -17,6 +17,7 @@ import {
 import { dropPin, editPin } from '../lib/pin-cache'
 import type { BareMessage, ChannelMessages, PinnedMessage } from '../types'
 import { messageKeys } from './keys'
+import { uploadsOnTheWay } from './attachmentUploads'
 import { fetchMessages } from './messages.api'
 
 /** The most a catch-up reads in one go; more missed than this, and the history starts over. */
@@ -63,8 +64,9 @@ interface ReactionEvent {
  *
  * Once per query client, for as long as the app runs: a history left on
  * another channel stays right for coming back. Signing out clears the cache.
- * While any message is still on its way (not failed), leaving or reloading
- * the page asks first (C-12 › Luật): it would be lost.
+ * While any message is still on its way (not failed), or a file of a tray
+ * is, leaving or reloading the page asks first (C-12 › Luật): it would be
+ * lost.
  *
  * Returns the way to stop (the first call only; tests use it).
  */
@@ -146,7 +148,7 @@ export function listenForMessages(client: QueryClient): () => void {
             const onItsWay = client
                 .getQueriesData<ChannelMessages>({ queryKey: [...messageKeys.all, 'channel'] })
                 .some(([, history]) => history?.pages.at(-1)?.outgoing?.some((message) => message.state !== 'failed'))
-            if (onItsWay) event.preventDefault()
+            if (onItsWay || uploadsOnTheWay()) event.preventDefault()
         }),
         client.getQueryCache().subscribe((event) => {
             if (event.type !== 'updated' || event.action.type !== 'success') return

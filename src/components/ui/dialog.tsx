@@ -57,6 +57,32 @@ const DialogContent = React.forwardRef<
 ))
 DialogContent.displayName = DialogPrimitive.Content.displayName
 
+/**
+ * A dialog over the whole window with no box of its own (C-42 MediaViewer):
+ * the caller draws all of it, over an overlay coloured by `overlayStyle`.
+ * Fades in and out like the others; focus kept inside, Esc closes.
+ */
+const DialogCover = React.forwardRef<
+    React.ElementRef<typeof DialogPrimitive.Content>,
+    React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { overlayStyle?: React.CSSProperties }
+>(({ className, overlayStyle, ...props }, ref) => (
+    <DialogPortal>
+        <DialogPrimitive.Overlay
+            className='fixed inset-0 z-50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0'
+            style={overlayStyle}
+        />
+        <DialogPrimitive.Content
+            ref={ref}
+            className={cn(
+                'fixed inset-0 z-50 flex flex-col focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+                className
+            )}
+            {...props}
+        />
+    </DialogPortal>
+))
+DialogCover.displayName = 'DialogCover'
+
 const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
     <div className={cn('flex flex-col space-y-1.5 text-center sm:text-left', className)} {...props} />
 )
@@ -94,6 +120,7 @@ export {
     DialogClose,
     DialogTrigger,
     DialogContent,
+    DialogCover,
     DialogHeader,
     DialogFooter,
     DialogTitle,

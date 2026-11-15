@@ -110,6 +110,7 @@ react-starter/
     │   │                      #   reactions, reactors, pins, read states and marking read,
     │   │                      #   liveMessages / liveReadStates: socket events into the cache,
     │   │                      #   attachmentUploads: files uploading outside React, three at a time,
+    │   │                      #   outgoingMessages: the messages on their way, outside React too,
     │   │                      #   useAttachmentTray, useAttachmentLinks), attachment-tray.store.ts
     │   │                      #   (the files chosen, per channel),
     │   │                      #   components/ (list, row, system row, text and its link chips,
