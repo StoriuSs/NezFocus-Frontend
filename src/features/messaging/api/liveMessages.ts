@@ -7,6 +7,7 @@ import {
     addReaction,
     addSaved,
     lastSavedId,
+    refreshSaved,
     removeReaction,
     removeSaved,
     replaceSaved,
@@ -15,7 +16,7 @@ import {
     stopsShort
 } from '../lib/message-cache'
 import { dropPin, editPin } from '../lib/pin-cache'
-import type { BareMessage, ChannelMessages, PinnedMessage } from '../types'
+import type { BareMessage, ChannelMessages, Message, MessageCursor, MessagePage, PinnedMessage } from '../types'
 import { messageKeys } from './keys'
 import { uploadsOnTheWay } from './attachmentUploads'
 import { fetchMessages } from './messages.api'
@@ -45,10 +46,10 @@ interface ReactionEvent {
  * their channel's history (`message.bulk_deleted`, a batch of a ban's, D-181,
  * as each of its messages deleted alone) when that history is loaded (a channel never
  * opened has nothing to keep), and each time the socket is live again, every
- * loaded history reads the newer messages it missed. An edit or a deletion
- * missed while the socket was down shows once the channel is read again; so
- * do reactions and the marks of pinned messages. The pins themselves are
- * read again (an open panel at once).
+ * loaded history reads the newer messages it missed and its loaded pages
+ * again: an edit, a deletion, a reaction or the mark of a pinned message
+ * missed while the socket was down shows without reloading (owner,
+ * 16/11/2026). The pins themselves are read again (an open panel at once).
  *
  * `reaction.added` / `reaction.removed` count the emoji on their message,
  * the reader's own marked as theirs (its event after one's own click counts
@@ -151,7 +152,7 @@ export function listenForMessages(client: QueryClient): () => void {
         }),
         onRealtimeEvent('ready', () => {
             for (const [key] of client.getQueriesData<ChannelMessages>({ queryKey: [...messageKeys.all, 'channel'] })) {
-                void catchUp(client, key[2] as string)
+                void catchUp(client, key[2] as string, true)
             }
             // Pins and unpins missed meanwhile: the pins are read again (an open panel at once).
             void client.invalidateQueries({ queryKey: [...messageKeys.all, 'pins'] })
@@ -182,24 +183,54 @@ export function listenForMessages(client: QueryClient): () => void {
  * What one history missed while the socket was down: the messages after its
  * newest saved one. More than a page missed: the newest page alone, older
  * ones read again on scrolling up. A history that stops short of the newest
- * messages (opened at a link) misses nothing: it reads them on scrolling
- * down. A channel no longer readable (deleted, access lost) is forgotten; any
- * other failure leaves the history for the next time the socket is live.
+ * messages (opened at a link) misses no newer ones: it reads them on
+ * scrolling down. Once the socket is live again (`again`), the pages a
+ * history holds are read again too (`readHeld`), so the edits, deletions,
+ * reactions and pins of their messages missed meanwhile show; a history that
+ * starts over needs none. A channel no longer readable (deleted, access
+ * lost) is forgotten; any other failure leaves the history for the next time
+ * the socket is live.
  */
-async function catchUp(client: QueryClient, channelId: string): Promise<void> {
+async function catchUp(client: QueryClient, channelId: string, again = false): Promise<void> {
     const key = messageKeys.channel(channelId)
     const history = client.getQueryData<ChannelMessages>(key)
-    if (!history || stopsShort(history)) return
+    if (!history) return
+    const short = stopsShort(history)
+    if (short && !again) return
     const after = lastSavedId(history)
     try {
-        const missed = after ? await fetchMessages(channelId, { after }, CATCH_UP_LIMIT) : undefined
-        const latest = !missed || missed.hasMoreAfter ? await fetchMessages(channelId, null) : undefined
+        // Stopping short: only the message after its newest, where reading the pages again starts.
+        const missed = after ? await fetchMessages(channelId, { after }, short ? 1 : CATCH_UP_LIMIT) : undefined
+        const latest = !short && (!missed || missed.hasMoreAfter) ? await fetchMessages(channelId, null) : undefined
+        const fresh = again && missed && !latest ? await readHeld(channelId, history, missed) : undefined
         client.setQueryData<ChannelMessages>(key, (now) => {
             // Opened at a link meanwhile: it reads its newer messages on scrolling down.
-            if (!now || stopsShort(now)) return now
-            return latest ? startOver(now, latest) : addNewer(now, missed!)
+            if (!now || (!short && stopsShort(now))) return now
+            if (latest) return startOver(now, latest)
+            const read = fresh ? refreshSaved(now, history, fresh) : now
+            return short ? read : addNewer(read, missed!)
         })
     } catch (error) {
         if (axios.isAxiosError(error) && error.response?.status === 404) client.removeQueries({ queryKey: key })
+    }
+}
+
+/**
+ * Every message the server now has from the oldest a history holds to its
+ * newest, read again a full page (100) at a time from the newest back: as
+ * many requests as the history holds pages of 100, the newer ones (`missed`)
+ * left out. Pages are one unbroken run, so one walk with `before` reads them
+ * all, wherever each loaded page started.
+ */
+async function readHeld(channelId: string, history: ChannelMessages, missed: MessagePage): Promise<Message[]> {
+    const oldest = history.pages.find((page) => page.items.length)?.items[0]?.id
+    const read: Message[] = []
+    let cursor: MessageCursor = missed.items[0] ? { before: missed.items[0].id } : null
+    for (;;) {
+        const page = await fetchMessages(channelId, cursor, CATCH_UP_LIMIT)
+        read.unshift(...page.items)
+        const first = page.items[0]?.id
+        if (!oldest || !first || !page.hasMoreBefore || first <= oldest) return read
+        cursor = { before: first }
     }
 }

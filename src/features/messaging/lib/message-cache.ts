@@ -23,6 +23,8 @@ const changeLast = (data: ChannelMessages, change: (page: CachedPage) => CachedP
     pages: data.pages.map((page, index) => (index === data.pages.length - 1 ? change(page) : page))
 })
 
+const byId = (a: { id: string }, b: { id: string }) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)
+
 const withoutNonce = (page: CachedPage, nonce: string | undefined): CachedPage =>
     nonce && page.outgoing?.some((item) => item.nonce === nonce)
         ? { ...page, outgoing: page.outgoing.filter((item) => item.nonce !== nonce) }
@@ -98,11 +100,62 @@ export function addNewer(data: ChannelMessages, missed: MessagePage): ChannelMes
     const known = new Set(data.pages.flatMap((page) => page.items.map((item) => item.id)))
     return changeLast(data, (page) => ({
         ...page,
-        items: [...page.items, ...missed.items.filter((item) => !known.has(item.id))].sort((a, b) =>
-            a.id < b.id ? -1 : a.id > b.id ? 1 : 0
-        ),
+        items: [...page.items, ...missed.items.filter((item) => !known.has(item.id))].sort(byId),
         hasMoreAfter: missed.hasMoreAfter
     }))
+}
+
+/**
+ * The loaded pages read again once the socket is live again (ARCHITECTURE
+ * 3.4): `fresh` is every message the server now has from the oldest saved
+ * message of `held` (the history when the reading began) to its newest, so
+ * the edits, deletions, reactions and pins missed while the socket was down
+ * show. What the socket changed while the reading was on its way stays: a
+ * message changed meanwhile keeps that change, one deleted meanwhile stays
+ * deleted, one added stays. Each page keeps its place and takes the messages
+ * up to its newest one; a page left empty goes with its cursor (not the
+ * last, which holds the messages on their way), the oldest page still saying
+ * whether older ones exist. A history moved meanwhile away from those
+ * messages (opened at a link) is left as it is.
+ */
+export function refreshSaved(now: ChannelMessages, held: ChannelMessages, fresh: Message[]): ChannelMessages {
+    const before = new Map(held.pages.flatMap((page) => page.items).map((item) => [item.id, item]))
+    const oldest = held.pages.find((page) => page.items.length)?.items[0]?.id
+    const newest = lastSavedId(held)
+    if (!oldest || !newest) return now
+    const within = (id: string) => id >= oldest && id <= newest
+    const current = new Map(now.pages.flatMap((page) => page.items).map((item) => [item.id, item]))
+    if (![...current.keys()].some(within)) return now
+
+    const messages = new Map<string, Message>()
+    for (const message of fresh) {
+        if (!within(message.id)) continue
+        const was = before.get(message.id)
+        const is = current.get(message.id)
+        if (was && !is) continue
+        messages.set(message.id, is && is !== was ? is : message)
+    }
+    // Outside the messages read again, or heard meanwhile: as they are.
+    for (const [id, message] of current)
+        if ((!within(id) || !before.has(id)) && !messages.has(id)) messages.set(id, message)
+
+    const sorted = [...messages.values()].sort(byId)
+    let next = 0
+    const pages = now.pages.map((page, index) => {
+        const bound = page.items.at(-1)?.id
+        let end = next
+        if (index === now.pages.length - 1) end = sorted.length
+        else if (bound) while (end < sorted.length && sorted[end]!.id <= bound) end++
+        const items = sorted.slice(next, end)
+        next = end
+        return { ...page, items }
+    })
+    const kept = pages.map((page, index) => index === pages.length - 1 || page.items.length > 0)
+    const [first, ...rest] = pages.filter((_, index) => kept[index])
+    return {
+        pages: [{ ...first!, hasMoreBefore: now.pages[0]!.hasMoreBefore }, ...rest],
+        pageParams: now.pageParams.filter((_, index) => kept[index])
+    }
 }
 
 /** Too much missed to fill in: the newest page alone, older ones read again on scrolling up. */

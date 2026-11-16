@@ -1,12 +1,13 @@
-import { expect, test, type Browser, type Page } from '@playwright/test'
+import { expect, test, type Browser, type BrowserContext, type Page, type WebSocketRoute } from '@playwright/test'
 import { apiUrl, asOwnClient, codeFromEmail, watchForProblems } from './helpers'
 
 /**
  * Chat between two browsers against the real API and socket (REQ-MSG-01,
  * S-CHAT-01, M2 "Xong khi"): An and Bình, each in a browser of their own,
  * open the same channel and see each other's messages without reloading;
- * Bình loses the network, An keeps writing, Bình writes too, and once the
- * network is back nothing is lost and nothing shows twice.
+ * Bình loses the network, An edits and deletes messages Bình has and keeps
+ * writing, Bình writes too, and once the network is back nothing is lost,
+ * nothing shows twice, and the edit and the deletion show without reloading.
  *
  * Needs the API (with Redis, for the socket) and Mailpit, like
  * invites.spec.ts. With E2E_SHOTS set to a folder, it also saves the screens
@@ -94,10 +95,42 @@ const shoot = async (page: Page, name: string) => {
     await page.screenshot({ path: `${SHOTS}/${name}.png` })
 }
 
-/** A browser of its own, signed in, on the channel. */
-async function openAs(browser: Browser, email: string) {
+/**
+ * A browser's socket the test can cut: going offline leaves an open
+ * WebSocket alone. Once cut, nothing the server says reaches the page; once
+ * back, the connection drops, so the page connects again (`ready`), as after
+ * a real network loss.
+ */
+class SocketSwitch {
+    private open: WebSocketRoute[] = []
+    private down = false
+
+    async route(context: BrowserContext) {
+        await context.routeWebSocket(/\/socket\.io\//, (socket) => {
+            const server = socket.connectToServer()
+            socket.onMessage((message) => server.send(message))
+            server.onMessage((message) => {
+                if (!this.down) socket.send(message)
+            })
+            this.open.push(socket)
+        })
+    }
+
+    cut() {
+        this.down = true
+    }
+
+    async restore() {
+        this.down = false
+        await Promise.all(this.open.splice(0).map((socket) => socket.close()))
+    }
+}
+
+/** A browser of its own, signed in, on the channel; its socket through `socket` when given. */
+async function openAs(browser: Browser, email: string, socket?: SocketSwitch) {
     const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'en-US' })
     await asOwnClient(context)
+    await socket?.route(context)
     const page = await context.newPage()
     const problems = await watchForProblems(page)
     await page.goto('/login?method=password')
@@ -126,7 +159,8 @@ test("two browsers see each other's messages at once, and none is lost or double
 }) => {
     test.setTimeout(120_000)
     const an = await openAs(browser, anEmail)
-    const binh = await openAs(browser, binhEmail)
+    const binhSocket = new SocketSwitch()
+    const binh = await openAs(browser, binhEmail, binhSocket)
     await expect(log(an.page).getByRole('heading', { name: `Welcome to #${channelName}` })).toBeVisible()
     await shoot(an.page, 'chat01-empty')
 
@@ -138,9 +172,27 @@ test("two browsers see each other's messages at once, and none is lost or double
     await seenOnce(an.page, 'Đổi sang tọa độ cực rồi tính tích phân kép là ra nhé')
     await expect(log(an.page).getByRole('separator', { name: 'Today' })).toBeVisible()
     await shoot(an.page, 'chat01-default')
+    await say(an.page, 'Nhầm kênh rồi, bỏ qua tin này nhé')
+    await say(an.page, 'Đề năm ngoái là đề 2025 nha')
+    await seenOnce(binh.page, 'Nhầm kênh rồi, bỏ qua tin này nhé')
+    await seenOnce(binh.page, 'Đề năm ngoái là đề 2025 nha')
 
     // Bình loses the network; An goes on writing; Bình writes too.
     await binh.context.setOffline(true)
+    // Its socket too: it misses what happens until the network is back.
+    binhSocket.cut()
+    // An edits one message Bình has and deletes another, while Bình cannot hear it.
+    await an.page.getByRole('combobox', { name: `Message #${channelName}` }).press('ArrowUp')
+    const editor = an.page.getByRole('combobox', { name: 'Edit message' })
+    await editor.fill('Đề năm ngoái là đề 2024 nha')
+    await editor.press('Enter')
+    await expect(log(an.page).getByText('Đề năm ngoái là đề 2024 nha')).toBeVisible()
+    const wrong = an.page.getByRole('article', { name: /^An, .*: Nhầm kênh rồi, bỏ qua tin này nhé/ })
+    await wrong.hover()
+    await wrong.getByRole('button', { name: 'More' }).click()
+    await an.page.getByRole('menuitem', { name: 'Delete message' }).click()
+    await an.page.getByRole('dialog', { name: 'Delete message?' }).getByRole('button', { name: 'Delete' }).click()
+    await expect(log(an.page).getByText('Nhầm kênh rồi, bỏ qua tin này nhé')).toHaveCount(0)
     await say(an.page, 'Câu 4 đổi cận thế nào vậy mọi người?')
     await say(an.page, 'Mình kẹt ở bước tìm miền D.')
     // Saved before Bình is back: the order below is the server's, and a slow
@@ -152,6 +204,10 @@ test("two browsers see each other's messages at once, and none is lost or double
 
     // Back online: Bình's message goes, An's two arrive, each once.
     await binh.context.setOffline(false)
+    await binhSocket.restore()
+    // The edit and the deletion missed meanwhile show on Bình's screen, without reloading.
+    await expect(log(binh.page).getByText('Đề năm ngoái là đề 2024 nha')).toBeVisible({ timeout: 15_000 })
+    await expect(log(binh.page).getByText('Nhầm kênh rồi, bỏ qua tin này nhé')).toHaveCount(0)
     for (const page of [an.page, binh.page]) {
         await seenOnce(page, 'Mình mất mạng, có lại sẽ gửi')
         await seenOnce(page, 'Câu 4 đổi cận thế nào vậy mọi người?')
@@ -167,6 +223,7 @@ test("two browsers see each other's messages at once, and none is lost or double
     expect(order.slice(1)).toEqual([
         'Mọi người ơi, câu 3 đề giữa kỳ năm ngoái giải thế nào vậy?',
         'Đổi sang tọa độ cực rồi tính tích phân kép là ra nhé',
+        expect.stringMatching(/^Đề năm ngoái là đề 2024 nha/),
         'Câu 4 đổi cận thế nào vậy mọi người?',
         'Mình kẹt ở bước tìm miền D.',
         'Mình mất mạng, có lại sẽ gửi'

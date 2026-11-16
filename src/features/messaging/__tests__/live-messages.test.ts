@@ -139,7 +139,11 @@ describe('Keeping open histories live (ARCHITECTURE 3.4, 10.2)', () => {
 
     it('reads what was missed after the newest saved message once the socket is live again', async () => {
         client.setQueryData(messageKeys.channel('hoi-dap'), cached(['m1', 'm2']))
-        fetchMessages.mockResolvedValue(page(['m2', 'm3'], { hasMoreBefore: true }))
+        fetchMessages.mockImplementation(async (_channel, cursor) =>
+            cursor && 'after' in cursor
+                ? page(['m3'], { hasMoreBefore: true })
+                : page(['m1', 'm2'], { hasMoreAfter: true })
+        )
 
         emitRealtimeEvent('ready', undefined)
 
@@ -147,18 +151,23 @@ describe('Keeping open histories live (ARCHITECTURE 3.4, 10.2)', () => {
         expect(fetchMessages).toHaveBeenCalledWith('hoi-dap', { after: 'm2' }, 100)
     })
 
-    it('leaves a history opened at a link where it is: it reads newer messages on scrolling down (D-48)', async () => {
+    it('reads a history opened at a link again where it is: it reads newer messages on scrolling down (D-48)', async () => {
         client.setQueryData<ChannelMessages>(messageKeys.channel('hoi-dap'), {
-            pages: [page(['m4', 'm5'], { hasMoreAfter: true })],
+            pages: [page(['m4', 'm5'], { hasMoreBefore: true, hasMoreAfter: true })],
             pageParams: [{ around: 'm4' }]
         })
-        fetchMessages.mockResolvedValue(page(['m200'], { hasMoreBefore: true }))
+        fetchMessages.mockImplementation(async (_channel, cursor) =>
+            cursor && 'after' in cursor
+                ? page(['m6'], { hasMoreBefore: true, hasMoreAfter: true })
+                : page(['m3', 'm5'], { hasMoreBefore: true, hasMoreAfter: true })
+        )
 
         emitRealtimeEvent('ready', undefined)
-        await new Promise((resolve) => setTimeout(resolve, 0))
 
-        expect(fetchMessages).not.toHaveBeenCalled()
-        expect(ids()).toEqual(['m4', 'm5'])
+        await vi.waitFor(() => expect(ids()).toEqual(['m5']))
+        expect(fetchMessages).toHaveBeenCalledWith('hoi-dap', { after: 'm5' }, 1)
+        expect(fetchMessages).toHaveBeenCalledWith('hoi-dap', { before: 'm6' }, 100)
+        expect(history()?.pages[0]).toMatchObject({ hasMoreBefore: true, hasMoreAfter: true })
     })
 
     it('reads what came meanwhile once a history that stopped short is back at the newest', async () => {
@@ -205,6 +214,79 @@ describe('Keeping open histories live (ARCHITECTURE 3.4, 10.2)', () => {
 
         await vi.waitFor(() => expect(ids()).toEqual(['m200']))
         expect(history()?.pages[0]?.hasMoreBefore).toBe(true)
+    })
+
+    it('reads the loaded pages again once the socket is live again: edits, deletions and reactions missed show', async () => {
+        const outgoing = {
+            nonce: 'n1',
+            channelId: 'hoi-dap',
+            content: 'Đang gửi',
+            author: saved('m1').author!,
+            createdAt: '2026-10-18T13:02:00.000Z',
+            state: 'failed' as const
+        }
+        client.setQueryData<ChannelMessages>(messageKeys.channel('hoi-dap'), {
+            pages: [page(['m1', 'm2'], { hasMoreBefore: true }), { ...page(['m3', 'm4']), outgoing: [outgoing] }],
+            pageParams: [{ before: 'm3' }, null]
+        })
+        const edited = { ...saved('m1'), content: 'Đã sửa', editedAt: '2026-10-18T13:05:00.000Z' }
+        const reacted = { ...saved('m4'), reactions: [{ emoji: '👍', count: 1, me: false }] }
+        fetchMessages.mockImplementation(async (_channel, cursor) =>
+            cursor && 'after' in cursor
+                ? page(['m5'], { hasMoreBefore: true })
+                : { items: [edited, saved('m3'), reacted], hasMoreBefore: true, hasMoreAfter: true }
+        )
+
+        emitRealtimeEvent('ready', undefined)
+
+        await vi.waitFor(() => expect(ids()).toEqual(['m1', 'm3', 'm4', 'm5']))
+        expect(fetchMessages).toHaveBeenCalledWith('hoi-dap', { after: 'm4' }, 100)
+        expect(fetchMessages).toHaveBeenCalledWith('hoi-dap', { before: 'm5' }, 100)
+        const now = history()!
+        expect(now.pages.map((p) => p.items.map((item) => item.id))).toEqual([['m1'], ['m3', 'm4', 'm5']])
+        expect(now.pageParams).toEqual([{ before: 'm3' }, null])
+        expect(now.pages[0]).toMatchObject({ hasMoreBefore: true })
+        expect(now.pages[0]?.items[0]).toMatchObject({ content: 'Đã sửa' })
+        expect(now.pages[1]?.items[1]?.reactions).toEqual([{ emoji: '👍', count: 1, me: false }])
+        expect(now.pages[1]?.outgoing).toEqual([outgoing])
+    })
+
+    it('drops a loaded page left empty once read again, the oldest page still saying whether older ones exist', async () => {
+        client.setQueryData<ChannelMessages>(messageKeys.channel('hoi-dap'), {
+            pages: [page(['m1', 'm2']), page(['m3', 'm4'])],
+            pageParams: [{ before: 'm3' }, null]
+        })
+        fetchMessages.mockImplementation(async (_channel, cursor) => (cursor ? page([]) : page(['m3', 'm4'])))
+
+        emitRealtimeEvent('ready', undefined)
+
+        await vi.waitFor(() => expect(ids()).toEqual(['m3', 'm4']))
+        expect(fetchMessages).toHaveBeenCalledWith('hoi-dap', null, 100)
+        expect(history()?.pageParams).toEqual([null])
+        expect(history()?.pages[0]?.hasMoreBefore).toBe(false)
+    })
+
+    it('keeps what the socket changed while the pages were read again', async () => {
+        const key = messageKeys.channel('hoi-dap')
+        client.setQueryData(key, cached(['m1', 'm2', 'm3']))
+        let answer: (value: MessagePage) => void = () => undefined
+        fetchMessages.mockImplementation((_channel, cursor) =>
+            cursor ? Promise.resolve(page([])) : new Promise((resolve) => (answer = resolve))
+        )
+        emitRealtimeEvent('ready', undefined)
+        await vi.waitFor(() => expect(fetchMessages).toHaveBeenCalledWith('hoi-dap', null, 100))
+
+        emitRealtimeEvent('message.deleted', { id: 'm1', channelId: 'hoi-dap' })
+        emitRealtimeEvent('message.updated', {
+            message: { ...saved('m2'), content: 'Sửa lúc đang đọc', editedAt: '2026-10-18T13:06:00.000Z' }
+        })
+        emitRealtimeEvent('message.created', { message: saved('m4') })
+        answer(page(['m1', 'm2', 'm3']))
+
+        await vi.waitFor(() => expect(fetchMessages).toHaveBeenCalledTimes(2))
+        await new Promise((resolve) => setTimeout(resolve, 0))
+        expect(ids()).toEqual(['m2', 'm3', 'm4'])
+        expect(history()?.pages[0]?.items[0]).toMatchObject({ content: 'Sửa lúc đang đọc' })
     })
 
     it('asks before the page is left while a message is still on its way, not for one that failed', () => {
