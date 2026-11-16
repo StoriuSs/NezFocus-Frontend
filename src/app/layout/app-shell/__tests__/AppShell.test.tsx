@@ -250,7 +250,10 @@ describe('AppShell (S-SHELL-01)', () => {
         it('opens "Create a server" from ＋', async () => {
             renderAt('/study')
             await userEvent.click(await within(rail()).findByRole('button', { name: 'Create or join a server' }))
-            expect(await screen.findByRole('heading', { name: 'Create a server' })).toBeInTheDocument()
+            // The dialog is a lazy chunk; under a full parallel run its import can outlast the 1 s default.
+            expect(
+                await screen.findByRole('heading', { name: 'Create a server' }, { timeout: 5000 })
+            ).toBeInTheDocument()
         })
 
         it('has no critical or serious accessibility problem', async () => {

@@ -93,12 +93,15 @@ async function comeBackToTab(page: Page) {
 
 /**
  * Where a device whose session ended lands, and what it is told (D-65,
- * D-75), found out while the app is open: its next request. (A reload finds
+ * D-75), found out while the app is open: its socket is told at once
+ * (`session.revoked`, M2), else its next request finds out. Either may come
+ * first, so the menu click may find the page already gone. (A reload finds
  * out too, but says nothing for an ending that reads like an expiry.)
  */
 async function expectSentToSignIn(page: Page, banner: string) {
-    await openAccountMenuItem(page, 'Settings')
-    await page.waitForURL(/\/login/)
+    const sent = page.waitForURL(/\/login/)
+    await Promise.race([sent, openAccountMenuItem(page, 'Settings').catch(() => undefined)])
+    await sent
     await expect(page.getByText(banner)).toBeVisible()
 }
 

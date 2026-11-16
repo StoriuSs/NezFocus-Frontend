@@ -143,6 +143,9 @@ test("two browsers see each other's messages at once, and none is lost or double
     await binh.context.setOffline(true)
     await say(an.page, 'Câu 4 đổi cận thế nào vậy mọi người?')
     await say(an.page, 'Mình kẹt ở bước tìm miền D.')
+    // Saved before Bình is back: the order below is the server's, and a slow
+    // machine could otherwise still be sending An's second when Bình's goes.
+    await seenOnce(an.page, 'Mình kẹt ở bước tìm miền D.')
     await say(binh.page, 'Mình mất mạng, có lại sẽ gửi')
     await expect(log(binh.page).getByText("Will send when you're back online")).toBeVisible()
     await shoot(binh.page, 'chat01-waiting')

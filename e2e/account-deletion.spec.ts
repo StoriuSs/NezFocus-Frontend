@@ -170,8 +170,12 @@ test('asking to delete signs out here and on the other device, both told the day
     await expect(here.page.getByText(banner)).toBeVisible()
     expect((await emailTo(email, 'will be deleted on', askedAt)).Text).toContain(day)
 
-    // The other device finds out at its next request.
-    await other.page.goto('/settings/account')
+    // The other device's socket is told at once (`session.revoked`, M2), else
+    // its next request finds out: either may come first, and the socket's
+    // navigation can cut this one short.
+    const sent = other.page.waitForURL(/\/login/)
+    await Promise.race([sent, other.page.goto('/settings/account').catch(() => undefined)])
+    await sent
     await expect(other.page.getByText(banner)).toBeVisible()
 
     expect(problems).toEqual([])
