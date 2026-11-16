@@ -589,7 +589,12 @@ test('files dropped on the page go to the tray; an image and a PDF of a message 
     await expect(viewer).toBeHidden()
     await expect(opener).toBeFocused()
 
-    await log(an.page).getByRole('button', { name: 'View de-giua-ky.pdf' }).click()
+    // In this message: an earlier case of the spec sent a file of the same name to the channel.
+    await log(an.page)
+        .getByRole('article')
+        .filter({ hasText: 'Kéo thả hai tệp' })
+        .getByRole('button', { name: 'View de-giua-ky.pdf' })
+        .click()
     const fileViewer = an.page.getByRole('dialog', { name: /^File de-giua-ky\.pdf from / })
     await expect(fileViewer).toBeVisible()
     // The browser's PDF viewer, or what a browser without one says.
