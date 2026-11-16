@@ -38,7 +38,7 @@ import {
     type TimeoutSeconds
 } from '../../../lib/moderation'
 import type { ServerMember } from '../../../types'
-import { memberName } from '../roles/RoleMembers'
+import { useMemberName } from '../../../hooks/useMemberName'
 
 export type Moderation = 'timeout' | 'kick' | 'ban'
 
@@ -207,7 +207,7 @@ function TimeoutDialog({
     const seconds = useWatch({ control, name: 'seconds' })
     const [refused, setRefused] = useState<Failure | null>(null)
     const failure = blocked ?? refused
-    const name = memberName(member)
+    const name = useMemberName()(member)
     const lengthId = useId()
     const ends = endsAt(new Date(now.getTime() + seconds * 1000), now, i18n.language, timeZone)
 
@@ -301,7 +301,7 @@ function RemoveDialog({
     const [days, setDays] = useState<DeleteMessageDays>(0)
     const [refused, setRefused] = useState<Failure | null>(null)
     const failure = blocked ?? refused
-    const name = memberName(member)
+    const name = useMemberName()(member)
     const daysId = useId()
 
     function submit() {

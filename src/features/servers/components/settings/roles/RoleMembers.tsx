@@ -18,6 +18,7 @@ import { WithTooltip } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/features/auth'
 import { useServerMembers, useTakeRole } from '../../../api/useRoles'
+import { useMemberName } from '../../../hooks/useMemberName'
 import { can } from '../../../lib/permissions'
 import { holdsAllOf, mayChangeMember } from '../../../lib/roles'
 import type { Role, Server, ServerMember } from '../../../types'
@@ -25,9 +26,6 @@ import { AddRoleMembersDialog } from './AddRoleMembersDialog'
 
 /** How many holders the tab lists; past that, "And N more" (a study group rarely gets there). */
 const SHOWN = 100
-
-export const memberName = (member: Pick<ServerMember, 'displayName' | 'username'>) =>
-    member.displayName ?? member.username ?? ''
 
 /** MemberRow `username` (C-13): the picture, the name, @username under it, a crown for the owner. */
 export function MemberIdentity({
@@ -42,7 +40,7 @@ export function MemberIdentity({
     noteStrong?: boolean
 }) {
     const { t } = useTranslation('servers')
-    const name = memberName(member)
+    const name = useMemberName()(member)
     return (
         <span className='flex min-w-0 flex-1 items-center gap-3'>
             <Avatar className='size-8'>
@@ -90,6 +88,7 @@ export function RoleMembers({
     readOnly: boolean
 }) {
     const { t } = useTranslation('servers')
+    const nameOf = useMemberName()
     const myId = useAuthStore((state) => state.user?.id) ?? ''
     const members = useServerMembers(server.id, { roleId: role.id, limit: SHOWN })
     // "Removed … from …" with Undo, or "Try again": the hook's toasts.
@@ -100,7 +99,7 @@ export function RoleMembers({
     const editable = !readOnly && handsOut
 
     function take(member: ServerMember) {
-        takeRole.mutate({ userId: member.userId, name: memberName(member), role: role.name })
+        takeRole.mutate({ userId: member.userId, name: nameOf(member), role: role.name })
     }
 
     /** Their own Manage roles may come from this role: ask before it goes (S-SET-02 › Gỡ người). */
@@ -149,7 +148,7 @@ export function RoleMembers({
             ) : (
                 <ul className='grid'>
                     {members.data.items.map((member) => {
-                        const label = t('roles.members.remove', { role: role.name, name: memberName(member) })
+                        const label = t('roles.members.remove', { role: role.name, name: nameOf(member) })
                         const removable = editable && mayChangeMember(server, myId, member, roles)
                         return (
                             <li key={member.userId} className='flex h-14 items-center gap-3 border-b px-1'>

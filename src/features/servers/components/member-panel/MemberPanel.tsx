@@ -8,7 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { useMemberPanel } from '../../api/useMemberPanel'
 import { useWhenSeen } from '../../hooks/useWhenSeen'
-import { memberName } from '../settings/roles/RoleMembers'
+import { useMemberName } from '../../hooks/useMemberName'
 import type { ServerMember } from '../../types'
 
 /**
@@ -116,7 +116,7 @@ function Group({
 /** MemberRow/panel (C-13): avatar 32 with its dot, name and username; the owner's crown at the end. */
 function MemberRow({ member, offline }: { member: ServerMember; offline: boolean }) {
     const { t } = useTranslation()
-    const name = memberName(member)
+    const name = useMemberName()(member)
     return (
         <li style={ROW} className='flex items-center rounded-input px-2 hover:bg-surface-2'>
             <span className='relative shrink-0'>

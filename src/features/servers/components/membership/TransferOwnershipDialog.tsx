@@ -31,7 +31,8 @@ import { endsAt } from '@/lib/time-zones'
 import { isTimedOut } from '../../lib/moderation'
 import { useMembershipDialogs, type TransferRecipient } from '../../membership-dialogs.store'
 import type { Server, ServerMember } from '../../types'
-import { MemberIdentity, memberName } from '../settings/roles/RoleMembers'
+import { useMemberName } from '../../hooks/useMemberName'
+import { MemberIdentity } from '../settings/roles/RoleMembers'
 
 /**
  * "Transfer ownership" (04 S-SET-07): choose who (`transfer-picker`), then
@@ -135,6 +136,7 @@ function PickRecipient({
 }) {
     const { t, i18n } = useTranslation('servers')
     const tCommon = useTranslation().t
+    const nameOf = useMemberName()
     const now = useMinuteClock()
     // Read only: the AppShell loads the account's settings as the app opens.
     const timeZone = useQuery(settingsCache).data?.timezone
@@ -225,9 +227,7 @@ function PickRecipient({
                                                 type='button'
                                                 disabled={timedOut}
                                                 onKeyDown={moveFocus}
-                                                onClick={() =>
-                                                    onPick({ userId: member.userId, name: memberName(member) })
-                                                }
+                                                onClick={() => onPick({ userId: member.userId, name: nameOf(member) })}
                                                 className={cn(
                                                     'flex h-14 w-full items-center gap-3 rounded-button px-2 text-left hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary disabled:pointer-events-none',
                                                     timedOut && 'opacity-50'

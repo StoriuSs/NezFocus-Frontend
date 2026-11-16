@@ -516,6 +516,7 @@
       "joined_at": "Sắp xếp theo ngày vào"
     },
     "owner": "Chủ server",
+    "deleted": "Tài khoản đã bị xóa",
     "assign": "Gán vai trò",
     "pickerTitle": "Vai trò của {{name}}",
     "findRole": "Tìm vai trò",

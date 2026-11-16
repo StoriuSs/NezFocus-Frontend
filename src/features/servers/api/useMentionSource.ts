@@ -45,13 +45,16 @@ export function useMentionSource(
                         order: 'asc',
                         limit: PEOPLE
                     })
-                    return page.items.map((member) => ({
-                        id: member.userId,
-                        username: member.username,
-                        displayName: member.displayName,
-                        avatarUrl: member.avatarUrl,
-                        presence: member.status
-                    }))
+                    // An account waiting to be deleted has no username, nor any name to mention (D-182).
+                    return page.items
+                        .filter((member) => member.username !== null)
+                        .map((member) => ({
+                            id: member.userId,
+                            username: member.username,
+                            displayName: member.displayName,
+                            avatarUrl: member.avatarUrl,
+                            presence: member.status
+                        }))
                 },
                 staleTime: FRESH
             }),

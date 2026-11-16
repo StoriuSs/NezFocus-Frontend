@@ -1657,7 +1657,7 @@ export interface components {
         InvitePreviewResponseDto: {
             code: string
             server: components['schemas']['InviteServerResponseDto']
-            /** @description Null: the creator has left or the account is deleted ("You're invited to", D-81). */
+            /** @description Null: the creator has left or the account is deleted, or waits to be ("You're invited to", D-81, D-182). */
             inviter_name: string | null
             channel: components['schemas']['InviteTargetResponseDto'] | null
         }

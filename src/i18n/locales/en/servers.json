@@ -516,6 +516,7 @@
       "joined_at": "Sort by join date"
     },
     "owner": "Server owner",
+    "deleted": "Deleted account",
     "assign": "Assign roles",
     "pickerTitle": "Roles of {{name}}",
     "findRole": "Find a role",

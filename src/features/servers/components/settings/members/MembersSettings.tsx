@@ -40,7 +40,8 @@ import {
 import { can } from '../../../lib/permissions'
 import type { Role, Server, ServerMember } from '../../../types'
 import { Pagination } from '../Pagination'
-import { MemberIdentity, memberName } from '../roles/RoleMembers'
+import { useMemberName } from '../../../hooks/useMemberName'
+import { MemberIdentity } from '../roles/RoleMembers'
 import { ModerationDialogFor, type Moderation } from './ModerationDialogs'
 import { RolePicker } from './RolePicker'
 
@@ -85,6 +86,7 @@ function useListState() {
  */
 export function MembersSettings({ server }: { server: Server }) {
     const { t, i18n } = useTranslation('servers')
+    const nameOf = useMemberName()
     const myId = useAuthStore((state) => state.user?.id) ?? ''
     const now = useMinuteClock()
     // Read only: the AppShell loads the account's settings as the app opens.
@@ -147,7 +149,7 @@ export function MembersSettings({ server }: { server: Server }) {
     }, [members.data, list, totalPages])
 
     function end(member: ServerMember) {
-        endTimeout.mutate({ userId: member.userId, name: memberName(member) })
+        endTimeout.mutate({ userId: member.userId, name: nameOf(member) })
     }
 
     const total = members.data?.meta.totalItems ?? 0
@@ -238,11 +240,9 @@ export function MembersSettings({ server }: { server: Server }) {
                                 menu={
                                     hasActions(actions) ? (
                                         <DropdownMenu>
-                                            <WithTooltip label={t('members.actions', { name: memberName(member) })}>
+                                            <WithTooltip label={t('members.actions', { name: nameOf(member) })}>
                                                 <DropdownMenuTrigger asChild>
-                                                    <IconButton
-                                                        label={t('members.actions', { name: memberName(member) })}
-                                                    >
+                                                    <IconButton label={t('members.actions', { name: nameOf(member) })}>
                                                         <MoreHorizontal />
                                                     </IconButton>
                                                 </DropdownMenuTrigger>
@@ -292,7 +292,7 @@ export function MembersSettings({ server }: { server: Server }) {
                                                                     serverId: server.id,
                                                                     recipient: {
                                                                         userId: member.userId,
-                                                                        name: memberName(member)
+                                                                        name: nameOf(member)
                                                                     }
                                                                 })
                                                             }

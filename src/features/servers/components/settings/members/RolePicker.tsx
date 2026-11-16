@@ -10,7 +10,7 @@ import { WithTooltip } from '@/components/ui/tooltip'
 import { folded } from '@/lib/utils'
 import { useSetMemberRole } from '../../../api/useRoles'
 import type { Role, ServerMember } from '../../../types'
-import { memberName } from '../roles/RoleMembers'
+import { useMemberName } from '../../../hooks/useMemberName'
 
 /** From ten roles up, a search box tops the list (04 › "+", as the private-channel picker). */
 const SEARCH_FROM = 10
@@ -25,7 +25,7 @@ export function RolePicker({ serverId, member, roles }: { serverId: string; memb
     const setRole = useSetMemberRole(serverId)
     const [query, setQuery] = useState('')
     const titleId = useId()
-    const name = memberName(member)
+    const name = useMemberName()(member)
     const held = new Set(member.roleIds)
     const shown = roles.filter((role) => folded(role.name).includes(folded(query.trim())))
 

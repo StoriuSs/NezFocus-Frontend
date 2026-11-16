@@ -93,6 +93,17 @@ describe('The Members panel (S-SHELL-01, C-13, D-175)', () => {
         await expectNoA11yViolations()
     })
 
+    it('shows an account waiting to be deleted as a deleted account, with no username (D-182)', async () => {
+        offline = [
+            member('dung', 'Dũng', 'offline'),
+            member('em', 'Em', 'offline', { username: null, displayName: null })
+        ]
+        renderPanel()
+
+        const off = await screen.findByRole('region', { name: 'Offline — 2' })
+        expect(names(off)).toEqual(['Dũng dung.tran', 'Deleted account'])
+    })
+
     it('leaves out the offline group when no one is offline', async () => {
         offline = []
         renderPanel()
