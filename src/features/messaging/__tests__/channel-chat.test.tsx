@@ -80,6 +80,7 @@ function renderChat(
                         permissions={{
                             attachFiles: true,
                             send: true,
+                            sendBlocked: null,
                             manage: false,
                             deleteOwn: true,
                             react: true,

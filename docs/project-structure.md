@@ -267,7 +267,7 @@ Shared and feature-free.
 | `image-file.ts` | `imageProblem()`: JPG, PNG or WEBP up to 8 MB (an avatar, a server icon), checked before the cropper opens |
 | `gone-places.ts` | The servers, channels and messages this tab just let go of (removed, deleted, gone private), kept two minutes or until listed again: a mutation failing about one shows no toast (11 S-MOD-02 E9); the features tell it |
 | `before-sign-out.ts` | Work that must be sent before the tab signs out or closes (a removed avatar waiting out its Undo); the auth store runs it while the token is still in hand |
-| `time-zones.ts` | The time zones to pick from (C-25), named and ordered, and the search over them; `wallClock()`, the calendar and clock in a zone (times shown in the account's zone) |
+| `time-zones.ts` | The time zones to pick from (C-25), named and ordered, and the search over them; `wallClock()`, the calendar and clock in a zone (times shown in the account's zone); `endsAt()` / `endsAtText()`, when a timeout ends ("22:30", "22:30, 19/10" on another day); `accountTimeZone()`, the account's zone for code outside React, from the source the users feature sets (`setTimeZoneSource`) |
 | `phase-sound.ts` | `playPhaseSound()`: the phase sound, two short notes (C6 then E6) made with Web Audio (D-140), silent where the browser cannot play. "Play sample" on Notifications now, the end of a study phase later |
 | `socket.ts` | `openSocket()`: the tab's one socket.io connection (SRS 5.2), websocket only, a new ticket for each attempt, a refused handshake tried again with a growing wait, a session that ended asked about (still signed in: connect again). Loaded with `import()` after the AppShell's first paint; knows no feature (the ticket and what to do come in its options) |
 | `simple-markdown.ts` | The small Markdown subset the legal pages are written in, read into blocks React draws (never `innerHTML`) |
@@ -382,8 +382,11 @@ Habits worth keeping:
   `src/hooks` are refused any `@/features/...` import. When shared code needs
   something a feature owns, it says what in an interface and is handed it: the
   API client declares `ApiSession`, auth implements it, and `main.tsx`
-  connects the two. `src/app` is the exception: it wires the features into the
-  app, so it may reach in.
+  connects the two. A small value can instead be lent by the feature itself,
+  set as its module loads: auth's store sets the token source
+  (`setTokenSource`, `before-sign-out.ts`), users' `settingsCache.ts` the
+  account's time zone (`setTimeZoneSource`). `src/app` is the exception: it
+  wires the features into the app, so it may reach in.
 - **A component or page reaches the API through a hook.** A feature's
   `components/` and `pages/` may not import `@/lib/api` or an `api/*.api.ts`
   file (types excepted); the sign-in pages of auth are the exception

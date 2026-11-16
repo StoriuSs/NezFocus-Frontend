@@ -34,6 +34,7 @@ import type {
     RepliedMessage
 } from '../types'
 import { Composer } from './Composer'
+import { ComposerDisabled } from './ComposerDisabled'
 import { TypingLine } from './TypingLine'
 import { DeleteMessageDialog } from './DeleteMessageDialog'
 import { MessageList } from './MessageList'
@@ -176,6 +177,10 @@ export default function ChannelChat({
         if (deletedHere.current !== editingId) toast(t('message.gone'))
         setEditingId(null)
     }, [editingGone, editingId, t])
+    // Timed out, or the channel left to moderators, while editing: the edit stops (C-12 `disabled`).
+    useEffect(() => {
+        if (!permissions.send) setEditingId(null)
+    }, [permissions.send])
     const deleting = deletingId ? saved.get(deletingId) : undefined
     useEffect(() => {
         if (deletingId && pages && !deleting) setDeletingId(null)
@@ -328,19 +333,23 @@ export default function ChannelChat({
                 onSeen={canSee && unread.unreadHeld > 0 ? unread.seen : undefined}
             />
             <TypingLine names={typing} />
-            <Composer
-                box={composer}
-                userId={me}
-                channelId={channelId}
-                channelName={channelName}
-                replyingTo={replyQuote}
-                onCancelReply={() => setReplyingTo(null)}
-                onEditLast={editLast}
-                onSend={sendReply}
-                source={mentions}
-                mentionEveryone={permissions.mentionEveryone}
-                attachFiles={permissions.attachFiles}
-            />
+            {permissions.sendBlocked ? (
+                <ComposerDisabled blocked={permissions.sendBlocked} now={now} timeZone={timeZone} />
+            ) : (
+                <Composer
+                    box={composer}
+                    userId={me}
+                    channelId={channelId}
+                    channelName={channelName}
+                    replyingTo={replyQuote}
+                    onCancelReply={() => setReplyingTo(null)}
+                    onEditLast={editLast}
+                    onSend={sendReply}
+                    source={mentions}
+                    mentionEveryone={permissions.mentionEveryone}
+                    attachFiles={permissions.attachFiles}
+                />
+            )}
             {deleting ? (
                 <DeleteMessageDialog
                     message={deleting}

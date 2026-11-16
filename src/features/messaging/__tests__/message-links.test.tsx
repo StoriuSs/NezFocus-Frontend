@@ -105,6 +105,7 @@ function renderChat({ target, client = newClient() }: { target?: ChatTarget; cli
                                         permissions={{
                                             attachFiles: true,
                                             send: true,
+                                            sendBlocked: null,
                                             manage: false,
                                             deleteOwn: true,
                                             react: true,

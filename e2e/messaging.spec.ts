@@ -159,7 +159,9 @@ test("two browsers see each other's messages at once, and none is lost or double
     await binh.page.reload()
     await seenOnce(binh.page, 'Mình kẹt ở bước tìm miền D.')
     const order = await log(binh.page).locator('article p').allTextContents()
-    expect(order).toEqual([
+    // #chao-mung, the welcome channel: Bình's joining comes first (D-83).
+    expect(order[0]).toMatch(/^Bình joined the server/)
+    expect(order.slice(1)).toEqual([
         'Mọi người ơi, câu 3 đề giữa kỳ năm ngoái giải thế nào vậy?',
         'Đổi sang tọa độ cực rồi tính tích phân kép là ra nhé',
         'Câu 4 đổi cận thế nào vậy mọi người?',

@@ -111,6 +111,7 @@ function renderChat({ attachFiles = true, history = [] as Message[] } = {}) {
                         channelName='hoi-dap'
                         permissions={{
                             send: true,
+                            sendBlocked: null,
                             manage: false,
                             deleteOwn: true,
                             react: true,

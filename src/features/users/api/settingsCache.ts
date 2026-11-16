@@ -1,4 +1,6 @@
 import { queryOptions, skipToken } from '@tanstack/react-query'
+import { queryClient } from '@/lib/query-client'
+import { setTimeZoneSource } from '@/lib/time-zones'
 import type { UserSettings } from '../types'
 import { userKeys } from './keys'
 
@@ -10,3 +12,6 @@ import { userKeys } from './keys'
  * `enabled: false`: a query without a queryFn is an error in TanStack Query.
  */
 export const settingsCache = queryOptions<UserSettings>({ queryKey: userKeys.settings(), queryFn: skipToken })
+
+// src/lib reads the account's zone from here, for a time it says outside React (a refusal's Toast).
+setTimeZoneSource(() => queryClient.getQueryData<UserSettings>(userKeys.settings())?.timezone)

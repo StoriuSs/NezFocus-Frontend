@@ -93,6 +93,7 @@ function renderChat(state: ReadState, client = new QueryClient({ defaultOptions:
                         permissions={{
                             attachFiles: true,
                             send: true,
+                            sendBlocked: null,
                             manage: false,
                             deleteOwn: true,
                             react: true,

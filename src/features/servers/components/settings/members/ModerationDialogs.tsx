@@ -22,6 +22,7 @@ import { SegmentedControl } from '@/components/ui/segmented-control'
 import { Textarea } from '@/components/ui/textarea'
 import { useMinuteClock } from '@/hooks/useMinuteClock'
 import { getApiErrorType } from '@/lib/api-error'
+import { endsAt } from '@/lib/time-zones'
 import { cn } from '@/lib/utils'
 import { settingsCache } from '@/features/users'
 import { useBanMember, useKickMember, useTimeoutMember } from '../../../api/useModeration'
@@ -29,7 +30,6 @@ import { refusedRule } from '../../../lib/layout-error'
 import {
     type Blocked,
     DEFAULT_TIMEOUT,
-    endsAt,
     isTimedOut,
     REASON_MAX_LENGTH,
     TIMEOUT_SECONDS,

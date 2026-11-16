@@ -25,5 +25,6 @@ export type {
     MentionChannel,
     MentionPerson,
     MentionRole,
-    MentionSource
+    MentionSource,
+    SendBlock
 } from './types'

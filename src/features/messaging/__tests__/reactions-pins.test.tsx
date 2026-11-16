@@ -120,6 +120,7 @@ const PINNED_NOTICE = message('m3', AN, '', '21:46', {
 const MEMBER: ChatPermissions = {
     attachFiles: true,
     send: true,
+    sendBlocked: null,
     manage: false,
     deleteOwn: true,
     react: true,
@@ -131,6 +132,7 @@ const NO_NEW: ChatPermissions = { ...MEMBER, addReactions: false }
 const TIMED_OUT: ChatPermissions = {
     attachFiles: true,
     send: false,
+    sendBlocked: { reason: 'timed-out', until: '2026-10-18T15:30:00Z' },
     manage: false,
     deleteOwn: false,
     react: false,

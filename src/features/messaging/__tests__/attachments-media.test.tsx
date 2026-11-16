@@ -11,6 +11,7 @@ import { expectNoA11yViolations } from '@/test/a11y'
 import type {
     Attachment,
     ChannelMessages,
+    ChatPermissions,
     MentionSource,
     Message,
     MessageCursor,
@@ -113,6 +114,7 @@ function renderChat(history: Message[]) {
                         channelName='hoi-dap'
                         permissions={{
                             send: true,
+                            sendBlocked: null,
                             manage: false,
                             deleteOwn: true,
                             react: true,
@@ -339,6 +341,8 @@ function drag(target: Element, type: 'dragEnter' | 'dragOver' | 'dragLeave' | 'd
     return event
 }
 
+const OPEN: Pick<ChatPermissions, 'attachFiles' | 'sendBlocked'> = { attachFiles: true, sendBlocked: null }
+
 describe('Files dragged onto the page (C-12 drop-target, drop-blocked)', () => {
     beforeEach(async () => {
         await i18n.changeLanguage('vi')
@@ -356,15 +360,17 @@ describe('Files dragged onto the page (C-12 drop-target, drop-blocked)', () => {
         vi.restoreAllMocks()
     })
 
-    function renderZone(permissions = { send: true, attachFiles: true }) {
+    function renderZone(permissions: Pick<ChatPermissions, 'attachFiles' | 'sendBlocked'> = OPEN) {
+        const client = new QueryClient()
+        client.setQueryData(userKeys.settings(), { timezone: 'Asia/Ho_Chi_Minh' })
         return render(
-            <>
+            <QueryClientProvider client={client}>
                 <section data-testid='column'>
                     <p>Tin nhắn</p>
                     <ChatDropZone channelId='hoi-dap' channelName='hoi-dap' permissions={permissions} />
                 </section>
                 <aside data-testid='panel'>Thành viên</aside>
-            </>
+            </QueryClientProvider>
         )
     }
 
@@ -400,7 +406,7 @@ describe('Files dragged onto the page (C-12 drop-target, drop-blocked)', () => {
     })
 
     it('says why without a frame for one who may not send files here, and a drop does nothing', () => {
-        renderZone({ send: true, attachFiles: false })
+        renderZone({ sendBlocked: null, attachFiles: false })
         const column = screen.getByTestId('column')
 
         drag(column, 'dragEnter')
@@ -412,20 +418,33 @@ describe('Files dragged onto the page (C-12 drop-target, drop-blocked)', () => {
     })
 
     it('says one may not send at all when that is why', () => {
-        renderZone({ send: false, attachFiles: false })
+        renderZone({ sendBlocked: { reason: 'no-permission' }, attachFiles: false })
         drag(screen.getByTestId('column'), 'dragEnter')
         expect(screen.getByText('Bạn chưa có quyền gửi tin trong server này')).toBeVisible()
     })
 
+    it('says only moderators post in a channel that is theirs (02 managers-only)', () => {
+        renderZone({ sendBlocked: { reason: 'managers-only' }, attachFiles: false })
+        drag(screen.getByTestId('column'), 'dragEnter')
+        expect(screen.getByText('Chỉ người quản lý được gửi tin trong kênh này')).toBeVisible()
+    })
+
+    it('says until when one is timed out, files and all (02 drop-blocked)', () => {
+        const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date())
+        const until = new Date(`${day}T22:30:00+07:00`).toISOString()
+        renderZone({ sendBlocked: { reason: 'timed-out', until }, attachFiles: false })
+        drag(screen.getByTestId('column'), 'dragEnter')
+        expect(screen.getByText('Bạn đang bị tạm khóa tới 22:30')).toBeVisible()
+        expect(screen.getByText('Chưa gửi tin được, kể cả tệp')).toBeVisible()
+        drag(screen.getByTestId('column'), 'drop', [new File(['x'], 'cau4-1.jpg')])
+        expect(useUploads.getState().trays['hoi-dap'] ?? []).toHaveLength(0)
+    })
+
     it('leaves another drop target on the page alone (the picture of a new server)', () => {
         render(
-            <>
+            <QueryClientProvider client={new QueryClient()}>
                 <section>
-                    <ChatDropZone
-                        channelId='hoi-dap'
-                        channelName='hoi-dap'
-                        permissions={{ send: true, attachFiles: true }}
-                    />
+                    <ChatDropZone channelId='hoi-dap' channelName='hoi-dap' permissions={OPEN} />
                 </section>
                 <div
                     data-testid='icon-drop'
@@ -434,7 +453,7 @@ describe('Files dragged onto the page (C-12 drop-target, drop-blocked)', () => {
                         event.dataTransfer.dropEffect = 'copy'
                     }}
                 />
-            </>
+            </QueryClientProvider>
         )
         const event = drag(screen.getByTestId('icon-drop'), 'dragOver')
         expect((event as DragEvent).dataTransfer!.dropEffect).toBe('copy')

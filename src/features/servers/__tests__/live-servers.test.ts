@@ -273,4 +273,91 @@ describe('Keeping the servers live from events (D-178)', () => {
         expect(reads).toHaveBeenCalledTimes(1)
         unsubscribe()
     })
+
+    describe('when a timeout ends (02 timed-out: the composer opens again)', () => {
+        const timedOut = (id: string, inMs: number): Server => ({
+            ...server(id, ['chung']),
+            timeoutUntil: new Date(Date.now() + inMs).toISOString()
+        })
+
+        it('reads the server again once its timeout is over, for the channels the server gives back', async () => {
+            stop()
+            client.setQueryData(serverKeys.list(), [timedOut('ot', 60_000), server('nd', ['chung'])])
+            stop = listenForServers(client, notices)
+            fetchServer.mockResolvedValue(server('ot', ['chung']))
+
+            await vi.advanceTimersByTimeAsync(59_000)
+            expect(fetchServer).not.toHaveBeenCalled()
+            await vi.advanceTimersByTimeAsync(3_000)
+
+            expect(fetchServer).toHaveBeenCalledTimes(1)
+            expect(fetchServer).toHaveBeenCalledWith('ot')
+            expect(list()?.[0]?.timeoutUntil).toBeNull()
+        })
+
+        it('reads once more a little later when the API still counts the timeout at its end (its clock behind)', async () => {
+            const until = new Date(Date.now() + 60_000).toISOString()
+            stop()
+            client.setQueryData(serverKeys.list(), [{ ...server('ot', ['chung']), timeoutUntil: until }])
+            stop = listenForServers(client, notices)
+            fetchServer.mockResolvedValueOnce({ ...server('ot', ['chung']), timeoutUntil: until })
+            fetchServer.mockResolvedValueOnce(server('ot', ['chung']))
+
+            await vi.advanceTimersByTimeAsync(62_000)
+            expect(fetchServer).toHaveBeenCalledTimes(1)
+            await vi.advanceTimersByTimeAsync(3_000)
+
+            expect(fetchServer).toHaveBeenCalledTimes(2)
+            expect(list()?.[0]?.timeoutUntil).toBeNull()
+        })
+
+        it('gives up after a few reads that still say timed out, until something else happens', async () => {
+            const until = new Date(Date.now() + 60_000).toISOString()
+            stop()
+            client.setQueryData(serverKeys.list(), [{ ...server('ot', ['chung']), timeoutUntil: until }])
+            stop = listenForServers(client, notices)
+            fetchServer.mockResolvedValue({ ...server('ot', ['chung']), timeoutUntil: until })
+
+            await vi.advanceTimersByTimeAsync(10 * 60_000)
+
+            expect(fetchServer.mock.calls.length).toBeGreaterThan(1)
+            expect(fetchServer.mock.calls.length).toBeLessThanOrEqual(6)
+        })
+
+        it('reads again at the end of a timeout given while the page is open', async () => {
+            fetchServer.mockResolvedValueOnce(timedOut('ot', 60_000))
+            emitRealtimeEvent('member.updated', { serverId: 'ot', userId: 'an' })
+            await settle()
+            expect(fetchServer).toHaveBeenCalledTimes(1)
+
+            fetchServer.mockResolvedValueOnce(server('ot', ['chung']))
+            await vi.advanceTimersByTimeAsync(62_000)
+            expect(fetchServer).toHaveBeenCalledTimes(2)
+            expect(list()?.[0]?.timeoutUntil).toBeNull()
+        })
+
+        it('reads nothing at the old end of a timeout lifted early', async () => {
+            fetchServer.mockResolvedValueOnce(timedOut('ot', 60_000))
+            emitRealtimeEvent('member.updated', { serverId: 'ot', userId: 'an' })
+            await settle()
+            expect(fetchServer).toHaveBeenCalledTimes(1)
+
+            // Lifted early: read again by its event, no read left waiting for the old end.
+            fetchServer.mockResolvedValueOnce(server('ot', ['chung']))
+            emitRealtimeEvent('member.updated', { serverId: 'ot', userId: 'an' })
+            await settle()
+            expect(fetchServer).toHaveBeenCalledTimes(2)
+            await vi.advanceTimersByTimeAsync(120_000)
+            expect(fetchServer).toHaveBeenCalledTimes(2)
+        })
+
+        it('waits for nothing once stopped (signed out)', async () => {
+            stop()
+            client.setQueryData(serverKeys.list(), [timedOut('ot', 60_000)])
+            stop = listenForServers(client, notices)
+            stop()
+            await vi.advanceTimersByTimeAsync(120_000)
+            expect(fetchServer).not.toHaveBeenCalled()
+        })
+    })
 })

@@ -132,10 +132,11 @@ function TextChannel({ server, channel, messageId }: { server: Server; channel: 
         if (!members.open || showMembers) members.toggle()
     }
     const { id: serverId, timeoutUntil } = server
-    const { id: channelId, permissions: bits } = channel
+    const { id: channelId, permissions: bits, sendMode } = channel
+    // Again when the server is read again: at the end of a timeout too (liveServers).
     const permissions = useMemo(
-        () => chatPermissions({ timeoutUntil }, { permissions: bits }, new Date()),
-        [timeoutUntil, bits]
+        () => chatPermissions({ timeoutUntil }, { permissions: bits, sendMode }, new Date()),
+        [timeoutUntil, bits, sendMode]
     )
     const linkTo = useCallback((id: string) => messageLink(serverId, channelId, id), [serverId, channelId])
     const linked = linkedServers(useServers().data ?? [])

@@ -71,6 +71,7 @@ const THEIRS = message('m2', TUAN, 'Câu 4 đổi cận thế nào vậy mọi n
 const MEMBER: ChatPermissions = {
     attachFiles: true,
     send: true,
+    sendBlocked: null,
     manage: false,
     deleteOwn: true,
     react: true,
@@ -80,6 +81,7 @@ const MEMBER: ChatPermissions = {
 const MODERATOR: ChatPermissions = {
     attachFiles: true,
     send: true,
+    sendBlocked: null,
     manage: true,
     deleteOwn: true,
     react: true,
@@ -89,6 +91,7 @@ const MODERATOR: ChatPermissions = {
 const TIMED_OUT: ChatPermissions = {
     attachFiles: true,
     send: false,
+    sendBlocked: { reason: 'timed-out', until: '2026-10-18T15:30:00Z' },
     manage: false,
     deleteOwn: false,
     react: false,
@@ -582,5 +585,119 @@ describe('Moving through the messages by keyboard (S-CHAT-01 › Focus, C-10 ›
         expect(await row(MINE.content)).toHaveFocus()
         await userEvent.keyboard('{ArrowDown}')
         expect(newest).toHaveFocus()
+    })
+})
+
+describe('The composer when one may not send (C-12 disabled, 02 timed-out / managers-only)', () => {
+    const today = (time: string) => at(time)
+    const blocked = (sendBlocked: ChatPermissions['sendBlocked']): ChatPermissions => ({
+        ...TIMED_OUT,
+        deleteOwn: sendBlocked?.reason !== 'timed-out',
+        react: sendBlocked?.reason !== 'timed-out',
+        sendBlocked
+    })
+    const tree = (permissions: ChatPermissions) => (
+        <QueryClientProvider client={client}>
+            <TooltipProvider>
+                <div className='flex h-[600px] flex-col'>
+                    <ChannelChat
+                        channelId='hoi-dap'
+                        channelName='hoi-dap'
+                        permissions={permissions}
+                        linkTo={(id) => `${window.location.origin}/channels/ot/hoi-dap/${id}`}
+                        readLink={() => null}
+                        mentions={NO_MENTIONS}
+                    />
+                </div>
+            </TooltipProvider>
+        </QueryClientProvider>
+    )
+    let client: QueryClient
+
+    beforeEach(async () => {
+        await i18n.changeLanguage('vi')
+        Object.values(messagesApi).forEach((fn) => fn.mockReset())
+        messagesApi.fetchMessages.mockResolvedValue({
+            items: [MINE, THEIRS],
+            hasMoreBefore: false,
+            hasMoreAfter: false
+        })
+        sessionStorage.clear()
+        client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+        client.setQueryData(userKeys.profile(), { id: 'an', username: 'an.nguyen', displayName: 'An', avatarUrl: null })
+        client.setQueryData(userKeys.settings(), { timezone: ZONE })
+    })
+
+    it('says until when one is timed out, in place of the box', async () => {
+        render(tree(blocked({ reason: 'timed-out', until: today('22:30') })))
+        await row(MINE.content)
+
+        expect(screen.queryByRole('combobox', { name: 'Nhắn #hoi-dap' })).not.toBeInTheDocument()
+        expect(screen.getByText('Bạn đang bị tạm khóa tới 22:30 · chưa gửi tin được')).toBeVisible()
+        await expectNoA11yViolations(document.body)
+    })
+
+    it('adds the day when the timeout ends on another one', async () => {
+        const later = new Date(new Date(today('22:30')).getTime() + 2 * 24 * 3600_000)
+        const day = new Intl.DateTimeFormat('vi', { timeZone: ZONE, day: '2-digit', month: '2-digit' })
+            .formatToParts(later)
+            .filter((part) => part.type !== 'literal')
+            .map((part) => part.value)
+            .join('/')
+        render(tree(blocked({ reason: 'timed-out', until: later.toISOString() })))
+
+        expect(await screen.findByText(`Bạn đang bị tạm khóa tới 22:30, ${day} · chưa gửi tin được`)).toBeVisible()
+    })
+
+    it('says only moderators post in a channel that is theirs, and when the server gives no SEND_MESSAGES', async () => {
+        const view = render(tree(blocked({ reason: 'managers-only' })))
+        expect(await screen.findByText('Chỉ người quản lý được gửi tin trong kênh này')).toBeVisible()
+
+        view.rerender(tree(blocked({ reason: 'no-permission' })))
+        expect(screen.getByText('Bạn chưa có quyền gửi tin trong server này')).toBeVisible()
+    })
+
+    it('keeps the draft while shut, and gives it back once one may send again', async () => {
+        const view = render(tree(MEMBER))
+        await userEvent.type(await screen.findByRole('combobox', { name: 'Nhắn #hoi-dap' }), 'Câu 5 làm sao')
+
+        view.rerender(tree(blocked({ reason: 'timed-out', until: today('22:30') })))
+        expect(screen.queryByRole('combobox', { name: 'Nhắn #hoi-dap' })).not.toBeInTheDocument()
+
+        view.rerender(tree(MEMBER))
+        expect(screen.getByRole('combobox', { name: 'Nhắn #hoi-dap' })).toHaveValue('Câu 5 làm sao')
+    })
+
+    it('says so to one typing as it shuts: the line takes the focus the box had, and is a status', async () => {
+        const view = render(tree(MEMBER))
+        const box = await screen.findByRole('combobox', { name: 'Nhắn #hoi-dap' })
+        await userEvent.type(box, 'Câu 5')
+
+        view.rerender(tree(blocked({ reason: 'managers-only' })))
+
+        const line = screen.getByRole('status')
+        expect(line).toHaveTextContent('Chỉ người quản lý được gửi tin trong kênh này')
+        expect(line).toHaveFocus()
+    })
+
+    it('leaves the focus where it is when it was not in the box', async () => {
+        const view = render(tree(MEMBER))
+        const mine = await row(MINE.content)
+        mine.focus()
+
+        view.rerender(tree(blocked({ reason: 'managers-only' })))
+
+        expect(mine).toHaveFocus()
+    })
+
+    it('stops editing a message once one may no longer send', async () => {
+        const view = render(tree(MEMBER))
+        await userEvent.type(await screen.findByRole('combobox', { name: 'Nhắn #hoi-dap' }), '{ArrowUp}')
+        expect(screen.getByRole('combobox', { name: 'Sửa tin nhắn' })).toBeInTheDocument()
+
+        view.rerender(tree(blocked({ reason: 'managers-only' })))
+
+        expect(screen.queryByRole('combobox', { name: 'Sửa tin nhắn' })).not.toBeInTheDocument()
+        expect(screen.getByText(MINE.content)).toBeVisible()
     })
 })

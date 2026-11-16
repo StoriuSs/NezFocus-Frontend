@@ -161,6 +161,53 @@ export function browserTimeZone(): string | null {
     }
 }
 
+/**
+ * When something ends, in the account's zone (NFR-I18N-01): "22:47", with
+ * "19/10" when that is not today ("Hết lúc 21:47, 19/10", 04 Q8).
+ */
+export function endsAt(
+    end: Date,
+    now: Date,
+    language: string,
+    timeZone?: string
+): { time: string; date: string | null } {
+    const dayOf = (at: Date) => {
+        const { year, month, day } = wallClock(at, timeZone)
+        return `${year}-${month}-${day}`
+    }
+    const date = new Intl.DateTimeFormat(language, { timeZone, day: '2-digit', month: '2-digit' })
+    // Day and month in the language's order, always joined by "/" (ICU writes "11-11" in Vietnamese).
+    const dayMonth = date
+        .formatToParts(end)
+        .filter((part) => part.type !== 'literal')
+        .map((part) => part.value)
+        .join('/')
+    return { time: timeIn(timeZone, end), date: dayOf(end) === dayOf(now) ? null : dayMonth }
+}
+
+/** "22:47", or "22:47, 19/10" when that is not today: how a timeout's end is said (02 `timed-out`, 11 › Mã lỗi). */
+export function endsAtText(end: Date, now: Date, language: string, timeZone?: string): string {
+    const { time, date } = endsAt(end, now, language, timeZone)
+    return date ? `${time}, ${date}` : time
+}
+
+let zoneSource: () => string | undefined = () => undefined
+
+/**
+ * The users feature says where the account's zone is (its settings in the
+ * query cache), for code outside React that shows a time: a refusal's
+ * Toast ("Bạn đang bị tạm khóa tới 22:30", src/lib/api-error.ts), which
+ * src/lib cannot read from a feature itself.
+ */
+export function setTimeZoneSource(source: () => string | undefined): void {
+    zoneSource = source
+}
+
+/** The account's zone now; none before its settings are read (the browser's is then used). */
+export function accountTimeZone(): string | undefined {
+    return zoneSource()
+}
+
 /** What the picker starts on: the browser's zone, or Hồ Chí Minh when it gives none (01-auth.md). */
 export function initialTimeZone(): string {
     return browserTimeZone() ?? FALLBACK_ZONES.find(isSelectableTimeZone) ?? 'Asia/Ho_Chi_Minh'

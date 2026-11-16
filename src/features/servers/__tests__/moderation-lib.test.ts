@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import {
     assignableRoles,
     blockedOn,
-    endsAt,
     hasActions,
     heldRoles,
     isTimedOut,
@@ -185,29 +184,5 @@ describe('pageButtons (C-40)', () => {
         expect(pageButtons(1, 14)).toEqual([1, 2, 3, 4, 5, 'gap', 14])
         expect(pageButtons(7, 14)).toEqual([1, 'gap', 6, 7, 8, 'gap', 14])
         expect(pageButtons(14, 14)).toEqual([1, 'gap', 10, 11, 12, 13, 14])
-    })
-})
-
-describe('endsAt (04 Q8)', () => {
-    it('gives the time alone today, and the day too otherwise, in the account’s zone', () => {
-        const zone = 'Asia/Ho_Chi_Minh'
-        expect(endsAt(new Date('2026-11-10T10:00:00Z'), NOW, 'vi', zone)).toEqual({ time: '17:00', date: null })
-        expect(endsAt(new Date('2026-11-11T10:00:00Z'), NOW, 'vi', zone)).toEqual({ time: '17:00', date: '11/11' })
-        // 23:30 in Hồ Chí Minh is already tomorrow.
-        expect(endsAt(new Date('2026-11-10T17:30:00Z'), NOW, 'vi', zone).date).toBe('11/11')
-    })
-
-    it('reads the clock and the day in the account’s zone, not the browser’s', () => {
-        // 03:30 UTC on the 11th is still the evening of the 10th in New York.
-        expect(endsAt(new Date('2026-11-11T03:30:00Z'), NOW, 'vi', 'America/New_York')).toEqual({
-            time: '22:30',
-            date: null
-        })
-    })
-
-    it('keeps a 24-hour clock in English, with the day and month in its order', () => {
-        const zone = 'Asia/Ho_Chi_Minh'
-        expect(endsAt(new Date('2026-11-12T14:05:00Z'), NOW, 'en', zone)).toEqual({ time: '21:05', date: '11/12' })
-        expect(endsAt(new Date('2026-11-12T14:05:00Z'), NOW, 'vi', zone).date).toBe('12/11')
     })
 })

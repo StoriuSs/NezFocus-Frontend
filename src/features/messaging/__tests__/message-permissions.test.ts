@@ -26,6 +26,7 @@ const message = (authorId: string): Message => ({
 const MEMBER: ChatPermissions = {
     attachFiles: true,
     send: true,
+    sendBlocked: null,
     manage: false,
     deleteOwn: true,
     react: true,
@@ -35,6 +36,7 @@ const MEMBER: ChatPermissions = {
 const MANAGERS_ONLY: ChatPermissions = {
     attachFiles: true,
     send: false,
+    sendBlocked: { reason: 'managers-only' },
     manage: false,
     deleteOwn: true,
     react: true,
@@ -44,6 +46,7 @@ const MANAGERS_ONLY: ChatPermissions = {
 const TIMED_OUT: ChatPermissions = {
     attachFiles: true,
     send: false,
+    sendBlocked: { reason: 'timed-out', until: '2026-10-18T15:30:00Z' },
     manage: false,
     deleteOwn: false,
     react: false,
@@ -53,6 +56,7 @@ const TIMED_OUT: ChatPermissions = {
 const MODERATOR: ChatPermissions = {
     attachFiles: true,
     send: true,
+    sendBlocked: null,
     manage: true,
     deleteOwn: true,
     react: true,

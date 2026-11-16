@@ -35,5 +35,8 @@
   "AUTH_CURRENT_PASSWORD_INVALID": "Your current password is not right",
   "AUTH_PASSWORD_REJECTED": "This password doesn't meet the rules",
   "ACCOUNT_INCOMPLETE": "Complete your account first.",
-  "ACCOUNT_ALREADY_COMPLETE": "This account is already complete."
+  "ACCOUNT_ALREADY_COMPLETE": "This account is already complete.",
+  "MEMBER_TIMED_OUT": "You are timed out until {{time}}",
+  "MEMBER_TIMED_OUT_NO_TIME": "You're timed out",
+  "FORBIDDEN_ERROR": "You're no longer allowed to do that"
 }

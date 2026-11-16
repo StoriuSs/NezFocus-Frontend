@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Lock, Upload } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { Lock, Timer, Upload } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import '@/i18n/messaging'
+import { endsAtText } from '@/lib/time-zones'
+import { settingsCache } from '@/features/users'
 import { addToTray } from '../../api/attachmentUploads'
 import { useUploads } from '../../attachment-tray.store'
 import { useChooseFiles } from '../../hooks/useChooseFiles'
@@ -22,8 +25,10 @@ const carriesFiles = (event: DragEvent) => event.dataTransfer?.types.includes('F
  * anywhere else on the page, a file does nothing, rather than the browser
  * opening it in place of the app.
  *
- * Timed out, or a channel only managers may write in, has its own words once
- * the composer says why it is shut (L10); until then, "no permission to send".
+ * Without files here, why, as the shut composer says it: `timer` "Timed out
+ * until 22:30" · "You can't send messages yet, files included"; `lock` for a
+ * channel only moderators post in, a server that gives no SEND_MESSAGES, or
+ * no ATTACH_FILES.
  */
 export function ChatDropZone({
     channelId,
@@ -32,12 +37,14 @@ export function ChatDropZone({
 }: {
     channelId: string
     channelName: string
-    permissions: Pick<ChatPermissions, 'send' | 'attachFiles'>
+    permissions: Pick<ChatPermissions, 'sendBlocked' | 'attachFiles'>
 }) {
-    const { t } = useTranslation('messaging')
+    const { t, i18n } = useTranslation('messaging')
+    const timeZone = useQuery(settingsCache).data?.timezone
     const self = useRef<HTMLDivElement>(null)
     const [dragging, setDragging] = useState(false)
     const allowed = permissions.attachFiles
+    const blocked = permissions.sendBlocked
     const inTray = useUploads((state) => state.trays[channelId]?.length ?? 0)
     const add = useCallback((files: File[]) => addToTray(channelId, files), [channelId])
     const choose = useChooseFiles(add, inTray, allowed)
@@ -118,11 +125,25 @@ export function ChatDropZone({
                         </p>
                         <p className='text-body-sm text-text-secondary'>{t('attach.dropLimits')}</p>
                     </>
+                ) : blocked?.reason === 'timed-out' ? (
+                    <>
+                        <Timer className='text-text-secondary' style={ICON} aria-hidden='true' />
+                        <p className='text-title-2 font-semibold text-text-secondary'>
+                            {t('attach.timedOut', {
+                                time: endsAtText(new Date(blocked.until), new Date(), i18n.language, timeZone)
+                            })}
+                        </p>
+                        <p className='text-body-sm text-text-secondary'>{t('attach.timedOutNote')}</p>
+                    </>
                 ) : (
                     <>
                         <Lock className='text-text-secondary' style={ICON} aria-hidden='true' />
                         <p className='text-title-2 font-semibold text-text-secondary'>
-                            {permissions.send ? t('attach.notAllowed') : t('attach.noSend')}
+                            {!blocked
+                                ? t('attach.notAllowed')
+                                : blocked.reason === 'managers-only'
+                                  ? t('composer.disabled.managersOnly')
+                                  : t('composer.disabled.noPermission')}
                         </p>
                     </>
                 )}

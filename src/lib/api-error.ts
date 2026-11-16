@@ -1,5 +1,6 @@
 import axios from 'axios'
 import i18n, { resources } from '@/i18n'
+import { accountTimeZone, endsAtText } from './time-zones'
 
 /** A key in the api translation namespace. */
 export type ApiMessageKey = `api:${keyof (typeof resources)['en']['api']}`
@@ -64,9 +65,18 @@ export function getApiErrorType(error: unknown): string | undefined {
  * error type with an entry renders in the user's language. The server's
  * `meta.message` is English and written for developers, so it is not shown;
  * types without an entry fall back to `fallbackKey`.
+ *
+ * `MEMBER_TIMED_OUT` says until when, from the answer, in the account's zone
+ * (11 › Mã lỗi): "Bạn đang bị tạm khóa tới 22:30", the day too when that is
+ * not today; "Bạn đang bị tạm khóa" if the answer carries no end.
  */
 export function getApiErrorMessage(error: unknown, fallbackKey: ApiMessageKey = 'api:GENERIC_ERROR'): string {
     const type = getApiErrorType(error)
+    if (type === 'MEMBER_TIMED_OUT') {
+        const until = timedOutUntil(error)
+        if (!until) return i18n.t('api:MEMBER_TIMED_OUT_NO_TIME')
+        return i18n.t('api:MEMBER_TIMED_OUT', { time: endsAtText(until, new Date(), i18n.language, accountTimeZone()) })
+    }
     const key = `api:${type}`
     // The type comes from the server, so whether it is catalogued is only
     // known at runtime.
@@ -74,4 +84,12 @@ export function getApiErrorMessage(error: unknown, fallbackKey: ApiMessageKey = 
         return i18n.t(key as ApiMessageKey)
     }
     return i18n.t(fallbackKey)
+}
+
+/** The end of a timeout a `MEMBER_TIMED_OUT` answer carries (`data.timeoutUntil`), if it is a time. */
+function timedOutUntil(error: unknown): Date | null {
+    if (!axios.isAxiosError(error)) return null
+    const until = (error.response?.data as { data?: { timeoutUntil?: unknown } } | undefined)?.data?.timeoutUntil
+    const end = typeof until === 'string' ? new Date(until) : null
+    return end && !Number.isNaN(end.getTime()) ? end : null
 }

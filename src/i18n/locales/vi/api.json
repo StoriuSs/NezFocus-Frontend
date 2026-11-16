@@ -35,5 +35,8 @@
   "AUTH_CURRENT_PASSWORD_INVALID": "Mật khẩu hiện tại không đúng",
   "AUTH_PASSWORD_REJECTED": "Mật khẩu này chưa đáp ứng các yêu cầu",
   "ACCOUNT_INCOMPLETE": "Hãy hoàn tất tài khoản trước.",
-  "ACCOUNT_ALREADY_COMPLETE": "Tài khoản này đã hoàn tất."
+  "ACCOUNT_ALREADY_COMPLETE": "Tài khoản này đã hoàn tất.",
+  "MEMBER_TIMED_OUT": "Bạn đang bị tạm khóa tới {{time}}",
+  "MEMBER_TIMED_OUT_NO_TIME": "Bạn đang bị tạm khóa",
+  "FORBIDDEN_ERROR": "Bạn không còn quyền làm việc này"
 }

@@ -97,9 +97,21 @@ export type ChatMessage = Message | OutgoingMessage
  * feature: messaging does not read permission bits). The backend still
  * refuses on its own (REQ-MSG-05, SRS 1.70).
  */
+/**
+ * Why one may not send in a channel, said in place of the composer (C-12
+ * `disabled`): timed out, until when (D-54); a channel only moderators post
+ * in (REQ-ROLE-03); else the server gives no SEND_MESSAGES.
+ */
+export type SendBlock =
+    | { reason: 'timed-out'; until: string }
+    | { reason: 'managers-only' }
+    | { reason: 'no-permission' }
+
 export interface ChatPermissions {
     /** SEND_MESSAGES: reply, and edit one's own messages. */
     send: boolean
+    /** Without SEND_MESSAGES, why (null with it). */
+    sendBlocked: SendBlock | null
     /** MANAGE_MESSAGES: delete anyone's message. */
     manage: boolean
     /** Not timed out: delete one's own messages. */

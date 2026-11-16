@@ -49,7 +49,12 @@
   "composer": {
     "placeholder": "Nhắn #{{channel}}",
     "left": "còn {{count}}",
-    "tooLong": "Tin nhắn dài quá 2000 ký tự"
+    "tooLong": "Tin nhắn dài quá 2000 ký tự",
+    "disabled": {
+      "timedOut": "Bạn đang bị tạm khóa tới {{time}} · chưa gửi tin được",
+      "managersOnly": "Chỉ người quản lý được gửi tin trong kênh này",
+      "noPermission": "Bạn chưa có quyền gửi tin trong server này"
+    }
   },
   "actions": {
     "toolbar": "Thao tác với tin nhắn",
@@ -215,11 +220,12 @@
     "offline": "Chờ có mạng",
     "dropTitle": "Thả tệp để gửi vào #{{channel}}",
     "dropLimits": "Tối đa 10 tệp, mỗi tệp 25 MB",
-    "noSend": "Bạn chưa có quyền gửi tin trong server này",
     "view": "Xem",
     "unplayable": "Trình duyệt không phát được video này",
     "video": "Video {{name}}",
-    "audio": "Âm thanh {{name}}"
+    "audio": "Âm thanh {{name}}",
+    "timedOut": "Bạn đang bị tạm khóa tới {{time}}",
+    "timedOutNote": "Chưa gửi tin được, kể cả tệp"
   },
   "viewer": {
     "newTab": "Mở tab mới",

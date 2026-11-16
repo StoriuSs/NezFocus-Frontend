@@ -94,6 +94,7 @@ const SOURCE: MentionSource = {
 const PERMISSIONS: ChatPermissions = {
     attachFiles: true,
     send: true,
+    sendBlocked: null,
     manage: false,
     deleteOwn: true,
     react: true,

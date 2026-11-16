@@ -1,4 +1,3 @@
-import { timeIn, wallClock } from '@/lib/time-zones'
 import { can } from './permissions'
 import { holdsAllOf, roleLock } from './roles'
 import type { Role, Server, ServerMember } from '../types'
@@ -146,30 +145,6 @@ export function pageButtons(current: number, total: number): (number | 'gap')[] 
     const end = Math.min(total - 1, Math.max(current + 1, 5))
     const middle = Array.from({ length: end - start + 1 }, (_, index) => start + index)
     return [1, ...(start > 2 ? ['gap' as const] : []), ...middle, ...(end < total - 1 ? ['gap' as const] : []), total]
-}
-
-/**
- * When something ends, in the account's zone (NFR-I18N-01): "22:47", with
- * "19/10" when that is not today ("Hết lúc 21:47, 19/10", 04 Q8).
- */
-export function endsAt(
-    end: Date,
-    now: Date,
-    language: string,
-    timeZone?: string
-): { time: string; date: string | null } {
-    const dayOf = (at: Date) => {
-        const { year, month, day } = wallClock(at, timeZone)
-        return `${year}-${month}-${day}`
-    }
-    const date = new Intl.DateTimeFormat(language, { timeZone, day: '2-digit', month: '2-digit' })
-    // Day and month in the language's order, always joined by "/" (ICU writes "11-11" in Vietnamese).
-    const dayMonth = date
-        .formatToParts(end)
-        .filter((part) => part.type !== 'literal')
-        .map((part) => part.value)
-        .join('/')
-    return { time: timeIn(timeZone, end), date: dayOf(end) === dayOf(now) ? null : dayMonth }
 }
 
 /** A day as the tables show it: "01/10/2026". */

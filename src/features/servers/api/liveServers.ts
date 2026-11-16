@@ -70,6 +70,10 @@ const SPREAD_MS = 500
 /** A read that failed for a while (no answer, 408, 429, 5xx) is tried again this much later, twice at most. */
 const RETRY_MS = 2000
 const RETRIES = 2
+/** A timeout over is read this long after its end, so the API's clock has passed it too. */
+const END_MARGIN_MS = 1000
+/** Read past its end and still timed out (the API's clock behind this one): read again RETRY_MS later, this many times at most. */
+const LATE_READS = 4
 
 const passing = (error: unknown) => {
     const { status } = getApiErrorInfo(error)
@@ -96,6 +100,11 @@ const listening = new WeakSet<QueryClient>()
  * only ever written into a list already held: an event never makes one. A
  * server this tab is deleting itself is left to its dialog.
  *
+ * A timeout ends with no event: a server whose timeout runs is read again
+ * once it is over, for the channels it gives back (the composer opens again,
+ * 02 `timed-out`). Given, changed or lifted, the read that tells of it moves
+ * that time.
+ *
  * Once per query client, for as long as the app runs (as liveMessages);
  * returns the way to stop (the first call only; tests use it).
  */
@@ -107,6 +116,10 @@ export function listenForServers(client: QueryClient, notices: ServerNotices): (
         client.getQueryData<Server[]>(serverKeys.list())?.find((server) => server.id === serverId)
     const timers = new Map<string, ReturnType<typeof setTimeout>>()
     const reading = new Set<string>()
+    /** Each server whose timeout runs: when it ends, and the read waiting for then. */
+    const ends = new Map<string, { until: string; timer: ReturnType<typeof setTimeout> }>()
+    /** Reads made past the end of a timeout the server still had. */
+    const late = new Map<string, { until: string; reads: number }>()
     const again = new Set<string>()
     const failures = new Map<string, number>()
     let stopped = false
@@ -114,9 +127,45 @@ export function listenForServers(client: QueryClient, notices: ServerNotices): (
     let version = 0
     const listHash = JSON.stringify(serverKeys.list())
     const stopVersions = client.getQueryCache().subscribe((event) => {
-        if (event.type === 'updated' && event.action.type === 'success' && event.query.queryHash === listHash)
+        if (event.type === 'updated' && event.action.type === 'success' && event.query.queryHash === listHash) {
             version += 1
+            followTimeouts()
+        }
     })
+
+    /**
+     * A read waiting for the end of each timeout the list holds, and none for
+     * one lifted. A server read past its end still timed out (the API's clock
+     * behind) is read again a little later, a few times; then the next event
+     * or `ready` reads it.
+     */
+    function followTimeouts(): void {
+        const held = new Map<string, string>()
+        for (const server of client.getQueryData<Server[]>(serverKeys.list()) ?? []) {
+            if (server.timeoutUntil) held.set(server.id, server.timeoutUntil)
+        }
+        for (const [serverId, end] of ends) {
+            if (held.get(serverId) === end.until) continue
+            clearTimeout(end.timer)
+            ends.delete(serverId)
+        }
+        for (const [serverId, tries] of late) if (held.get(serverId) !== tries.until) late.delete(serverId)
+        for (const [serverId, until] of held) {
+            if (ends.has(serverId)) continue
+            let wait = Date.parse(until) - Date.now() + END_MARGIN_MS
+            if (wait <= END_MARGIN_MS) {
+                const reads = late.get(serverId)?.reads ?? 0
+                if (reads >= LATE_READS) continue
+                late.set(serverId, { until, reads: reads + 1 })
+                wait = RETRY_MS
+            }
+            const timer = setTimeout(() => {
+                ends.delete(serverId)
+                schedule(serverId)
+            }, wait)
+            ends.set(serverId, { until, timer })
+        }
+    }
 
     function gone(serverId: string): Server | undefined {
         const server = listed(serverId)
@@ -187,6 +236,7 @@ export function listenForServers(client: QueryClient, notices: ServerNotices): (
         )
     }
 
+    followTimeouts()
     const stops = [
         ...READ_AGAIN.map((event) =>
             onRealtimeEvent(event, (data) => {
@@ -225,6 +275,9 @@ export function listenForServers(client: QueryClient, notices: ServerNotices): (
         stopVersions()
         for (const timer of timers.values()) clearTimeout(timer)
         timers.clear()
+        for (const end of ends.values()) clearTimeout(end.timer)
+        ends.clear()
+        late.clear()
         again.clear()
         listening.delete(client)
     }

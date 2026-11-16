@@ -49,7 +49,12 @@
   "composer": {
     "placeholder": "Message #{{channel}}",
     "left": "{{count}} left",
-    "tooLong": "Messages can be at most 2000 characters"
+    "tooLong": "Messages can be at most 2000 characters",
+    "disabled": {
+      "timedOut": "You're timed out until {{time}} · you can't send messages yet",
+      "managersOnly": "Only moderators can send messages in this channel",
+      "noPermission": "You don't have permission to send messages in this server"
+    }
   },
   "actions": {
     "toolbar": "Message actions",
@@ -215,11 +220,12 @@
     "offline": "Waiting for network",
     "dropTitle": "Drop files to send to #{{channel}}",
     "dropLimits": "Up to 10 files, 25 MB each",
-    "noSend": "You don't have permission to send messages in this server",
     "view": "View",
     "unplayable": "This browser can't play this video",
     "video": "Video {{name}}",
-    "audio": "Audio {{name}}"
+    "audio": "Audio {{name}}",
+    "timedOut": "You're timed out until {{time}}",
+    "timedOutNote": "You can't send messages yet, files included"
   },
   "viewer": {
     "newTab": "Open in new tab",

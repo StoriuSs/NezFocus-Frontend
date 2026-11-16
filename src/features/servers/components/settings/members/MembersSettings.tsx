@@ -20,6 +20,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { TooltipWhenCut, WithTooltip } from '@/components/ui/tooltip'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { useMinuteClock } from '@/hooks/useMinuteClock'
+import { endsAt } from '@/lib/time-zones'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/features/auth'
 import { settingsCache } from '@/features/users'
@@ -30,7 +31,6 @@ import type { MemberSort, PageSize, SortOrder } from '../../../api/roles.api'
 import {
     assignableRoles,
     blockedOn,
-    endsAt,
     hasActions,
     heldRoles,
     isTimedOut,
