@@ -3,6 +3,7 @@ import type { ApiEnvelope } from '@/lib/api-types'
 import { currentLanguage } from '@/i18n'
 import type { AccountCompletion, AuthOptions, EmailCodeSignIn, SessionList, TokenResponse } from '@/features/auth/types'
 import { untilSignedOut } from '@/features/auth/lib/sign-out-in-flight'
+import { withCookieLock } from '@/features/auth/lib/cookie-lock'
 
 /**
  * The API's auth routes (the backend's docs/auth/api-reference.md).
@@ -60,13 +61,19 @@ export const authApi = {
         await api.post('/auth/forgot-password', { email, language: currentLanguage() }, auth)
     },
 
-    /** Ends every earlier session, then signs in here: tokens, and a new refresh cookie. */
+    /**
+     * Ends every earlier session, then signs in here: tokens, and a new
+     * refresh cookie. Under the cookie lock, so another tab's refresh waits
+     * for the new cookie (cookie-lock.ts).
+     */
     async resetPassword(email: string, code: string, password: string): Promise<TokenResponse> {
         await untilSignedOut()
-        const response = await api.post<ApiEnvelope<TokenResponse>>(
-            '/auth/reset-password',
-            { email, code, password, language: currentLanguage() },
-            auth
+        const response = await withCookieLock(() =>
+            api.post<ApiEnvelope<TokenResponse>>(
+                '/auth/reset-password',
+                { email, code, password, language: currentLanguage() },
+                auth
+            )
         )
         return response.data.data
     },
@@ -77,10 +84,16 @@ export const authApi = {
         return response.data.data
     },
 
-    /** A new access token for the cookie. Rejects with a 401 when the session is over. */
+    /**
+     * A new access token for the cookie. Rejects with a 401 when the session
+     * is over. Waits for a password reset on its way in another tab
+     * (cookie-lock.ts).
+     */
     async refresh(): Promise<TokenResponse> {
         await untilSignedOut()
-        const response = await api.post<ApiEnvelope<TokenResponse>>('/auth/refresh', undefined, auth)
+        const response = await withCookieLock(() =>
+            api.post<ApiEnvelope<TokenResponse>>('/auth/refresh', undefined, auth)
+        )
         return response.data.data
     },
 

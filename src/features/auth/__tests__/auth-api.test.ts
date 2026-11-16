@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import i18n from '@/i18n'
 
 const post = vi.hoisted(() => vi.fn())
@@ -83,5 +83,62 @@ describe('authApi', () => {
         answer()
         await signingIn
         expect(post).toHaveBeenCalledWith('/auth/login', expect.anything(), PUBLIC)
+    })
+
+    describe('a password reset and a refresh in two tabs of one browser (D-74)', () => {
+        /** navigator.locks as browsers have it: one holder per name, the others wait in turn. */
+        function installLocks() {
+            const tails = new Map<string, Promise<unknown>>()
+            const request = (name: string, work: () => Promise<unknown>) => {
+                const run = (tails.get(name) ?? Promise.resolve()).then(work)
+                tails.set(
+                    name,
+                    run.catch(() => undefined)
+                )
+                return run
+            }
+            Object.defineProperty(navigator, 'locks', { value: { request }, configurable: true })
+        }
+        afterEach(() => {
+            Reflect.deleteProperty(navigator, 'locks')
+        })
+
+        it('sends a refresh asked while the reset is on its way only after its answer, with the new cookie', async () => {
+            // The reset ends this browser's session too; another tab's socket
+            // hears it and refreshes. Sent before the reset's answer stores
+            // the new cookie, that refresh would carry the old one and sign
+            // every tab out.
+            installLocks()
+            let answer: () => void = () => undefined
+            post.mockImplementationOnce(
+                () => new Promise((resolve) => (answer = () => resolve({ data: { data: { accessToken: 'new' } } })))
+            )
+
+            const resetting = authApi.resetPassword('an.nguyen@gmail.com', '482913', 'Harbour-Lantern-42')
+            const refreshing = authApi.refresh()
+            await new Promise((resolve) => setTimeout(resolve))
+            expect(post).toHaveBeenCalledTimes(1)
+            expect(post).toHaveBeenLastCalledWith('/auth/reset-password', expect.anything(), PUBLIC)
+
+            answer()
+            await resetting
+            await refreshing
+            expect(post).toHaveBeenLastCalledWith('/auth/refresh', undefined, PUBLIC)
+        })
+
+        it('a refused reset lets the refresh go too', async () => {
+            installLocks()
+            post.mockRejectedValueOnce(new Error('AUTH_CODE_INVALID'))
+
+            await expect(authApi.resetPassword('an.nguyen@gmail.com', '000000', 'Harbour-Lantern-42')).rejects.toThrow()
+            await expect(authApi.refresh()).resolves.toEqual({ accessToken: 'a' })
+        })
+
+        it('without Web Locks (some embedded browsers), each goes at once as before', async () => {
+            post.mockImplementationOnce(() => new Promise(() => undefined))
+
+            void authApi.resetPassword('an.nguyen@gmail.com', '482913', 'Harbour-Lantern-42')
+            await expect(authApi.refresh()).resolves.toEqual({ accessToken: 'a' })
+        })
     })
 })
