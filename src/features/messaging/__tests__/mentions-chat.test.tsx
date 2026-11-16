@@ -386,7 +386,7 @@ describe('Suggestions after @ and # in the composer (C-12 › MentionSuggest)', 
         await userEvent.type(composer(), 'x')
         expect(screen.queryByRole('listbox')).toBeNull()
         await userEvent.type(composer(), ' @ch')
-        await userEvent.click(within(await suggestions()).getByRole('option', { name: /Chi/ }))
+        await userEvent.click(await within(await suggestions()).findByRole('option', { name: /Chi/ }))
         expect(composer()).toHaveValue('@Trưởng nhóm @cx @Chi ')
         expect(composer()).toHaveFocus()
     })
@@ -524,7 +524,7 @@ describe('Mentions while editing a message (C-10 `editing`)', () => {
         await within(await suggestions()).findByRole('option', { name: /Chi/ })
         expect(again).toHaveAttribute('aria-expanded', 'true')
         await expectNoA11yViolations(document.body)
-        await userEvent.click(within(await suggestions()).getByRole('option', { name: /Chi/ }))
+        await userEvent.click(await within(await suggestions()).findByRole('option', { name: /Chi/ }))
         await userEvent.keyboard('{Enter}')
         await waitFor(() =>
             expect(messagesApi.editMessage).toHaveBeenCalledWith('m50', `<@${BINH}> xem <#${HOI_DAP}> nhé <@${CHI}>`)
