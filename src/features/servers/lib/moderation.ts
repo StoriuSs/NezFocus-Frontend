@@ -13,6 +13,9 @@ export type TimeoutSeconds = (typeof TIMEOUT_SECONDS)[number]
 export const DEFAULT_TIMEOUT: TimeoutSeconds = 3600
 /** The longest reason for a kick, ban or timeout. */
 export const REASON_MAX_LENGTH = 512
+/** How many days of their messages a ban deletes (04 `ban-confirm`, D-181), none chosen first. */
+export const DELETE_MESSAGE_DAYS = [0, 1, 7] as const
+export type DeleteMessageDays = (typeof DELETE_MESSAGE_DAYS)[number]
 
 type RankedRole = Pick<Server['roles'][number], 'id' | 'position' | 'administrator'>
 

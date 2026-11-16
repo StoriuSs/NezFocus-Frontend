@@ -16,7 +16,7 @@ const listening = new WeakSet<QueryClient>()
  * reader's own mark from another tab or device comes as `read_state.updated`
  * and is kept only when not behind the one held (D-173). What the client
  * cannot count itself (a role mention, a reply to a deleted message, an edit
- * or a deletion after the mark, a channel with no state yet) reads the list
+ * or a deletion after the mark, one by one or a ban's batch, a channel with no state yet) reads the list
  * again a second after the first of a burst, once for it; so does each
  * `ready` (the socket live again: what was missed meanwhile, or a first
  * reading that failed).
@@ -54,6 +54,11 @@ export function listenForReadStates(client: QueryClient): () => void {
         onRealtimeEvent('message.deleted', (data) => {
             const { id, channelId } = data as { id: string; channelId: string }
             apply(hearDeleted(client.getQueryData<ReadState[]>(key), channelId, id))
+        }),
+        // A batch of a ban's (D-181): as each of its messages deleted alone.
+        onRealtimeEvent('message.bulk_deleted', (data) => {
+            const { channelId, ids } = data as { channelId: string; ids: string[] }
+            for (const id of ids) apply(hearDeleted(client.getQueryData<ReadState[]>(key), channelId, id))
         }),
         onRealtimeEvent('read_state.updated', (data) => {
             client.setQueryData<ReadState[]>(key, (states) => keepState(states, data as ReadState))

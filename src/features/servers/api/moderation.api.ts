@@ -23,9 +23,17 @@ export async function timeoutMember(
     await api.patch(`/servers/${serverId}/members/${userId}`, { timeoutSeconds, reason })
 }
 
-/** Out of the server and kept out (BAN_MEMBERS); only someone in it (D-155). */
-export async function banMember(serverId: string, userId: string, reason: string | null): Promise<void> {
-    await api.put(`/servers/${serverId}/bans/${userId}`, { reason })
+/**
+ * Out of the server and kept out (BAN_MEMBERS); only someone in it (D-155).
+ * With 1 or 7 days, their messages of those days go soon after (D-181).
+ */
+export async function banMember(
+    serverId: string,
+    userId: string,
+    reason: string | null,
+    deleteMessageDays: number
+): Promise<void> {
+    await api.put(`/servers/${serverId}/bans/${userId}`, { reason, deleteMessageDays })
 }
 
 export async function unbanMember(serverId: string, userId: string): Promise<void> {

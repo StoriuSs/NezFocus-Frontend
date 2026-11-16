@@ -30,6 +30,8 @@ import { refusedRule } from '../../../lib/layout-error'
 import {
     type Blocked,
     DEFAULT_TIMEOUT,
+    DELETE_MESSAGE_DAYS,
+    type DeleteMessageDays,
     isTimedOut,
     REASON_MAX_LENGTH,
     TIMEOUT_SECONDS,
@@ -274,7 +276,10 @@ function TimeoutDialog({
     )
 }
 
-/** Mời ra (S-SET-03 `kick-confirm`) and Cấm (`ban-confirm`): both `danger`, with a reason. */
+/**
+ * Mời ra (S-SET-03 `kick-confirm`) and Cấm (`ban-confirm`): both `danger`,
+ * with a reason; Cấm also with how many days of their messages go (D-181).
+ */
 function RemoveDialog({
     kind,
     serverId,
@@ -293,23 +298,25 @@ function RemoveDialog({
     const ban = useBanMember(serverId)
     const action = kind === 'kick' ? kick : ban
     const [reason, setReason] = useState('')
+    const [days, setDays] = useState<DeleteMessageDays>(0)
     const [refused, setRefused] = useState<Failure | null>(null)
     const failure = blocked ?? refused
     const name = memberName(member)
+    const daysId = useId()
 
     function submit() {
         if (action.isPending || stopsSending(failure)) return
         setRefused(null)
-        action.mutate(
-            { userId: member.userId, reason: reason.trim() || null },
-            {
-                onSuccess: () => {
-                    toast(t(kind === 'kick' ? 'members.toast.kicked' : 'members.toast.banned', { name }))
-                    onClose()
-                },
-                onError: (error) => setRefused(failureOf(error))
-            }
-        )
+        const removal = { userId: member.userId, reason: reason.trim() || null }
+        const after = {
+            onSuccess: () => {
+                toast(t(kind === 'kick' ? 'members.toast.kicked' : 'members.toast.banned', { name }))
+                onClose()
+            },
+            onError: (error: unknown) => setRefused(failureOf(error))
+        }
+        if (kind === 'kick') kick.mutate(removal, after)
+        else ban.mutate({ ...removal, deleteMessageDays: days }, after)
     }
 
     return (
@@ -324,6 +331,21 @@ function RemoveDialog({
             onSubmit={submit}
             onClose={onClose}
         >
+            {kind === 'ban' ? (
+                // Three choices: the track hugs them (04 `ban-confirm`), not the dialog's width.
+                <div className='grid justify-items-start gap-2'>
+                    <Label id={daysId}>{t('members.dialog.deleteMessages')}</Label>
+                    <SegmentedControl
+                        aria-labelledby={daysId}
+                        value={String(days)}
+                        onValueChange={(value) => setDays(Number(value) as DeleteMessageDays)}
+                        segments={DELETE_MESSAGE_DAYS.map((count) => ({
+                            value: String(count),
+                            label: t(`members.deleteDays.${count}`)
+                        }))}
+                    />
+                </div>
+            ) : null}
             <ReasonField name={name} value={reason} onChange={setReason} onSubmit={submit} />
         </ModerationDialog>
     )

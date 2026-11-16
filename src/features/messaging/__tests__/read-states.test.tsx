@@ -97,6 +97,16 @@ describe('Read states kept live by the socket (REQ-MSG-09)', () => {
         expect(refetching()).toBe(true)
     })
 
+    it('reads the list again a moment after a bulk deletion past the mark (a ban, D-181), not one before it', () => {
+        emitRealtimeEvent('message.bulk_deleted', { channelId: 'hoi-dap', ids: [id(4), id(6)] })
+        vi.advanceTimersByTime(1000)
+        expect(refetching()).toBe(false)
+
+        emitRealtimeEvent('message.bulk_deleted', { channelId: 'hoi-dap', ids: [id(8), id(12)] })
+        vi.advanceTimersByTime(1000)
+        expect(refetching()).toBe(true)
+    })
+
     it('reads the list again each time the socket is live again: what was missed meanwhile', () => {
         emitRealtimeEvent('ready', {})
         expect(refetching()).toBe(true)

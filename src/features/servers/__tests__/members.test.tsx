@@ -421,6 +421,40 @@ describe('Members (S-SET-03)', () => {
         expect(moderationApi.timeoutMember).toHaveBeenCalledTimes(1)
     })
 
+    it('bans keeping their messages unless the last day or week is picked (04 `ban-confirm`, D-181)', async () => {
+        const user = userEvent.setup()
+        moderationApi.banMember.mockResolvedValue(undefined)
+        renderPage('/servers/ot/settings/members', an, 'an')
+        await user.click(within(await rowOf('Dũng')).getByRole('button', { name: 'Actions for Dũng' }))
+        await user.click(await screen.findByRole('menuitem', { name: 'Ban from server' }))
+
+        const dialog = await screen.findByRole('dialog', { name: 'Ban Dũng from the server?' })
+        const days = within(dialog).getByRole('radiogroup', { name: 'Delete recent messages' })
+        expect(
+            within(days)
+                .getAllByRole('radio')
+                .map((radio) => radio.textContent)
+        ).toEqual(['Don’t delete', 'Past day', 'Past 7 days'])
+        expect(within(days).getByRole('radio', { name: 'Don’t delete' })).toBeChecked()
+        await expectNoA11yViolations(dialog)
+        await user.click(within(days).getByRole('radio', { name: 'Past 7 days' }))
+        await user.type(within(dialog).getByLabelText('Reason (optional)'), 'Bán đề thi')
+        await user.click(within(dialog).getByRole('button', { name: 'Ban' }))
+
+        await waitFor(() => expect(moderationApi.banMember).toHaveBeenCalledWith('ot', 'dung', 'Bán đề thi', 7))
+        expect(await screen.findByText('Banned Dũng')).toBeInTheDocument()
+    })
+
+    it('has no Delete recent messages when kicking', async () => {
+        const user = userEvent.setup()
+        renderPage('/servers/ot/settings/members', an, 'an')
+        await user.click(within(await rowOf('Dũng')).getByRole('button', { name: 'Actions for Dũng' }))
+        await user.click(await screen.findByRole('menuitem', { name: 'Kick from server' }))
+
+        const dialog = await screen.findByRole('dialog', { name: 'Kick Dũng from the server?' })
+        expect(within(dialog).queryByRole('radiogroup')).toBeNull()
+    })
+
     it('lets a retry follow a dropped connection', async () => {
         const user = userEvent.setup()
         moderationApi.banMember.mockRejectedValueOnce(new AxiosError('offline')).mockResolvedValueOnce(undefined)
@@ -434,7 +468,7 @@ describe('Members (S-SET-03)', () => {
         ).toBeInTheDocument()
         await user.click(within(dialog).getByRole('button', { name: 'Ban' }))
         expect(await screen.findByText('Banned Dũng')).toBeInTheDocument()
-        expect(moderationApi.banMember).toHaveBeenLastCalledWith('ot', 'dung', null)
+        expect(moderationApi.banMember).toHaveBeenLastCalledWith('ot', 'dung', null, 0)
     })
 
     it.each([

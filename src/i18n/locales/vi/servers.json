@@ -549,6 +549,11 @@
       "86400": "1 ngày",
       "604800": "1 tuần"
     },
+    "deleteDays": {
+      "0": "Không xóa",
+      "1": "1 ngày qua",
+      "7": "7 ngày qua"
+    },
     "dialog": {
       "timeoutTitle": "Tạm khóa {{name}}",
       "changeTitle": "Đổi thời hạn tạm khóa {{name}}",
@@ -569,7 +574,8 @@
       "failed": "Chưa thực hiện được. Kiểm tra kết nối rồi thử lại.",
       "outranked": "{{name}} vừa có vai trò ngang hoặc cao hơn bạn nên bạn không thể thực hiện.",
       "gone": "{{name}} không còn ở trong server.",
-      "admin": "{{name}} đang có quyền Toàn quyền nên không tạm khóa được. Gỡ vai trò đó trước."
+      "admin": "{{name}} đang có quyền Toàn quyền nên không tạm khóa được. Gỡ vai trò đó trước.",
+      "deleteMessages": "Xóa tin nhắn gần đây"
     }
   },
   "pagination": {

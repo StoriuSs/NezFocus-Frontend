@@ -5,7 +5,8 @@ import { apiUrl, asOwnClient, codeFromEmail, watchForProblems } from './helpers'
  * Members and bans against the real API (S-SET-03, S-SET-04, REQ-ROLE-04):
  * An times Chi out from the Members page, bans Bình, who can no longer join
  * through the link, then lifts the ban from the Bans page, after which Bình
- * joins again.
+ * joins again. Then a ban that deletes Bình's messages of the last day: they
+ * leave the chat Chi has open at once, and the pins with them (D-181).
  *
  * Needs the API and Mailpit, like invites.spec.ts. With E2E_SHOTS set to a
  * folder, it also saves the screens compared with their frames.
@@ -17,8 +18,11 @@ const SHOTS = process.env.E2E_SHOTS
 const stamp = Date.now().toString(36)
 
 let anEmail: string
+let chiEmail: string
+let anToken: string
 let binhToken: string
 let serverId: string
+const channels: Record<string, string> = {}
 let inviteCode: string
 const ip = `198.51.100.${Math.floor(Math.random() * 254) + 1}`
 
@@ -67,13 +71,16 @@ test.beforeAll(async ({ browserName }) => {
 
     anEmail = `e2e-mod-an-${browserName}${stamp}@example.test`
     const an = await account(anEmail, 'An', `e2e_ma${stamp}`)
+    anToken = an
     binhToken = await account(`e2e-mod-binh-${browserName}${stamp}@example.test`, 'Bình', `e2e_mb${stamp}`)
-    const chi = await account(`e2e-mod-chi-${browserName}${stamp}@example.test`, 'Chi', `e2e_mc${stamp}`)
+    chiEmail = `e2e-mod-chi-${browserName}${stamp}@example.test`
+    const chi = await account(chiEmail, 'Chi', `e2e_mc${stamp}`)
 
-    const server: { id: string } = (
+    const server: { id: string; channels: { id: string; name: string }[] } = (
         await ok('POST', 'servers', { name: 'Ôn thi Giải tích 2', template: 'study' }, an, crypto.randomUUID())
     ).data
     serverId = server.id
+    for (const channel of server.channels) channels[channel.name] = channel.id
     const invite: { code: string } = (
         await ok(
             'POST',
@@ -160,4 +167,59 @@ test('times out and bans from Members, and lifts the ban from Bans', async ({ pa
     expect((await call('POST', `invites/${inviteCode}/accept`, {}, binhToken)).status).toBe(200)
 
     expect(problems).toEqual([])
+})
+
+test('a ban that deletes the last day of messages takes them out of the chat others have open (D-181)', async ({
+    page,
+    browser
+}) => {
+    test.setTimeout(90_000)
+    const send = async (content: string) =>
+        (
+            (await ok(
+                'POST',
+                `channels/${channels['hoi-dap']}/messages`,
+                { content, nonce: crypto.randomUUID() },
+                binhToken,
+                crypto.randomUUID()
+            )) as { data: { id: string } }
+        ).data.id
+    await send('Ai cần đề có đáp án thì inbox mình')
+    const pinned = await send('Bán tài liệu ôn thi, giá rẻ')
+    await ok('PUT', `channels/${channels['hoi-dap']}/pins/${pinned}`, undefined, anToken)
+
+    // Chi has #hoi-dap open, in a browser of her own.
+    const chiContext = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'en-US' })
+    const chiPage = await chiContext.newPage()
+    const chiProblems = await watchForProblems(chiPage)
+    await signIn(chiPage, chiEmail)
+    await chiPage.goto(`/channels/${serverId}/${channels['hoi-dap']}`)
+    const binhsMessages = chiPage
+        .getByRole('log')
+        .getByRole('article')
+        .filter({ hasText: /đề có đáp án|giá rẻ/ })
+    await expect(binhsMessages).toHaveCount(2, { timeout: 20_000 })
+
+    const problems = await watchForProblems(page)
+    await signIn(page, anEmail)
+    await page.goto(`/servers/${serverId}/settings/members`)
+    await rowOf(page, 'Bình').getByRole('button', { name: 'Actions for Bình' }).click()
+    await page.getByRole('menuitem', { name: 'Ban from server' }).click()
+    const ban = page.getByRole('dialog', { name: 'Ban Bình from the server?' })
+    const days = ban.getByRole('radiogroup', { name: 'Delete recent messages' })
+    await expect(days.getByRole('radio', { name: 'Don’t delete' })).toBeChecked()
+    await days.getByRole('radio', { name: 'Past day' }).click()
+    await shoot(page, 'set03-ban-confirm-delete')
+    await ban.getByRole('button', { name: 'Ban' }).click()
+    await expect(page.getByText('Banned Bình')).toBeVisible()
+
+    // Gone from Chi's chat without reading it again, and from the pins.
+    await expect(binhsMessages).toHaveCount(0, { timeout: 10_000 })
+    const pins = (await ok('GET', `channels/${channels['hoi-dap']}/pins`, undefined, anToken)) as {
+        data: { items: unknown[] }
+    }
+    expect(pins.data.items).toEqual([])
+    expect(problems).toEqual([])
+    expect(chiProblems).toEqual([])
+    await chiContext.close()
 })

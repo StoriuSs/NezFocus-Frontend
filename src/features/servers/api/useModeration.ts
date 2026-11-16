@@ -44,8 +44,15 @@ export function useKickMember(serverId: string) {
 export function useBanMember(serverId: string) {
     const queryClient = useQueryClient()
     return useMutation({
-        mutationFn: ({ userId, reason }: { userId: string; reason: string | null }) =>
-            banMember(serverId, userId, reason),
+        mutationFn: ({
+            userId,
+            reason,
+            deleteMessageDays
+        }: {
+            userId: string
+            reason: string | null
+            deleteMessageDays: number
+        }) => banMember(serverId, userId, reason, deleteMessageDays),
         onSuccess: () => {
             recount(queryClient)
             return reload(queryClient, serverId)

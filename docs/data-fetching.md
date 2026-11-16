@@ -358,7 +358,8 @@ listens through realtime's `onRealtimeEvent`, once per query client:
 `message.created` goes into its channel's history if that history is
 loaded, `message.updated` swaps a message in (and the reply lines quoting
 it), `message.deleted` takes it out (its reply lines then say it was
-deleted), and each `ready` (the socket live again) reads what every loaded
+deleted), `message.bulk_deleted` does the same for each id of a ban's batch
+(D-181; the pins panel and the read states too), and each `ready` (the socket live again) reads what every loaded
 history missed with `after=<newest id>`; more than 100 missed and the
 history starts over from the newest page. The changes themselves are pure
 functions (`lib/message-cache.ts`), tested without React.

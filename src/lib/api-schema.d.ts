@@ -475,7 +475,12 @@ export interface paths {
             path?: never
             cookie?: never
         }
-        get?: never
+        /**
+         * One of their servers as the list shows it to them: what a member reads
+         *     again when an event says the server changed (D-178), the channels they
+         *     may see and what they may do. Not in it, or gone: NOT_FOUND.
+         */
+        get: operations['ServersController_one_v1']
         put?: never
         post?: never
         /**
@@ -864,7 +869,10 @@ export interface paths {
             cookie?: never
         }
         get?: never
-        /** Out of the server and kept out (BAN_MEMBERS); only someone in it (D-155). */
+        /**
+         * Out of the server and kept out (BAN_MEMBERS); only someone in it (D-155).
+         *     Their messages of the last day or week go soon after, by a job (D-181).
+         */
         put: operations['ModerationController_ban_v1']
         post?: never
         delete: operations['ModerationController_unban_v1']
@@ -1763,6 +1771,15 @@ export interface components {
         BanPageResponseDto: {
             items: components['schemas']['BanResponseDto'][]
             meta: components['schemas']['PageMetaResponseDto']
+        }
+        BanMemberRequestDto: {
+            reason?: string | null
+            /**
+             * @description How many days of their messages go: 0 (none, when left out), 1 or 7.
+             * @default 0
+             * @enum {number}
+             */
+            delete_message_days: 0 | 1 | 7
         }
         RealtimeTicketResponseDto: {
             /** @description Sent once in the socket's `auth`; never in a URL. Spent on the first connection. */
@@ -2971,6 +2988,30 @@ export interface operations {
             }
         }
     }
+    ServersController_one_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                serverId: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['ServerResponseDto']
+                    }
+                }
+            }
+        }
+    }
     ServersController_remove_v1: {
         parameters: {
             query?: never
@@ -3825,7 +3866,7 @@ export interface operations {
         }
         requestBody: {
             content: {
-                'application/json': components['schemas']['ModerationReasonRequestDto']
+                'application/json': components['schemas']['BanMemberRequestDto']
             }
         }
         responses: {

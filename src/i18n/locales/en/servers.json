@@ -549,6 +549,11 @@
       "86400": "1 day",
       "604800": "1 week"
     },
+    "deleteDays": {
+      "0": "Don’t delete",
+      "1": "Past day",
+      "7": "Past 7 days"
+    },
     "dialog": {
       "timeoutTitle": "Time out {{name}}",
       "changeTitle": "Change the timeout of {{name}}",
@@ -569,7 +574,8 @@
       "failed": "Couldn’t do that. Check your connection and try again.",
       "outranked": "{{name}} now has a role equal to or above yours, so you can’t do this.",
       "gone": "{{name}} is no longer in the server.",
-      "admin": "{{name}} has Administrator, so they can’t be timed out. Remove that role first."
+      "admin": "{{name}} has Administrator, so they can’t be timed out. Remove that role first.",
+      "deleteMessages": "Delete recent messages"
     }
   },
   "pagination": {

@@ -81,6 +81,34 @@ describe('Keeping open histories live (ARCHITECTURE 3.4, 10.2)', () => {
         expect(ids()).toEqual(['m2'])
     })
 
+    it('drops each message of a bulk deletion (a ban, D-181), its replies saying it was deleted', () => {
+        const original = saved('m1')
+        const reply: Message = {
+            ...saved('m4'),
+            author: { id: 'an', username: 'an.nguyen', displayName: 'An', avatarUrl: null },
+            replyTo: {
+                files: { count: 0, images: 0 },
+                id: 'm1',
+                author: original.author,
+                content: original.content,
+                deleted: false,
+                mentionUsers: [],
+                mentionRoles: []
+            }
+        }
+        client.setQueryData(messageKeys.channel('hoi-dap'), {
+            pages: [{ ...page(['m1', 'm2', 'm3']), items: [...page(['m1', 'm2', 'm3']).items, reply] }],
+            pageParams: [null]
+        })
+        client.setQueryData(messageKeys.channel('tai-lieu'), cached(['m9']))
+
+        emitRealtimeEvent('message.bulk_deleted', { channelId: 'hoi-dap', ids: ['m1', 'm3'] })
+
+        expect(ids()).toEqual(['m2', 'm4'])
+        expect(history()?.pages[0]?.items.at(-1)?.replyTo).toMatchObject({ id: 'm1', deleted: true, content: '' })
+        expect(ids('tai-lieu')).toEqual(['m9'])
+    })
+
     it('listens once per query client, however many lists mount', () => {
         listenForMessages(client)()
         client.setQueryData(messageKeys.channel('hoi-dap'), cached(['m1']))
@@ -337,5 +365,13 @@ describe('Keeping reactions and pins live (REQ-MSG-05, REQ-MSG-07, SRS 1.71)', (
 
         emitRealtimeEvent('message.deleted', { id: 'm2', channelId: 'hoi-dap' })
         expect(pins()?.map((item) => item.id)).toEqual(['m1'])
+    })
+
+    it('drops the cards of the messages of a bulk deletion (D-181)', () => {
+        client.setQueryData(messageKeys.pins('hoi-dap'), [pin('m1'), pin('m2'), pin('m3')])
+
+        emitRealtimeEvent('message.bulk_deleted', { channelId: 'hoi-dap', ids: ['m1', 'm3'] })
+
+        expect(pins()?.map((item) => item.id)).toEqual(['m2'])
     })
 })

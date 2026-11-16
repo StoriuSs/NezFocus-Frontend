@@ -42,7 +42,8 @@ interface ReactionEvent {
 /**
  * Keep every open channel history in the cache live (ARCHITECTURE 10.2,
  * 3.4): `message.created`, `message.updated` and `message.deleted` change
- * their channel's history when that history is loaded (a channel never
+ * their channel's history (`message.bulk_deleted`, a batch of a ban's, D-181,
+ * as each of its messages deleted alone) when that history is loaded (a channel never
  * opened has nothing to keep), and each time the socket is live again, every
  * loaded history reads the newer messages it missed. An edit or a deletion
  * missed while the socket was down shows once the channel is read again; so
@@ -107,6 +108,17 @@ export function listenForMessages(client: QueryClient): () => void {
                 (history) => history && removeSaved(history, id)
             )
             client.setQueryData<PinnedMessage[]>(messageKeys.pins(channelId), (pins) => pins && dropPin(pins, id))
+        }),
+        onRealtimeEvent('message.bulk_deleted', (data) => {
+            const { channelId, ids } = data as { channelId: string; ids: string[] }
+            client.setQueryData<ChannelMessages>(
+                messageKeys.channel(channelId),
+                (history) => history && ids.reduce(removeSaved, history)
+            )
+            client.setQueryData<PinnedMessage[]>(
+                messageKeys.pins(channelId),
+                (pins) => pins && ids.reduce(dropPin, pins)
+            )
         }),
         onRealtimeEvent('reaction.added', (data) => {
             const { channelId, messageId, emoji, userId } = data as ReactionEvent
