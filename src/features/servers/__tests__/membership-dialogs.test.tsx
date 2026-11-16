@@ -124,6 +124,12 @@ const BLOCKING_ONE = [{ id: 'ot', name: 'Ôn thi Giải tích 2', memberCount: 1
 // By its text: an open dialog hides the rest of the page from the accessibility tree.
 const where = () => screen.getByText((_, element) => element?.tagName === 'OUTPUT')
 
+/**
+ * The transfer's password step: auth's ConfirmPasswordDialog, a lazy chunk. Under
+ * a full parallel run its import can outlast the 1 s default.
+ */
+const passwordStep = () => screen.findByRole('dialog', { name: 'Transfer ownership to Bình?' }, { timeout: 5000 })
+
 describe('leaving, handing over and deleting a server (03 S-SRV-04, 04 S-SET-07)', () => {
     beforeEach(async () => {
         await i18n.changeLanguage('en')
@@ -341,7 +347,7 @@ describe('leaving, handing over and deleting a server (03 S-SRV-04, 04 S-SET-07)
             useMembershipDialogs.getState().show({ kind: 'transfer', serverId: 'ot' })
             await userEvent.click(await screen.findByRole('button', { name: /Bình/ }))
 
-            const dialog = await screen.findByRole('dialog', { name: 'Transfer ownership to Bình?' })
+            const dialog = await passwordStep()
             const submit = within(dialog).getByRole('button', { name: 'Transfer ownership' })
             expect(submit).toBeDisabled()
             expect(within(dialog).getByRole('button', { name: 'Forgot password?' })).toBeInTheDocument()
@@ -367,7 +373,7 @@ describe('leaving, handing over and deleting a server (03 S-SRV-04, 04 S-SET-07)
             renderAt('/channels/ot')
             useMembershipDialogs.getState().show({ kind: 'transfer', serverId: 'ot' })
             await userEvent.click(await screen.findByRole('button', { name: /Bình/ }))
-            const dialog = await screen.findByRole('dialog', { name: 'Transfer ownership to Bình?' })
+            const dialog = await passwordStep()
             await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
             expect(await screen.findByRole('dialog', { name: 'Transfer ownership' })).toBeInTheDocument()
         })
@@ -378,7 +384,7 @@ describe('leaving, handing over and deleting a server (03 S-SRV-04, 04 S-SET-07)
             useMembershipDialogs
                 .getState()
                 .show({ kind: 'transfer', serverId: 'ot', recipient: { userId: 'binh', name: 'Bình' } })
-            const dialog = await screen.findByRole('dialog', { name: 'Transfer ownership to Bình?' })
+            const dialog = await passwordStep()
             const field = within(dialog).getByLabelText('Your password')
             await userEvent.type(field, 'Wrong-Horse-1')
             await userEvent.click(within(dialog).getByRole('button', { name: 'Transfer ownership' }))
@@ -394,7 +400,7 @@ describe('leaving, handing over and deleting a server (03 S-SRV-04, 04 S-SET-07)
             useMembershipDialogs
                 .getState()
                 .show({ kind: 'transfer', serverId: 'ot', recipient: { userId: 'binh', name: 'Bình' } })
-            const dialog = await screen.findByRole('dialog', { name: 'Transfer ownership to Bình?' })
+            const dialog = await passwordStep()
             await userEvent.type(within(dialog).getByLabelText('Your password'), 'Correct-Horse-1')
             await userEvent.click(within(dialog).getByRole('button', { name: 'Transfer ownership' }))
             expect(
@@ -408,7 +414,7 @@ describe('leaving, handing over and deleting a server (03 S-SRV-04, 04 S-SET-07)
             renderAt('/channels/ot')
             useMembershipDialogs.getState().show({ kind: 'transfer', serverId: 'ot' })
             await userEvent.click(await screen.findByRole('button', { name: /Bình/ }))
-            const dialog = await screen.findByRole('dialog', { name: 'Transfer ownership to Bình?' })
+            const dialog = await passwordStep()
             await userEvent.type(within(dialog).getByLabelText('Your password'), 'Correct-Horse-1')
             rolesApi.fetchMembers.mockResolvedValue(page([]))
             await userEvent.click(within(dialog).getByRole('button', { name: 'Transfer ownership' }))
@@ -427,7 +433,7 @@ describe('leaving, handing over and deleting a server (03 S-SRV-04, 04 S-SET-07)
                 recipient: { userId: 'binh', name: 'Bình' },
                 thenLeave: true
             })
-            const dialog = await screen.findByRole('dialog', { name: 'Transfer ownership to Bình?' })
+            const dialog = await passwordStep()
             serversApi.fetchServers.mockRejectedValue(new (await import('axios')).AxiosError('offline'))
             await userEvent.type(within(dialog).getByLabelText('Your password'), 'Correct-Horse-1')
             await userEvent.click(within(dialog).getByRole('button', { name: 'Transfer ownership' }))
@@ -443,7 +449,7 @@ describe('leaving, handing over and deleting a server (03 S-SRV-04, 04 S-SET-07)
                 recipient: { userId: 'binh', name: 'Bình' },
                 thenLeave: true
             })
-            const dialog = await screen.findByRole('dialog', { name: 'Transfer ownership to Bình?' })
+            const dialog = await passwordStep()
             serversApi.fetchServers.mockResolvedValue([{ ...OT, isOwner: false }, ND, CG])
             await userEvent.type(within(dialog).getByLabelText('Your password'), 'Correct-Horse-1')
             await userEvent.click(within(dialog).getByRole('button', { name: 'Transfer ownership' }))
