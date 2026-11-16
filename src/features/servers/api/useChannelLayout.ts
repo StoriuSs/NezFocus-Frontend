@@ -17,6 +17,7 @@ import {
 } from './layout.api'
 import { rememberServer } from './useServers'
 import type { CreateChannelRequest, LayoutMove, Server, UpdateChannelRequest } from '../types'
+import { aboutGonePlace } from '@/lib/gone-places'
 
 /**
  * A category at the end of the list (S-SRV-05 `category`). One key per name
@@ -131,6 +132,7 @@ export function useMoveInLayout() {
             if (context?.before) rememberServer(queryClient, context.before)
             if (layoutRule(error)?.rule === 'stale_move' || getApiErrorType(error) === 'NOT_FOUND_ERROR')
                 void queryClient.invalidateQueries({ queryKey: serverKeys.list() })
+            if (aboutGonePlace(error)) return
             toast.error(t('shell.drag.saveFailed'), {
                 action: { label: t('shell.drag.retry'), onClick: () => move.mutate(sent) }
             })

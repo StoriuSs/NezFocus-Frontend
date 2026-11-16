@@ -294,6 +294,12 @@ for every mutation that fails. So:
 - **When the screen shows the error itself** (a message under a field), opt
   out: `meta: { errorToast: false }` on the mutation.
 - **For a different fallback message**: `meta: { errorFallbackKey: 'api:SOME_KEY' }`.
+- **About something just let go of, no toast**: a server one was removed
+  from or that was deleted, a channel gone or gone private, a message read
+  in one. `forgetServerData` and `forgetChannels` note their ids in
+  `src/lib/gone-places.ts` for two minutes; a mutation failing on a request
+  whose path holds one of them says nothing, as the dialog or Toast that said
+  it went has said enough (11 S-MOD-02 E9). Nothing to add in a hook.
 
 Failed **queries** show no toast: the component has `isError` and decides.
 A page that throws to its error boundary does so only when it has **no data**
@@ -463,10 +469,20 @@ again. Channels no longer listed take their histories with them
 too). `ready` reads everything again.
 
 A server deleted, or one they were kicked or banned from (`member.left` on
-their own tabs, with `removed_by`), leaves at once and they are told; the
-page on it goes to the next server on the rail (`useGoneServerPath`). The
-channel open on a page, deleted or no longer seen, goes to the first text
-channel with a Toast (02 `channel-removed`).
+their own tabs, with `removed_by`), leaves at once; the page on it goes to
+the next server on the rail (`useGoneServerPath`), then they are told: a
+Toast for a deletion, the dialog of 11 S-MOD-02 for a removal (queued in
+`server-removals.store.ts`, one at a time). The channel open on a page,
+deleted or no longer seen, goes to the first text channel with a Toast (02
+`channel-removed`); what is typed in a channel let go goes with its history.
+
+Screens open on something that changes keep up from the cache, with no
+listener of their own (04 SET-EDGE, 03 SRV-EDGE): a settings page whose
+permission went moves away (`ServerSettingsPage`), a role, channel or
+category deleted closes its page or dialog with a Toast naming it, a channel
+lifted for a move is let go, a moderation dialog reads the person as last
+listed (`blockedOn`), and the channel settings form takes new values into
+the fields not touched (`values` with `keepDirtyValues`).
 
 ## A server one is no longer in
 

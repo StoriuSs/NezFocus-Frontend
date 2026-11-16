@@ -12,6 +12,8 @@ import { ShellPage } from '@/components/shell/ShellPage'
 import { expectNoA11yViolations } from '@/test/a11y'
 import { mockAuthStore, queryWrapper } from '@/test/helpers'
 import type { Server, ServerChannel } from '@/features/servers'
+import { useChannelDialogs } from '@/features/servers/channel-dialogs.store'
+import { useServerRemovals } from '@/features/servers/server-removals.store'
 
 const authState = {
     isAuthenticated: true,
@@ -453,6 +455,33 @@ describe('AppShell (S-SHELL-01)', () => {
             expect(await screen.findByText('This channel is no longer available')).toBeInTheDocument()
         })
 
+        it('says it once when the open channel, held for a move, is deleted (S-SRV-06, 02 channel-removed)', async () => {
+            render(<Toaster />)
+            // An manages channels here, so may move one (MANAGE_CHANNELS, bit 3).
+            const manages = String(BigInt(MEMBER) | (1n << 3n))
+            const managed = (server: Server): Server => ({
+                ...server,
+                permissions: manages,
+                channels: server.channels.map((one) => ({ ...one, permissions: manages }))
+            })
+            serversApi.fetchServers.mockResolvedValue([managed(OT), ND])
+            serversApi.fetchServer.mockResolvedValue(managed(without('hoi-dap')))
+            const router = renderAt('/channels/ot/hoi-dap')
+            const channels = await screen.findByRole('navigation', { name: 'Channels of Ôn thi Giải tích 2' })
+            within(channels).getByRole('link', { name: 'hoi-dap' }).focus()
+            await userEvent.keyboard(' ')
+            expect(screen.getByText(/Picked up #hoi-dap/)).toBeInTheDocument()
+
+            act(() => emitRealtimeEvent('channel.deleted', { serverId: 'ot' }))
+
+            await waitFor(() => expect(router.state.location.pathname).toBe('/channels/ot/ban-can-su'), {
+                timeout: 2000
+            })
+            await waitFor(() => expect(screen.getAllByText('This channel is no longer available')).toHaveLength(1))
+            await new Promise((resolve) => setTimeout(resolve, 100))
+            expect(screen.getAllByText('This channel is no longer available')).toHaveLength(1)
+        })
+
         it('says a server was deleted, with its name, and opens the next one on the rail', async () => {
             render(<Toaster />)
             const router = renderAt('/channels/ot/hoi-dap')
@@ -465,22 +494,117 @@ describe('AppShell (S-SHELL-01)', () => {
             expect(within(rail()).queryByRole('link', { name: 'Ôn thi Giải tích 2' })).not.toBeInTheDocument()
         })
 
-        it('says one is no longer in a server they were kicked from, and opens the next one (dialog: L9b)', async () => {
-            render(<Toaster />)
-            const router = renderAt('/channels/nd/hoi-dap')
-            expect(await screen.findByRole('heading', { level: 1, name: 'hoi-dap' })).toBeInTheDocument()
+        describe('kicked or banned while the tab is open (11 S-MOD-02)', () => {
+            afterEach(() => {
+                useServerRemovals.setState({ queue: [] })
+                useChannelDialogs.setState({ open: null })
+            })
 
-            act(() =>
-                emitRealtimeEvent('member.left', {
-                    serverId: 'nd',
-                    userId: 'user-1',
-                    removedBy: 'kick',
-                    reason: 'Spam'
+            const removed = (serverId: string, removedBy: 'kick' | 'ban', reason: string | null) =>
+                act(() => emitRealtimeEvent('member.left', { serverId, userId: profile.id, removedBy, reason }))
+
+            it('opens the next server first, then says they were removed, why, and what follows, with no Toast', async () => {
+                render(<Toaster />)
+                const router = renderAt('/channels/nd/hoi-dap')
+                expect(await screen.findByRole('heading', { level: 1, name: 'hoi-dap' })).toBeInTheDocument()
+
+                removed('nd', 'kick', 'Spam')
+
+                const dialog = await screen.findByRole('alertdialog', {
+                    name: 'You were removed from Nhóm đồ án Mobile'
                 })
-            )
+                expect(router.state.location.pathname).toBe('/channels/ot/ban-can-su')
+                // Under the modal dialog, the rail is hidden from the accessibility tree.
+                const servers = screen.getByRole('navigation', { name: 'Servers', hidden: true })
+                expect(within(servers).queryByRole('link', { name: 'Nhóm đồ án Mobile', hidden: true })).toBeNull()
+                expect(
+                    within(servers).getByRole('link', { name: 'Ôn thi Giải tích 2', hidden: true })
+                ).toBeInTheDocument()
+                expect(within(dialog).getByText('Reason: Spam')).toBeInTheDocument()
+                expect(within(dialog).getByText('You can come back with a new invite.')).toBeInTheDocument()
+                // One button, focused; no corner ✕ (C-14 one choice).
+                expect(within(dialog).getAllByRole('button')).toHaveLength(1)
+                expect(within(dialog).getByRole('button', { name: 'Got it' })).toHaveFocus()
+                expect(screen.queryByText('You are no longer in Nhóm đồ án Mobile')).not.toBeInTheDocument()
+                await expectNoA11yViolations()
+            })
 
-            expect(await screen.findByText('You are no longer in Nhóm đồ án Mobile')).toBeInTheDocument()
-            await waitFor(() => expect(router.state.location.pathname).toBe('/channels/ot/ban-can-su'))
+            it('says a ban without a reason leaves out the reason line, and that they cannot come back', async () => {
+                renderAt('/channels/nd/hoi-dap')
+                expect(await screen.findByRole('heading', { level: 1, name: 'hoi-dap' })).toBeInTheDocument()
+
+                removed('nd', 'ban', null)
+
+                const dialog = await screen.findByRole('alertdialog', {
+                    name: 'You were banned from Nhóm đồ án Mobile'
+                })
+                expect(within(dialog).getByText('You cannot join this server again.')).toBeInTheDocument()
+                expect(within(dialog).queryByText(/^Reason:/)).not.toBeInTheDocument()
+            })
+
+            it('closes on "Got it", with focus on the new page', async () => {
+                const user = userEvent.setup()
+                renderAt('/channels/nd/hoi-dap')
+                expect(await screen.findByRole('heading', { level: 1, name: 'hoi-dap' })).toBeInTheDocument()
+                removed('nd', 'kick', null)
+
+                await user.click(await screen.findByRole('button', { name: 'Got it' }))
+
+                expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+                await waitFor(() =>
+                    expect(screen.getByRole('main')).toContainElement(document.activeElement as HTMLElement)
+                )
+            })
+
+            it('shows one dialog at a time, in the order they came (E4)', async () => {
+                const user = userEvent.setup()
+                renderAt('/channels/nd/hoi-dap')
+                expect(await screen.findByRole('heading', { level: 1, name: 'hoi-dap' })).toBeInTheDocument()
+
+                removed('nd', 'kick', null)
+                removed('ot', 'ban', 'Spam')
+
+                expect(await screen.findByRole('alertdialog', { name: /Nhóm đồ án Mobile/ })).toBeInTheDocument()
+                expect(screen.getAllByRole('alertdialog')).toHaveLength(1)
+                await user.click(screen.getByRole('button', { name: 'Got it' }))
+                expect(
+                    await screen.findByRole('alertdialog', { name: 'You were banned from Ôn thi Giải tích 2' })
+                ).toBeInTheDocument()
+                await waitFor(() => expect(screen.getByRole('button', { name: 'Got it' })).toHaveFocus())
+            })
+
+            it('closes a dialog of that server first (Q4): it is not left over the new page', async () => {
+                renderAt('/channels/nd/hoi-dap')
+                expect(await screen.findByRole('heading', { level: 1, name: 'hoi-dap' })).toBeInTheDocument()
+                act(() =>
+                    useChannelDialogs
+                        .getState()
+                        .show({ kind: 'createChannel', serverId: 'nd', categoryId: null, type: 'text' })
+                )
+                expect(await screen.findByRole('dialog', { name: 'Create a channel' })).toBeInTheDocument()
+
+                removed('nd', 'kick', null)
+
+                expect(await screen.findByRole('alertdialog')).toBeInTheDocument()
+                expect(screen.queryByRole('dialog', { name: 'Create a channel' })).not.toBeInTheDocument()
+            })
+
+            it('says nothing when another tab of theirs left it: only a removal has a dialog', async () => {
+                const router = renderAt('/channels/nd/hoi-dap')
+                expect(await screen.findByRole('heading', { level: 1, name: 'hoi-dap' })).toBeInTheDocument()
+
+                act(() =>
+                    emitRealtimeEvent('member.left', {
+                        serverId: 'nd',
+                        userId: profile.id,
+                        removedBy: null,
+                        reason: null
+                    })
+                )
+
+                await waitFor(() => expect(router.state.location.pathname).toBe('/channels/ot/ban-can-su'))
+                expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+            })
         })
 
         it('goes to the Study page when the server deleted was the last one', async () => {

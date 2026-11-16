@@ -76,7 +76,8 @@ react-starter/
     │   │   │                  #   (auth's port), useMentionSource (the chat's MentionSource port),
     │   │   │                  #   liveServers (socket events: each server read again, D-178)
     │   │   ├── components/    # CreateServerDialog, NoServers, ServerIcon, ServerMenuItems; channel-list/,
-    │   │   │                  #   dialogs/ (channels, categories), invites/, membership/ (leave, hand over, delete),
+    │   │   │                  #   dialogs/ (channels, categories), invites/, membership/ (leave, hand over, delete;
+    │   │   │                  #   RemovedDialog: kicked or banned, 11 S-MOD-02),
     │   │   │                  #   settings/ (ServerNameForm, ServerIconSetting, WelcomeChannelSetting, OwnerSettings,
     │   │   │                  #   InvitesSettings, Pagination; members/, roles/)
     │   │   ├── hooks/         # useFoldedCategories (the categories folded, kept in this browser), useMoveAwayFrom,
@@ -93,7 +94,7 @@ react-starter/
     │   │   │                  #   at a message, D-48), ServerSettingsPage
     │   │   │                  #   (/servers/:serverId/settings/…), InvitePage (/invite/:code)
     │   │   ├── *.store.ts     # create-server, channel-dialogs, invite-dialogs, membership-dialogs: which dialog
-    │   │   │                  #   the AppShell shows
+    │   │   │                  #   the AppShell shows; server-removals: the S-MOD-02 dialogs waiting, in turn
     │   │   ├── routes.tsx     # serversInviteRoutes (AuthShell), serversChannelRoutes, serversSettingsRoutes (AppShell)
     │   │   ├── types.ts
     │   │   └── index.ts       # What other features may import
@@ -113,7 +114,7 @@ react-starter/
     │   │                      #   liveMessages / liveReadStates: socket events into the cache,
     │   │                      #   attachmentUploads: files uploading outside React, three at a time,
     │   │                      #   outgoingMessages: the messages on their way, outside React too,
-    │   │                      #   forgetChannels: the histories of channels no longer seen (servers calls it),
+    │   │                      #   forgetChannels: the histories and drafts of channels no longer seen (servers calls it),
     │   │                      #   useAttachmentTray, useAttachmentLinks), attachment-tray.store.ts
     │   │                      #   (the files chosen, per channel),
     │   │                      #   components/ (list, row, system row, text and its link chips,
@@ -126,7 +127,7 @@ react-starter/
     │   │                      #   (formatting and mention tokens, mentions read and written, cache
     │   │                      #   changes, pins and read states in the cache, where "New" goes, emoji
     │   │                      #   data, grid moves and recent picks, tooltip words, rows, times; files:
-    │   │                      #   rules, posting one to the storage, downloading),
+    │   │                      #   rules, posting one to the storage, downloading; drafts: the key of one draft),
     │   │                      #   messaging.css (the chat's classes)
     │   └── users/             # The profile and the account's settings
     │       ├── api/           # users.api.ts (fetchProfile, removeAvatar),
@@ -264,6 +265,7 @@ Shared and feature-free.
 | `utils.ts` | `cn()`, which merges Tailwind classes; `folded()`, how a search compares words (no case, no accents, đ as d) |
 | `crop-image.ts` | Cuts the chosen area out of a picture as a JPEG, longest edge 1024; used by `ImageCropDialog` |
 | `image-file.ts` | `imageProblem()`: JPG, PNG or WEBP up to 8 MB (an avatar, a server icon), checked before the cropper opens |
+| `gone-places.ts` | The servers, channels and messages this tab just let go of (removed, deleted, gone private), kept two minutes or until listed again: a mutation failing about one shows no toast (11 S-MOD-02 E9); the features tell it |
 | `before-sign-out.ts` | Work that must be sent before the tab signs out or closes (a removed avatar waiting out its Undo); the auth store runs it while the token is still in hand |
 | `time-zones.ts` | The time zones to pick from (C-25), named and ordered, and the search over them; `wallClock()`, the calendar and clock in a zone (times shown in the account's zone) |
 | `phase-sound.ts` | `playPhaseSound()`: the phase sound, two short notes (C6 then E6) made with Web Audio (D-140), silent where the browser cannot play. "Play sample" on Notifications now, the end of a study phase later |

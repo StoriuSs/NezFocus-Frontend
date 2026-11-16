@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
+import type { ReactNode } from 'react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AxiosError, AxiosHeaders } from 'axios'
 import { Toaster } from 'sonner'
 import i18n from '@/i18n'
@@ -9,6 +11,7 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { useAuthStore } from '@/features/auth'
 import { expectNoA11yViolations } from '@/test/a11y'
 import { queryWrapper } from '@/test/helpers'
+import { serverKeys } from '../api/keys'
 import type { BanItem, BanPage, MemberPage, Role, Server, ServerMember } from '../types'
 
 const serversApi = { fetchServers: vi.fn() }
@@ -152,7 +155,7 @@ const refused = (type: string, status: number, data: object | null = null) =>
         data: { meta: { type, code: String(status) }, data }
     })
 
-function renderPage(path: string, server: Server, me = 'binh') {
+function renderPage(path: string, server: Server, me = 'binh', client?: QueryClient) {
     useAuthStore.setState({ user: { id: me } as never })
     serversApi.fetchServers.mockResolvedValue([server])
     const router = createMemoryRouter(
@@ -164,7 +167,13 @@ function renderPage(path: string, server: Server, me = 'binh') {
             <RouterProvider router={router} />
             <Toaster />
         </TooltipProvider>,
-        { wrapper: queryWrapper() }
+        {
+            wrapper: client
+                ? ({ children }: { children: ReactNode }) => (
+                      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+                  )
+                : queryWrapper()
+        }
     )
     return { router, ...view }
 }
@@ -356,6 +365,34 @@ describe('Members (S-SET-03)', () => {
             await within(dialog).findByText('Dũng now has a role equal to or above yours, so you can’t do this.')
         ).toBeInTheDocument()
         expect(within(dialog).getByRole('button', { name: 'Kick' })).toBeDisabled()
+    })
+
+    it('says at once when the person comes to outrank them while the dialog is open (SET-EDGE target-outranked)', async () => {
+        const user = userEvent.setup()
+        const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        renderPage('/servers/ot/settings/members', binh, 'binh', client)
+        await user.click(within(await rowOf('Dũng')).getByRole('button', { name: 'Actions for Dũng' }))
+        await user.click(await screen.findByRole('menuitem', { name: 'Kick from server' }))
+        const dialog = await screen.findByRole('dialog', { name: 'Kick Dũng from the server?' })
+        expect(within(dialog).getByRole('button', { name: 'Kick' })).toBeEnabled()
+
+        // An gives Dũng Trưởng nhóm, level with Bình: the list is read again (member.updated).
+        rolesApi.fetchMembers.mockResolvedValue(
+            page(MEMBERS.map((one) => (one.userId === 'dung' ? { ...one, roleIds: ['lead'] } : one)))
+        )
+        await act(() => client.invalidateQueries({ queryKey: serverKeys.members('ot') }))
+
+        expect(
+            await within(dialog).findByText('Dũng now has a role equal to or above yours, so you can’t do this.')
+        ).toBeInTheDocument()
+        expect(within(dialog).getByRole('button', { name: 'Kick' })).toBeDisabled()
+        await user.type(within(dialog).getByLabelText('Reason (optional)'), '{Control>}{Enter}{/Control}')
+        expect(moderationApi.kickMember).not.toHaveBeenCalled()
+        // The row lost its ⋯ under the dialog (hidden from the accessibility tree while it is open).
+        const row = screen
+            .getAllByRole('row', { hidden: true })
+            .find((one) => within(one).queryByText('Dũng', { exact: true }))!
+        expect(within(row).queryByRole('button', { name: 'Actions for Dũng', hidden: true })).toBeNull()
     })
 
     it('keeps Ctrl + Enter off too once the person outranks them', async () => {

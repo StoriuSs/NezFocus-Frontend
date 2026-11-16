@@ -29,6 +29,7 @@ import { useServerMembers, useServerRoles } from '../../../api/useRoles'
 import type { MemberSort, PageSize, SortOrder } from '../../../api/roles.api'
 import {
     assignableRoles,
+    blockedOn,
     endsAt,
     hasActions,
     heldRoles,
@@ -101,6 +102,8 @@ export function MembersSettings({ server }: { server: Server }) {
     // Refused: the hook says so, with "Try again".
     const endTimeout = useEndTimeout(server.id)
     const [acting, setActing] = useState<{ kind: Moderation; member: ServerMember } | null>(null)
+    // The person as last read: a role given meanwhile stops the dialog at once (SET-EDGE target-outranked).
+    const actingOn = acting && members.data?.items.find((member) => member.userId === acting.member.userId)
     const showMembership = useMembershipDialogs((state) => state.show)
 
     // The box and the words on the URL (D-90). Typing waits for a pause, then
@@ -325,7 +328,8 @@ export function MembersSettings({ server }: { server: Server }) {
                 <ModerationDialogFor
                     kind={acting.kind}
                     serverId={server.id}
-                    member={acting.member}
+                    member={actingOn ?? acting.member}
+                    blocked={blockedOn(server, actingOn ?? acting.member, acting.kind)}
                     onClose={() => setActing(null)}
                 />
             ) : null}

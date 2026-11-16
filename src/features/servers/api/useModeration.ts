@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { banMember, fetchBans, kickMember, timeoutMember, unbanMember } from './moderation.api'
 import type { PageSize } from './roles.api'
 import { serverKeys } from './keys'
+import { aboutGonePlace } from '@/lib/gone-places'
 
 /** After one: the members, how many hold each role, and the bans. */
 function reload(queryClient: QueryClient, serverId: string): Promise<unknown> {
@@ -87,10 +88,12 @@ export function useEndTimeout(serverId: string) {
             await reload(queryClient, serverId)
             toast(t('members.toast.timeoutEnded', { name: sent.name }))
         },
-        onError: (_error, sent) =>
+        onError: (error, sent) => {
+            if (aboutGonePlace(error)) return
             toast.error(t('members.saveFailed'), {
                 action: { label: t('members.retry'), onClick: () => end.mutate(sent) }
-            }),
+            })
+        },
         meta: QUIET
     })
     return end

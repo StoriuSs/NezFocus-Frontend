@@ -77,6 +77,17 @@ export function ChannelSettingsDialog({
     const { t } = useTranslation('servers')
     const update = useUpdateChannel(server.id)
     const schema = useMemo(() => createSchema(t, server, channel), [t, server, channel])
+    // The channel as it is now: saved meanwhile in another tab or by someone
+    // else, the fields left alone follow it; what was changed here stays (04 SET-EDGE).
+    const current = useMemo<Values>(
+        () => ({
+            name: channel.name,
+            sendMode: channel.sendMode,
+            isPrivate: channel.isPrivate,
+            viewRoleIds: channel.viewRoleIds ?? []
+        }),
+        [channel.name, channel.sendMode, channel.isPrivate, channel.viewRoleIds]
+    )
     const {
         control,
         handleSubmit,
@@ -88,12 +99,8 @@ export function ChannelSettingsDialog({
         resolver: zodResolver(schema),
         // The error goes as they type and is checked again on the next click only.
         reValidateMode: 'onSubmit',
-        defaultValues: {
-            name: channel.name,
-            sendMode: channel.sendMode,
-            isPrivate: channel.isPrivate,
-            viewRoleIds: channel.viewRoleIds ?? []
-        }
+        values: current,
+        resetOptions: { keepDirtyValues: true }
     })
     const [name, sendMode, isPrivate, viewRoleIds] = useWatch({
         control,

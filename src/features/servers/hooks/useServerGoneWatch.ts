@@ -3,9 +3,11 @@ import { hashKey, useQueryClient } from '@tanstack/react-query'
 import { LogOut, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import i18n from '@/i18n'
+import { rememberPlaces } from '@/lib/gone-places'
 import { serverKeys } from '../api/keys'
 import { listenForServers } from '../api/liveServers'
 import { forgetServerData } from '../api/useServers'
+import { useServerRemovals } from '../server-removals.store'
 import { notFoundServerId } from '../lib/membership'
 import { toastName } from '../lib/server-name'
 import type { Server } from '../types'
@@ -15,9 +17,9 @@ import type { Server } from '../types'
  * says when one is gone. Run once, by the AppShell.
  *
  * - A server deleted: Toast `trash-2` "{server} was deleted" (11 S-MOD-02 ›
- *   Server bị xóa). Kicked or banned from one: until the dialog of L9b,
- *   "You are no longer in {server}". The page on it goes to the next server
- *   on the rail itself.
+ *   Server bị xóa). Kicked or banned from one: the dialog of S-MOD-02, in
+ *   turn (server-removals store). The page on it goes to the next server on
+ *   the rail itself, before the dialog shows.
  *
  * - Any query or mutation refused as not found under `/servers/{id}` reads
  *   the server list again: the error alone cannot tell a gone server from a
@@ -41,7 +43,8 @@ export function useServerGoneWatch() {
                     id: `server-deleted-${server.id}`,
                     icon: icon(Trash2)
                 }),
-            removed: (server) => sayGone(server)
+            removed: (server, by, reason) =>
+                useServerRemovals.getState().push({ serverId: server.id, name: server.name, by, reason })
         })
         const listKey = serverKeys.list()
         let known = queryClient.getQueryData<Server[]>(listKey)
@@ -55,6 +58,8 @@ export function useServerGoneWatch() {
             if (event.action.type === 'error') return readAgainIfGone(event.action.error)
             if (event.action.type !== 'success' || event.query.queryHash !== hashKey(listKey)) return
             const servers = event.query.state.data as Server[]
+            // Listed again (joined again, a channel seen again): its errors show again at once.
+            rememberPlaces(servers.flatMap((server) => [server.id, ...server.channels.map((channel) => channel.id)]))
             if (!event.action.manual) {
                 for (const gone of known?.filter((server) => !servers.some((now) => now.id === server.id)) ?? []) {
                     sayGone(gone)

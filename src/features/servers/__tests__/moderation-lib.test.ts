@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { assignableRoles, endsAt, hasActions, heldRoles, isTimedOut, pageButtons, rowActions } from '../lib/moderation'
+import {
+    assignableRoles,
+    blockedOn,
+    endsAt,
+    hasActions,
+    heldRoles,
+    isTimedOut,
+    pageButtons,
+    rowActions
+} from '../lib/moderation'
 import type { Role, Server, ServerMember } from '../types'
 
 const bits = (...positions: number[]) => String(positions.reduce((all, bit) => all | (1n << BigInt(bit)), 0n))
@@ -95,6 +104,33 @@ describe('rowActions (04 › Menu ⋯)', () => {
         expect(rowActions(binh, over, NOW).endTimeout).toBe(false)
         expect(isTimedOut(running, NOW)).toBe(true)
         expect(isTimedOut(over, NOW)).toBe(false)
+    })
+})
+
+describe('blockedOn (04 SET-EDGE target-outranked)', () => {
+    const binh = viewer(bits(KICK, BAN, MODERATE), 2)
+
+    it('says nothing while the person is still ranked below', () => {
+        for (const kind of ['timeout', 'kick', 'ban'] as const) {
+            expect(blockedOn(binh, member('dung', ['docs']), kind)).toBeNull()
+        }
+    })
+
+    it('says outranked once they hold a role level with or above, or became the owner', () => {
+        for (const target of [
+            member('dung', ['lead']),
+            member('dung', ['admin']),
+            member('dung', [], { isOwner: true })
+        ]) {
+            expect(blockedOn(binh, target, 'kick')).toBe('outranked')
+            expect(blockedOn(binh, target, 'timeout')).toBe('outranked')
+        }
+    })
+
+    it('stops only a timeout of someone who now holds Administrator, below the owner (D-147)', () => {
+        const owner = viewer(bits(KICK, BAN, MODERATE), 0, true)
+        expect(blockedOn(owner, member('tuan', ['admin']), 'timeout')).toBe('admin')
+        expect(blockedOn(owner, member('tuan', ['admin']), 'kick')).toBeNull()
     })
 })
 

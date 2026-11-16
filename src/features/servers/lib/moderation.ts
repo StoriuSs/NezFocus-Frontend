@@ -53,11 +53,8 @@ export function rowActions(
     member: ServerMember,
     now: Date
 ): RowActions {
-    const mine = server.isOwner ? Number.POSITIVE_INFINITY : server.topRolePosition
-    // Their own rank is never above itself and the owner's is infinite: no one acts on themselves or the owner.
-    const below = mine > rankOf(member, server.roles)
-    const held = new Set(member.roleIds)
-    const admin = server.roles.some((role) => role.administrator && held.has(role.id))
+    const below = isBelow(server, member)
+    const admin = holdsAdministrator(server, member)
     const moderates = below && can(server.permissions, 'MODERATE_MEMBERS')
     const timedOut = isTimedOut(member, now)
     return {
@@ -67,6 +64,43 @@ export function rowActions(
         ban: below && can(server.permissions, 'BAN_MEMBERS'),
         transfer: server.isOwner && !member.isOwner && !timedOut
     }
+}
+
+/**
+ * Why a kick, ban or timeout already open can no longer be done, as the
+ * person now is (04 SET-EDGE `target-outranked`): they came to rank level
+ * with or above them, or, for a timeout, to hold Administrator (D-147).
+ * Null: nothing stops it here; the backend still decides.
+ */
+export function blockedOn(
+    server: Pick<Server, 'isOwner' | 'topRolePosition' | 'roles'>,
+    member: Pick<ServerMember, 'isOwner' | 'roleIds'>,
+    kind: 'timeout' | 'kick' | 'ban'
+): Blocked {
+    if (!isBelow(server, member)) return 'outranked'
+    if (kind === 'timeout' && holdsAdministrator(server, member)) return 'admin'
+    return null
+}
+
+/** What already stops a moderation dialog (blockedOn); null: nothing. */
+export type Blocked = 'outranked' | 'admin' | null
+
+/**
+ * Whether the member ranks below them: their own rank is never above itself
+ * and the owner's is infinite, so no one acts on themselves or the owner.
+ */
+function isBelow(
+    server: Pick<Server, 'isOwner' | 'topRolePosition' | 'roles'>,
+    member: Pick<ServerMember, 'isOwner' | 'roleIds'>
+): boolean {
+    const mine = server.isOwner ? Number.POSITIVE_INFINITY : server.topRolePosition
+    return mine > rankOf(member, server.roles)
+}
+
+/** Whether the member holds a role with Administrator (D-147: never timed out). */
+function holdsAdministrator(server: Pick<Server, 'roles'>, member: Pick<ServerMember, 'roleIds'>): boolean {
+    const held = new Set(member.roleIds)
+    return server.roles.some((role) => role.administrator && held.has(role.id))
 }
 
 /** Whether the row has a ⋯ at all (04: only with at least one action). */

@@ -102,9 +102,17 @@ export function CreateChannelDialog({
         name: ['type', 'name', 'categoryId', 'isPrivate']
     })
     const [failure, setFailure] = useState<LayoutFailure['form'] | null>(null)
+    // The right to create was lost meanwhile: only "Close" is left (03 SRV-EDGE).
+    const [forbidden, setForbidden] = useState(false)
 
     const atLimit = server.categories.length + server.channels.length >= MAX_CHANNELS_AND_CATEGORIES
     const group = groupIn(server, categoryId)
+    // The category chosen, by the name it had: deleted meanwhile, the channel
+    // goes to the top and the line under the field says so; nothing is sent by itself (03 SRV-EDGE).
+    const chosen = server.categories.find((c) => c.id === categoryId)
+    const [chosenName, setChosenName] = useState(chosen?.name ?? null)
+    if (chosen && chosen.name !== chosenName) setChosenName(chosen.name)
+    const lostCategory = categoryId !== null && !chosen ? chosenName : null
     const dirty = name.trim() !== ''
 
     const send = handleSubmit(async (values) => {
@@ -135,7 +143,10 @@ export function CreateChannelDialog({
                 onClose()
                 toast.error(t('layoutError.gone'))
             } else if (described.field) setError('name', { message: described.field }, { shouldFocus: true })
-            else setFailure(described.form ?? null)
+            else {
+                setFailure(described.form ?? null)
+                setForbidden(described.forbidden === true)
+            }
         }
     })
 
@@ -165,8 +176,9 @@ export function CreateChannelDialog({
             >
                 <form
                     onSubmit={(event) => {
-                        // At the limit nothing is checked or sent: the line above says why.
-                        if (atLimit) return event.preventDefault()
+                        // At the limit, or without the right any more, nothing is checked or sent
+                        // (Enter in the name too): the line above says why.
+                        if (atLimit || forbidden) return event.preventDefault()
                         void send(event)
                     }}
                     className='flex min-h-0 flex-col gap-5'
@@ -256,6 +268,11 @@ export function CreateChannelDialog({
                                     />
                                 )}
                             />
+                            {lostCategory ? (
+                                <FormMessage tone='neutral'>
+                                    {t('layoutError.categoryGoneNote', { name: lostCategory.toLocaleUpperCase('vi') })}
+                                </FormMessage>
+                            ) : null}
                         </div>
 
                         {type === 'voice' ? (
@@ -311,13 +328,21 @@ export function CreateChannelDialog({
                         </FormMessage>
                     ) : null}
                     <DialogFooter>
-                        <Button type='button' variant='text' disabled={creating} onClick={onClose}>
-                            {t('actions.cancel')}
-                        </Button>
-                        {atLimit ? (
-                            <WithTooltip label={t('layoutError.limit')}>{submitButton}</WithTooltip>
+                        {forbidden ? (
+                            <Button type='button' onClick={onClose}>
+                                {t('actions.close')}
+                            </Button>
                         ) : (
-                            submitButton
+                            <>
+                                <Button type='button' variant='text' disabled={creating} onClick={onClose}>
+                                    {t('actions.cancel')}
+                                </Button>
+                                {atLimit ? (
+                                    <WithTooltip label={t('layoutError.limit')}>{submitButton}</WithTooltip>
+                                ) : (
+                                    submitButton
+                                )}
+                            </>
                         )}
                     </DialogFooter>
                 </form>

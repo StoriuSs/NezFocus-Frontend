@@ -1,4 +1,4 @@
-import { Fragment, useState, type KeyboardEvent } from 'react'
+import { Fragment, useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -80,12 +80,43 @@ export function ChannelList({ server }: { server: Server }) {
         setByKeyboard(false)
     }
 
+    // What is lifted left the server meanwhile (deleted, or out of their
+    // sight): it is let go, a channel with "no longer available" (S-SRV-06 ›
+    // Luật bằng chữ, as 02 channel-removed, the same Toast as the page open on
+    // it, so it is said once). A pointer still down then drops nothing; a
+    // keyboard holding it keeps the focus in the list.
+    const lost =
+        dragged !== null &&
+        (dragged.kind === 'channel' ? !draggedChannel : !server.categories.some((c) => c.id === dragged.id))
+    // Its name while it was there, for the screen reader once it is not.
+    const [heldName, setHeldName] = useState('')
+    const shownName = dragged && !lost ? nameOf(dragged) : heldName
+    if (shownName !== heldName) setHeldName(shownName)
+    const list = useRef<HTMLUListElement>(null)
+    useEffect(() => {
+        if (!lost || !dragged) return
+        setDragged(null)
+        setTarget(null)
+        setByKeyboard(false)
+        setAnnouncement(t('shell.drag.lost', { name: heldName }))
+        if (dragged.kind === 'channel') toast(t('shell.channelGone'), { id: 'channel-removed' })
+        if (byKeyboard) list.current?.querySelector<HTMLElement>('a[href]')?.focus()
+    }, [lost, dragged, heldName, byKeyboard, t])
+
     /** One drop: shown at once, sent, and put back if refused (useMoveInLayout). */
     const commit = (move: LayoutMove) => moveInLayout.mutate({ serverId: server.id, change: move })
 
+    /** A place that went while it was held over (its category or the channel it follows deleted): nothing to drop into. */
+    function goneFrom(at: Target): boolean {
+        const known = (id: string | null, among: { id: string }[]) => id === null || among.some((one) => one.id === id)
+        return at.kind === 'channel'
+            ? !known(at.slot.categoryId, server.categories) || !known(at.slot.afterId, server.channels)
+            : !known(at.afterId, server.categories)
+    }
+
     function drop(item: Dragged, at: Target | null) {
         end()
-        if (!at) return setAnnouncement(t('shell.drag.cancelled', { name: nameOf(item) }))
+        if (!at || goneFrom(at)) return setAnnouncement(t('shell.drag.cancelled', { name: nameOf(item) }))
         if (item.kind === 'channel' && at.kind === 'channel') {
             const channel = server.channels.find((c) => c.id === item.id)
             if (!channel || sameSlot(at.slot, slotOf(server, channel))) {
@@ -265,7 +296,7 @@ export function ChannelList({ server }: { server: Server }) {
             }}
             accessibility={{ announcements: QUIET, screenReaderInstructions: { draggable: '' } }}
         >
-            <ul className='flex flex-col gap-3'>
+            <ul ref={list} className='flex flex-col gap-3'>
                 <li>
                     <ul className='flex flex-col gap-0.5'>
                         {managesServer ? <TopZone enabled={dragged?.kind === 'channel'} /> : null}

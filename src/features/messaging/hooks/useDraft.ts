@@ -1,9 +1,7 @@
 import { useCallback, useState } from 'react'
 import { safeSessionStorage } from '@/lib/safe-storage'
+import { draftKey } from '../lib/drafts'
 import type { ComposerNames } from '../lib/mention-text'
-
-/** One person's draft in one channel: whoever signs in next in the tab never reads it. */
-const draftKey = (userId: string | undefined, channelId: string) => `draft:${userId ?? ''}:${channelId}`
 
 /** The text as it will be sent (mentions as tokens), and the names the box shows for them. */
 export interface Draft {

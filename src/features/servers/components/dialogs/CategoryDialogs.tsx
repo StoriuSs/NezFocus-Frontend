@@ -47,6 +47,8 @@ function CategoryForm({
     const [fieldError, setFieldError] = useState<string | null>(null)
     const [failure, setFailure] = useState<LayoutFailure['form'] | null>(null)
     const [saving, setSaving] = useState(false)
+    // The right to create was lost meanwhile: only "Close" is left (03 SRV-EDGE).
+    const [forbidden, setForbidden] = useState(false)
 
     const creating = !category
     const atLimit = creating && server.categories.length + server.channels.length >= MAX_CHANNELS_AND_CATEGORIES
@@ -54,7 +56,8 @@ function CategoryForm({
 
     async function submit(event: FormEvent) {
         event.preventDefault()
-        if (saving || atLimit) return
+        // Without the right any more, Enter in the name sends nothing either.
+        if (saving || atLimit || forbidden) return
         if (category && !dirty) return onClose()
         const problem = nameError(t, server, 'category', name, null, category?.id)
         if (problem) {
@@ -82,7 +85,10 @@ function CategoryForm({
             } else if (described.field) {
                 setFieldError(described.field)
                 nameInput.current?.focus()
-            } else setFailure(described.form ?? null)
+            } else {
+                setFailure(described.form ?? null)
+                setForbidden(described.forbidden === true)
+            }
         } finally {
             setSaving(false)
         }
@@ -148,10 +154,22 @@ function CategoryForm({
                     </FormMessage>
                 ) : null}
                 <DialogFooter>
-                    <Button type='button' variant='text' disabled={saving} onClick={onClose}>
-                        {t('actions.cancel')}
-                    </Button>
-                    {atLimit ? <WithTooltip label={t('layoutError.limit')}>{submitButton}</WithTooltip> : submitButton}
+                    {forbidden ? (
+                        <Button type='button' onClick={onClose}>
+                            {t('actions.close')}
+                        </Button>
+                    ) : (
+                        <>
+                            <Button type='button' variant='text' disabled={saving} onClick={onClose}>
+                                {t('actions.cancel')}
+                            </Button>
+                            {atLimit ? (
+                                <WithTooltip label={t('layoutError.limit')}>{submitButton}</WithTooltip>
+                            ) : (
+                                submitButton
+                            )}
+                        </>
+                    )}
                 </DialogFooter>
             </form>
         </DialogContent>

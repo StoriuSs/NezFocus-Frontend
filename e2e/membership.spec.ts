@@ -4,7 +4,7 @@ import { apiUrl, asOwnClient, codeFromEmail, watchForProblems } from './helpers'
 /**
  * Leaving, handing over and deleting a server against the real API
  * (03 S-SRV-04, 04 S-SET-07, D-143): Chi, kicked while her page is open,
- * hears she is no longer in it once the tab comes back; An, the owner, is
+ * is told at once in the dialog of 11 S-MOD-02, with the reason; An, the owner, is
  * told to hand ÔT over first, gives it to Bình with her password, then
  * leaves; and deletes the server she is alone in, whose link stops working.
  *
@@ -116,7 +116,9 @@ async function signIn(page: Page, email: string) {
     await page.waitForURL(/\/study$/)
 }
 
-test('someone kicked while the page is open hears it at once, through the socket (D-178)', async ({ page }) => {
+test('someone kicked while the page is open is told at once, why, over the page that moved (11 S-MOD-02, D-178)', async ({
+    page
+}) => {
     test.setTimeout(60_000)
     const problems = await watchForProblems(page)
     await signIn(page, chiEmail)
@@ -127,11 +129,21 @@ test('someone kicked while the page is open hears it at once, through the socket
         await ok('GET', `servers/${otId}/members?q=Chi`, undefined, anToken)
     ).data
     const chiId = members.items.find((member) => member.display_name === 'Chi')!.user_id
-    await ok('DELETE', `servers/${otId}/members/${chiId}`, {}, anToken)
+    await ok('DELETE', `servers/${otId}/members/${chiId}`, { reason: 'Gửi link quảng cáo' }, anToken)
 
-    // No reload, no coming back to the tab: the server leaves the rail and they are told (dialog: L9b).
-    await expect(page.getByText('You are no longer in Ôn thi Giải tích 2')).toBeVisible({ timeout: 5000 })
+    // No reload, no coming back to the tab: the page moves (ÔT was her only server), then the dialog.
+    const dialog = page.getByRole('alertdialog', { name: 'You were removed from Ôn thi Giải tích 2' })
+    await expect(dialog).toBeVisible({ timeout: 5000 })
     await page.waitForURL(/\/study$/)
+    await expect(dialog.getByText('Reason: Gửi link quảng cáo')).toBeVisible()
+    await expect(dialog.getByText('You can come back with a new invite.')).toBeVisible()
+    await expect(page.getByText('You are no longer in Ôn thi Giải tích 2')).toHaveCount(0)
+    await shoot(page, 's-mod-02-kicked')
+    await dialog.getByRole('button', { name: 'Got it' }).click()
+    await expect(dialog).toHaveCount(0)
+    await expect(
+        page.getByRole('navigation', { name: 'Servers' }).getByRole('link', { name: 'Ôn thi Giải tích 2' })
+    ).toHaveCount(0)
     expect(problems.filter((problem) => !problem.includes('404'))).toEqual([])
 })
 

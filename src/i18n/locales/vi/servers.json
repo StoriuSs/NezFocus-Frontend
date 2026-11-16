@@ -124,7 +124,13 @@
     "forbidden": "Bạn không còn quyền thay đổi kênh trong server này",
     "saveFailed": "Chưa lưu được thay đổi. Thử lại.",
     "saveOffline": "Cần kết nối mạng để lưu",
-    "gone": "Kênh hoặc danh mục này vừa bị xóa"
+    "gone": "Kênh hoặc danh mục này vừa bị xóa",
+    "channelGone": "#{{name}} không còn khả dụng",
+    "roomGone": "{{name}} không còn khả dụng",
+    "categoryGone": "Danh mục {{name}} vừa bị xóa",
+    "categoryGoneNote": "Danh mục {{name}} vừa bị xóa · kênh sẽ nằm trên cùng danh sách",
+    "createChannelForbidden": "Bạn không còn quyền tạo kênh trong server này",
+    "createCategoryForbidden": "Bạn không còn quyền tạo danh mục trong server này"
   },
   "actions": {
     "cancel": "Hủy",
@@ -363,6 +369,7 @@
       "everyoneIntro": "Quyền của mọi người trong server. Vai trò khác cộng thêm quyền vào đây.",
       "everyoneWarning": "Tắt ở đây là tắt cho mọi người chưa có vai trò khác bật quyền này, ở mọi kênh.",
       "gone": "Vai trò này không còn nữa",
+      "goneNamed": "Vai trò {{name}} vừa bị xóa",
       "groups": {
         "general": "Chung",
         "members": "Thành viên",
@@ -660,5 +667,13 @@
       "members_other": "{{count}} thành viên",
       "close": "Đóng"
     }
+  },
+  "removed": {
+    "kickTitle": "Bạn đã bị mời ra khỏi {{name}}",
+    "banTitle": "Bạn đã bị cấm khỏi {{name}}",
+    "reason": "Lý do: {{reason}}",
+    "kickAfter": "Bạn có thể quay lại khi có lời mời mới.",
+    "banAfter": "Bạn không thể tham gia lại server này.",
+    "ok": "Đã hiểu"
   }
 }

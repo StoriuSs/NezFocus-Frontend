@@ -27,6 +27,7 @@ import { settingsCache } from '@/features/users'
 import { useBanMember, useKickMember, useTimeoutMember } from '../../../api/useModeration'
 import { refusedRule } from '../../../lib/layout-error'
 import {
+    type Blocked,
     DEFAULT_TIMEOUT,
     endsAt,
     isTimedOut,
@@ -181,7 +182,17 @@ type TimeoutValues = z.infer<typeof timeoutSchema>
  * lúc …" for the one chosen, an optional reason. On someone timed out it
  * gives a new length, counted again from now.
  */
-function TimeoutDialog({ serverId, member, onClose }: { serverId: string; member: ServerMember; onClose: () => void }) {
+function TimeoutDialog({
+    serverId,
+    member,
+    blocked,
+    onClose
+}: {
+    serverId: string
+    member: ServerMember
+    blocked: Blocked
+    onClose: () => void
+}) {
     const { t, i18n } = useTranslation('servers')
     const now = useMinuteClock()
     // Read only: the AppShell loads the account's settings as the app opens.
@@ -192,14 +203,15 @@ function TimeoutDialog({ serverId, member, onClose }: { serverId: string; member
         defaultValues: { seconds: DEFAULT_TIMEOUT, reason: '' }
     })
     const seconds = useWatch({ control, name: 'seconds' })
-    const [failure, setFailure] = useState<Failure | null>(null)
+    const [refused, setRefused] = useState<Failure | null>(null)
+    const failure = blocked ?? refused
     const name = memberName(member)
     const lengthId = useId()
     const ends = endsAt(new Date(now.getTime() + seconds * 1000), now, i18n.language, timeZone)
 
     // The callbacks of mutate(), as Mời ra and Cấm: a dialog gone meanwhile says nothing.
     const send = handleSubmit((values) => {
-        setFailure(null)
+        setRefused(null)
         timeout.mutate(
             { userId: member.userId, seconds: values.seconds, reason: values.reason.trim() || null },
             {
@@ -207,7 +219,7 @@ function TimeoutDialog({ serverId, member, onClose }: { serverId: string; member
                     toast(t('members.toast.timedOut', { name, length: t(`members.lengths.${values.seconds}`) }))
                     onClose()
                 },
-                onError: (error) => setFailure(failureOf(error))
+                onError: (error) => setRefused(failureOf(error))
             }
         )
     })
@@ -267,11 +279,13 @@ function RemoveDialog({
     kind,
     serverId,
     member,
+    blocked,
     onClose
 }: {
     kind: 'kick' | 'ban'
     serverId: string
     member: ServerMember
+    blocked: Blocked
     onClose: () => void
 }) {
     const { t } = useTranslation('servers')
@@ -279,12 +293,13 @@ function RemoveDialog({
     const ban = useBanMember(serverId)
     const action = kind === 'kick' ? kick : ban
     const [reason, setReason] = useState('')
-    const [failure, setFailure] = useState<Failure | null>(null)
+    const [refused, setRefused] = useState<Failure | null>(null)
+    const failure = blocked ?? refused
     const name = memberName(member)
 
     function submit() {
         if (action.isPending || stopsSending(failure)) return
-        setFailure(null)
+        setRefused(null)
         action.mutate(
             { userId: member.userId, reason: reason.trim() || null },
             {
@@ -292,7 +307,7 @@ function RemoveDialog({
                     toast(t(kind === 'kick' ? 'members.toast.kicked' : 'members.toast.banned', { name }))
                     onClose()
                 },
-                onError: (error) => setFailure(failureOf(error))
+                onError: (error) => setRefused(failureOf(error))
             }
         )
     }
@@ -314,18 +329,25 @@ function RemoveDialog({
     )
 }
 
-/** The dialog of one row's ⋯ choice. */
+/**
+ * The dialog of one row's ⋯ choice, on the person as last read: `blocked`
+ * when they came to outrank them meanwhile (04 SET-EDGE `target-outranked`),
+ * said at once, the action off.
+ */
 export function ModerationDialogFor({
     kind,
     serverId,
     member,
+    blocked,
     onClose
 }: {
     kind: Moderation
     serverId: string
     member: ServerMember
+    blocked: Blocked
     onClose: () => void
 }) {
-    if (kind === 'timeout') return <TimeoutDialog serverId={serverId} member={member} onClose={onClose} />
-    return <RemoveDialog kind={kind} serverId={serverId} member={member} onClose={onClose} />
+    if (kind === 'timeout')
+        return <TimeoutDialog serverId={serverId} member={member} blocked={blocked} onClose={onClose} />
+    return <RemoveDialog kind={kind} serverId={serverId} member={member} blocked={blocked} onClose={onClose} />
 }

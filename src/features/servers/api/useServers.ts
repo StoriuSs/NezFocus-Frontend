@@ -1,5 +1,6 @@
 import { useQuery, type QueryClient } from '@tanstack/react-query'
 import { forgetChannels } from '@/features/messaging'
+import { forgetPlaces } from '@/lib/gone-places'
 import { fetchServers } from './servers.api'
 import { serverKeys } from './keys'
 import type { Server } from '../types'
@@ -41,6 +42,7 @@ export function forgetServer(queryClient: QueryClient, serverId: string) {
 /** What was read about a server no longer listed: its lists, and its channels' histories. */
 export function forgetServerData(queryClient: QueryClient, server: Pick<Server, 'id' | 'channels'>) {
     const serverId = server.id
+    forgetPlaces([serverId])
     forgetChannels(
         queryClient,
         server.channels.map((channel) => channel.id)

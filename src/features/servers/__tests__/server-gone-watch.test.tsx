@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider, useMutation } from '@tanstack/react-q
 import type { ReactNode } from 'react'
 import { AxiosHeaders } from 'axios'
 import i18n from '@/i18n'
+import { aboutGonePlace } from '@/lib/gone-places'
 import { apiError } from '@/test/helpers'
 import { serverKeys } from '../api/keys'
 import type { Server } from '../types'
@@ -55,6 +56,21 @@ describe('useServerGoneWatch', () => {
         await client.fetchQuery({ queryKey: serverKeys.list(), queryFn: async () => [ND], staleTime: 0 })
         expect(client.getQueryData(serverKeys.roles('ot'))).toBeUndefined()
         expect(client.getQueryData(['messages', 'channel', 'ot-chung'])).toBeUndefined()
+        // A change about it still on its way fails without a Toast (11 S-MOD-02 E9).
+        expect(aboutGonePlace(notFoundUnder('/servers/ot/members'))).toBe(true)
+        expect(aboutGonePlace(notFoundUnder('/channels/ot-chung/messages'))).toBe(true)
+    })
+
+    it('lets a server joined again show its errors again, at once (not two minutes later)', async () => {
+        const { client } = setup()
+        await client.fetchQuery({ queryKey: serverKeys.list(), queryFn: async () => [ND], staleTime: 0 })
+        expect(aboutGonePlace(notFoundUnder('/servers/ot/members'))).toBe(true)
+
+        // Invited back: the list has it again (joining puts it in by hand).
+        client.setQueryData<Server[]>(serverKeys.list(), [ND, OT])
+
+        expect(aboutGonePlace(notFoundUnder('/servers/ot/members'))).toBe(false)
+        expect(aboutGonePlace(notFoundUnder('/channels/ot-chung/messages'))).toBe(false)
     })
 
     it('says nothing about one taken out by hand, as leaving or deleting does', async () => {

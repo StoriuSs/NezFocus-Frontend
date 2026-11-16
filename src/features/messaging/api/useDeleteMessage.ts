@@ -5,6 +5,7 @@ import { removeSaved } from '../lib/message-cache'
 import type { ChannelMessages } from '../types'
 import { messageKeys } from './keys'
 import { deleteMessage } from './messages.api'
+import { aboutGonePlace } from '@/lib/gone-places'
 
 /**
  * Deleting a message (REQ-MSG-05): it leaves the list with the answer, and
@@ -26,7 +27,7 @@ export function useDeleteMessage(channelId: string) {
         onSuccess: (_answer, messageId) => remove(messageId),
         onError: (error, messageId) => {
             if (getApiErrorType(error) === 'NOT_FOUND_ERROR') remove(messageId)
-            else toast.error(getApiErrorMessage(error))
+            else if (!aboutGonePlace(error)) toast.error(getApiErrorMessage(error))
         },
         meta: { errorToast: false }
     })

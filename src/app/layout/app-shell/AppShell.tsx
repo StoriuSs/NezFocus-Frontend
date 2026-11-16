@@ -11,6 +11,7 @@ import { useCreateServerDialog } from '@/features/servers/create-server.store'
 import { useChannelDialogs } from '@/features/servers/channel-dialogs.store'
 import { useInviteDialogs } from '@/features/servers/invite-dialogs.store'
 import { useMembershipDialogs } from '@/features/servers/membership-dialogs.store'
+import { useServerRemovals } from '@/features/servers/server-removals.store'
 import { useServerGoneWatch } from '@/features/servers/hooks/useServerGoneWatch'
 import { serverOwnership } from '@/features/servers/api/serverOwnership'
 import { connectServerOwnership } from '@/features/auth'
@@ -37,6 +38,8 @@ const InviteDialog = lazy(() => import('@/features/servers/components/invites/In
 const JoinInviteDialog = lazy(() => import('@/features/servers/components/invites/JoinInviteDialog'))
 // Leave, hand over, delete (S-SRV-04, S-SET-07); the password step inside loads on its own.
 const MembershipDialogs = lazy(() => import('@/features/servers/components/membership/MembershipDialogs'))
+// Kicked or banned while open (11 S-MOD-02), loaded when the first one comes.
+const RemovedDialog = lazy(() => import('@/features/servers/components/membership/RemovedDialog'))
 
 // Deleting the account (auth) asks the servers feature which servers block it
 // (S-ME-03 `delete-blocked-owner`). Connected here, not in main.tsx: every page
@@ -65,9 +68,10 @@ export default function AppShell() {
     const inviting = useInviteDialogs((state) => state.invite !== null)
     const joiningByInvite = useInviteDialogs((state) => state.join !== null)
     const membershipDialog = useMembershipDialogs((state) => state.open !== null)
+    const removed = useServerRemovals((state) => state.queue.length > 0)
     // The account's theme and language, here and in this browser's other tabs (REQ-AUTH-08).
     useAccountSettings()
-    // The servers kept live by the socket, and one no longer in leaving the rail with a Toast (D-178, D-143).
+    // The servers kept live by the socket; one no longer in leaves the rail, with a dialog or a Toast (D-178, D-179).
     useServerGoneWatch()
     // The tab's socket (SRS 5.2), opened after this first paint; and the Banner it shows when lost.
     useRealtimeConnection()
@@ -167,6 +171,11 @@ export default function AppShell() {
             {membershipDialog ? (
                 <Suspense fallback={null}>
                     <MembershipDialogs />
+                </Suspense>
+            ) : null}
+            {removed ? (
+                <Suspense fallback={null}>
+                    <RemovedDialog />
                 </Suspense>
             ) : null}
         </ShellContext.Provider>

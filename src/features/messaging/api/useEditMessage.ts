@@ -5,6 +5,7 @@ import { removeSaved, replaceSaved } from '../lib/message-cache'
 import type { ChannelMessages } from '../types'
 import { messageKeys } from './keys'
 import { editMessage } from './messages.api'
+import { aboutGonePlace } from '@/lib/gone-places'
 
 /**
  * Editing one's own message (REQ-MSG-05): the answer goes into the cache at
@@ -24,7 +25,7 @@ export function useEditMessage(channelId: string) {
         onSuccess: (message) => change((history) => replaceSaved(history, message)),
         onError: (error, { messageId }) => {
             if (getApiErrorType(error) === 'NOT_FOUND_ERROR') change((history) => removeSaved(history, messageId))
-            else toast.error(getApiErrorMessage(error))
+            else if (!aboutGonePlace(error)) toast.error(getApiErrorMessage(error))
         },
         meta: { errorToast: false }
     })

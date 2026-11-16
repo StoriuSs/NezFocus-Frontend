@@ -45,6 +45,10 @@ export function RoleEditor({ server, roleId }: { server: Server; roleId: string 
     const back = serverSettingsPath(server.id, 'roles')
 
     const role = roles.data?.find((candidate) => candidate.id === roleId)
+    // Its name as last seen: deleted by someone else while open, the Toast
+    // names it, and a name typed goes with the page (04 SET-EDGE).
+    const [seenName, setSeenName] = useState<string | null>(null)
+    if (role && role.name !== seenName) setSeenName(role.name)
     // Still loading, or reloading after a change that may have made it (a role just created).
     if (roles.isPending || (!role && roles.isFetching)) {
         return (
@@ -56,7 +60,10 @@ export function RoleEditor({ server, roleId }: { server: Server; roleId: string 
     }
     // Only with nothing to show: a failed re-read after a save keeps the roles.
     if (roles.data === undefined) throw roles.error
-    if (!role) return <Gone to={back} message={t('roles.edit.gone')} />
+    if (!role) {
+        const message = seenName ? t('roles.edit.goneNamed', { name: seenName }) : t('roles.edit.gone')
+        return <Gone to={back} message={message} />
+    }
 
     const lock = roleLock(server, role)
     const tab = params.get('tab') === 'members' && !role.isEveryone ? 'members' : 'permissions'
@@ -410,7 +417,11 @@ function RoleNameForm({
 function DeleteRole({ server, role }: { server: Server; role: Role }) {
     const { t } = useTranslation('servers')
     const navigate = useNavigate()
-    const remove = useDeleteRole(server.id)
+    // Said and left before the roles are read again: once they lack it, this page is gone.
+    const remove = useDeleteRole(server.id, async () => {
+        toast(t('roles.edit.deleted', { name: role.name }))
+        await navigate(serverSettingsPath(server.id, 'roles'), { replace: true, flushSync: true })
+    })
     const [asking, setAsking] = useState(false)
     const allowed = holdsAllOf(server.permissions, role)
     // Focusable while locked (aria-disabled, not disabled), so the reason shows on focus too.
@@ -454,13 +465,7 @@ function DeleteRole({ server, role }: { server: Server; role: Role }) {
                             variant='destructive'
                             disabled={remove.isPending}
                             onClick={() =>
-                                remove.mutate(role.id, {
-                                    onSuccess: () => {
-                                        toast(t('roles.edit.deleted', { name: role.name }))
-                                        void navigate(serverSettingsPath(server.id, 'roles'), { replace: true })
-                                    },
-                                    onError: () => toast.error(t('roles.saveFailed'))
-                                })
+                                remove.mutate(role.id, { onError: () => toast.error(t('roles.saveFailed')) })
                             }
                         >
                             {remove.isPending ? <Loader2 className='animate-spin' aria-hidden='true' /> : null}

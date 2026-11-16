@@ -65,6 +65,11 @@ export interface LayoutFailure {
     form?: { tone: 'neutral' | 'danger'; text: string; icon?: 'wifi-off' }
     /** The server, channel or category is no longer there: close and say so. */
     gone?: boolean
+    /**
+     * Creating, the right to it was lost meanwhile (03 SRV-EDGE): nothing is
+     * left to try, so the buttons are only "Close".
+     */
+    forbidden?: boolean
 }
 
 export function describeFailure(
@@ -78,6 +83,10 @@ export function describeFailure(
         return { form: { tone: 'danger', text, icon: 'wifi-off' } }
     }
     if (type === 'NOT_FOUND_ERROR') return { gone: true }
+    if (type === 'FORBIDDEN_ERROR' && context.creating) {
+        const key = context.kind === 'category' ? 'createCategoryForbidden' : 'createChannelForbidden'
+        return { form: { tone: 'danger', text: t(`layoutError.${key}`) }, forbidden: true }
+    }
     if (type === 'FORBIDDEN_ERROR') return { form: { tone: 'danger', text: t('layoutError.forbidden') } }
 
     const broken = layoutRule(error)

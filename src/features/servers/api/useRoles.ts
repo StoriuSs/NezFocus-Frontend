@@ -20,6 +20,7 @@ import { serverKeys } from './keys'
 import type { PermissionName } from '../lib/permissions'
 import { withPermission } from '../lib/roles'
 import type { Role, UpdateRoleRequest } from '../types'
+import { aboutGonePlace } from '@/lib/gone-places'
 
 /**
  * After a change to roles: the Roles page, the members (who holds what), and
@@ -66,7 +67,9 @@ function saveIntoList(queryClient: QueryClient, serverId: string, roleId: string
 }
 
 /** A toast for a change saved at once and refused, with "Try again" (04 › Toast). */
-function refusedToast(t: TFunction<'servers'>, again: () => void) {
+function refusedToast(t: TFunction<'servers'>, error: unknown, again: () => void) {
+    // About a server let go of meanwhile: the dialog or Toast that said so said enough (11 S-MOD-02 E9).
+    if (aboutGonePlace(error)) return
     toast.error(t('roles.saveFailed'), { action: { label: t('roles.retry'), onClick: again } })
 }
 
@@ -111,7 +114,7 @@ export function useSaveRoleSwitch(serverId: string, roleId: string) {
             return body
         },
         onSuccess: (body) => saveIntoList(queryClient, serverId, roleId, body),
-        onError: (_error, sent) => refusedToast(t, () => save.mutate(sent)),
+        onError: (error, sent) => refusedToast(t, error, () => save.mutate(sent)),
         onSettled: () => reload(queryClient, serverId),
         meta: { errorToast: false }
     })
@@ -126,11 +129,17 @@ export function useSaveRoleSwitch(serverId: string, roleId: string) {
     return save
 }
 
-export function useDeleteRole(serverId: string) {
+/** "Delete role" (S-SET-02 `delete-confirm`); `moveAway` leaves its page and says it was deleted. */
+export function useDeleteRole(serverId: string, moveAway: (roleId: string) => Promise<void>) {
     const queryClient = useQueryClient()
     return useMutation({
         mutationFn: (roleId: string) => deleteRole(serverId, roleId),
-        onSuccess: () => reload(queryClient, serverId),
+        // The page on the role moves (and says so) before the roles are read
+        // again without it: not taken for a role someone else deleted (04 SET-EDGE).
+        onSuccess: async (_answer, roleId) => {
+            await moveAway(roleId)
+            await reload(queryClient, serverId)
+        },
         meta: { errorToast: false }
     })
 }
@@ -157,6 +166,7 @@ export function useReorderRoles(serverId: string) {
         },
         onError: (error, sent, context) => {
             if (context?.before) queryClient.setQueryData(serverKeys.roles(serverId), context.before)
+            if (aboutGonePlace(error)) return
             const stale = getApiErrorType(error) === 'CONFLICT_ERROR'
             toast.error(t('roles.saveFailed'), {
                 action: stale ? undefined : { label: t('roles.retry'), onClick: () => reorder.mutate(sent) }
@@ -193,7 +203,7 @@ export function useTakeRole(serverId: string, roleId: string) {
     const giveBack = useMutation({
         mutationFn: ({ userId }: RoleHolder) => grantRole(serverId, roleId, [userId]),
         onSuccess: () => reload(queryClient, serverId),
-        onError: (_error, sent) => refusedToast(t, () => giveBack.mutate(sent)),
+        onError: (error, sent) => refusedToast(t, error, () => giveBack.mutate(sent)),
         meta: { errorToast: false }
     })
     const take = useMutation({
@@ -205,7 +215,7 @@ export function useTakeRole(serverId: string, roleId: string) {
                 action: { label: t('roles.members.undo'), onClick: () => giveBack.mutate(sent) }
             })
         },
-        onError: (_error, sent) => refusedToast(t, () => take.mutate(sent)),
+        onError: (error, sent) => refusedToast(t, error, () => take.mutate(sent)),
         meta: { errorToast: false }
     })
     return take
@@ -223,10 +233,12 @@ export function useSetMemberRole(serverId: string) {
     const set = useMutation({
         mutationFn: ({ roleId, userId, held }: { roleId: string; userId: string; held: boolean }) =>
             held ? grantRole(serverId, roleId, [userId]) : revokeRole(serverId, roleId, userId),
-        onError: (_error, sent) =>
+        onError: (error, sent) => {
+            if (aboutGonePlace(error)) return
             toast.error(t('members.saveFailed'), {
                 action: { label: t('members.retry'), onClick: () => set.mutate(sent) }
-            }),
+            })
+        },
         onSettled: () => reload(queryClient, serverId),
         meta: { errorToast: false }
     })

@@ -9,6 +9,7 @@ import { addReaction as addToCache, removeReaction as removeFromCache, removeSav
 import type { ChannelMessages } from '../types'
 import { messageKeys } from './keys'
 import { addReaction, removeReaction } from './reactions.api'
+import { aboutGonePlace } from '@/lib/gone-places'
 
 interface Toggle {
     messageId: string
@@ -76,7 +77,7 @@ export function useReactions(channelId: string) {
             if (run) run.given = give
         },
         onError: (error) => {
-            if (getApiErrorType(error) === 'NOT_FOUND_ERROR') return
+            if (getApiErrorType(error) === 'NOT_FOUND_ERROR' || aboutGonePlace(error)) return
             toast.error(
                 getApiErrorType(error) === 'MAX_REACTIONS_REACHED' ? t('reactions.full') : getApiErrorMessage(error)
             )

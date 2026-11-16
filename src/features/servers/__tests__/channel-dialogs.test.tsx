@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
@@ -100,6 +100,12 @@ function renderDialogs(server: Server = OT, client?: QueryClient) {
     )
     return router
 }
+
+/** "Close" in the row of buttons, not the corner ✕ that shares its name. */
+const footerClose = (dialog: HTMLElement) =>
+    within(dialog)
+        .getAllByRole('button', { name: 'Close' })
+        .find((button) => button.textContent === 'Close')!
 
 const refused = (status: number, type: string, data: object = {}) =>
     new AxiosError(String(status), String(status), undefined, undefined, {
@@ -275,7 +281,53 @@ describe('Create a channel (S-SRV-05)', () => {
         expect(await screen.findByText('You need a connection to create a channel')).toBeInTheDocument()
         layoutApi.createChannel.mockRejectedValueOnce(refused(403, 'FORBIDDEN_ERROR'))
         await userEvent.click(screen.getByRole('button', { name: 'Create channel' }))
-        expect(await screen.findByText('You can no longer change channels in this server')).toBeInTheDocument()
+        // MANAGE_CHANNELS lost while open (03 SRV-EDGE): nothing left to do but close.
+        expect(await screen.findByText('You can no longer create channels in this server')).toBeInTheDocument()
+        const dialog = screen.getByRole('dialog', { name: 'Create a channel' })
+        expect(within(dialog).queryByRole('button', { name: 'Create channel' })).toBeNull()
+        expect(within(dialog).queryByRole('button', { name: 'Cancel' })).toBeNull()
+        // Enter in the name sends nothing more: there is nothing left to try.
+        await userEvent.type(screen.getByRole('textbox', { name: 'Channel name' }), '{Enter}')
+        expect(layoutApi.createChannel).toHaveBeenCalledTimes(2)
+        await userEvent.click(footerClose(dialog))
+        expect(useChannelDialogs.getState().open).toBeNull()
+    })
+
+    it('puts the channel at the top when its category is deleted meanwhile, saying so, sending nothing by itself (03 SRV-EDGE)', async () => {
+        layoutApi.createChannel.mockResolvedValue({ id: 'new', server: OT })
+        const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        useChannelDialogs.getState().show({ kind: 'createChannel', serverId: 'ot', categoryId: 'info', type: 'text' })
+        renderDialogs(OT, client)
+        await userEvent.type(await screen.findByRole('textbox', { name: 'Channel name' }), 'de-cuong')
+
+        // Someone deletes THÔNG TIN: its channels go to the top (the server read again, D-178).
+        act(
+            () =>
+                void client.setQueryData<Server[]>(serverKeys.list(), [
+                    {
+                        ...OT,
+                        categories: OT.categories.filter((one) => one.id !== 'info'),
+                        channels: OT.channels.map((one) =>
+                            one.categoryId === 'info' ? { ...one, categoryId: null } : one
+                        )
+                    }
+                ])
+        )
+
+        expect(
+            await screen.findByText('Category THÔNG TIN was just deleted · the channel will be at the top of the list')
+        ).toBeInTheDocument()
+        expect(screen.getByRole('combobox', { name: 'Category' })).toHaveTextContent('No category')
+        expect(screen.getByRole('textbox', { name: 'Channel name' })).toHaveValue('de-cuong')
+        expect(layoutApi.createChannel).not.toHaveBeenCalled()
+        await userEvent.click(screen.getByRole('button', { name: 'Create channel' }))
+        await waitFor(() =>
+            expect(layoutApi.createChannel).toHaveBeenCalledWith(
+                'ot',
+                expect.objectContaining({ name: 'de-cuong', categoryId: null }),
+                expect.any(String)
+            )
+        )
     })
 
     it('tries again with the same Idempotency-Key after a lost answer, so one channel is made', async () => {
@@ -353,6 +405,70 @@ describe('Channel settings (S-SET-05)', () => {
         expect(await screen.findByText('Deleted #hoi-dap')).toBeInTheDocument()
         expect(confirm).not.toBeInTheDocument()
         expect(router.state.location.pathname).toBe('/channels/ot/chao-mung')
+        // Deleted here: not said as gone from someone else.
+        expect(screen.queryByText('#hoi-dap is no longer available')).toBeNull()
+    })
+
+    // A list read again after an event (D-178), as liveServers writes it.
+    const listNow = (client: QueryClient, server: Server) =>
+        act(() => void client.setQueryData<Server[]>(serverKeys.list(), [server]))
+
+    it('closes when its channel leaves the list, saying so, without claiming it was deleted (04 SET-EDGE)', async () => {
+        const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        useChannelDialogs.getState().show({ kind: 'channelSettings', serverId: 'ot', channelId: 'hoi-dap' })
+        renderDialogs(OT, client)
+        expect(await screen.findByText('#hoi-dap · THÔNG TIN')).toBeInTheDocument()
+
+        listNow(client, { ...OT, channels: OT.channels.filter((one) => one.id !== 'hoi-dap') })
+
+        expect(await screen.findByText('#hoi-dap is no longer available')).toBeInTheDocument()
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+        expect(useChannelDialogs.getState().open).toBeNull()
+    })
+
+    it('names a room without #', async () => {
+        const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        useChannelDialogs.getState().show({ kind: 'channelSettings', serverId: 'ot', channelId: 'phong' })
+        renderDialogs(OT, client)
+        await screen.findByRole('dialog')
+
+        listNow(client, { ...OT, channels: OT.channels.filter((one) => one.id !== 'phong') })
+
+        expect(await screen.findByText('Phòng học im lặng is no longer available')).toBeInTheDocument()
+    })
+
+    it('says nothing of it when the whole server went: what took it says so (11 S-MOD-02)', async () => {
+        const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        useChannelDialogs.getState().show({ kind: 'channelSettings', serverId: 'ot', channelId: 'hoi-dap' })
+        renderDialogs(OT, client)
+        await screen.findByRole('dialog')
+
+        act(() => void client.setQueryData<Server[]>(serverKeys.list(), []))
+
+        await waitFor(() => expect(useChannelDialogs.getState().open).toBeNull())
+        expect(screen.queryByText(/no longer available/)).toBeNull()
+    })
+
+    it('takes what someone else saved into the fields left alone, keeping what was typed (04 SET-EDGE)', async () => {
+        layoutApi.updateChannel.mockResolvedValue(OT)
+        const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        useChannelDialogs.getState().show({ kind: 'channelSettings', serverId: 'ot', channelId: 'hoi-dap' })
+        renderDialogs(OT, client)
+        const name = await screen.findByRole('textbox', { name: 'Channel name' })
+        await userEvent.clear(name)
+        await userEvent.type(name, 'hoi-dap-ky-2')
+
+        listNow(client, {
+            ...OT,
+            channels: OT.channels.map((one) => (one.id === 'hoi-dap' ? { ...one, sendMode: 'managers' } : one))
+        })
+
+        await waitFor(() => expect(screen.getByRole('radio', { name: /Only message managers/ })).toBeChecked())
+        expect(name).toHaveValue('hoi-dap-ky-2')
+        await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+        await waitFor(() =>
+            expect(layoutApi.updateChannel).toHaveBeenCalledWith('ot', 'hoi-dap', { name: 'hoi-dap-ky-2' })
+        )
     })
 
     it('leaves the channel open here before it leaves the list: not taken for one someone else deleted (02 channel-removed)', async () => {
@@ -436,6 +552,40 @@ describe('Categories (S-SRV-05 `category`, S-SET-05 `category-edit`)', () => {
         ).toBeInTheDocument()
         await userEvent.click(screen.getAllByRole('button', { name: 'Delete category' }).at(-1)!)
         expect(await screen.findByText('Deleted the category THÔNG TIN')).toBeInTheDocument()
+        expect(screen.queryByText(/was just deleted/)).toBeNull()
+    })
+
+    it('closes when someone else deletes it, saying so by name (04 SET-EDGE)', async () => {
+        const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        useChannelDialogs.getState().show({ kind: 'categorySettings', serverId: 'ot', categoryId: 'info' })
+        renderDialogs(OT, client)
+        await screen.findByRole('textbox', { name: 'Category name' })
+
+        act(
+            () =>
+                void client.setQueryData<Server[]>(serverKeys.list(), [
+                    { ...OT, categories: OT.categories.filter((one) => one.id !== 'info') }
+                ])
+        )
+
+        expect(await screen.findByText('Category THÔNG TIN was just deleted')).toBeInTheDocument()
+        expect(useChannelDialogs.getState().open).toBeNull()
+    })
+
+    it('says when the right to create one is gone, leaving only Close (03 SRV-EDGE)', async () => {
+        layoutApi.createCategory.mockRejectedValue(refused(403, 'FORBIDDEN_ERROR'))
+        useChannelDialogs.getState().show({ kind: 'createCategory', serverId: 'ot' })
+        renderDialogs()
+        await userEvent.type(await screen.findByRole('textbox', { name: 'Category name' }), 'Ôn tập')
+        await userEvent.click(screen.getByRole('button', { name: 'Create category' }))
+
+        expect(await screen.findByText('You can no longer create categories in this server')).toBeInTheDocument()
+        const dialog = screen.getByRole('dialog')
+        expect(within(dialog).queryByRole('button', { name: 'Create category' })).toBeNull()
+        expect(within(dialog).queryByRole('button', { name: 'Cancel' })).toBeNull()
+        expect(footerClose(dialog)).toBeInTheDocument()
+        await userEvent.type(screen.getByRole('textbox', { name: 'Category name' }), '{Enter}')
+        expect(layoutApi.createCategory).toHaveBeenCalledTimes(1)
     })
 
     it('will not delete one whose channel would clash at the top, naming it', async () => {

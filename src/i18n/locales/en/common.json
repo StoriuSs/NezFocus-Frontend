@@ -142,6 +142,7 @@
       "inCategory": "in {{category}}, position {{position}}",
       "dropped": "Dropped {{name}}",
       "cancelled": "Cancelled, {{name}} is back where it was",
+      "lost": "{{name}} is no longer there, nothing was moved",
       "blocked": "Cannot drop here: {{reason}}",
       "saveFailed": "The channel order could not be saved",
       "retry": "Try again",

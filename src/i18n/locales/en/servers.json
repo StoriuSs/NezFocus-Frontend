@@ -124,7 +124,13 @@
     "forbidden": "You can no longer change channels in this server",
     "saveFailed": "The changes could not be saved. Try again.",
     "saveOffline": "You need a connection to save",
-    "gone": "This channel or category was just deleted"
+    "gone": "This channel or category was just deleted",
+    "channelGone": "#{{name}} is no longer available",
+    "roomGone": "{{name}} is no longer available",
+    "categoryGone": "Category {{name}} was just deleted",
+    "categoryGoneNote": "Category {{name}} was just deleted · the channel will be at the top of the list",
+    "createChannelForbidden": "You can no longer create channels in this server",
+    "createCategoryForbidden": "You can no longer create categories in this server"
   },
   "actions": {
     "cancel": "Cancel",
@@ -363,6 +369,7 @@
       "everyoneIntro": "Permissions of everyone in the server. Other roles add to these.",
       "everyoneWarning": "Turning it off here turns it off for everyone who has no other role turning it on, in every channel.",
       "gone": "This role no longer exists",
+      "goneNamed": "Role {{name}} was just deleted",
       "groups": {
         "general": "General",
         "members": "Members",
@@ -660,5 +667,13 @@
       "members_other": "{{count}} members",
       "close": "Close"
     }
+  },
+  "removed": {
+    "kickTitle": "You were removed from {{name}}",
+    "banTitle": "You were banned from {{name}}",
+    "reason": "Reason: {{reason}}",
+    "kickAfter": "You can come back with a new invite.",
+    "banAfter": "You cannot join this server again.",
+    "ok": "Got it"
   }
 }

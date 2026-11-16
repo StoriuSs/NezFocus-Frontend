@@ -8,6 +8,7 @@ import { dropPin } from '../lib/pin-cache'
 import type { ChannelMessages, PinnedMessage } from '../types'
 import { messageKeys } from './keys'
 import { pinMessage, unpinMessage } from './pins.api'
+import { aboutGonePlace } from '@/lib/gone-places'
 
 /**
  * Pinning and unpinning (REQ-MSG-07), for MANAGE_MESSAGES: not shown
@@ -30,6 +31,7 @@ export function usePinMessage(channelId: string) {
             changePins((pins) => dropPin(pins, messageId))
             return
         }
+        if (aboutGonePlace(error)) return
         toast.error(getApiErrorType(error) === 'MAX_PINS_REACHED' ? t('pins.full') : getApiErrorMessage(error))
     }
 

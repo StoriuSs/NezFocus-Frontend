@@ -2,6 +2,7 @@ import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { getApiErrorInfo, getApiErrorMessage, type ApiMessageKey } from '@/lib/api-error'
 import { reportError } from '@/lib/error-tracking'
+import { aboutGonePlace } from '@/lib/gone-places'
 
 declare module '@tanstack/react-query' {
     interface Register {
@@ -33,10 +34,11 @@ export function shouldRetryQuery(failureCount: number, error: unknown): boolean 
  * Every failed mutation shows one translated toast, from here. Each mutation
  * hook used to repeat `onError: toast.error(getApiErrorMessage(error))`, and a
  * new hook that forgot it failed silently. Hooks keep their own onError for
- * side effects only; `meta: { errorToast: false }` opts out.
+ * side effects only; `meta: { errorToast: false }` opts out. A change about
+ * a server or channel just let go of fails silently (gone-places).
  */
 export function notifyMutationError(error: unknown, meta?: { errorToast?: boolean; errorFallbackKey?: ApiMessageKey }) {
-    if (meta?.errorToast === false) return
+    if (meta?.errorToast === false || aboutGonePlace(error)) return
     toast.error(getApiErrorMessage(error, meta?.errorFallbackKey))
 }
 

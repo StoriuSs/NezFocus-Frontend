@@ -7,6 +7,7 @@ import { removeServerIcon, updateServer, uploadServerIcon } from './servers.api'
 import { serverKeys } from './keys'
 import { rememberServer } from './useServers'
 import type { Server, UpdateServerRequest } from '../types'
+import { aboutGonePlace } from '@/lib/gone-places'
 
 /** Put a field of one server in the cached list (the rail and Overview read it). */
 export function patchServer(queryClient: QueryClient, serverId: string, change: Partial<Server>) {
@@ -39,10 +40,12 @@ export function useRemoveServerIcon(serverId: string) {
     const remove = useMutation({
         mutationFn: () => removeServerIcon(serverId),
         onSuccess: () => patchServer(queryClient, serverId, { iconUrl: null }),
-        onError: () =>
+        onError: (error) => {
+            if (aboutGonePlace(error)) return
             toast.error(t('settings.overview.failed'), {
                 action: { label: t('settings.overview.retry'), onClick: () => remove.mutate() }
-            }),
+            })
+        },
         // Its own toast above, with "Try again".
         meta: { errorToast: false }
     })
@@ -83,9 +86,10 @@ export function useChooseWelcomeChannel() {
             return { before: before ? before.welcomeChannelId : undefined }
         },
         onSuccess: (server) => rememberServer(queryClient, server),
-        onError: (_error, sent, context) => {
+        onError: (error, sent, context) => {
             if (context?.before !== undefined)
                 patchServer(queryClient, sent.serverId, { welcomeChannelId: context.before })
+            if (aboutGonePlace(error)) return
             toast.error(t('settings.overview.failed'), {
                 action: { label: t('settings.overview.retry'), onClick: () => choose.mutate(sent) }
             })

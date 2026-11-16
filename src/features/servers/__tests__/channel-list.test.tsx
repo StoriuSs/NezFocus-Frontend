@@ -5,9 +5,13 @@ import { createMemoryRouter, RouterProvider, useParams } from 'react-router-dom'
 import { Toaster } from 'sonner'
 import { AxiosError, AxiosHeaders } from 'axios'
 import i18n from '@/i18n'
+import { forgetPlaces } from '@/lib/gone-places'
+import type { ReactNode } from 'react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { expectNoA11yViolations } from '@/test/a11y'
 import { queryWrapper } from '@/test/helpers'
+import { serverKeys } from '../api/keys'
 import type { Server, ServerChannel } from '../types'
 
 const serversApi = { fetchServers: vi.fn(), createServer: vi.fn(), uploadServerIcon: vi.fn() }
@@ -63,7 +67,7 @@ const server = (permissions: string, channels?: ServerChannel[]): Server => ({
     ).map((c) => ({ ...c, permissions: permissions === MANAGER ? c.permissions : MEMBER }))
 })
 
-function renderColumn(data: Server) {
+function renderColumn(data: Server, client?: QueryClient) {
     serversApi.fetchServers.mockResolvedValue([data])
     const router = createMemoryRouter(
         [
@@ -79,7 +83,13 @@ function renderColumn(data: Server) {
             <RouterProvider router={router} />
             <Toaster />
         </TooltipProvider>,
-        { wrapper: queryWrapper() }
+        {
+            wrapper: client
+                ? ({ children }: { children: ReactNode }) => (
+                      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+                  )
+                : queryWrapper()
+        }
     )
 }
 
@@ -234,6 +244,28 @@ describe('The channel list for whoever manages channels (S-SRV-04, S-SRV-06)', (
         await waitFor(() => expect(serversApi.fetchServers).toHaveBeenCalledTimes(2))
     })
 
+    it('says nothing of a move refused once the server was let go of (11 S-MOD-02 E9)', async () => {
+        layoutApi.moveInLayout.mockImplementation(async () => {
+            // Removed from ÔT while the move is on its way.
+            forgetPlaces(['ot'])
+            throw new AxiosError('404', '404', { url: '/servers/ot/layout', headers: new AxiosHeaders() }, null, {
+                status: 404,
+                statusText: '',
+                headers: {},
+                config: { headers: new AxiosHeaders() },
+                data: { meta: { type: 'NOT_FOUND_ERROR', code: '404000' }, data: {} }
+            })
+        })
+        renderColumn(server(MANAGER))
+        const row = await screen.findByRole('link', { name: 'tai-lieu' })
+        row.focus()
+        await userEvent.keyboard(' {ArrowDown} ')
+
+        await waitFor(() => expect(layoutApi.moveInLayout).toHaveBeenCalled())
+        await waitFor(() => expect(names('info')).toEqual(['chao-mung', 'tai-lieu', 'hoi-dap']))
+        expect(screen.queryByText('The channel order could not be saved')).toBeNull()
+    })
+
     it('puts the list back when the move cannot reach the server, without reading it again', async () => {
         layoutApi.moveInLayout.mockRejectedValue(new AxiosError('offline', 'ERR_NETWORK'))
         renderColumn(server(MANAGER))
@@ -291,6 +323,92 @@ describe('The channel list for whoever manages channels (S-SRV-04, S-SRV-06)', (
         await userEvent.keyboard(' {ArrowDown}{ArrowDown} ')
         expect(await screen.findByText('PHÒNG HỌC already has a channel #Hoi-dap')).toBeInTheDocument()
         expect(layoutApi.moveInLayout).not.toHaveBeenCalled()
+    })
+
+    it('lets go of a channel being moved when it leaves the list, saying so (S-SRV-06 › Luật bằng chữ)', async () => {
+        const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        renderColumn(server(MANAGER), client)
+        const row = await screen.findByRole('link', { name: 'hoi-dap' })
+        row.focus()
+        await userEvent.keyboard(' ')
+        expect(screen.getByText(/Picked up #hoi-dap/)).toBeInTheDocument()
+
+        const now = server(MANAGER)
+        act(
+            () =>
+                void client.setQueryData<Server[]>(serverKeys.list(), [
+                    { ...now, channels: now.channels.filter((one) => one.id !== 'hoi-dap') }
+                ])
+        )
+
+        expect(await screen.findByText('This channel is no longer available')).toBeInTheDocument()
+        expect(screen.queryByRole('link', { name: 'hoi-dap' })).toBeNull()
+        // A screen reader hears it too, and the focus stays in the list rather than falling to the page.
+        expect(screen.getByText('#hoi-dap is no longer there, nothing was moved')).toBeInTheDocument()
+        expect(screen.getByRole('link', { name: 'chao-mung' })).toHaveFocus()
+        // Nothing is lifted any more: another row can be picked up.
+        screen.getByRole('link', { name: 'tai-lieu' }).focus()
+        await userEvent.keyboard(' ')
+        expect(screen.getByText(/Picked up #tai-lieu/)).toBeInTheDocument()
+        await userEvent.keyboard('{Escape}')
+        expect(layoutApi.moveInLayout).not.toHaveBeenCalled()
+    })
+
+    it('drops nothing into a category deleted while a channel is held over it', async () => {
+        const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        renderColumn(server(MANAGER), client)
+        const row = await screen.findByRole('link', { name: 'hoi-dap' })
+        row.focus()
+        await userEvent.keyboard(' {ArrowDown}')
+        expect(screen.getByText(/#hoi-dap: in PHÒNG HỌC/)).toBeInTheDocument()
+
+        const now = server(MANAGER)
+        act(
+            () =>
+                void client.setQueryData<Server[]>(serverKeys.list(), [
+                    {
+                        ...now,
+                        categories: now.categories.filter((one) => one.id !== 'rooms'),
+                        channels: now.channels.map((one) =>
+                            one.categoryId === 'rooms' ? { ...one, categoryId: null } : one
+                        )
+                    }
+                ])
+        )
+        await userEvent.keyboard(' ')
+
+        expect(layoutApi.moveInLayout).not.toHaveBeenCalled()
+        expect(screen.getByText('Cancelled, #hoi-dap is back where it was')).toBeInTheDocument()
+    })
+
+    it('lets go of a category being moved when it is deleted, quietly', async () => {
+        const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        renderColumn(server(MANAGER), client)
+        ;(await screen.findByRole('button', { name: 'Phòng học' })).focus()
+        await userEvent.keyboard(' ')
+
+        const now = server(MANAGER)
+        act(
+            () =>
+                void client.setQueryData<Server[]>(serverKeys.list(), [
+                    {
+                        ...now,
+                        categories: now.categories.filter((one) => one.id !== 'rooms'),
+                        channels: now.channels.map((one) =>
+                            one.categoryId === 'rooms' ? { ...one, categoryId: null } : one
+                        )
+                    }
+                ])
+        )
+
+        await waitFor(() => expect(screen.queryByRole('button', { name: 'Phòng học' })).toBeNull())
+        expect(screen.queryByText('This channel is no longer available')).toBeNull()
+        expect(screen.getByText('PHÒNG HỌC is no longer there, nothing was moved')).toBeInTheDocument()
+        // Nothing is lifted any more: another row can be picked up.
+        screen.getByRole('link', { name: 'tai-lieu' }).focus()
+        await userEvent.keyboard(' ')
+        expect(screen.getByText(/Picked up #tai-lieu/)).toBeInTheDocument()
+        await userEvent.keyboard('{Escape}')
     })
 
     it('cancels with Esc, and moves a category from its heading', async () => {

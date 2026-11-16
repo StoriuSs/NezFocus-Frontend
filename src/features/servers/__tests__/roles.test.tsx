@@ -3,11 +3,16 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, Outlet, RouterProvider, useLocation } from 'react-router-dom'
 import { Toaster } from 'sonner'
+import { AxiosError, AxiosHeaders } from 'axios'
 import i18n from '@/i18n'
+import { forgetPlaces } from '@/lib/gone-places'
+import type { ReactNode } from 'react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { useAuthStore } from '@/features/auth'
 import { expectNoA11yViolations } from '@/test/a11y'
 import { queryWrapper } from '@/test/helpers'
+import { serverKeys } from '../api/keys'
 import type { MemberPage, Role, Server, ServerMember } from '../types'
 
 const serversApi = { fetchServers: vi.fn() }
@@ -98,7 +103,7 @@ function Where() {
     return <p data-testid='where'>{useLocation().pathname}</p>
 }
 
-function renderRoles(path = '/servers/ot/settings/roles', server = binh, roles = ROLES) {
+function renderRoles(path = '/servers/ot/settings/roles', server = binh, roles = ROLES, client?: QueryClient) {
     serversApi.fetchServers.mockResolvedValue([server])
     rolesApi.fetchRoles.mockResolvedValue(roles)
     const router = createMemoryRouter(
@@ -123,7 +128,13 @@ function renderRoles(path = '/servers/ot/settings/roles', server = binh, roles =
             <RouterProvider router={router} />
             <Toaster />
         </TooltipProvider>,
-        { wrapper: queryWrapper() }
+        {
+            wrapper: client
+                ? ({ children }: { children: ReactNode }) => (
+                      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+                  )
+                : queryWrapper()
+        }
     )
     return { router, ...view }
 }
@@ -251,6 +262,30 @@ describe('Edit role (S-SET-02 edit-role)', () => {
         expect(screen.getByRole('switch', { name: 'Kick members' })).toBeInTheDocument()
     })
 
+    it('says nothing of a switch refused once the server was let go of: the dialog said enough (11 S-MOD-02 E9)', async () => {
+        const user = userEvent.setup()
+        renderRoles('/servers/ot/settings/roles/docs', binh, ROLES)
+        const kick = await screen.findByRole('switch', { name: 'Kick members' })
+        rolesApi.updateRole.mockImplementation(async () => {
+            // Removed from ÔT while the save is on its way.
+            forgetPlaces(['ot'])
+            throw new AxiosError('404', '404', { url: '/servers/ot/roles/docs', headers: new AxiosHeaders() }, null, {
+                status: 404,
+                statusText: '',
+                headers: {},
+                config: { headers: new AxiosHeaders() },
+                data: { meta: { type: 'NOT_FOUND_ERROR', code: '404000' }, data: {} }
+            })
+        })
+
+        await user.click(kick)
+
+        await waitFor(() => expect(rolesApi.updateRole).toHaveBeenCalled())
+        await waitFor(() => expect(screen.getByRole('switch', { name: 'Kick members' })).not.toBeChecked())
+        expect(screen.queryByText('Couldn’t save the change')).toBeNull()
+        expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull()
+    })
+
     it('offers Try again for a refused permission, on top of what was saved since (04 › Lưu thay đổi)', async () => {
         let saved = '0'
         const user = userEvent.setup()
@@ -351,6 +386,23 @@ describe('Edit role (S-SET-02 edit-role)', () => {
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     })
 
+    it('goes back to the list, naming the role, when someone else deletes it; a name typed is dropped without asking (04 SET-EDGE)', async () => {
+        const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        const { router } = renderRoles('/servers/ot/settings/roles/docs', binh, ROLES, client)
+        const name = await screen.findByRole('textbox', { name: 'Role name' })
+        await userEvent.type(name, ' K22')
+
+        // Deleted by An: the roles read again after role.deleted (D-178).
+        await act(async () => {
+            rolesApi.fetchRoles.mockResolvedValue(ROLES.filter((one) => one.id !== 'docs'))
+            await client.invalidateQueries({ queryKey: serverKeys.roles('ot') })
+        })
+
+        expect(await screen.findByText('Role Nhóm tài liệu was just deleted')).toBeInTheDocument()
+        await waitFor(() => expect(router.state.location.pathname).toBe('/servers/ot/settings/roles'))
+        expect(screen.queryByRole('dialog')).toBeNull()
+    })
+
     it('deletes a role after asking, back to the list', async () => {
         rolesApi.deleteRole.mockResolvedValue(undefined)
         const user = userEvent.setup()
@@ -360,6 +412,22 @@ describe('Edit role (S-SET-02 edit-role)', () => {
         await user.click(within(dialog).getByRole('button', { name: 'Delete role' }))
         await waitFor(() => expect(router.state.location.pathname).toBe('/servers/ot/settings/roles'))
         expect(rolesApi.deleteRole).toHaveBeenCalledWith('ot', 'docs')
+    })
+
+    it('says it deleted the role here, never that someone else just did, once the roles read again lack it', async () => {
+        rolesApi.deleteRole.mockImplementation(async () => {
+            rolesApi.fetchRoles.mockResolvedValue(ROLES.filter((one) => one.id !== 'docs'))
+        })
+        const user = userEvent.setup()
+        const { router } = renderRoles('/servers/ot/settings/roles/docs')
+        await user.click(await screen.findByRole('button', { name: 'Delete role' }))
+        const dialog = screen.getByRole('dialog', { name: 'Delete role Nhóm tài liệu?' })
+        await user.click(within(dialog).getByRole('button', { name: 'Delete role' }))
+
+        expect(await screen.findByText('Deleted role Nhóm tài liệu')).toBeInTheDocument()
+        await waitFor(() => expect(router.state.location.pathname).toBe('/servers/ot/settings/roles'))
+        expect(screen.queryByText('Role Nhóm tài liệu was just deleted')).toBeNull()
+        expect(screen.queryByText('This role no longer exists')).toBeNull()
     })
 
     it('shows only the permissions of @everyone, with no name, tabs or Delete', async () => {

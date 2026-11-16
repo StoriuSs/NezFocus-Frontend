@@ -142,6 +142,7 @@
       "inCategory": "trong {{category}}, vị trí {{position}}",
       "dropped": "Đã thả {{name}}",
       "cancelled": "Đã hủy, {{name}} về chỗ cũ",
+      "lost": "{{name}} không còn nữa, chưa di chuyển gì",
       "blocked": "Không thả được: {{reason}}",
       "saveFailed": "Chưa lưu được thứ tự kênh",
       "retry": "Thử lại",
