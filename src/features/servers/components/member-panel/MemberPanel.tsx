@@ -1,7 +1,7 @@
 import { useId, type ReactNode } from 'react'
 import { Crown } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage, AvatarInitial } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { PresenceDot } from '@/components/ui/presence-dot'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -123,7 +123,7 @@ function MemberRow({ member, offline }: { member: ServerMember; offline: boolean
                 <Avatar className='size-8'>
                     <AvatarImage src={member.avatarUrl ?? undefined} alt='' className='object-cover' />
                     <AvatarFallback className='bg-surface-3 text-label font-semibold text-text-primary'>
-                        {name.slice(0, 1).toUpperCase()}
+                        <AvatarInitial name={member.displayName ?? member.username} />
                     </AvatarFallback>
                 </Avatar>
                 <PresenceDot

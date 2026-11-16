@@ -36,7 +36,7 @@ const today = (time: string) => {
     const day = new Intl.DateTimeFormat('en-CA', { timeZone: ZONE }).format(now)
     return new Date(`${day}T${time}:00+07:00`).toISOString()
 }
-const message = (id: string, author: typeof BINH, content: string, createdAt: string): Message => ({
+const message = (id: string, author: Message['author'], content: string, createdAt: string): Message => ({
     attachments: [],
     id,
     channelId: 'hoi-dap',
@@ -121,6 +121,20 @@ describe('A text channel chat (S-CHAT-01)', () => {
         expect(within(log).getByText('Đề giữa kỳ năm ngoái')).toBeInTheDocument()
         expect(messagesApi.fetchMessages).toHaveBeenCalledWith('hoi-dap', null)
         await expectNoA11yViolations(container)
+    })
+
+    it('shows an account others see as deleted with the default person, not a letter (C-03, D-182)', async () => {
+        const gone = { id: 'em', username: null, displayName: null, avatarUrl: null }
+        messagesApi.fetchMessages.mockResolvedValue(
+            page([message('m1', gone, 'Chào cả lớp', today('20:02')), message('m2', BINH, 'Chào Em', today('20:11'))])
+        )
+        renderChat()
+
+        const log = await screen.findByRole('log', { name: 'Tin nhắn trong #hoi-dap' })
+        expect(await within(log).findByText('Tài khoản đã bị xóa')).toBeInTheDocument()
+        // One default person (the deleted account's); Bình keeps the first letter.
+        expect(log.querySelectorAll('.lucide-user-round')).toHaveLength(1)
+        expect(within(log).getByText('B')).toBeInTheDocument()
     })
 
     it('says so when the history cannot be read, and reads it again on "Try again"', async () => {

@@ -2,7 +2,7 @@ import '@/i18n/servers'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Crown, UserPlus, X } from 'lucide-react'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage, AvatarInitial } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
     Dialog,
@@ -46,7 +46,7 @@ export function MemberIdentity({
             <Avatar className='size-8'>
                 <AvatarImage src={member.avatarUrl ?? undefined} alt='' className='object-cover' />
                 <AvatarFallback className='bg-surface-3 text-label font-semibold text-text-primary'>
-                    {name.slice(0, 1).toUpperCase()}
+                    <AvatarInitial name={member.displayName ?? member.username} />
                 </AvatarFallback>
             </Avatar>
             <span className='grid min-w-0'>

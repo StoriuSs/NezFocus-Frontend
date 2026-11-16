@@ -1,5 +1,6 @@
 import * as React from 'react'
 import * as AvatarPrimitive from '@radix-ui/react-avatar'
+import { UserRound } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 
@@ -35,4 +36,15 @@ const AvatarFallback = React.forwardRef<
 ))
 AvatarFallback.displayName = AvatarPrimitive.Fallback.displayName
 
-export { Avatar, AvatarImage, AvatarFallback }
+/**
+ * What an avatar shows without a picture (00-components C-03): the first letter
+ * of the name, or, with no name to show, the `deleted` variant: the default
+ * person (an account others see as deleted, D-182). Goes in an AvatarFallback.
+ */
+function AvatarInitial({ name }: { name: string | null | undefined }) {
+    // Sized as an SVG attribute: a class would grow the initial CSS bundle (size-limit) for one icon.
+    if (!name) return <UserRound size='60%' aria-hidden='true' />
+    return name.slice(0, 1).toUpperCase()
+}
+
+export { Avatar, AvatarImage, AvatarFallback, AvatarInitial }

@@ -777,6 +777,14 @@ describe('Bans (S-SET-04)', () => {
         expect(within(row).getByText('Deleted account')).toBeInTheDocument()
     })
 
+    it('draws a banned account others see as deleted with the default person, not a letter (C-03, D-182)', async () => {
+        const hidden = { userId: 'em', username: null, displayName: null, avatarUrl: null }
+        moderationApi.fetchBans.mockResolvedValue(bans([ban('khanh', 'Khánh'), ban('em', 'Em', { user: hidden })]))
+        renderPage('/servers/ot/settings/bans', an, 'an')
+        expect((await rowOf('Deleted account')).querySelector('.lucide-user-round')).not.toBeNull()
+        expect((await rowOf('Khánh')).querySelector('.lucide-user-round')).toBeNull()
+    })
+
     it('filters the page shown past ten people, ignoring accents', async () => {
         const user = userEvent.setup()
         const many = ['Khánh', 'Lan', 'Mai', 'Minh', 'Nam', 'Ngân', 'Oanh', 'Phúc', 'Quân', 'Sơn', 'Tâm'].map((name) =>

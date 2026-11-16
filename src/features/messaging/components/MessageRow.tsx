@@ -3,7 +3,7 @@ import { CircleAlert, Clock, CornerUpRight, WifiOff } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import '@/i18n/messaging'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage, AvatarInitial } from '@/components/ui/avatar'
 import { PopoverAnchor } from '@/components/ui/popover'
 import { WithTooltip } from '@/components/ui/tooltip'
 import { useCountdown } from '@/hooks/useCountdown'
@@ -221,7 +221,7 @@ export const MessageRow = memo(function MessageRow({
                     <Avatar className='size-10'>
                         <AvatarImage src={author?.avatarUrl ?? undefined} alt='' className='object-cover' />
                         <AvatarFallback className='bg-surface-3 text-body-sm font-semibold text-text-primary'>
-                            {name.slice(0, 1).toUpperCase()}
+                            <AvatarInitial name={author?.displayName ?? author?.username} />
                         </AvatarFallback>
                     </Avatar>
                 )}

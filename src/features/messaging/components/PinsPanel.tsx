@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { MoreHorizontal, PinOff } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import '@/i18n/messaging'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage, AvatarInitial } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -179,7 +179,7 @@ function PinCard({
                 <Avatar className='size-6 shrink-0'>
                     <AvatarImage src={pin.author?.avatarUrl ?? undefined} alt='' className='object-cover' />
                     <AvatarFallback className='bg-surface-3 text-micro font-semibold text-text-primary'>
-                        {name.slice(0, 1).toUpperCase()}
+                        <AvatarInitial name={pin.author?.displayName ?? pin.author?.username} />
                     </AvatarFallback>
                 </Avatar>
                 <span className='flex min-w-0 flex-1 flex-col gap-0.5'>

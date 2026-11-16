@@ -6,7 +6,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Loader2, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import { FormMessage } from '@/components/form/FormMessage'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage, AvatarInitial } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { folded } from '@/lib/utils'
 import {
@@ -207,7 +207,7 @@ function BanRow({ ban, onOpen, onUnban }: { ban: BanItem; onOpen: () => void; on
                     <Avatar className='size-8'>
                         <AvatarImage src={ban.user.avatarUrl ?? undefined} alt='' className='object-cover' />
                         <AvatarFallback className='bg-surface-3 text-label font-semibold text-text-primary'>
-                            {(ban.user.displayName ?? ban.user.username ?? '?').slice(0, 1).toUpperCase()}
+                            <AvatarInitial name={ban.user.displayName ?? ban.user.username} />
                         </AvatarFallback>
                     </Avatar>
                     <PersonName person={ban.user} />
@@ -251,7 +251,7 @@ function BanDetail({ ban, onClose, onUnban }: { ban: BanItem; onClose: () => voi
                     <Avatar className='size-12'>
                         <AvatarImage src={ban.user.avatarUrl ?? undefined} alt='' className='object-cover' />
                         <AvatarFallback className='bg-surface-3 text-body font-semibold text-text-primary'>
-                            {name.slice(0, 1).toUpperCase()}
+                            <AvatarInitial name={ban.user.displayName ?? ban.user.username} />
                         </AvatarFallback>
                     </Avatar>
                     <span className='grid'>

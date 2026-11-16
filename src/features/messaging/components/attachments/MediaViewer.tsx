@@ -2,7 +2,7 @@ import { useRef, useState, type KeyboardEvent, type Ref } from 'react'
 import { ChevronLeft, ChevronRight, Download, ExternalLink, FileText, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import '@/i18n/messaging'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage, AvatarInitial } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogCover, DialogTitle } from '@/components/ui/dialog'
 import { IconButton } from '@/components/ui/icon-button'
@@ -98,7 +98,7 @@ export default function MediaViewer({
                         <Avatar className='size-6'>
                             <AvatarImage src={author?.avatarUrl ?? undefined} alt='' className='object-cover' />
                             <AvatarFallback className='bg-surface-3 text-label font-semibold text-text-primary'>
-                                {name.slice(0, 1).toUpperCase()}
+                                <AvatarInitial name={author?.displayName ?? author?.username} />
                             </AvatarFallback>
                         </Avatar>
                     )}

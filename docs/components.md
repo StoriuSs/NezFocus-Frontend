@@ -657,7 +657,7 @@ components written for this project in the same style (the rows that say so):
 
 | Component | What it is |
 |-----------|-------------|
-| `Avatar` | A profile picture with a fallback |
+| `Avatar` | A profile picture with a fallback. `AvatarInitial`, written for this project, is what the fallback shows (C-03): the name's first letter, or the default person when there is no name to show (an account others see as deleted, D-182). Pass the person's own name, not the "Deleted account" text |
 | `Button` | Default, secondary, outline, ghost, text, destructive and link variants |
 | `Checkbox` | A checkbox (C-24b), a plain input rather than a Radix primitive ([above](#checkbox)) |
 | `Combobox` | A long list with a search box (C-25), written for this project on `Popover` ([above](#combobox)) |

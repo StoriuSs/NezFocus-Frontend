@@ -102,6 +102,11 @@ describe('The Members panel (S-SHELL-01, C-13, D-175)', () => {
 
         const off = await screen.findByRole('region', { name: 'Offline — 2' })
         expect(names(off)).toEqual(['Dũng dung.tran', 'Deleted account'])
+        // Its avatar is the default person (C-03 `deleted`), not the first letter of that name.
+        const rows = within(off).getAllByRole('listitem')
+        expect(rows[1]!.querySelector('.lucide-user-round')).not.toBeNull()
+        expect(rows[0]!.querySelector('.lucide-user-round')).toBeNull()
+        expect(within(rows[0]!).getByText('D')).toBeInTheDocument()
     })
 
     it('leaves out the offline group when no one is offline', async () => {
