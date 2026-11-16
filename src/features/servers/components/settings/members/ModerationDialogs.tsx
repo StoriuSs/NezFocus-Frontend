@@ -333,7 +333,7 @@ function RemoveDialog({
         >
             {kind === 'ban' ? (
                 // Three choices: the track hugs them (04 `ban-confirm`), not the dialog's width.
-                <div className='grid justify-items-start gap-2'>
+                <div className='flex flex-col items-start gap-2'>
                     <Label id={daysId}>{t('members.dialog.deleteMessages')}</Label>
                     <SegmentedControl
                         aria-labelledby={daysId}
