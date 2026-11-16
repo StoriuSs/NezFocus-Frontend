@@ -93,11 +93,14 @@ done
 # The socket (SRS 5.2) connects to the same host over ws:// or wss://.
 API_SOCKET_ORIGIN=$(origin VITE_API_URL "$API_URL" | sed -E 's#^http#ws#')
 
+# Without a bucket, frame-src (a message's PDF, its only source) would be left
+# bare: it says 'none' then, plainly.
 sed -e "s#__API_SOCKET_ORIGIN__#$API_SOCKET_ORIGIN#g" 	-e "s#__API_ORIGIN__#$(origin VITE_API_URL "$API_URL")#g" \
 	-e "s#__SENTRY_ORIGIN__#$([ -z "$SENTRY_DSN" ] || origin VITE_SENTRY_DSN "$SENTRY_DSN")#g" \
 	-e "s#__EXTRA_IMAGE_ORIGINS__#${image_origins# }#g" \
 	-e "s#__STORAGE_ORIGINS__#${storage_origins# }#g" \
 	-e 's/  */ /g' \
+	-e "s#frame-src ;#frame-src 'none';#" \
 	"$CSP_TEMPLATE" > "$CSP_FILE"
 
 if grep -q '__[A-Z_]*__' "$CSP_FILE"; then
