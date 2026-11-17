@@ -35,6 +35,10 @@
 // own too, loaded with the Task Board's chunk (tailwind.feature.js): "Tasks
 // CSS" below, 622 B when it began (the board, its row, its form, the date
 // and people pickers), limit with the same 0.5% tolerance.
+// From M3 L6b (17/11/2026) the inbox's classes are one more (D-193), loaded
+// with its Popover's chunk: "Notifications CSS" below, 483 B when it began
+// (the panel's size, a row's layers and its ✓ on hover or focus, the "N new"
+// button, the loading rows), limit with the same 0.5% tolerance.
 // Raise them
 // only as CONSTRAINTS.md says: the owner decides, in a commit of its own.
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
@@ -72,6 +76,7 @@ const chunkCss = (chunk) => {
 }
 const chatCss = chunkCss('ChannelChat')
 const tasksCss = chunkCss('TaskStyles')
+const notificationsCss = chunkCss('NotificationStyles')
 
 // A split stylesheet loads after the main one: a class written in both would
 // let the later copy beat the main file's own rules everywhere in the app
@@ -94,7 +99,8 @@ const classesIn = (paths) =>
 const mainClasses = classesIn(css)
 for (const [name, paths] of [
     ['chat', chatCss],
-    ['tasks', tasksCss]
+    ['tasks', tasksCss],
+    ['notifications', notificationsCss]
 ]) {
     const shared = [...classesIn(paths)].filter((one) => mainClasses.has(one))
     if (shared.length)
@@ -107,5 +113,6 @@ export default [
     { name: 'Initial JS (gzip)', path: js, gzip: true, limit: '246.75 kB' },
     { name: 'Initial CSS (gzip)', path: css, gzip: true, limit: '8.80 kB' },
     { name: 'Chat CSS (gzip)', path: chatCss, gzip: true, limit: '647 B' },
-    { name: 'Tasks CSS (gzip)', path: tasksCss, gzip: true, limit: '880 B' }
+    { name: 'Tasks CSS (gzip)', path: tasksCss, gzip: true, limit: '880 B' },
+    { name: 'Notifications CSS (gzip)', path: notificationsCss, gzip: true, limit: '486 B' }
 ]
