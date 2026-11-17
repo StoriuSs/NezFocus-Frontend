@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import i18n from '@/i18n'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { userKeys } from '@/features/users'
+import { messageKeys } from '../api/keys'
 import { expectNoA11yViolations } from '@/test/a11y'
 import { apiError } from '@/test/helpers'
 import type { MentionSource, Message, MessageCursor, MessagePage } from '../types'
@@ -134,7 +135,29 @@ describe('A text channel chat (S-CHAT-01)', () => {
         expect(await within(log).findByText('Tài khoản đã bị xóa')).toBeInTheDocument()
         // One default person (the deleted account's); Bình keeps the first letter.
         expect(log.querySelectorAll('.lucide-user-round')).toHaveLength(1)
+        // Drawn in `text-tertiary`, as the frame's `Avatar · deleted`: quieter than a name's letter.
+        expect(log.querySelector('.lucide-user-round')).toHaveClass('text-text-tertiary')
         expect(within(log).getByText('B')).toBeInTheDocument()
+    })
+
+    it('shows a message typed offline as on its way: faded, with the clock and "Sẽ gửi khi có mạng" (S-SHELL-01 offline)', async () => {
+        messagesApi.fetchMessages.mockResolvedValue(page([]))
+        renderChat()
+        const box = await screen.findByRole('combobox', { name: 'Nhắn #hoi-dap' })
+        const offline = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+        try {
+            await userEvent.type(box, 'Câu 4 đổi sang tọa độ cực{Enter}')
+
+            const row = (await screen.findByText('Câu 4 đổi sang tọa độ cực')).closest('article')!
+            expect(row).toHaveClass('opacity-50')
+            // Not busy, though: a screen reader would hold back the status line inside it.
+            expect(row).not.toHaveAttribute('aria-busy')
+            expect(within(row).getByText('Sẽ gửi khi có mạng')).toBeInTheDocument()
+            expect(row.querySelector('.lucide-clock')).not.toBeNull()
+            expect(messagesApi.sendMessage).not.toHaveBeenCalled()
+        } finally {
+            offline.mockRestore()
+        }
     })
 
     it('says so when the history cannot be read, and reads it again on "Try again"', async () => {
@@ -257,6 +280,27 @@ describe('A text channel chat (S-CHAT-01)', () => {
         await waitFor(() => expect(messagesApi.sendMessage).toHaveBeenCalledTimes(1))
         expect(messagesApi.sendMessage.mock.calls[0]![1].content).toBe('Gửi sớm quá')
         expect(box).toHaveValue('')
+    })
+
+    it('never sends what was typed while the history loaded once the cache is cleared meanwhile (signing out)', async () => {
+        let arrive!: (first: MessagePage) => void
+        messagesApi.fetchMessages
+            .mockReturnValueOnce(new Promise((resolve) => (arrive = resolve)))
+            .mockResolvedValue(page([]))
+        const { client } = renderChat()
+        const box = await screen.findByRole('combobox', { name: 'Nhắn #hoi-dap' })
+
+        await userEvent.type(box, 'Gửi sớm quá{Enter}')
+        act(() => client.clear())
+        act(() => arrive(page([])))
+        // The channel's history in the cache again (someone else signed in, in this tab, and opened it):
+        // what the first person typed is not sent with it (S-CHAT-04 › Edge case).
+        act(() => {
+            client.setQueryData(messageKeys.channel('hoi-dap'), { pages: [page([])], pageParams: [null] })
+        })
+
+        await new Promise((resolve) => setTimeout(resolve, 50))
+        expect(messagesApi.sendMessage).not.toHaveBeenCalled()
     })
 
     it('keeps the text when the history could not be read', async () => {

@@ -147,31 +147,30 @@ export function sendFrom(
     return true
 }
 
-/** "Try again" on a failed message: the same nonce; only the files that failed upload again. */
 /**
- * Resolves once the channel's history is in the cache, so a message can be
- * taken (true), or once its read failed (false): for one typed before the
- * first page came (S-CHAT-01 `loading`: the composer works at once). Bound to
- * the channel, not to the chat, so leaving it meanwhile still sends there.
+ * The channel's history once it is in the cache, so a message can be taken;
+ * null once its read failed, or once the cache let it go (signing out clears
+ * it: what one person typed is never sent as the next one, S-CHAT-04 › Edge
+ * case). For one typed before the first page came (S-CHAT-01 `loading`: the
+ * composer works at once). Bound to the channel, not to the chat, so leaving
+ * it meanwhile still sends there.
  */
-export function untilHistory(client: QueryClient, channelId: string): Promise<boolean> {
+export function untilHistory(client: QueryClient, channelId: string): Promise<ChannelMessages | null> {
     return new Promise((resolve) => {
         let stop = () => {}
         const look = () => {
-            const taken = historyOf(client, channelId)
-                ? true
-                : client.getQueryState(messageKeys.channel(channelId))?.status === 'error'
-                  ? false
-                  : null
-            if (taken === null) return
+            const history = historyOf(client, channelId)
+            const state = client.getQueryState(messageKeys.channel(channelId))
+            if (!history && state && state.status !== 'error') return
             stop()
-            resolve(taken)
+            resolve(history ?? null)
         }
         stop = client.getQueryCache().subscribe(look)
         look()
     })
 }
 
+/** "Try again" on a failed message: the same nonce; only the files that failed upload again. */
 export async function retryMessage(client: QueryClient, channelId: string, nonce: string): Promise<void> {
     const message = outgoingOf(client, channelId).find((item) => item.nonce === nonce)
     if (!message) return

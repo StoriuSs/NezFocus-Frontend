@@ -1,5 +1,5 @@
 import { memo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from 'react'
-import { CircleAlert, Clock, CornerUpRight, WifiOff } from 'lucide-react'
+import { CircleAlert, Clock, CornerUpRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import '@/i18n/messaging'
@@ -144,7 +144,9 @@ export const MessageRow = memo(function MessageRow({
         (saved?.reactions.length ? `, ${t('reactions.inMessage', { count: saved.reactions.length })}` : '')
     // Queued behind another: shown as sending, or as waiting for the network while offline.
     const state = outgoing?.state === 'queued' ? (online ? 'sending' : 'waiting') : outgoing?.state
-    const onItsWay = state === 'sending'
+    // Waiting for the network looks on its way too: faded, as the frame S-SHELL-01 `offline` draws it.
+    // Busy only while sending: a screen reader holds back the status line inside a busy row.
+    const onItsWay = state === 'sending' || state === 'waiting'
 
     const openMenu = (anchor: MenuAnchor, from: HTMLElement) => {
         openedFrom.current = from
@@ -189,7 +191,7 @@ export const MessageRow = memo(function MessageRow({
             data-row-key={rowKey}
             tabIndex={tabbable ? 0 : -1}
             aria-label={label}
-            aria-busy={onItsWay || undefined}
+            aria-busy={state === 'sending' || undefined}
             data-highlight={highlighted || undefined}
             data-related={related || undefined}
             onContextMenu={contextMenu}
@@ -276,8 +278,8 @@ export const MessageRow = memo(function MessageRow({
                 {saved && !editor ? (
                     <ReactionBar message={saved} handlers={handlers} onAdd={(button) => openPicker(button)} />
                 ) : null}
-                {onItsWay ? <span className='sr-only'>{t('message.sending')}</span> : null}
-                {outgoing && !onItsWay ? (
+                {state === 'sending' ? <span className='sr-only'>{t('message.sending')}</span> : null}
+                {outgoing && state !== 'sending' ? (
                     <OutgoingLine
                         message={{ ...outgoing, state: state ?? outgoing.state }}
                         onRetry={onRetry}
@@ -421,10 +423,10 @@ function OutgoingLine({
             </p>
         )
     }
-    const Icon = message.state === 'rate-limited' ? Clock : WifiOff
+    // The clock for both, as the frames (S-CHAT-01 `message-states`, S-SHELL-01 `offline`): it goes later, by itself.
     return (
         <p role='status' className='mt-1 flex items-center gap-1.5 text-label text-text-secondary'>
-            <Icon className='size-4 shrink-0' aria-hidden='true' />
+            <Clock className='size-4 shrink-0' aria-hidden='true' />
             {message.state === 'rate-limited' ? t('message.rateLimited', { count: seconds }) : t('message.waiting')}
         </p>
     )

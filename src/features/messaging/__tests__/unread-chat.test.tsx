@@ -156,6 +156,36 @@ describe('Unread messages in an open channel (REQ-MSG-09, D-46, C-10)', () => {
         await expectNoA11yViolations(container)
     })
 
+    it('sends a message typed while the page around the mark loads only once the newest are back: it lands after them', async () => {
+        let arrive!: (first: MessagePage) => void
+        messagesApi.fetchMessages.mockImplementation((_channel: string, cursor: MessageCursor) =>
+            cursor ? new Promise((resolve) => (arrive = resolve)) : Promise.resolve(page([7, 8].map((n) => message(n))))
+        )
+        messagesApi.sendMessage.mockImplementation(async (_channel: string, body: { content: string }) => ({
+            ...message(9, AN),
+            content: body.content
+        }))
+        renderChat(readState('m04', 40))
+        const box = await screen.findByRole('combobox', { name: 'Message #hoi-dap' })
+
+        await userEvent.type(box, 'Typed early{Enter}')
+        act(() =>
+            arrive(
+                page(
+                    [3, 4, 5, 6].map((n) => message(n)),
+                    { hasMoreAfter: true }
+                )
+            )
+        )
+
+        await waitFor(() => expect(messagesApi.sendMessage).toHaveBeenCalledTimes(1))
+        const latest = messagesApi.fetchMessages.mock.calls.findIndex(([, cursor]) => cursor === null)
+        expect(latest).toBeGreaterThan(-1)
+        expect(messagesApi.fetchMessages.mock.invocationCallOrder[latest]).toBeLessThan(
+            messagesApi.sendMessage.mock.invocationCallOrder[0]!
+        )
+    })
+
     it('opens a channel whose first unread message is not held at the page around the mark', async () => {
         messagesApi.fetchMessages.mockResolvedValue(
             page(

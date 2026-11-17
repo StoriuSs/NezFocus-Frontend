@@ -26,6 +26,7 @@ import { isGoneFrom, stopsShort } from '../lib/message-cache'
 import { messageTime } from '../lib/message-time'
 import type {
     AppLink,
+    ChannelMessages,
     ChatPermissions,
     ChatTarget,
     MentionSource,
@@ -288,11 +289,12 @@ export default function ChannelChat({
             if (taken) setReplyingTo(null)
             return taken
         }
-        // Typed before the first page came (S-CHAT-01 `loading`): sent once it comes.
-        if (!history.data) return historyReady().then((ready) => ready && go())
         // Read at an older message: the newest come back first, so one's own lands after them.
-        if (stopsShort(history.data)) return jump.backToPresent().then((back) => back && go())
-        return go()
+        const after = (loaded: ChannelMessages) =>
+            stopsShort(loaded) ? jump.backToPresent().then((back) => back && go()) : go()
+        // Typed before the first page came (S-CHAT-01 `loading`): sent once it comes, the same way.
+        if (!history.data) return historyReady().then((loaded) => (loaded ? after(loaded) : false))
+        return after(history.data)
     }
 
     /** Back to the message the dialog was about, or to the composer once it is gone. */

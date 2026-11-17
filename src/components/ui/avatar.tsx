@@ -42,8 +42,9 @@ AvatarFallback.displayName = AvatarPrimitive.Fallback.displayName
  * person (an account others see as deleted, D-182). Goes in an AvatarFallback.
  */
 function AvatarInitial({ name }: { name: string | null | undefined }) {
-    // Sized as an SVG attribute: a class would grow the initial CSS bundle (size-limit) for one icon.
-    if (!name) return <UserRound size='60%' aria-hidden='true' />
+    // As the frame (`Avatar · deleted`): 20 on a 40 avatar, `text-tertiary`. Sized as an SVG
+    // attribute: a size class would grow the initial CSS bundle (size-limit) for one icon.
+    if (!name) return <UserRound size='50%' className='text-text-tertiary' aria-hidden='true' />
     return name.slice(0, 1).toUpperCase()
 }
 
