@@ -59,13 +59,15 @@ export function MessageEditor({
     const tooLong = notice !== null && notice.left < 0
     const hint = `edit-hint-${messageId}`
 
-    // The cursor at the end of the text, as if it had just been typed.
+    // The cursor at the end of the text, as if it had just been typed; the box and its
+    // hint in view (the message grew: at the bottom of the list, they would sit past it).
     useEffect(() => {
         const field = box.current
         if (!field) return
         field.focus()
         field.setSelectionRange(field.value.length, field.value.length)
-    }, [])
+        document.getElementById(hint)?.scrollIntoView?.({ block: 'nearest' })
+    }, [hint])
 
     const keyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
         if (mention.keyDown(event)) return

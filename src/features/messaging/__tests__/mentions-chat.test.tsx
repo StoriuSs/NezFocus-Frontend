@@ -347,6 +347,8 @@ describe('Suggestions after @ and # in the composer (C-12 › MentionSuggest)', 
         )
         expect(within(list).getByText('Thành viên')).toBeInTheDocument()
         expect(within(list).getByText('Vai trò')).toBeInTheDocument()
+        // A long role name is what gives way, not its count (seen cut to "0 thành vi…" in A3).
+        expect(within(list).getByText('2 thành viên')).toHaveClass('shrink-0')
         expect(composer()).toHaveAttribute('aria-activedescendant', within(list).getAllByRole('option')[0]!.id)
         await expectNoA11yViolations(document.body)
     })

@@ -244,8 +244,13 @@ test('an edit, a reply and a deletion reach the other browser at once (REQ-MSG-0
     await seenOnce(binh.page, 'Ok, mình vào sớm giữ chỗ')
 
     // ↑ in the empty composer edits An's last message; Bình sees the new text, marked edited.
+    // A window short enough that the list scrolls: the message grows into the box at the very bottom.
+    await an.page.setViewportSize({ width: 1440, height: 420 })
     await an.page.getByRole('combobox', { name: `Message #${channelName}` }).press('ArrowUp')
     const editor = an.page.getByRole('combobox', { name: 'Edit message' })
+    // The list follows it down: the box and its hint in view, not cut off above the composer.
+    await expect(an.page.getByText('Esc to cancel · Enter to save')).toBeInViewport({ ratio: 1 })
+    await an.page.setViewportSize({ width: 1440, height: 900 })
     await editor.fill('Mình vào phòng rồi nhé')
     await shoot(an.page, 'chat01-edit-mode')
     await editor.press('Enter')

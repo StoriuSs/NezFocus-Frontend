@@ -200,3 +200,13 @@ test('drags a channel up its category and into another, kept after a reload (D-1
         'tai-lieu'
     ])
 })
+
+test('keeps the page itself still when the channel list is taller than the window', async ({ page }) => {
+    await openServer(page)
+    // Short enough that the channel list scrolls inside its column.
+    await page.setViewportSize({ width: 1440, height: 360 })
+    await expect.poll(() => channels(page).evaluate((nav) => nav.scrollHeight > nav.clientHeight)).toBe(true)
+
+    // Nothing in the list (its drag announcer is position: absolute) may reach past its column and make the page scroll.
+    expect(await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight)).toBe(0)
+})

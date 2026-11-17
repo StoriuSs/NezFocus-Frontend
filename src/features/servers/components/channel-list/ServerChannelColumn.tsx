@@ -47,9 +47,10 @@ export function ServerChannelColumn({ serverId }: { serverId: string | undefined
     return (
         <>
             <ServerMenu server={server} />
+            {/* relative: the list's drag announcer (sr-only, so absolute) stays inside the scroll, not past the page's end. */}
             <nav
                 aria-label={t('shell.channels.label', { name: server.name })}
-                className='min-h-0 flex-1 overflow-y-auto p-2'
+                className='relative min-h-0 flex-1 overflow-y-auto p-2'
             >
                 <ChannelList server={server} />
             </nav>

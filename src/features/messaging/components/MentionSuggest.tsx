@@ -156,7 +156,12 @@ function Option({ row, index, state }: { row: SuggestRow; index: number; state: 
                 </span>
             )}
             <span className='truncate text-body-sm font-medium text-text-primary'>{name}</span>
-            {detail ? <span className='truncate text-label text-text-tertiary'>{detail}</span> : null}
+            {detail ? (
+                // A role's count stays whole: its name, maybe long, is what gives way.
+                <span className={cn('truncate text-label text-text-tertiary', row.kind === 'role' && 'shrink-0')}>
+                    {detail}
+                </span>
+            ) : null}
         </div>
     )
 }
