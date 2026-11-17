@@ -131,7 +131,7 @@ export default function ChannelChat({
     )
     const history = useChannelMessages(channelId, target?.messageId ?? startAt)
     const author = useMemo(() => authorFrom(profile), [profile])
-    const { send, retry, discard } = useSendMessage(channelId, author)
+    const { send, historyReady, retry, discard } = useSendMessage(channelId, author)
     const edit = useEditMessage(channelId)
     const remove = useDeleteMessage(channelId)
     const react = useReactions(channelId)
@@ -288,8 +288,10 @@ export default function ChannelChat({
             if (taken) setReplyingTo(null)
             return taken
         }
+        // Typed before the first page came (S-CHAT-01 `loading`): sent once it comes.
+        if (!history.data) return historyReady().then((ready) => ready && go())
         // Read at an older message: the newest come back first, so one's own lands after them.
-        if (history.data && stopsShort(history.data)) return jump.backToPresent().then((back) => back && go())
+        if (stopsShort(history.data)) return jump.backToPresent().then((back) => back && go())
         return go()
     }
 

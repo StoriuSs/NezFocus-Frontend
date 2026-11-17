@@ -237,12 +237,35 @@ describe('A text channel chat (S-CHAT-01)', () => {
         expect(await screen.findByRole('combobox', { name: 'Nhắn #hoi-dap' })).toHaveFocus()
     })
 
-    it('keeps the text when the history is not there yet to show the message', async () => {
-        messagesApi.fetchMessages.mockReturnValue(new Promise(() => undefined))
+    it('sends a message typed before the history came, once it comes, and once (S-CHAT-01 loading)', async () => {
+        let arrive!: (first: MessagePage) => void
+        messagesApi.fetchMessages.mockReturnValue(new Promise((resolve) => (arrive = resolve)))
+        messagesApi.sendMessage.mockImplementation(async (_channel, body) =>
+            message('m9', AN, body.content, new Date().toISOString())
+        )
         renderChat()
         const box = await screen.findByRole('combobox', { name: 'Nhắn #hoi-dap' })
 
         await userEvent.type(box, 'Gửi sớm quá{Enter}')
+        // A second Enter while it waits sends nothing more.
+        await userEvent.type(box, '{Enter}')
+        expect(messagesApi.sendMessage).not.toHaveBeenCalled()
+        expect(box).toHaveValue('Gửi sớm quá')
+
+        act(() => arrive(page([])))
+
+        await waitFor(() => expect(messagesApi.sendMessage).toHaveBeenCalledTimes(1))
+        expect(messagesApi.sendMessage.mock.calls[0]![1].content).toBe('Gửi sớm quá')
+        expect(box).toHaveValue('')
+    })
+
+    it('keeps the text when the history could not be read', async () => {
+        messagesApi.fetchMessages.mockRejectedValue(new Error('offline'))
+        renderChat()
+        const box = await screen.findByRole('combobox', { name: 'Nhắn #hoi-dap' })
+
+        await userEvent.type(box, 'Gửi sớm quá{Enter}')
+        await screen.findByRole('button', { name: 'Thử lại' })
 
         expect(box).toHaveValue('Gửi sớm quá')
         expect(messagesApi.sendMessage).not.toHaveBeenCalled()

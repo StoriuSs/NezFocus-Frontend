@@ -148,6 +148,30 @@ export function sendFrom(
 }
 
 /** "Try again" on a failed message: the same nonce; only the files that failed upload again. */
+/**
+ * Resolves once the channel's history is in the cache, so a message can be
+ * taken (true), or once its read failed (false): for one typed before the
+ * first page came (S-CHAT-01 `loading`: the composer works at once). Bound to
+ * the channel, not to the chat, so leaving it meanwhile still sends there.
+ */
+export function untilHistory(client: QueryClient, channelId: string): Promise<boolean> {
+    return new Promise((resolve) => {
+        let stop = () => {}
+        const look = () => {
+            const taken = historyOf(client, channelId)
+                ? true
+                : client.getQueryState(messageKeys.channel(channelId))?.status === 'error'
+                  ? false
+                  : null
+            if (taken === null) return
+            stop()
+            resolve(taken)
+        }
+        stop = client.getQueryCache().subscribe(look)
+        look()
+    })
+}
+
 export async function retryMessage(client: QueryClient, channelId: string, nonce: string): Promise<void> {
     const message = outgoingOf(client, channelId).find((item) => item.nonce === nonce)
     if (!message) return
