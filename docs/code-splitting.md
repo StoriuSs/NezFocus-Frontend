@@ -163,10 +163,13 @@ The pins panel (S-CHAT-02) is in the same chunk: `index.ts` exports
 `PinsPanel` as `lazy(() => import('./components/ChannelChat').then((chat) =>
 ({ default: chat.PinsPanel })))`, and `ChannelChat.tsx` re-exports it, so it
 comes with the chat's stylesheet and no second copy of the chat's code.
-The emoji picker's data, `emojibase-data` in the person's language (about 93
+The emoji picker's data, `emojibase-data` in Vietnamese and English (about 93
 kB gzipped each), is read with `import()` the first time the picker opens
-(`lib/emoji-data.ts`): two chunks of their own, never in the chat's. Vite
-warns that they are over 500 kB before gzip; they are data, read once.
+(`lib/emoji-data.ts`): two chunks of their own, never in the chat's. Both are
+read whatever the language on screen: the names come from that one, the search
+takes the words of both (SRS 1.81, owner's choice over a build-time word list),
+so the first opening reads about 186 kB. Vite warns that they are over 500 kB
+before gzip; they are data, read once.
 
 The chat's file holds only the classes the rest of the app does not use:
 its config blocks every class candidate of the other files, read with

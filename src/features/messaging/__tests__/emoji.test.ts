@@ -80,6 +80,17 @@ describe('The emoji picker’s data (C-12, SRS 1.71)', () => {
         expect(searchEmoji(groups, 'uoi')).toEqual([])
         expect(fold('Đề Cương')).toBe('de cuong')
     })
+
+    it('finds emoji by the other language’s words too, showing the names of the one in use (SRS 1.81)', () => {
+        const vi = [raw('🌳', 'cây rụng lá', 3, 0, { tags: ['cây'] }), raw('👍️', 'thích', 1, 1)]
+        const en = [raw('🌳', 'deciduous tree', 3, 0, { tags: ['tree', 'forest'] }), raw('👍', 'thumbs up', 1, 1)]
+        const groups = buildGroups(vi, en)
+
+        expect(searchEmoji(groups, 'tree')).toEqual([expect.objectContaining({ emoji: '🌳', label: 'cây rụng lá' })])
+        expect(searchEmoji(groups, 'cay').map((item) => item.emoji)).toEqual(['🌳'])
+        // Matched across the two files whatever variation selector each writes.
+        expect(searchEmoji(groups, 'thumbs').map((item) => item.emoji)).toEqual(['👍'])
+    })
 })
 
 describe('Recently used emoji, per person in this browser (SRS 1.71)', () => {

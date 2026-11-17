@@ -2,9 +2,10 @@ import type { TFunction } from 'i18next'
 import '@/i18n/messaging'
 
 /*
- * The emoji picker's data (C-12, SRS 1.71): `emojibase-data` in the
- * person's language, read with `import()` the first time the picker opens,
- * so its 90 kB stay out of the chat's chunk.
+ * The emoji picker's data (C-12, SRS 1.71): `emojibase-data` in both
+ * languages, read with `import()` the first time the picker opens, so their
+ * 2 × 90 kB stay out of the chat's chunk. Names come from the person's
+ * language; the search takes the words of both (SRS 1.81).
  */
 
 /** An entry of emojibase's `data.json`, the fields read here. */
@@ -96,8 +97,21 @@ export function normaliseEmoji(text: string): string | null {
     return bare !== text && standard.test(bare) ? bare : null
 }
 
-/** The picker's groups in emojibase's order, as the picker shows them. */
-export function buildGroups(data: RawEmoji[]): EmojiGroup[] {
+/** An entry's name and tags, as search words: lower case, without accents. */
+const wordsOf = (item: RawEmoji) =>
+    [item.label, ...(item.tags ?? [])].flatMap((text) => fold(text).split(/\s+/)).filter(Boolean)
+
+/**
+ * The picker's groups in emojibase's order, as the picker shows them, named
+ * from `data`. `other`, the same emoji in the other language, adds its words
+ * to the search: "tree" finds 🌳 in Vietnamese too (SRS 1.81).
+ */
+export function buildGroups(data: RawEmoji[], other: RawEmoji[] = []): EmojiGroup[] {
+    const otherWords = new Map<string, string[]>()
+    for (const item of other) {
+        const emoji = normaliseEmoji(item.emoji)
+        if (emoji) otherWords.set(emoji, wordsOf(item))
+    }
     const groups = new Map<EmojiGroupKey, EmojiEntry[]>()
     const kept = data
         .filter((item) => item.group !== undefined && GROUPS[item.group] !== 'component')
@@ -107,7 +121,7 @@ export function buildGroups(data: RawEmoji[]): EmojiGroup[] {
         const emoji = normaliseEmoji(item.emoji)
         if (!emoji) continue
         const key = GROUPS[item.group!] as EmojiGroupKey
-        const words = [item.label, ...(item.tags ?? [])].flatMap((text) => fold(text).split(/\s+/)).filter(Boolean)
+        const words = [...new Set([...wordsOf(item), ...(otherWords.get(emoji) ?? [])])]
         const entries = groups.get(key) ?? []
         entries.push({ emoji, label: item.label, words })
         groups.set(key, entries)
@@ -161,10 +175,9 @@ export function pickerSections(
     ]
 }
 
-/** The picker's emoji in Vietnamese or English, read the first time it opens. */
+/** The picker's emoji named in Vietnamese or English, searched in both, read the first time it opens. */
 export async function loadEmoji(language: string): Promise<EmojiGroup[]> {
-    const data = language.startsWith('vi')
-        ? await import('emojibase-data/vi/data.json')
-        : await import('emojibase-data/en/data.json')
-    return buildGroups(data.default as RawEmoji[])
+    const [vi, en] = await Promise.all([import('emojibase-data/vi/data.json'), import('emojibase-data/en/data.json')])
+    const [shown, other] = language.startsWith('vi') ? [vi, en] : [en, vi]
+    return buildGroups(shown.default as RawEmoji[], other.default as RawEmoji[])
 }
