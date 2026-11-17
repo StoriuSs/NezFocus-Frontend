@@ -61,6 +61,24 @@ export function useSetTaskStatus() {
     })
 }
 
+/** "Tôi làm", "Thêm người" (S-TASK-02): these people on the task too. The query client's Toast on a refusal. */
+export function useAssignTask() {
+    const client = useQueryClient()
+    return useMutation({
+        mutationFn: ({ taskId, userIds }: { taskId: string; userIds: string[] }) => assignTask(taskId, userIds),
+        onSuccess: (task) => rememberTask(client, task, 'updated')
+    })
+}
+
+/** "Rút khỏi việc này", the x on a person (S-TASK-02): one person off. */
+export function useUnassignTask() {
+    const client = useQueryClient()
+    return useMutation({
+        mutationFn: ({ taskId, userId }: { taskId: string; userId: string }) => unassignTask(taskId, userId),
+        onSuccess: (task) => rememberTask(client, task, 'updated')
+    })
+}
+
 /**
  * "Xóa việc" (S-TASK-02 `delete-confirm`): gone from every board of its
  * channel at once. Gone already (deleted meanwhile, or this same delete sent

@@ -9,6 +9,15 @@ import { taskKeys } from './keys'
  * in, or about a task deleted, is left out, whichever list holds it now.
  */
 const seen = new WeakMap<QueryClient, Map<string, number>>()
+
+/** Those told of a task deleted (an open detail closes, 05 › Edge case). */
+const deletions = new Set<(taskId: string) => void>()
+
+/** Hear of each task deleted, by this tab or another person; returns the way to stop. */
+export function onTaskDeleted(listener: (taskId: string) => void): () => void {
+    deletions.add(listener)
+    return () => void deletions.delete(listener)
+}
 const heard = (client: QueryClient) => {
     let tasks = seen.get(client)
     if (!tasks) seen.set(client, (tasks = new Map()))
@@ -46,6 +55,9 @@ export function rememberTask(client: QueryClient, task: Task, change: 'created' 
     const reopened = change === 'updated' && task.status !== 'done' && !inOpen
     client.setQueryData<TaskList>(open, (list) => list && putOpen(list, task, reopened))
     client.setQueryData<DonePages>(done, (pages) => pages && putDone(pages, task))
+    // Its detail, if read, and the history the change wrote a line in.
+    client.setQueryData<Task>(taskKeys.one(task.id), (held) => held && task)
+    void client.invalidateQueries({ queryKey: taskKeys.history(task.id), exact: true })
     readAgainIfReading(client, task.channelId)
     void client.invalidateQueries({
         queryKey: taskKeys.board(task.channelId),
@@ -79,4 +91,15 @@ export function forgetTask(client: QueryClient, channelId: string, taskId: strin
         queryKey: taskKeys.board(channelId),
         predicate: (query) => query.queryKey[4] !== ''
     })
+    for (const listener of [...deletions]) listener(taskId)
+}
+
+/** The task as a board in the cache holds it: its detail opens with it at once (S-TASK-02 › loading). */
+export function heldTask(client: QueryClient, taskId: string): Task | undefined {
+    for (const [, data] of client.getQueriesData<TaskList | DonePages>({ queryKey: taskKeys.boards() })) {
+        const lists = data && 'pages' in data ? data.pages : data ? [data] : []
+        const found = lists.flatMap((list) => list.items).find((item) => item.id === taskId)
+        if (found) return found
+    }
+    return undefined
 }

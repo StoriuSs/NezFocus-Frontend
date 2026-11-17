@@ -11,6 +11,7 @@ import {
     type RefObject
 } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useSearchParams } from 'react-router-dom'
 import { ChevronDown, ChevronRight, Plus, Search, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import '@/i18n/tasks'
@@ -31,6 +32,7 @@ import { folded } from '@/lib/utils'
 import { useDoneTasks, useOpenTasks } from '../api/useTaskBoard'
 import { useHeldTasks } from '../held-tasks.store'
 import { useStatusChange } from '../hooks/useStatusChange'
+import { useTaskLink } from '../hooks/useTaskLink'
 import { useDayWords } from '../hooks/useDayWords'
 import { boardRows, type BoardRow } from '../lib/task-board'
 import { dueLine } from '../lib/due-text'
@@ -38,6 +40,7 @@ import { mayChangeStatus, mayEdit } from '../lib/people'
 import { taskFailure } from '../lib/task-errors'
 import type { Task, TaskBoardPlace, TaskCandidate } from '../types'
 import { DeleteTaskDialog } from './DeleteTaskDialog'
+import { Offline } from './Offline'
 import { TaskDialog } from './TaskDialog'
 import { TaskRow } from './TaskRow'
 
@@ -84,6 +87,7 @@ export function TaskBoard({
     const done = useDoneTasks(place.channelId, search, enabled && !off && showDone && open.isSuccess)
     const holds = useHeldTasks((state) => state.holds)
     const change = useStatusChange()
+    const link = useTaskLink()
     const now = useMinuteClock()
     const timeZone = useQuery(settingsCache).data?.timezone
     const words = useDayWords()
@@ -221,6 +225,19 @@ export function TaskBoard({
         focusAfter(id, before)
         // `placing` changes when a row only moves to another group, `order` does not.
     }, [order, placing])
+    // The detail opened from a row closes after its task went (deleted meanwhile, 05 Q11):
+    // the next row takes the focus, which Radix would give back to the row gone.
+    const opened = useRef<{ id: string; order: readonly string[] } | null>(null)
+    const openTask = useSearchParams()[0].get('task')
+    useEffect(() => {
+        const was = opened.current
+        if (openTask !== null || !was) return
+        opened.current = null
+        if (shownOrder.current.includes(was.id)) return
+        const timer = setTimeout(() => focusAfter(was.id, was.order), 0)
+        return () => clearTimeout(timer)
+        // focusAfter reads refs only.
+    }, [openTask])
     const rowOf = ({ task, status }: BoardRow) => (
         <TaskRow
             key={task.id}
@@ -234,9 +251,14 @@ export function TaskBoard({
             active={tabRow === task.id}
             onFocus={() => setActiveId(task.id)}
             onKeyDown={rowKey}
+            onOpen={() => {
+                opened.current = { id: task.id, order: shownOrder.current }
+                link.open(task.id)
+            }}
             onToggle={() => change(task, status === 'done' ? 'todo' : 'done')}
             onSetStatus={(next) => change(task, next)}
             onEdit={() => setEditing(task)}
+            onCopyLink={() => link.copy(place.linkTo(task.id))}
             onDelete={() => {
                 deletingOrder.current = order.split(' ')
                 setDeleting(task)
@@ -396,20 +418,6 @@ export function TaskBoard({
                 />
             ) : null}
         </RightPanel>
-    )
-}
-
-/**
- * Offline, a control that saves is off with "Cần kết nối mạng" in a Tooltip
- * (05 Q10): a disabled button hears no pointer, so the Tooltip is on a box
- * around it.
- */
-function Offline({ offline, label, children }: { offline: boolean; label: string; children: ReactNode }) {
-    if (!offline) return children
-    return (
-        <WithTooltip label={label}>
-            <span className='flex'>{children}</span>
-        </WithTooltip>
     )
 }
 

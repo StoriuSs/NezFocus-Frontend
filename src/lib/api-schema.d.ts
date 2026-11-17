@@ -2204,12 +2204,16 @@ export interface components {
         TaskAssigneeResponseDto: {
             /** Format: date-time */
             assigned_at: string
+            /** @description False: still on the task but no longer views its channel ("Mất quyền xem kênh", D-194). */
+            views_channel: boolean
             id: string
             username: string | null
             display_name: string | null
             avatar_url: string | null
         }
-        TaskPersonResponseDto: {
+        TaskCreatorResponseDto: {
+            /** @description No longer a member of the task's server: "(đã rời server)", no presence (D-194). */
+            left_server: boolean
             id: string
             username: string | null
             display_name: string | null
@@ -2240,7 +2244,7 @@ export interface components {
              * @description Moves on every change: of two copies of a task, the client keeps the later one.
              */
             updated_at: string
-            creator: components['schemas']['TaskPersonResponseDto']
+            creator: components['schemas']['TaskCreatorResponseDto']
         }
         TaskListResponseDto: {
             items: components['schemas']['TaskResponseDto'][]
@@ -2274,6 +2278,12 @@ export interface components {
         AssignTaskRequestDto: {
             /** @description People already on it are skipped. */
             user_ids: string[]
+        }
+        TaskPersonResponseDto: {
+            id: string
+            username: string | null
+            display_name: string | null
+            avatar_url: string | null
         }
         TaskEventResponseDto: {
             /** @enum {string} */

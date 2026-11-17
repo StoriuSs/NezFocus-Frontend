@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Hash, LampDesk, ListChecks, Pin, Users, Volume2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -17,6 +17,7 @@ import { useMentionSource } from '../api/useMentionSource'
 import { MemberPanel } from '../components/member-panel/MemberPanel'
 import { useServers } from '../api/useServers'
 import { useTaskBoardPlace } from '../api/useTaskBoardPlace'
+import { useVisitKey } from '../hooks/useVisitKey'
 import { useChannelDialogs } from '../channel-dialogs.store'
 import { useGoneServerPath } from '../hooks/useGoneServerPath'
 import { linkedServers, readAppLink, type LinkedServer } from '../lib/app-links'
@@ -121,8 +122,9 @@ function Removed({ to }: { to: string }) {
  * open at first as a column. [list-checks], on a channel with its Task
  * Board on, opens the board (S-TASK-01, the tasks feature's), closed at
  * first and remembered as a column; turned off while open, the board says
- * so (`board-off`) and the button stays until the panel closes. One panel
- * at a time: opening one closes the others (S-CHAT-02 › Mở từ, C-08).
+ * so (`board-off`) and the button stays until the panel closes; a task's
+ * channel line comes with it open (`openTasks`, S-TASK-02). One panel at a
+ * time: opening one closes the others (S-CHAT-02 › Mở từ, C-08).
  */
 function TextChannel({ server, channel, messageId }: { server: Server; channel: ServerChannel; messageId?: string }) {
     const { t } = useTranslation('servers')
@@ -172,9 +174,19 @@ function TextChannel({ server, channel, messageId }: { server: Server; channel: 
     }, [linked, serverId])
     const mentions = useMentionSource(server, linked)
     const { key, state } = useLocation()
+    // From a task's channel line (S-TASK-02): the board open, once per visit.
+    const wantsTasks = (state as { openTasks?: boolean } | null)?.openTasks === true
+    const tasksAsked = useRef<string | null>(null)
+    useEffect(() => {
+        if (!wantsTasks || tasksAsked.current === key) return
+        tasksAsked.current = key
+        if (!showTasks) toggleTasks()
+    })
     // From the pins sheet, which closes with the focus in it: focus goes to the message.
     const focus = (state as { focusMessage?: boolean } | null)?.focusMessage === true
-    const target = useMemo(() => (messageId ? { messageId, key, focus } : undefined), [messageId, key, focus])
+    // A link followed again jumps again; a task's detail opened over the page (`?task=`) does not.
+    const visit = useVisitKey()
+    const target = useMemo(() => (messageId ? { messageId, key: visit, focus } : undefined), [messageId, visit, focus])
     const openPinned = (pinnedId: string) => {
         // As a column the panel stays, focus on its card; as a sheet it closes, focus to the message.
         void navigate(messagePath(serverId, channelId, pinnedId), { state: { focusMessage: !pins.docked } })

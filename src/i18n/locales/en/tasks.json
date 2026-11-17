@@ -48,12 +48,16 @@
         "unassigned": "Unassigned",
         "more": "Options for task {{title}}",
         "label": "{{title}}, {{status}}, {{due}}, {{people}}",
-        "andMore": "+{{count}}"
+        "andMore": "+{{count}}",
+        "lostAccess": "Lost access to the channel",
+        "lostAccessHint": "{{names}} can no longer see this channel",
+        "labelLost": "{{title}}, {{status}}, {{due}}, {{people}}, lost access to the channel: {{names}}"
     },
     "menu": {
         "status": "Status",
         "edit": "Edit",
-        "delete": "Delete task"
+        "delete": "Delete task",
+        "copyLink": "Copy task link"
     },
     "due": {
         "today": "Today",
@@ -69,7 +73,8 @@
             "4": "Thu",
             "5": "Fri",
             "6": "Sat"
-        }
+        },
+        "yesterday": "Yesterday"
     },
     "toast": {
         "done": "Done “{{title}}”",
@@ -79,7 +84,11 @@
         "added": "Added “{{title}}”",
         "deleted": "Deleted “{{title}}”",
         "full": "This channel has 500 open tasks. Mark some done or delete some, then reopen it.",
-        "gone": "This task is no longer available"
+        "gone": "This task is no longer available",
+        "linkCopied": "Task link copied",
+        "deletedMeanwhile": "This task was just deleted",
+        "removedYou": "{{name}} removed you from this task",
+        "copyFailed": "Couldn't copy the task link"
     },
     "form": {
         "createTitle": "Add task",
@@ -139,5 +148,54 @@
         "body": "The task disappears from the Task Board and from everyone's tasks. This can't be undone.",
         "cancel": "Cancel",
         "confirm": "Delete task"
+    },
+    "detail": {
+        "openChannel": "Open channel",
+        "more": "Task options",
+        "status": "Status",
+        "due": "Due",
+        "creator": "Created by",
+        "assignees_one": "ASSIGNED — {{count}}",
+        "assignees_other": "ASSIGNED — {{count}}",
+        "assigneesNone": "ASSIGNED",
+        "unassigned": "Unassigned",
+        "addPeople": "Add people",
+        "withdraw": "Leave this task",
+        "claim": "I'll do it",
+        "remove": "Remove {{name}} from the task",
+        "you": "{{name}} (you)",
+        "leftServer": "{{name}} (left the server)",
+        "lostAccess": "Lost access to the channel",
+        "lostAccessHint": "{{name}} is still assigned but can no longer see this channel",
+        "allPeople_one": "Show all {{count}} person",
+        "allPeople_other": "Show all {{count}} people",
+        "fewerPeople": "Show less",
+        "description": "DESCRIPTION",
+        "noDescription": "No description",
+        "loading": "Loading the task",
+        "loadError": "Couldn't load this task",
+        "retry": "Try again",
+        "close": "Close"
+    },
+    "history": {
+        "title": "HISTORY",
+        "you": "You",
+        "youObject": "you",
+        "created": "{{who}} created the task",
+        "titleChanged": "{{who}} renamed it from “{{from}}” → “{{to}}”",
+        "descriptionChanged": "{{who}} edited the description",
+        "dueSet": "{{who}} set the due date to {{to}}",
+        "dueChanged": "{{who}} changed the due date {{from}} → {{to}}",
+        "dueCleared": "{{who}} removed the due date",
+        "added": "{{who}} added {{whom}}",
+        "removed": "{{who}} removed {{whom}}",
+        "claimed": "{{who}} took the task",
+        "withdrew": "{{who}} left the task",
+        "leftServer": "{{whom}} left the server and is no longer assigned",
+        "statusChanged": "{{who}} changed the status {{from}} → {{to}}",
+        "all_one": "Show the whole history ({{count}})",
+        "all_other": "Show the whole history ({{count}})",
+        "less": "Show less",
+        "loadError": "Couldn't load the history"
     }
 }

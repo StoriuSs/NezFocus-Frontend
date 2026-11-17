@@ -24,12 +24,15 @@ import type { Task } from '../types'
 export function DeleteTaskDialog({
     task,
     onClose,
-    onDeleted
+    onDeleted,
+    onDeleting
 }: {
     task: Task
     onClose: () => void
     /** Deleted: where the focus goes is the board's (the next row), not the gone row's ⋯. */
     onDeleted: () => void
+    /** About to send it: a detail open on it closes without "Việc này vừa bị xóa". */
+    onDeleting?: () => void
 }) {
     const { t } = useTranslation('tasks')
     const remove = useDeleteTask(task.channelId)
@@ -39,6 +42,7 @@ export function DeleteTaskDialog({
 
     const confirm = async () => {
         setDeleting(true)
+        onDeleting?.()
         try {
             await remove.mutateAsync(task.id)
             deleted.current = true

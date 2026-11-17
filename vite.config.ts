@@ -70,6 +70,20 @@ function vendorChunk(id: string): string | undefined {
 }
 
 /**
+ * A split feature's stylesheet (tailwind.feature.js, D-193) in a chunk of its
+ * own name, whichever lazy chunks import it: the tasks' is shared by the Task
+ * Board and the task detail, and `.size-limit.mjs` finds it by that name.
+ */
+const FEATURE_STYLES: Record<string, RegExp> = {
+    TaskStyles: /\/src\/features\/tasks\/tasks\.css(\?|$)/
+}
+
+function chunkOf(id: string): string | undefined {
+    const path = id.replaceAll('\\', '/')
+    return Object.entries(FEATURE_STYLES).find(([, pattern]) => pattern.test(path))?.[0] ?? vendorChunk(id)
+}
+
+/**
  * Uploads the build's sourcemaps to Sentry, so reported stack traces show the
  * source instead of minified code (docs/error-tracking.md). Only when
  * SENTRY_AUTH_TOKEN, SENTRY_ORG and SENTRY_PROJECT are set, which a normal
@@ -117,7 +131,7 @@ export default defineConfig({
         // first screen, and unicode-range could no longer skip it.
         assetsInlineLimit: (file) => (file.endsWith('.woff2') ? false : undefined),
         rollupOptions: {
-            output: { manualChunks: vendorChunk }
+            output: { manualChunks: chunkOf }
         }
     },
     server: {

@@ -170,6 +170,14 @@ both folders out), "Tasks CSS" in `.size-limit.mjs` (D-193, M3 L3). Only
 `useOpenTaskCount` is not lazy: the channel settings dialog, itself lazy,
 says how many tasks turning the board off hides.
 
+A task's detail (S-TASK-02) opens over any page with `?task=`: the AppShell
+loads `servers/components/TaskDetailRoute.tsx` lazily the first time the
+parameter is there, and it shows `TaskDetail`, the tasks feature's second
+lazy export. The board and the detail share the form, the pickers and the
+stylesheet, so `vite.config.ts` puts `tasks.css` in a chunk of its own name
+(`FEATURE_STYLES`: `TaskStyles-<hash>.css`), which `.size-limit.mjs` finds
+whichever lazy chunks import it (M3 L4).
+
 The pins panel (S-CHAT-02) is in the same chunk: `index.ts` exports
 `PinsPanel` as `lazy(() => import('./components/ChannelChat').then((chat) =>
 ({ default: chat.PinsPanel })))`, and `ChannelChat.tsx` re-exports it, so it

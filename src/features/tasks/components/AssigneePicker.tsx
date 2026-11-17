@@ -1,4 +1,4 @@
-import { useId, useMemo, useState, type KeyboardEvent } from 'react'
+import { useId, useMemo, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Check, ChevronDown, Search, User } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -20,6 +20,10 @@ import { AvatarStack } from './AvatarStack'
  * server) over the members who view the channel (D-192): "Tôi (An)" always
  * first, then by name; a Checkbox on each. ↑ ↓ move, Space or Enter ticks
  * and keeps it open; Esc or a click outside closes, keeping the ticks.
+ *
+ * "Thêm người" of the detail (S-TASK-02) opens the same list from its own
+ * button (`trigger`), saving when it closes (`onOpenChange`); the people
+ * one may not take off stay ticked (`locked`).
  */
 export function AssigneePicker({
     id,
@@ -31,7 +35,10 @@ export function AssigneePicker({
     candidates,
     invalid,
     describedBy,
-    disabled
+    disabled,
+    trigger,
+    locked,
+    onOpenChange
 }: {
     id?: string
     selected: readonly string[]
@@ -45,6 +52,11 @@ export function AssigneePicker({
     invalid?: boolean
     describedBy?: string
     disabled?: boolean
+    /** A button of one's own in place of the field. */
+    trigger?: ReactNode
+    /** Ticked and staying so: people one may not take off. */
+    locked?: ReadonlySet<string>
+    onOpenChange?: (open: boolean) => void
 }) {
     const { t } = useTranslation('tasks')
     const [open, setOpen] = useState(false)
@@ -74,6 +86,7 @@ export function AssigneePicker({
               : ordered.map((person) => nameOf(person, deleted)).join(', ')
 
     const toggle = (person: TaskCandidate) => {
+        if (locked?.has(person.id)) return
         remember(person)
         onChange(
             selected.includes(person.id)
@@ -102,35 +115,44 @@ export function AssigneePicker({
                 setOpen(next)
                 if (!next) setQuery('')
                 setActive(0)
+                onOpenChange?.(next)
             }}
         >
             <PopoverTrigger asChild>
-                <button
-                    id={id}
-                    type='button'
-                    disabled={disabled}
-                    data-invalid={invalid || undefined}
-                    aria-describedby={describedBy}
-                    className={cn(
-                        'flex h-10 w-full items-center gap-2 rounded-input border border-border-input bg-surface-1 px-3 text-left text-body-sm transition-colors duration-micro hover:border-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
-                        'data-[invalid=true]:border-danger disabled:cursor-not-allowed disabled:bg-surface-2',
-                        open && 'border-primary'
-                    )}
-                >
-                    <User className='size-4 shrink-0 text-text-secondary' aria-hidden='true' />
-                    {ordered.length > 0 ? <AvatarStack people={ordered} me={me?.id} size={24} /> : null}
-                    <span
+                {trigger ?? (
+                    <button
+                        id={id}
+                        type='button'
+                        disabled={disabled}
+                        data-invalid={invalid || undefined}
+                        aria-describedby={describedBy}
                         className={cn(
-                            'flex-1 truncate',
-                            selected.length === 0 ? 'text-text-tertiary' : 'text-text-primary'
+                            'flex h-10 w-full items-center gap-2 rounded-input border border-border-input bg-surface-1 px-3 text-left text-body-sm transition-colors duration-micro hover:border-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                            'data-[invalid=true]:border-danger disabled:cursor-not-allowed disabled:bg-surface-2',
+                            open && 'border-primary'
                         )}
                     >
-                        {label}
-                    </span>
-                    <ChevronDown className='size-4 shrink-0 text-text-secondary' aria-hidden='true' />
-                </button>
+                        <User className='size-4 shrink-0 text-text-secondary' aria-hidden='true' />
+                        {ordered.length > 0 ? <AvatarStack people={ordered} me={me?.id} size={24} /> : null}
+                        <span
+                            className={cn(
+                                'flex-1 truncate',
+                                selected.length === 0 ? 'text-text-tertiary' : 'text-text-primary'
+                            )}
+                        >
+                            {label}
+                        </span>
+                        <ChevronDown className='size-4 shrink-0 text-text-secondary' aria-hidden='true' />
+                    </button>
+                )}
             </PopoverTrigger>
-            <PopoverContent className='flex w-[var(--radix-popover-trigger-width)] flex-col gap-1 p-2'>
+            <PopoverContent
+                align='end'
+                className={cn(
+                    'flex flex-col gap-1 p-2',
+                    trigger ? 'w-[320px]' : 'w-[var(--radix-popover-trigger-width)]'
+                )}
+            >
                 <div className='relative'>
                     <Search
                         className='pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-text-tertiary'
@@ -169,6 +191,7 @@ export function AssigneePicker({
                                 id={optionId(index)}
                                 role='option'
                                 aria-selected={on}
+                                aria-disabled={locked?.has(person.id) || undefined}
                                 onPointerDown={(event) => event.preventDefault()}
                                 onClick={() => toggle(person)}
                                 onKeyDown={(event) => {

@@ -19,7 +19,7 @@ const task = (id: string, overrides: Partial<Task> = {}): Task => ({
     completedAt: null,
     createdAt: '2026-10-10T00:00:00.000Z',
     updatedAt: '2026-10-10T00:00:00.000Z',
-    creator: { id: 'an', username: 'an', displayName: 'An', avatarUrl: null },
+    creator: { id: 'an', username: 'an', displayName: 'An', avatarUrl: null, leftServer: false },
     assignees: [],
     ...overrides
 })

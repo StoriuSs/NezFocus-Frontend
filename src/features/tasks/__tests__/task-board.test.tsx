@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MemoryRouter, useLocation, useSearchParams } from 'react-router-dom'
 import { toast, Toaster } from 'sonner'
 import i18n from '@/i18n'
 import type { PanelState } from '@/components/shell/RightPanel'
@@ -38,7 +39,11 @@ const AN = person('an', 'An')
 const BINH = person('binh', 'Bình')
 const CHI = person('chi', 'Chi')
 const DUNG = person('dung', 'Dũng')
-const assigned = (who: TaskCandidate, at = '2026-10-12T00:00:00.000Z') => ({ ...who, assignedAt: at })
+const assigned = (who: TaskCandidate, at = '2026-10-12T00:00:00.000Z', viewsChannel = true) => ({
+    ...who,
+    assignedAt: at,
+    viewsChannel
+})
 
 /** A day from today in Hồ Chí Minh, at that clock. */
 const inDays = (days: number, time: string) => {
@@ -47,7 +52,8 @@ const inDays = (days: number, time: string) => {
 }
 
 let stamp = 0
-const task = (id: string, title: string, more: Partial<Task> = {}): Task => ({
+type TaskMore = Partial<Omit<Task, 'creator'>> & { creator?: TaskCandidate & { leftServer?: boolean } }
+const task = (id: string, title: string, { creator = AN, ...more }: TaskMore = {}): Task => ({
     id,
     serverId: 'ot',
     channelId: 'viec-nhom',
@@ -58,7 +64,7 @@ const task = (id: string, title: string, more: Partial<Task> = {}): Task => ({
     completedAt: null,
     createdAt: '2026-10-10T00:00:00.000Z',
     updatedAt: new Date(Date.UTC(2026, 9, 10) + stamp++).toISOString(),
-    creator: AN,
+    creator: { leftServer: false, ...creator },
     assignees: [],
     ...more
 })
@@ -85,6 +91,20 @@ const BOARD: TaskList = { items: [SLIDE, BAO_CAO, ON_TAP, GIAI_DE], doneCount: 3
 
 const PANEL: PanelState = { open: true, docked: true, toggle: vi.fn(), close: vi.fn() }
 
+/** Where the page is: a row opens its task with `?task=` (05 Q6). */
+function WhereAmI() {
+    const [, setParams] = useSearchParams()
+    return (
+        <>
+            <output data-testid='where'>{useLocation().search}</output>
+            {/* What the shell does when a task's detail closes. */}
+            <button type='button' onClick={() => setParams({}, { replace: true })}>
+                close detail
+            </button>
+        </>
+    )
+}
+
 function place(more: Partial<TaskBoardPlace> = {}): TaskBoardPlace {
     return {
         channelId: 'viec-nhom',
@@ -99,6 +119,7 @@ function place(more: Partial<TaskBoardPlace> = {}): TaskBoardPlace {
             queryFn: async () => [AN, BINH, CHI, DUNG].filter((one) => one.displayName!.includes(query))
         }),
         openSettings: vi.fn(),
+        linkTo: (taskId) => `http://app.test/channels/ot/viec-nhom?task=${taskId}`,
         ...more
     }
 }
@@ -108,12 +129,15 @@ function renderBoard(where = place(), enabled = true, panel: PanelState = PANEL)
     client.setQueryData(userKeys.profile(), { id: 'an', username: 'an.tran', displayName: 'An', avatarUrl: null })
     client.setQueryData(userKeys.settings(), { timezone: ZONE })
     const ui = (board: TaskBoardPlace, on: boolean) => (
-        <QueryClientProvider client={client}>
-            <TooltipProvider>
-                <TaskBoard panel={panel} buttonRef={{ current: null }} place={board} enabled={on} />
-                <Toaster />
-            </TooltipProvider>
-        </QueryClientProvider>
+        <MemoryRouter initialEntries={['/servers/ot/viec-nhom']}>
+            <QueryClientProvider client={client}>
+                <TooltipProvider>
+                    <TaskBoard panel={panel} buttonRef={{ current: null }} place={board} enabled={on} />
+                    <Toaster />
+                    <WhereAmI />
+                </TooltipProvider>
+            </QueryClientProvider>
+        </MemoryRouter>
     )
     const view = render(ui(where, enabled))
     return { ...view, client, rerenderWith: (board: TaskBoardPlace, on: boolean) => view.rerender(ui(board, on)) }
@@ -169,12 +193,21 @@ describe('The Task Board (S-TASK-01)', () => {
         expect(tasksApi.fetchDoneTasks).toHaveBeenLastCalledWith('viec-nhom', '', 'd1')
     })
 
-    it('shows only what the viewer may do: a still box and no menu on a task of others (REQ-TASK-02)', async () => {
+    it('shows only what the viewer may do: a still box and only "Sao chép link việc" on a task of others (REQ-TASK-02)', async () => {
         renderBoard()
         await screen.findByRole('heading', { name: 'ĐANG LÀM — 1' })
         // Dũng's task, An not on it, no MANAGE_TASKS.
         expect(screen.queryByRole('button', { name: 'Đánh dấu xong: Giải đề giữa kỳ 2024' })).not.toBeInTheDocument()
-        expect(screen.queryByRole('button', { name: 'Tùy chọn của việc Giải đề giữa kỳ 2024' })).not.toBeInTheDocument()
+        await userEvent.click(screen.getByRole('button', { name: 'Tùy chọn của việc Giải đề giữa kỳ 2024' }))
+        const others = await screen.findByRole('menu')
+        expect(
+            within(others)
+                .getAllByRole('menuitem')
+                .map((item) => item.textContent)
+        ).toEqual(['Sao chép link việc'])
+        expect(within(others).queryByRole('menuitemradio')).not.toBeInTheDocument()
+        await userEvent.keyboard('{Escape}')
+        await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument())
         // On it: the box and the status in the menu, no edit.
         expect(screen.getByRole('button', { name: 'Đánh dấu xong: Nộp báo cáo giữa kỳ' })).toBeInTheDocument()
         await userEvent.click(screen.getByRole('button', { name: 'Tùy chọn của việc Nộp báo cáo giữa kỳ' }))
@@ -185,6 +218,45 @@ describe('The Task Board (S-TASK-01)', () => {
                 .map((item) => item.textContent)
         ).toEqual(['Cần làm', 'Đang làm', 'Xong'])
         expect(within(menu).queryByRole('menuitem', { name: 'Sửa' })).not.toBeInTheDocument()
+    })
+
+    it('opens a task from its row on this page (`?task=`), and copies its link (05 Q6)', async () => {
+        const writeText = vi.fn<(text: string) => Promise<void>>().mockResolvedValue(undefined)
+        Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+        renderBoard()
+
+        await userEvent.click(await screen.findByRole('button', { name: /^Nộp báo cáo giữa kỳ/ }))
+        expect(screen.getByTestId('where')).toHaveTextContent('?task=t3')
+
+        await userEvent.click(screen.getByRole('button', { name: 'Tùy chọn của việc Làm slide thuyết trình' }))
+        await userEvent.click(await screen.findByRole('menuitem', { name: 'Sao chép link việc' }))
+        // The task's own channel, wherever it was copied (D-194 place).
+        expect(writeText).toHaveBeenCalledWith('http://app.test/channels/ot/viec-nhom?task=t4')
+        expect(await screen.findByText('Đã sao chép link việc')).toBeInTheDocument()
+    })
+
+    it('gives the focus to the next row when the task open in the detail is deleted meanwhile (05 Q11)', async () => {
+        renderBoard()
+        await userEvent.click(await screen.findByRole('button', { name: /^Nộp báo cáo giữa kỳ/ }))
+        expect(screen.getByTestId('where')).toHaveTextContent('?task=t3')
+
+        act(() => emitRealtimeEvent('task.deleted', { taskId: 't3', channelId: 'viec-nhom' }))
+        await userEvent.click(screen.getByRole('button', { name: 'close detail' }))
+
+        await waitFor(() => expect(rowNamed('Làm slide thuyết trình')).toHaveFocus())
+    })
+
+    it('says when someone on a task no longer views the channel, naming them (C-28, D-194)', async () => {
+        tasksApi.fetchOpenTasks.mockResolvedValue({
+            ...BOARD,
+            items: [SLIDE, { ...BAO_CAO, assignees: [assigned(BINH, undefined, false), assigned(AN)] }, ON_TAP]
+        })
+        renderBoard()
+
+        const row = await screen.findByRole('button', { name: /^Nộp báo cáo giữa kỳ/ })
+        expect(row).toHaveAccessibleName(/mất quyền xem kênh: Bình$/)
+        expect(within(row).getByText('Mất quyền xem kênh')).toBeInTheDocument()
+        expect(within(rowNamed('Ôn chương 4')).queryByText('Mất quyền xem kênh')).not.toBeInTheDocument()
     })
 
     it('keeps a row marked done in its group, counts too, while its Toast shows; Hoàn tác sends the status back', async () => {
@@ -401,13 +473,17 @@ describe('The Task Board, more review fixes (L3)', () => {
         const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
         client.setQueryData(userKeys.profile(), { id: 'an', username: 'an.tran', displayName: 'An', avatarUrl: null })
         render(
-            <QueryClientProvider client={client}>
-                <ShellContext.Provider value={{ navOpen: false, toggleNav: () => undefined, connection: 'offline' }}>
-                    <TooltipProvider>
-                        <TaskBoard panel={PANEL} buttonRef={{ current: null }} place={place()} enabled />
-                    </TooltipProvider>
-                </ShellContext.Provider>
-            </QueryClientProvider>
+            <MemoryRouter>
+                <QueryClientProvider client={client}>
+                    <ShellContext.Provider
+                        value={{ navOpen: false, toggleNav: () => undefined, connection: 'offline' }}
+                    >
+                        <TooltipProvider>
+                            <TaskBoard panel={PANEL} buttonRef={{ current: null }} place={place()} enabled />
+                        </TooltipProvider>
+                    </ShellContext.Provider>
+                </QueryClientProvider>
+            </MemoryRouter>
         )
         const add = await screen.findByRole('button', { name: 'Thêm việc' })
         expect(add).toBeDisabled()

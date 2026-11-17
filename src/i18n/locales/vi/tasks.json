@@ -48,12 +48,16 @@
         "unassigned": "Chưa giao",
         "more": "Tùy chọn của việc {{title}}",
         "label": "{{title}}, {{status}}, {{due}}, {{people}}",
-        "andMore": "+{{count}}"
+        "andMore": "+{{count}}",
+        "lostAccess": "Mất quyền xem kênh",
+        "lostAccessHint": "{{names}} không còn xem được kênh này",
+        "labelLost": "{{title}}, {{status}}, {{due}}, {{people}}, mất quyền xem kênh: {{names}}"
     },
     "menu": {
         "status": "Trạng thái",
         "edit": "Sửa",
-        "delete": "Xóa việc"
+        "delete": "Xóa việc",
+        "copyLink": "Sao chép link việc"
     },
     "due": {
         "today": "Hôm nay",
@@ -69,7 +73,8 @@
             "4": "Thứ 5",
             "5": "Thứ 6",
             "6": "Thứ 7"
-        }
+        },
+        "yesterday": "Hôm qua"
     },
     "toast": {
         "done": "Đã xong “{{title}}”",
@@ -79,7 +84,11 @@
         "added": "Đã thêm “{{title}}”",
         "deleted": "Đã xóa “{{title}}”",
         "full": "Kênh đã có 500 việc chưa xong. Đánh dấu xong hoặc xóa bớt rồi mở lại.",
-        "gone": "Việc này không còn khả dụng"
+        "gone": "Việc này không còn khả dụng",
+        "linkCopied": "Đã sao chép link việc",
+        "deletedMeanwhile": "Việc này vừa bị xóa",
+        "removedYou": "{{name}} đã gỡ bạn khỏi việc này",
+        "copyFailed": "Không sao chép được link việc"
     },
     "form": {
         "createTitle": "Thêm việc",
@@ -139,5 +148,54 @@
         "body": "Việc biến mất khỏi Task Board và Việc cần làm của mọi người. Không hoàn tác được.",
         "cancel": "Hủy",
         "confirm": "Xóa việc"
+    },
+    "detail": {
+        "openChannel": "Mở kênh",
+        "more": "Tùy chọn của việc",
+        "status": "Trạng thái",
+        "due": "Hạn",
+        "creator": "Người tạo",
+        "assignees_one": "NGƯỜI ĐƯỢC GIAO — {{count}}",
+        "assignees_other": "NGƯỜI ĐƯỢC GIAO — {{count}}",
+        "assigneesNone": "NGƯỜI ĐƯỢC GIAO",
+        "unassigned": "Chưa giao",
+        "addPeople": "Thêm người",
+        "withdraw": "Rút khỏi việc này",
+        "claim": "Tôi làm",
+        "remove": "Gỡ {{name}} khỏi việc",
+        "you": "{{name}} (bạn)",
+        "leftServer": "{{name}} (đã rời server)",
+        "lostAccess": "Mất quyền xem kênh",
+        "lostAccessHint": "{{name}} vẫn được giao nhưng không còn thấy kênh này",
+        "allPeople_one": "Xem tất cả {{count}} người",
+        "allPeople_other": "Xem tất cả {{count}} người",
+        "fewerPeople": "Thu gọn",
+        "description": "MÔ TẢ",
+        "noDescription": "Chưa có mô tả",
+        "loading": "Đang tải việc",
+        "loadError": "Không tải được việc này",
+        "retry": "Thử lại",
+        "close": "Đóng"
+    },
+    "history": {
+        "title": "LỊCH SỬ",
+        "you": "Bạn",
+        "youObject": "bạn",
+        "created": "{{who}} đã tạo việc",
+        "titleChanged": "{{who}} đã đổi tiêu đề “{{from}}” → “{{to}}”",
+        "descriptionChanged": "{{who}} đã sửa mô tả",
+        "dueSet": "{{who}} đã đặt hạn {{to}}",
+        "dueChanged": "{{who}} đã đổi hạn {{from}} → {{to}}",
+        "dueCleared": "{{who}} đã bỏ hạn",
+        "added": "{{who}} đã thêm {{whom}}",
+        "removed": "{{who}} đã gỡ {{whom}}",
+        "claimed": "{{who}} đã tự nhận việc",
+        "withdrew": "{{who}} đã rút khỏi việc",
+        "leftServer": "{{whom}} rời server nên không còn được giao",
+        "statusChanged": "{{who}} đã đổi trạng thái {{from}} → {{to}}",
+        "all_one": "Xem toàn bộ lịch sử ({{count}})",
+        "all_other": "Xem toàn bộ lịch sử ({{count}})",
+        "less": "Thu gọn",
+        "loadError": "Không tải được lịch sử"
     }
 }

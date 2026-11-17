@@ -468,6 +468,17 @@ changes nothing: a copy no newer (`updatedAt`) than the one held is left
 out. A search's boards read again instead, the matching being the
 server's (D-97). Each `ready` reads every board again.
 
+A task's detail (S-TASK-02) reads `taskKeys.one(id)` (`useTask`): at once
+from a board in the cache that holds it (`heldTask`), and again each time it
+opens, for whether its people still view the channel (D-194); its history
+(`taskKeys.history(id)`) is read again after each change `rememberTask`
+takes in. Who views a server's channels changes with no task event (a role,
+a channel made private, a member leaving): the signals of D-178 for that
+server (`STANDING` in `liveTasks.ts`) read its tasks held in the cache again,
+gathered and spread like the servers' reads, so "Mất quyền xem kênh" follows
+and a detail one may no longer view closes. A deleted task tells an open
+detail through `onTaskDeleted`, so it closes with its own words.
+
 A status set from the box or the row's menu shows at once; the row and its
 group's count stand still while the Toast with "Hoàn tác" shows (8 s, one
 per task), held in `held-tasks.store.ts`, the Toast keyed by the task's id

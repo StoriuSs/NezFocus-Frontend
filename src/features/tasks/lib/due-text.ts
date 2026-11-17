@@ -22,7 +22,7 @@ export function daysBetween(now: Date, at: Date, timeZone?: string): number {
 }
 
 /** "23/10", or "05/01/2027": day and month in the language's order, joined by "/" (as endsAt does). */
-function dateOf(at: Date, language: string, timeZone: string | undefined, withYear: boolean): string {
+export function dateOf(at: Date, language: string, timeZone: string | undefined, withYear: boolean): string {
     return new Intl.DateTimeFormat(language, {
         timeZone,
         day: '2-digit',

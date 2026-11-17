@@ -1,5 +1,5 @@
 import { useState, type KeyboardEvent, type MouseEvent } from 'react'
-import { AlarmClockOff, Calendar, CalendarOff, Check, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
+import { AlarmClockOff, Calendar, CalendarOff, Check, EyeOff, Link, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import '@/i18n/tasks'
 import {
@@ -34,8 +34,11 @@ export interface RowPowers {
  * viewer who may not change it sees a still box with the reason in a
  * Tooltip. ⋯ (on hover or keyboard focus, in place of the avatars; always
  * there on a touch screen), a right click or Shift+F10 open the row's menu:
- * the status (one of three), "Sửa", "Xóa việc", each only for who may (05
- * S-TASK-01 › Menu hàng việc). Offline, nothing that saves works (05 Q10).
+ * the status (one of three), "Sửa", "Sao chép link việc" (for everyone),
+ * "Xóa việc", each only for who may (05 S-TASK-01 › Menu hàng việc).
+ * Offline, nothing that saves works (05 Q10). People on it who no longer
+ * view the channel add "Mất quyền xem kênh", their names in a Tooltip
+ * (C-28 › Mất quyền, D-194).
  */
 export function TaskRow({
     task,
@@ -52,6 +55,7 @@ export function TaskRow({
     onToggle,
     onSetStatus,
     onEdit,
+    onCopyLink,
     onDelete
 }: {
     task: Task
@@ -66,11 +70,12 @@ export function TaskRow({
     active: boolean
     onFocus: () => void
     onKeyDown: (event: KeyboardEvent<HTMLElement>) => void
-    /** Bấm hàng / Enter: the task's detail (S-TASK-02, L4); nothing until then. */
-    onOpen?: () => void
+    /** Bấm hàng / Enter: the task's detail (S-TASK-02). */
+    onOpen: () => void
     onToggle: () => void
     onSetStatus: (status: TaskStatus) => void
     onEdit: () => void
+    onCopyLink: () => void
     onDelete: () => void
 }) {
     const { t } = useTranslation('tasks')
@@ -78,20 +83,24 @@ export function TaskRow({
     const people = meFirst(task.assignees, me)
     const names = people.map((person) => nameOf(person, t('people.deleted'))).join(', ')
     const done = status === 'done'
-    const hasMenu = powers.status || powers.edit
+    const lost = task.assignees
+        .filter((person) => !person.viewsChannel)
+        .map((person) => nameOf(person, t('people.deleted')))
+        .join(', ')
     const can = powers.status && !offline
 
     const keyDown = (event: KeyboardEvent<HTMLElement>) => {
         if (event.key === ' ' && can) {
             event.preventDefault()
             onToggle()
-        } else if (hasMenu && (event.key === 'ContextMenu' || (event.key === 'F10' && event.shiftKey))) {
+        } else if (event.key === 'ContextMenu' || (event.key === 'F10' && event.shiftKey)) {
             event.preventDefault()
             if (!offline) setMenuOpen(true)
         } else onKeyDown(event)
     }
     const contextMenu = (event: MouseEvent<HTMLElement>) => {
-        if (!hasMenu || offline) return
+        // "Sao chép link việc" is for everyone: every row has its menu.
+        if (offline) return
         event.preventDefault()
         setMenuOpen(true)
     }
@@ -117,11 +126,12 @@ export function TaskRow({
                 type='button'
                 data-task-row={task.id}
                 tabIndex={active ? 0 : -1}
-                aria-label={t('row.label', {
+                aria-label={t(lost ? 'row.labelLost' : 'row.label', {
                     title: task.title,
                     status: t(`status.${status}`),
                     due: due.text,
-                    people: names || t('row.unassigned')
+                    people: names || t('row.unassigned'),
+                    names: lost
                 })}
                 onClick={onOpen}
                 onFocus={onFocus}
@@ -154,13 +164,21 @@ export function TaskRow({
                         <DueIcon className='size-3 shrink-0' aria-hidden='true' />
                         <span className='truncate'>{due.text}</span>
                     </span>
+                    {lost ? (
+                        <WithTooltip label={t('row.lostAccessHint', { names: lost })}>
+                            <span className='flex min-w-0 items-center gap-1 text-label text-danger'>
+                                <EyeOff className='size-3 shrink-0' aria-hidden='true' />
+                                <span className='truncate'>{t('row.lostAccess')}</span>
+                            </span>
+                        </WithTooltip>
+                    ) : null}
                 </span>
                 <span
                     className={cn(
                         'flex shrink-0 items-center gap-1 pt-0.5',
-                        hasMenu && !touch && 'group-focus-within:invisible group-hover:invisible',
-                        hasMenu && !touch && menuOpen && 'invisible',
-                        hasMenu && touch && 'pr-8'
+                        !touch && 'group-focus-within:invisible group-hover:invisible',
+                        !touch && menuOpen && 'invisible',
+                        touch && 'pr-8'
                     )}
                 >
                     {people.length > 0 ? (
@@ -189,7 +207,7 @@ export function TaskRow({
                     </WithTooltip>
                 )}
             </span>
-            {hasMenu && offline ? (
+            {offline ? (
                 <WithTooltip label={t('board.offline')}>
                     <span className={cn('absolute right-1 top-1.5', !touch && 'opacity-0 group-hover:opacity-100')}>
                         <IconButton
@@ -201,7 +219,7 @@ export function TaskRow({
                         </IconButton>
                     </span>
                 </WithTooltip>
-            ) : hasMenu ? (
+            ) : (
                 <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
                     <DropdownMenuTrigger asChild>
                         <IconButton
@@ -235,13 +253,19 @@ export function TaskRow({
                                 </DropdownMenuRadioGroup>
                             </>
                         ) : null}
+                        {powers.status ? <DropdownMenuSeparator /> : null}
+                        {powers.edit ? (
+                            <DropdownMenuItem onSelect={onEdit}>
+                                <Pencil aria-hidden='true' />
+                                {t('menu.edit')}
+                            </DropdownMenuItem>
+                        ) : null}
+                        <DropdownMenuItem onSelect={onCopyLink}>
+                            <Link aria-hidden='true' />
+                            {t('menu.copyLink')}
+                        </DropdownMenuItem>
                         {powers.edit ? (
                             <>
-                                {powers.status ? <DropdownMenuSeparator /> : null}
-                                <DropdownMenuItem onSelect={onEdit}>
-                                    <Pencil aria-hidden='true' />
-                                    {t('menu.edit')}
-                                </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onSelect={onDelete} className='text-danger focus:text-danger'>
                                     <Trash2 aria-hidden='true' />
@@ -251,7 +275,7 @@ export function TaskRow({
                         ) : null}
                     </DropdownMenuContent>
                 </DropdownMenu>
-            ) : null}
+            )}
         </li>
     )
 }

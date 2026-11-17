@@ -6,7 +6,9 @@ import { apiUrl, asOwnClient, codeFromEmail, watchForProblems } from './helpers'
  * socket (S-TASK-01, S-TASK-03, REQ-TASK-01, REQ-TASK-02): An adds a task
  * due next Friday for Bình, Bình sees it at once and marks it done (its row
  * standing still while the Toast shows), An sees it go to Done; An turns the
- * board off in the channel settings while Bình has it open, and on again.
+ * board off in the channel settings while Bình has it open, and on again;
+ * a task's detail (S-TASK-02): Bình opens one from its row and takes it on,
+ * An opens it from its link on another page and takes Bình off, Bình told.
  *
  * Needs the API (with Redis, for the socket) and Mailpit, like
  * messaging.spec.ts. With E2E_SHOTS set to a folder, it also saves the
@@ -22,6 +24,8 @@ const ip = `198.51.100.${Math.floor(Math.random() * 254) + 1}`
 let anEmail: string
 let binhEmail: string
 let boardPath: string
+let anToken: string
+let boardId: string
 
 async function ok(method: string, path: string, body?: object, token?: string, key?: string) {
     const response = await fetch(`${apiUrl}/${path}`, {
@@ -83,6 +87,8 @@ test.beforeAll(async ({ browserName }) => {
     await ok('POST', `invites/${invite.code}/accept`, {}, binh)
     const board = server.channels.find((channel) => channel.name === 'viec-nhom')!
     boardPath = `/channels/${server.id}/${board.id}`
+    anToken = an
+    boardId = board.id
 })
 
 const shoot = async (page: Page, name: string) => {
@@ -228,6 +234,53 @@ test('turning the board off in the channel settings shows it off to who has it o
     // Back as it was.
     await expect(row(binh.page, 'Ôn chương 4 — tích phân bội')).toBeVisible({ timeout: 15_000 })
     await expect(board(binh.page).getByRole('button', { name: 'DONE — 1' })).toBeVisible()
+
+    expect(an.problems).toEqual([])
+    expect(binh.problems).toEqual([])
+    await an.context.close()
+    await binh.context.close()
+})
+
+test('a task opens in its detail from its row and from its link on any page, live for both', async ({ browser }) => {
+    test.setTimeout(120_000)
+    const made: { id: string } = (
+        await ok('POST', `channels/${boardId}/tasks`, { title: 'Viết tài liệu API' }, anToken, crypto.randomUUID())
+    ).data
+    const binh = await openAs(browser, binhEmail)
+
+    await row(binh.page, 'Viết tài liệu API').click()
+    const detail = binh.page.getByRole('dialog', { name: 'Viết tài liệu API' })
+    await expect(detail).toBeVisible()
+    await expect(binh.page).toHaveURL(new RegExp(`\\?task=${made.id}$`))
+    // Not on it and not its maker: the status in words, "I'll do it".
+    await expect(detail.getByRole('radiogroup')).toHaveCount(0)
+    await expect(detail.getByText('You created the task')).toHaveCount(0)
+    await expect(detail.getByText('An created the task')).toBeVisible()
+    await shoot(binh.page, 'task02-viewer')
+    await detail.getByRole('button', { name: "I'll do it" }).click()
+    await expect(detail.getByRole('button', { name: 'Leave this task' })).toBeVisible()
+    await expect(detail.getByText('You took the task')).toBeVisible()
+    await expect(detail.getByRole('radiogroup')).toBeVisible()
+
+    // An, on another page, from its link.
+    const an = await openAs(browser, anEmail)
+    await an.page.goto(`/study?task=${made.id}`)
+    const hers = an.page.getByRole('dialog', { name: 'Viết tài liệu API' })
+    await expect(hers).toBeVisible({ timeout: 15_000 })
+    await expect(hers.getByText('ASSIGNED — 1')).toBeVisible()
+    await shoot(an.page, 'task02-creator')
+    await hers.getByRole('button', { name: 'Remove Bình from the task' }).click()
+    await expect(hers.getByText('ASSIGNED', { exact: true })).toBeVisible()
+
+    // Bình, his dialog still open: a viewer's again, and told by whom.
+    await expect(binh.page.getByText('An removed you from this task')).toBeVisible({ timeout: 15_000 })
+    await expect(detail.getByRole('button', { name: "I'll do it" })).toBeVisible()
+
+    // The channel line: to the channel, its board open.
+    await hers.getByRole('button', { name: /^# viec-nhom/ }).click()
+    await expect(an.page).toHaveURL(new RegExp(`${boardPath}$`))
+    await expect(board(an.page)).toBeVisible()
+    await expect(hers).toBeHidden()
 
     expect(an.problems).toEqual([])
     expect(binh.problems).toEqual([])

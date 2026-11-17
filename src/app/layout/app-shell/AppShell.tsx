@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
-import { Outlet, useLocation } from 'react-router-dom'
+import { Outlet, useLocation, useSearchParams } from 'react-router-dom'
 import { useQueryErrorResetBoundary } from '@tanstack/react-query'
 
 import { ErrorBoundary } from '@/components/ErrorBoundary'
@@ -40,6 +40,8 @@ const JoinInviteDialog = lazy(() => import('@/features/servers/components/invite
 const MembershipDialogs = lazy(() => import('@/features/servers/components/membership/MembershipDialogs'))
 // Kicked or banned while open (11 S-MOD-02), loaded when the first one comes.
 const RemovedDialog = lazy(() => import('@/features/servers/components/membership/RemovedDialog'))
+// A task's detail on any page with `?task=` (05 Q6, S-TASK-02), loaded the first time one opens.
+const TaskDetailRoute = lazy(() => import('@/features/servers/components/TaskDetailRoute'))
 
 // Deleting the account (auth) asks the servers feature which servers block it
 // (S-ME-03 `delete-blocked-owner`). Connected here, not in main.tsx: every page
@@ -58,6 +60,9 @@ connectServerOwnership(serverOwnership)
  * outside, Esc, or opening a page closes it, and Esc gives focus back to ☰.
  *
  * Tab order follows reading order: rail → list → content → right panel.
+ *
+ * `?task=` on any page opens that task's detail over it (05 Q6); closing it
+ * takes the parameter off.
  */
 export default function AppShell() {
     const { pathname } = useLocation()
@@ -69,6 +74,20 @@ export default function AppShell() {
     const joiningByInvite = useInviteDialogs((state) => state.join !== null)
     const membershipDialog = useMembershipDialogs((state) => state.open !== null)
     const removed = useServerRemovals((state) => state.queue.length > 0)
+    const [params, setParams] = useSearchParams()
+    const openTask = params.get('task')
+    const closeTask = useCallback(
+        () =>
+            setParams(
+                (before) => {
+                    const next = new URLSearchParams(before)
+                    next.delete('task')
+                    return next
+                },
+                { replace: true }
+            ),
+        [setParams]
+    )
     // The account's theme and language, here and in this browser's other tabs (REQ-AUTH-08).
     useAccountSettings()
     // The servers kept live by the socket; one no longer in leaves the rail, with a dialog or a Toast (D-178, D-179).
@@ -176,6 +195,11 @@ export default function AppShell() {
             {removed ? (
                 <Suspense fallback={null}>
                     <RemovedDialog />
+                </Suspense>
+            ) : null}
+            {openTask ? (
+                <Suspense fallback={null}>
+                    <TaskDetailRoute key={openTask} taskId={openTask} onClose={closeTask} />
                 </Suspense>
             ) : null}
         </ShellContext.Provider>

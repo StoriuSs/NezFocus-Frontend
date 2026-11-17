@@ -6,6 +6,11 @@ export type Task = ApiModel<'TaskResponseDto'>
 export type TaskStatus = Task['status']
 export type TaskPerson = ApiModel<'TaskPersonResponseDto'>
 export type TaskAssignee = ApiModel<'TaskAssigneeResponseDto'>
+export type TaskCreator = ApiModel<'TaskCreatorResponseDto'>
+/** A line of a task's history (REQ-TASK-03). */
+export type TaskEvent = ApiModel<'TaskEventResponseDto'>
+/** The newest 200 lines and how many there are (SRS 5.1). */
+export type TaskHistory = ApiModel<'TaskHistoryResponseDto'>
 /** A Task Board page: the tasks not done and how many are done (S-TASK-01), or a page of the done ones. */
 export type TaskList = ApiModel<'TaskListResponseDto'>
 export type CreateTaskRequest = ApiModel<'CreateTaskRequestDto'>
@@ -48,4 +53,6 @@ export interface TaskBoardPlace {
     candidates: (query: string) => SourceQuery<TaskCandidate[]>
     /** Opens the channel's settings (S-SET-05), from `board-off`. */
     openSettings: () => void
+    /** The link of one of its tasks: its channel with `?task=` ("Sao chép link việc", 05 Q6). */
+    linkTo: (taskId: string) => string
 }

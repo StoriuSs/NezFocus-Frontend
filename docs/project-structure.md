@@ -129,15 +129,17 @@ react-starter/
     │   │                      #   data, grid moves and recent picks, tooltip words, rows, times; files:
     │   │                      #   rules, posting one to the storage, downloading; drafts: the key of one draft),
     │   │                      #   messaging.css (the chat's classes)
-    │   ├── tasks/             # A text channel's Task Board (S-TASK-01) and its form (S-TASK-03), lazy
-    │   │                      #   (index.ts: TaskBoard; useOpenTaskCount for the channel settings'
-    │   │                      #   warning): api/ (the board, the done pages, writes answered with the
+    │   ├── tasks/             # A text channel's Task Board (S-TASK-01), its form (S-TASK-03) and a task's
+    │   │                      #   detail (S-TASK-02, `?task=`), lazy (index.ts: TaskBoard, TaskDetail;
+    │   │                      #   useOpenTaskCount for the channel settings'
+    │   │                      #   warning): api/ (the board, the done pages, one task and its history, writes answered with the
     │   │                      #   task, D-191; liveTasks: task.* into the cache; rememberTask: one
     │   │                      #   task into every board of its channel), components/ (the board, its
-    │   │                      #   row, the form, the date picker C-43, the people picker C-25 `multi`,
-    │   │                      #   the delete dialog), hooks/ (a status change and its Undo Toast, the
-    │   │                      #   words of due dates), lib/ (groups and order, cache changes, due
-    │   │                      #   lines, the calendar, who may do what, refusals the form names),
+    │   │                      #   row, the form, the detail and its person rows, the date picker C-43,
+    │   │                      #   the people picker C-25 `multi`, the delete dialog), hooks/ (a status
+    │   │                      #   change and its Undo Toast, the words of due dates, a task's link),
+    │   │                      #   lib/ (groups and order, cache changes, due lines, history lines, the
+    │   │                      #   calendar, who may do what, refusals the form names),
     │   │                      #   held-tasks.store.ts (rows standing still while their Toast shows),
     │   │                      #   tasks.css (its classes, D-193)
     │   └── users/             # The profile and the account's settings
@@ -391,7 +393,10 @@ Habits worth keeping:
   cache stay the servers feature's, as `settingsCache` does for the users
   feature. The Task Board's `TaskBoardPlace` (`tasks/types.ts`) is the same:
   the channel page hands what one may do there and the members who view the
-  channel (`servers/api/useTaskBoardPlace.ts`, D-192).
+  channel (`servers/api/useTaskBoardPlace.ts`, D-192). A task's detail, on
+  any page, is handed a `PlaceOf` (the place of any channel of one's
+  servers) by `servers/components/TaskDetailRoute.tsx`, which the AppShell
+  shows when `?task=` is there.
 - **Shared code imports no feature.** `src/lib`, `src/components` and
   `src/hooks` are refused any `@/features/...` import. When shared code needs
   something a feature owns, it says what in an interface and is handed it: the

@@ -1,6 +1,6 @@
 import api from '@/lib/api'
 import type { ApiEnvelope } from '@/lib/api-types'
-import type { CreateTaskRequest, Task, TaskList, UpdateTaskRequest } from '../types'
+import type { CreateTaskRequest, Task, TaskHistory, TaskList, UpdateTaskRequest } from '../types'
 
 /** GET /channels/{id}/tasks (S-TASK-01): the tasks not done and how many are done; `q` searches titles (D-97). */
 export async function fetchOpenTasks(channelId: string, q: string): Promise<TaskList> {
@@ -15,6 +15,18 @@ export async function fetchDoneTasks(channelId: string, q: string, before: strin
     const response = await api.get<ApiEnvelope<TaskList>>(`/channels/${channelId}/tasks`, {
         params: { status: 'done', ...(q ? { q } : {}), ...(before ? { before } : {}) }
     })
+    return response.data.data
+}
+
+/** GET /tasks/{id} (S-TASK-02): the task, to one who views its channel; else NOT_FOUND. */
+export async function fetchTask(taskId: string): Promise<Task> {
+    const response = await api.get<ApiEnvelope<Task>>(`/tasks/${taskId}`)
+    return response.data.data
+}
+
+/** GET /tasks/{id}/history: the newest 200 lines and how many there are (SRS 5.1). */
+export async function fetchTaskHistory(taskId: string): Promise<TaskHistory> {
+    const response = await api.get<ApiEnvelope<TaskHistory>>(`/tasks/${taskId}/history`)
     return response.data.data
 }
 
