@@ -1,6 +1,9 @@
 import type { CSSProperties } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Toaster as Sonner } from 'sonner'
+import { useShallow } from 'zustand/react/shallow'
+import { useMediaQuery } from '@/hooks/useMediaQuery'
+import { toastPlace, useToastArea } from '@/hooks/useToastArea'
 
 type ToasterProps = React.ComponentProps<typeof Sonner>
 
@@ -13,15 +16,21 @@ type ToasterProps = React.ComponentProps<typeof Sonner>
  * after 5 seconds, unless hovered or focused. The `x` shows on hover, and on
  * keyboard focus so it can be reached without a mouse.
  *
- * Placed at the bottom right. C-16 puts it at the bottom right of the content
- * area, above the Composer or room controls; that comes with those pages.
+ * Placed at the bottom right of the content area, above the Composer (or 24
+ * from the window's corner on a page with none); in the middle at the bottom
+ * below 1024 (`useToastArea`). Not yet: the pages outside the app (C-16: the
+ * form column's right, above the language line) still use the window's corner.
  */
 function Toaster(props: ToasterProps) {
     const { t } = useTranslation('common')
+    const edges = useToastArea(useShallow((state) => state))
+    const wide = useMediaQuery('(min-width: 1024px)')
+    const { position, offset } = toastPlace(edges, { width: window.innerWidth, height: window.innerHeight }, wide)
     return (
         <Sonner
-            position='bottom-right'
-            offset={24}
+            position={position}
+            offset={offset}
+            mobileOffset={offset}
             visibleToasts={3}
             duration={5000}
             closeButton

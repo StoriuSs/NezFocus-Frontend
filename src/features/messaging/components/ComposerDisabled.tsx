@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { Lock, Timer } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import '@/i18n/messaging'
+import { useToastEdge } from '@/hooks/useToastArea'
 import { endsAtText } from '@/lib/time-zones'
 import type { SendBlock } from '../types'
 
@@ -21,12 +22,15 @@ export function ComposerDisabled({ blocked, now, timeZone }: { blocked: SendBloc
     const { t, i18n } = useTranslation('messaging')
     const Icon = blocked.reason === 'timed-out' ? Timer : Lock
     const line = useRef<HTMLParagraphElement>(null)
+    // In the Composer's place: toasts sit 16 above it (C-16).
+    const bar = useRef<HTMLDivElement>(null)
+    useToastEdge('barTop', bar)
     useEffect(() => {
         const focused = document.activeElement
         if (!focused || focused === document.body) line.current?.focus()
     }, [])
     return (
-        <div className='shrink-0 px-4 pb-4'>
+        <div ref={bar} className='shrink-0 px-4 pb-4'>
             <p
                 ref={line}
                 role='status'

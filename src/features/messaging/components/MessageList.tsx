@@ -1,8 +1,9 @@
-import { useState, type FocusEvent } from 'react'
+import { useRef, useState, type FocusEvent } from 'react'
 import { ArrowDown, CloudOff } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import '@/i18n/messaging'
 import { Button } from '@/components/ui/button'
+import { useToastEdge } from '@/hooks/useToastArea'
 import { useChatScroll, type ScrollTarget } from '../hooks/useChatScroll'
 import { useSeenMessages } from '../hooks/useSeenMessages'
 import type { ChatRow } from '../lib/chat-rows'
@@ -101,6 +102,9 @@ export function MessageList({
     })
     // Messages come while reading older ones; or opened at "New", those still unread below it.
     const below = Math.max(newCount, unreadHeld)
+    // While it shows, toasts sit 8 above it (C-16, 06 message-deleted).
+    const toNew = useRef<HTMLButtonElement>(null)
+    useToastEdge('liftTop', toNew, away)
     useSeenMessages(list, rows, onSeen)
     const [focused, setFocused] = useState<string>()
     // The messages drawn: a system message only when its words are known.
@@ -202,6 +206,7 @@ export function MessageList({
             </div>
             {away ? (
                 <button
+                    ref={toNew}
                     type='button'
                     onClick={newer.has ? onToPresent : toBottom}
                     aria-label={below ? undefined : t('list.toLatest')}

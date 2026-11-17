@@ -19,6 +19,7 @@ a few small Zustand stores, or in a component.**
 | The access token | Module memory, `src/features/auth/lib/access-token.ts` — not a store, not storage | read only by the store and the API client |
 | The account's settings (theme, language, time zone, switches) | TanStack Query, key `userKeys.settings()`, loaded by the AppShell | `useSettings()` inside the users feature; elsewhere `useQuery(settingsCache)` (the key with `queryFn: skipToken`: the cache only, never a request) |
 | The theme on screen | The theme store, `src/hooks/useTheme.ts`, set from the settings once signed in | `useTheme()` |
+| Where toasts sit (C-16): the content area's right edge, the top of the page's bottom bar (the Composer), the top of the "N new" button | The toast area store, `src/hooks/useToastArea.ts`: each part says where it is with `useToastEdge`, measured again on any size change | read by the `Toaster` (`toastPlace`) |
 | A removed avatar waiting out its "Undo" | `useAvatarRemoval`, `src/features/users/lib/avatar-removal-state.ts` | read by `useProfile` |
 | A form's values and errors | React Hook Form | [shadcn-forms.md](./shadcn-forms.md) |
 | Which servers dialog is open, and on what (create a server, a channel or category dialog, invite friends, join from an invite, leave, hand over or delete a server) | `useCreateServerDialog`, `useChannelDialogs`, `useInviteDialogs`, `useMembershipDialogs` (`src/features/servers/*.store.ts`); the AppShell draws the dialogs | `useCreateServerDialog((s) => s.show)` |

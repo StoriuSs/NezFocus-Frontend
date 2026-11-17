@@ -6,6 +6,7 @@ import '@/i18n/messaging'
 import { IconButton } from '@/components/ui/icon-button'
 import { PopoverAnchor, PopoverTrigger } from '@/components/ui/popover'
 import { WithTooltip } from '@/components/ui/tooltip'
+import { useToastEdge } from '@/hooks/useToastArea'
 import { cn } from '@/lib/utils'
 import { settingsCache } from '@/features/users'
 import { useAttachmentTray } from '../api/useAttachmentTray'
@@ -115,6 +116,9 @@ export function Composer({
     const caret = useRef<number | null>(null)
     /** A message waiting to be taken: Enter sends nothing more meanwhile. */
     const waiting = useRef(false)
+    // Toasts sit 16 above it (C-16).
+    const bar = useRef<HTMLDivElement>(null)
+    useToastEdge('barTop', bar)
     const tray = useAttachmentTray(channelId)
     const choose = useChooseFiles(tray.add, tray.uploads.length, attachFiles)
     const picker = useRef<HTMLInputElement>(null)
@@ -195,7 +199,7 @@ export function Composer({
     }
 
     return (
-        <div className='shrink-0 px-4 pb-4'>
+        <div ref={bar} className='shrink-0 px-4 pb-4'>
             {replyingTo ? <ReplyBar id={replyId} quoted={replyingTo} onCancel={onCancelReply} /> : null}
             <MentionSuggest state={mention.suggest}>
                 <PopoverAnchor asChild>

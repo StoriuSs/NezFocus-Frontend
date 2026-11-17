@@ -286,6 +286,35 @@ test('an edit, a reply and a deletion reach the other browser at once (REQ-MSG-0
     await binh.context.close()
 })
 
+test('a toast sits at the bottom right of the content area, above the composer, off the members panel (C-16)', async ({
+    browser
+}) => {
+    const an = await openAs(browser, anEmail)
+    await an.context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: new URL(an.page.url()).origin })
+    await say(an.page, 'Chỗ của thông báo')
+    await seenOnce(an.page, 'Chỗ của thông báo')
+
+    await log(an.page)
+        .getByRole('article', { name: /Chỗ của thông báo/ })
+        .click({ button: 'right' })
+    await an.page.getByRole('menuitem', { name: 'Copy message link' }).click()
+    const toast = an.page.locator('[data-sonner-toast]').filter({ hasText: 'Copied' })
+    await expect(toast).toBeVisible()
+
+    const composer = (await an.page.getByRole('combobox', { name: `Message #${channelName}` }).boundingBox())!
+    const panel = (await an.page.getByRole('complementary', { name: 'Members' }).boundingBox())!
+    // Measured once it has slid in.
+    await expect
+        .poll(async () => {
+            const box = (await toast.boundingBox())!
+            return box.y + box.height <= composer.y - 16 + 1 && box.x + box.width <= panel.x - 16 + 1
+        })
+        .toBe(true)
+
+    expect(an.problems).toEqual([])
+    await an.context.close()
+})
+
 test('a message link opens the message for someone else, lit up; one they cannot see is not found (D-48)', async ({
     browser
 }) => {

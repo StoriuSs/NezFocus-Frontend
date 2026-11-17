@@ -1,9 +1,10 @@
-import { useContext, type ReactNode } from 'react'
+import { useContext, useRef, type ReactNode } from 'react'
 import { Menu, type LucideIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { WithTooltip } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
+import { useToastEdge } from '@/hooks/useToastArea'
 import { SHELL_LIST_ID, SHELL_NAV_BUTTON_ID, ShellContext } from './shell-context'
 import { ConnectionBanner } from './ConnectionBanner'
 import { IconButton } from '@/components/ui/icon-button'
@@ -46,10 +47,13 @@ export function ShellPage({
 }) {
     const { t } = useTranslation()
     const shell = useContext(ShellContext)
+    // The content area: toasts keep to its bottom right (C-16).
+    const area = useRef<HTMLElement>(null)
+    useToastEdge('contentRight', area)
 
     return (
         <>
-            <section className={cn('flex min-w-0 flex-1 flex-col', overlay !== undefined && 'relative')}>
+            <section ref={area} className={cn('flex min-w-0 flex-1 flex-col', overlay !== undefined && 'relative')}>
                 <header className={cn('flex h-12 shrink-0 items-center gap-2 border-b px-4', bare && 'lg:hidden')}>
                     {shell ? (
                         <WithTooltip label={t('shell.openNav')} side='bottom'>
