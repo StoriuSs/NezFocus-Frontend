@@ -57,6 +57,8 @@
       "study": "Học",
       "tasks": "Việc cần làm",
       "notifications": "Thông báo",
+      "notificationsUnread_one": "{{name}}, {{count}} thông báo chưa đọc",
+      "notificationsUnread_other": "{{name}}, {{count}} thông báo chưa đọc",
       "tasksDue_one": "{{name}}, {{count}} việc quá hạn hoặc đến hạn hôm nay",
       "tasksDue_other": "{{name}}, {{count}} việc quá hạn hoặc đến hạn hôm nay"
     },

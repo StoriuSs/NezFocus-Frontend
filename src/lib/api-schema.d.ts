@@ -1245,6 +1245,47 @@ export interface paths {
         patch?: never
         trace?: never
     }
+    '/api/v1/me/notifications': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        /**
+         * A page of the inbox, newest first, older than `before`, with how many
+         *     items are unread: only those of channels one views now (REQ-NOTIF-03).
+         */
+        get: operations['NotificationsController_list_v1']
+        put?: never
+        post?: never
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/me/notifications/read': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        /**
+         * Marks items read (REQ-NOTIF-02): `ids`, or `all` up to `before_id`, the
+         *     newest shown. The channels stay unread as they were (D-99). Marking
+         *     twice changes nothing, so no Idempotency-Key.
+         */
+        post: operations['NotificationsController_markRead_v1']
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
 }
 export type webhooks = Record<string, never>
 export interface components {
@@ -2376,6 +2417,78 @@ export interface components {
         TaskHistoryResponseDto: {
             items: components['schemas']['TaskEventResponseDto'][]
             total: number
+        }
+        NotificationActorResponseDto: {
+            id: string
+            username: string | null
+            display_name: string | null
+            avatar_url: string | null
+        }
+        NotificationMentionedUserResponseDto: {
+            id: string
+            username: string | null
+            display_name: string | null
+        }
+        NotificationMentionedRoleResponseDto: {
+            id: string
+            name: string
+        }
+        NotificationFilesResponseDto: {
+            count: number
+            images: number
+        }
+        NotificationMessageResponseDto: {
+            mention_users: components['schemas']['NotificationMentionedUserResponseDto'][]
+            mention_roles: components['schemas']['NotificationMentionedRoleResponseDto'][]
+            id: string
+            content: string
+            files: components['schemas']['NotificationFilesResponseDto']
+        }
+        NotificationResponseDto: {
+            /** @enum {string} */
+            type:
+                | 'mention'
+                | 'reply'
+                | 'task_assigned'
+                | 'task_reminder'
+                | 'task_unassigned'
+                | 'owner_transferred'
+                | 'moderation'
+            actor: components['schemas']['NotificationActorResponseDto'] | null
+            /**
+             * @description A mention: by name, a role, @everyone or @here; null for a reply.
+             * @enum {string|null}
+             */
+            reason: 'user' | 'role' | 'everyone' | 'here' | null
+            message: components['schemas']['NotificationMessageResponseDto'] | null
+            /**
+             * Format: date-time
+             * @description Null while unread.
+             */
+            read_at: string | null
+            id: string
+            server_id: string | null
+            channel_id: string | null
+            message_id: string | null
+            role_id: string | null
+            /** Format: date-time */
+            created_at: string
+        }
+        NotificationListResponseDto: {
+            items: components['schemas']['NotificationResponseDto'][]
+            /** @description Of the channels one views now, like the page. */
+            unread_count: number
+            has_more: boolean
+        }
+        NotificationsReadResponseDto: {
+            unread_count: number
+        }
+        MarkNotificationsReadRequestDto: {
+            ids?: string[]
+            /** @enum {boolean} */
+            all?: true
+            /** Format: uuid */
+            before_id?: string
         }
     }
     responses: never
@@ -4861,6 +4974,59 @@ export interface operations {
                     'application/json': {
                         meta: components['schemas']['ApiResponseMetaDto']
                         data: components['schemas']['TaskHistoryResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    NotificationsController_list_v1: {
+        parameters: {
+            query?: {
+                /** @description The oldest item the client holds; left out, the newest page. */
+                before?: string
+                /** @description 1-100; 50 when left out. */
+                limit?: number
+            }
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['NotificationListResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    NotificationsController_markRead_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['MarkNotificationsReadRequestDto']
+            }
+        }
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['NotificationsReadResponseDto']
                     }
                 }
             }

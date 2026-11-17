@@ -9,10 +9,10 @@ const extract = defaultExtractor({ tailwindConfig: { separator: ':', prefix: '' 
 
 /**
  * The features whose classes are a stylesheet of their own, loaded with
- * their lazy chunk: the chat (M2 L4a) and tasks (D-193). tailwind.config.js
- * leaves the same folders out.
+ * their lazy chunk: the chat (M2 L4a), tasks (D-193) and the inbox (M3 L6b).
+ * tailwind.config.js leaves the same folders out.
  */
-export const SPLIT_FEATURES = ['messaging', 'tasks']
+export const SPLIT_FEATURES = ['messaging', 'tasks', 'notifications']
 const SPLIT = SPLIT_FEATURES.map((feature) => join('src', 'features', feature))
 
 /** Every .ts / .tsx file under `dir`, the split features left out: the main stylesheet's files. */

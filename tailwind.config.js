@@ -44,9 +44,9 @@ const type = (size, lineHeight, fontWeight) => [`${size}px`, { lineHeight: `${li
 /** @type {import('tailwindcss').Config} */
 export default {
     darkMode: 'class',
-    // The chat's and the tasks' own classes go in their own stylesheets
+    // The chat's, the tasks' and the inbox's own classes go in their own stylesheets
     // (tailwind.feature.js), loaded with their chunks, not in the one loaded before the first screen.
-    content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}', '!./src/features/messaging/**', '!./src/features/tasks/**'],
+    content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}', '!./src/features/messaging/**', '!./src/features/tasks/**', '!./src/features/notifications/**'],
     theme: {
         container: {
             center: true,

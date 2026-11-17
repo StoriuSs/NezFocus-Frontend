@@ -1,0 +1,47 @@
+{
+    "inbox": {
+        "title": "Thông báo",
+        "readAll": "Đọc hết",
+        "readAllLabel": "Đánh dấu tất cả là đã đọc",
+        "settings": "Cài đặt thông báo",
+        "loading": "Đang tải thông báo",
+        "loadError": "Không tải được thông báo",
+        "moreError": "Không tải được thêm",
+        "retry": "Thử lại",
+        "end": "Đã hiện hết thông báo trong 90 ngày qua",
+        "emptyTitle": "Chưa có thông báo nào",
+        "empty": "Khi có người nhắc tới bạn, trả lời bạn, giao việc hay mời kết bạn, bạn sẽ thấy ở đây.",
+        "newItems_one": "{{count}} thông báo mới",
+        "newItems_other": "{{count}} thông báo mới",
+        "offline": "Cần kết nối mạng",
+        "lostAccess": "Bạn không còn xem được kênh này"
+    },
+    "group": {
+        "today": "Hôm nay",
+        "yesterday": "Hôm qua",
+        "earlier": "Trước đó"
+    },
+    "row": {
+        "mention": "{{name}} nhắc tới bạn",
+        "mentionWide": "{{name}} nhắc tới {{whom}}",
+        "reply": "{{name}} trả lời bạn",
+        "deletedAccount": "Tài khoản đã bị xóa",
+        "image": "Đã gửi một ảnh",
+        "images_one": "Đã gửi {{count}} ảnh",
+        "images_other": "Đã gửi {{count}} ảnh",
+        "file": "Đã gửi một tệp",
+        "files_one": "Đã gửi {{count}} tệp",
+        "files_other": "Đã gửi {{count}} tệp",
+        "source": "#{{channel}} · {{server}}",
+        "unread": "Chưa đọc.",
+        "markRead": "Đánh dấu đã đọc",
+        "full": "{{weekday}}, {{date}} · {{time}}",
+        "weekday_0": "Chủ Nhật",
+        "weekday_1": "Thứ 2",
+        "weekday_2": "Thứ 3",
+        "weekday_3": "Thứ 4",
+        "weekday_4": "Thứ 5",
+        "weekday_5": "Thứ 6",
+        "weekday_6": "Thứ 7"
+    }
+}

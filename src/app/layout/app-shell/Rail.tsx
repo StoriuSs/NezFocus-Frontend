@@ -1,9 +1,10 @@
-import { useMemo, useRef, useState, type ReactNode } from 'react'
+import { Suspense, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Bell, GraduationCap, ListChecks, MessageCircle, Plus, type LucideIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { CountBadge } from '@/components/ui/count-badge'
+import { Popover, PopoverAnchor, PopoverTrigger } from '@/components/ui/popover'
 import { WithTooltip } from '@/components/ui/tooltip'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import {
@@ -13,10 +14,12 @@ import {
     serverSettingsPath,
     SERVERS_PATHS,
     useCreateServerDialog,
+    useInboxPlaces,
     useServers,
     type Server
 } from '@/features/servers'
 import { useServerReadState } from '@/features/messaging'
+import { InboxPanel, useUnreadNotificationCount } from '@/features/notifications'
 import { useDueTaskCount } from '@/features/tasks'
 import { cn } from '@/lib/utils'
 import { MeMenu } from './MeMenu'
@@ -215,6 +218,56 @@ function TasksItem() {
     )
 }
 
+/**
+ * "Thông báo" (S-NOTI-01): opens the inbox, a Popover beside the rail from
+ * the rail's edge, 8 away (06 › Quy ước); while open the item is `open`
+ * (C-05: `surface-2`, the icon `text-primary`, no bar, `aria-expanded`). Its
+ * badge counts the unread items (06 › Quy ước › Số), as "Việc" does. Esc, a
+ * click outside or on it again closes it, focus back here.
+ */
+function NotificationsItem() {
+    const { t } = useTranslation()
+    const unread = useUnreadNotificationCount()
+    const places = useInboxPlaces()
+    const [open, setOpen] = useState(false)
+    const name = t('shell.rail.notifications')
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            {/* The popover hangs from the rail's edge, not the icon's. */}
+            <PopoverAnchor asChild>
+                <li className='relative flex w-full justify-center'>
+                    <WithTooltip label={name} side='right'>
+                        <PopoverTrigger asChild>
+                            <button
+                                type='button'
+                                aria-label={
+                                    unread > 0 ? t('shell.rail.notificationsUnread', { name, count: unread }) : name
+                                }
+                                className={cn(
+                                    'flex size-12 items-center justify-center rounded-server transition-colors duration-micro',
+                                    open ? 'bg-surface-2 text-text-primary' : 'text-text-secondary hover:bg-surface-1'
+                                )}
+                            >
+                                <Bell className='size-[22px]' aria-hidden='true' />
+                            </button>
+                        </PopoverTrigger>
+                    </WithTooltip>
+                    <CountBadge
+                        count={unread}
+                        cutout='ring-bg'
+                        className='pointer-events-none absolute bottom-0 right-4'
+                    />
+                </li>
+            </PopoverAnchor>
+            {open ? (
+                <Suspense fallback={null}>
+                    <InboxPanel places={places} onClose={() => setOpen(false)} />
+                </Suspense>
+            ) : null}
+        </Popover>
+    )
+}
+
 function Group({ label, children, className }: { label: string; children: ReactNode; className?: string }) {
     return (
         <nav aria-label={label} className={className}>
@@ -229,7 +282,7 @@ function Group({ label, children, className }: { label: string; children: ReactN
  * avatar, which opens your menu (S-ME-01).
  *
  * Servers come in the order they were joined (GET /servers). Direct
- * messages and Notifications are pages of later milestones and say so.
+ * messages are a page of a later milestone and say so.
  */
 export function Rail({ id, className }: { id?: string; className?: string }) {
     const { t } = useTranslation()
@@ -252,7 +305,7 @@ export function Rail({ id, className }: { id?: string; className?: string }) {
             <Group label={t('shell.rail.pages')} className='w-full'>
                 <PageItem to='/study' icon={GraduationCap} name={t('shell.rail.study')} />
                 <TasksItem />
-                <SoonItem icon={Bell} name={t('shell.rail.notifications')} />
+                <NotificationsItem />
             </Group>
             <MeMenu />
         </div>

@@ -57,6 +57,8 @@
       "study": "Study",
       "tasks": "To-do",
       "notifications": "Notifications",
+      "notificationsUnread_one": "{{name}}, {{count}} unread",
+      "notificationsUnread_other": "{{name}}, {{count}} unread",
       "tasksDue_one": "{{name}}, {{count}} task overdue or due today",
       "tasksDue_other": "{{name}}, {{count}} tasks overdue or due today"
     },

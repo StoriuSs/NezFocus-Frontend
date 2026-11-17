@@ -1,0 +1,47 @@
+{
+    "inbox": {
+        "title": "Notifications",
+        "readAll": "Mark all read",
+        "readAllLabel": "Mark every notification as read",
+        "settings": "Notification settings",
+        "loading": "Loading notifications",
+        "loadError": "Couldn't load notifications",
+        "moreError": "Couldn't load more",
+        "retry": "Try again",
+        "end": "That's every notification from the last 90 days",
+        "emptyTitle": "No notifications yet",
+        "empty": "When someone mentions you, replies to you, gives you a task or sends a friend request, you'll see it here.",
+        "newItems_one": "{{count}} new notification",
+        "newItems_other": "{{count}} new notifications",
+        "offline": "You need a network connection",
+        "lostAccess": "You can no longer view this channel"
+    },
+    "group": {
+        "today": "Today",
+        "yesterday": "Yesterday",
+        "earlier": "Earlier"
+    },
+    "row": {
+        "mention": "{{name}} mentioned you",
+        "mentionWide": "{{name}} mentioned {{whom}}",
+        "reply": "{{name}} replied to you",
+        "deletedAccount": "Deleted account",
+        "image": "Sent an image",
+        "images_one": "Sent {{count}} image",
+        "images_other": "Sent {{count}} images",
+        "file": "Sent a file",
+        "files_one": "Sent {{count}} file",
+        "files_other": "Sent {{count}} files",
+        "source": "#{{channel}} · {{server}}",
+        "unread": "Unread.",
+        "markRead": "Mark as read",
+        "full": "{{weekday}}, {{date}} · {{time}}",
+        "weekday_0": "Sunday",
+        "weekday_1": "Monday",
+        "weekday_2": "Tuesday",
+        "weekday_3": "Wednesday",
+        "weekday_4": "Thursday",
+        "weekday_5": "Friday",
+        "weekday_6": "Saturday"
+    }
+}

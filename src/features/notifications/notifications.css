@@ -1,0 +1,9 @@
+/*
+ * The classes of the inbox (tailwind.notifications.config.js, D-193): only
+ * the utilities the notifications feature's files use that the main
+ * stylesheet lacks, loaded with the inbox's chunk. The base styles and the
+ * design tokens come from src/index.css, loaded first.
+ */
+@config "../../../tailwind.notifications.config.js";
+
+@tailwind utilities;

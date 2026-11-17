@@ -82,7 +82,8 @@ react-starter/
     │   │   │                  #   InvitesSettings, Pagination; members/, roles/)
     │   │   ├── hooks/         # useFoldedCategories (the categories folded, kept in this browser), useMoveAwayFrom,
     │   │   │                  #   useServerGoneWatch (D-143, D-178: starts liveServers, run by the AppShell),
-    │   │   │                  #   useGoneServerPath (where a page of a server gone goes)
+    │   │   │                  #   useGoneServerPath (where a page of a server gone goes),
+    │   │   │                  #   useInboxPlaces (the names and paths the inbox is handed)
     │   │   ├── lib/           # paths (SERVERS_PATHS and channelPath, messagePath, messageLink, invitePath,
     │   │   │                  #   serverSettingsPath, roleEditPath, isId), app-links (how a link in a message
     │   │   │                  #   shows: a message chip, "can't view", a page of the app, D-117; and a channel
@@ -143,6 +144,12 @@ react-starter/
     │   │                      #   calendar, who may do what, refusals the form names),
     │   │                      #   held-tasks.store.ts (rows standing still while their Toast shows),
     │   │                      #   tasks.css (its classes, D-193)
+    │   ├── notifications/     # The inbox (S-NOTI-01), a Popover the rail opens, lazy with its own
+    │   │                      #   stylesheet (index.ts: InboxPanel; useUnreadNotificationCount for the
+    │   │                      #   rail's badge, not lazy): api/ (one's inbox 30 a page, marking read,
+    │   │                      #   liveNotifications: notification.* into the cache), components/ (the
+    │   │                      #   panel, NotificationRow C-29), lib/ (cache changes, day groups and times,
+    │   │                      #   a row's words), notifications.css (its classes, D-193)
     │   └── users/             # The profile and the account's settings
     │       ├── api/           # users.api.ts (fetchProfile, removeAvatar),
     │       │                  #   settings.api.ts (fetchSettings, settingsQuery, updateSettings), hooks, keys
@@ -380,7 +387,10 @@ Habits worth keeping:
   `users, realtime ← messaging ← servers`: the channel page shows the chat,
   which hears the socket through `onRealtimeEvent`, realtime knowing no
   feature; `users, realtime ← tasks ← servers`: the channel page shows the
-  Task Board, and the channel settings ask it how many tasks are not done). When the one imported
+  Task Board, and the channel settings ask it how many tasks are not done;
+  `users, realtime, messaging ← notifications ← servers`: the inbox reads
+  a message's words with the chat's mention names, and the servers feature
+  hands it the names of channels and servers). When the one imported
   needs the other, it declares a port and is handed it: deleting the account
   (auth) asks the servers it owns through `ServerOwnership`
   (`auth/lib/server-ownership.ts`), the servers feature answers
@@ -401,7 +411,12 @@ Habits worth keeping:
   (D-197): `servers/components/MyTasksRoute.tsx` (the route `/tasks`) and
   `MyTasksColumn.tsx` hand the tasks feature one's servers in the rail's
   order (`hooks/useTaskServers.tsx`) and the same `PlaceOf`
-  (`useTaskPlaceOf`).
+  (`useTaskPlaceOf`). The inbox (S-NOTI-01) takes `InboxPlaces`
+  (`notifications/types.ts`: an item's channel and server by name, a channel
+  mentioned in a message, the path to a message) from
+  `servers/hooks/useInboxPlaces.ts`, handed by the rail (the app wires the
+  two), so the servers feature may later use notifications (L8: the
+  "Xem" of a removal's Toast opens the inbox).
 - **Shared code imports no feature.** `src/lib`, `src/components` and
   `src/hooks` are refused any `@/features/...` import. When shared code needs
   something a feature owns, it says what in an interface and is handed it: the

@@ -1,5 +1,5 @@
 import { folded } from '@/lib/utils'
-import { MENTION_TOKEN, parseMessage, type Inline, type MentionPart } from './markdown'
+import { MENTION_TOKEN, parseMessage, plainText, type Inline, type MentionPart } from './markdown'
 import type { MentionChannel, MentionedRole, MentionedUser } from '../types'
 
 /** The mentions written in a message where they count: never in code or a link (D-172). */
@@ -79,6 +79,13 @@ const partOf = (kind: string, id: string): MentionPart => ({
     kind: kind === '@' ? 'user' : kind === '@&' ? 'role' : 'channel',
     id
 })
+
+/**
+ * What a message says without its markers, each mention by its name: a pinned
+ * card's words, and an inbox row's (06 S-NOTI-01: "@An mai bạn mang laptop…").
+ */
+export const plainMessage = (content: string, names: MentionNames, words: MentionWords): string =>
+    plainText(content, (part) => mentionName(part, names, words))
 
 /**
  * The message as "Copy text" gives it (owner, 14/11/2026): each token as its

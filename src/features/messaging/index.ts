@@ -18,6 +18,9 @@ export const ChatDropZone = lazy(() =>
 )
 export { useChannelReadState, useMentionedChannels, useMentionTotal, useServerReadState } from './api/useReadStates'
 export { forgetChannels } from './api/forgetChannels'
+// A message's words without markers, mentions by name: the inbox's rows (06 S-NOTI-01).
+export { plainMessage, type MentionNames, type MentionWords } from './lib/mentions'
+export { useMentionWords } from './hooks/useMentionWords'
 export type {
     AppLink,
     ChatPermissions,

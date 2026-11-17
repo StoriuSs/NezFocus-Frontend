@@ -328,6 +328,8 @@ test('a message link opens the message for someone else, lit up; one they cannot
     await expect(solution.locator('strong')).toHaveText('Lời giải câu 3:')
     await expect(solution.locator('code')).toHaveText('x = r cos φ')
     await shoot(an.page, 'chat01-formatting')
+    // Its row is keyed by its nonce until the saved copy comes back: link the saved id.
+    await expect(solution).not.toHaveAttribute('data-row-key', /^nonce:/)
     const id = await solution.getAttribute('data-row-key')
     const origin = new URL(an.page.url()).origin
     const missing = crypto.randomUUID()

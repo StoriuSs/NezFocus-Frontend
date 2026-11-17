@@ -15,8 +15,7 @@ import { cn } from '@/lib/utils'
 import { usePinMessage } from '../api/usePinMessage'
 import { usePins } from '../api/usePins'
 import { useMentionWords } from '../hooks/useMentionWords'
-import { plainText } from '../lib/markdown'
-import { mentionName } from '../lib/mentions'
+import { plainMessage } from '../lib/mentions'
 import { messageTime } from '../lib/message-time'
 import type { MentionChannel, PinnedMessage } from '../types'
 
@@ -161,7 +160,7 @@ function PinCard({
     const name = pin.author?.displayName ?? pin.author?.username ?? t('message.deletedAccount')
     const words = useMentionWords()
     const names = { users: pin.mentionUsers, roles: pin.mentionRoles, channel }
-    const content = plainText(pin.content, (part) => mentionName(part, names, words))
+    const content = plainMessage(pin.content, names, words)
 
     return (
         <li className='group relative'>

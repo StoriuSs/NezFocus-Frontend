@@ -183,6 +183,14 @@ S-TASK-04) and its column are two more lazy exports, `MyTasks` and
 needs `useDueTaskCount` at once, so it is not lazy: it sits in the AppShell's
 chunk, not in the first download (M3 L5).
 
+The inbox (S-NOTI-01) is the same again: `src/features/notifications/index.ts`
+exports `InboxPanel` lazily, the rail shows it inside a `Suspense` (fallback
+none) the first time "Thông báo" opens, with its words (`notifications`) and
+its classes (`tailwind.notifications.config.js`, `notifications.css`, a
+chunk of its own name, `NotificationStyles-<hash>.css`, "Notifications CSS"
+in `.size-limit.mjs`). The badge's `useUnreadNotificationCount` is not lazy
+and sits in the AppShell's chunk (M3 L6b).
+
 The pins panel (S-CHAT-02) is in the same chunk: `index.ts` exports
 `PinsPanel` as `lazy(() => import('./components/ChannelChat').then((chat) =>
 ({ default: chat.PinsPanel })))`, and `ChannelChat.tsx` re-exports it, so it

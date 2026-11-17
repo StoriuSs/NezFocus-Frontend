@@ -57,6 +57,15 @@ const tasksApi = vi.hoisted(() => ({
     )
 }))
 vi.mock('@/features/tasks/api/tasks.api', () => tasksApi)
+// One's inbox (the rail's badge, S-NOTI-01): empty unless a test says otherwise.
+const notificationsApi = vi.hoisted(() => ({
+    INBOX_PAGE: 30,
+    fetchNotifications: vi.fn(
+        async (..._: unknown[]): Promise<unknown> => ({ items: [], unreadCount: 0, hasMore: false })
+    ),
+    markNotificationsRead: vi.fn(async (..._: unknown[]) => 0)
+}))
+vi.mock('@/features/notifications/api/notifications.api', () => notificationsApi)
 // The member panel's lists: nobody, unless a test says otherwise.
 vi.mock('@/features/servers/api/roles.api', async (original) => ({
     ...(await original<typeof import('@/features/servers/api/roles.api')>()),
@@ -245,7 +254,49 @@ describe('AppShell (S-SHELL-01)', () => {
             expect(dm).toHaveAttribute('aria-disabled', 'true')
             await userEvent.click(dm)
             expect(router.state.location.pathname).toBe('/study')
-            expect(screen.getByRole('button', { name: 'Notifications · coming soon' })).toBeInTheDocument()
+        })
+
+        it('counts on Notifications the unread items, and opens the inbox over the page (S-NOTI-01)', async () => {
+            const mention = {
+                id: '0193a000-0000-7000-8000-000000000001',
+                type: 'mention',
+                serverId: 'nd',
+                channelId: 'hoi-dap',
+                messageId: 'm1',
+                roleId: null,
+                reason: 'user',
+                actor: { id: 'lan', username: 'lan.pham', displayName: 'Lan', avatarUrl: null },
+                message: {
+                    id: 'm1',
+                    content: 'bring the laptop tomorrow',
+                    mentionUsers: [],
+                    mentionRoles: [],
+                    files: { count: 0, images: 0 }
+                },
+                readAt: null,
+                createdAt: new Date().toISOString()
+            }
+            notificationsApi.fetchNotifications.mockResolvedValue({ items: [mention], unreadCount: 1, hasMore: false })
+            const router = renderAt('/study')
+            const pages = screen.getByRole('navigation', { name: 'Pages' })
+            const bell = await within(pages).findByRole('button', { name: 'Notifications, 1 unread' })
+            expect(within(bell.closest('li')!).getByText('1')).toBeInTheDocument()
+            expect(bell).toHaveAttribute('aria-expanded', 'false')
+
+            await userEvent.click(bell)
+            const inbox = await screen.findByRole('dialog', { name: 'Notifications' }, { timeout: 5000 })
+            expect(bell).toHaveAttribute('aria-expanded', 'true')
+            expect(
+                await within(inbox).findByRole('link', {
+                    name: /^Unread\. Lan mentioned you: bring the laptop tomorrow/
+                })
+            ).toHaveFocus()
+            // Over the page, which stays where it was.
+            expect(router.state.location.pathname).toBe('/study')
+
+            await userEvent.keyboard('{Escape}')
+            await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Notifications' })).not.toBeInTheDocument())
+            expect(bell).toHaveFocus()
         })
 
         it('counts on To-do the tasks overdue or due today, and opens the page with its column (S-TASK-04)', async () => {
@@ -555,6 +606,8 @@ describe('AppShell (S-SHELL-01)', () => {
                 render(<Toaster />)
                 const router = renderAt('/channels/nd/hoi-dap')
                 expect(await screen.findByRole('heading', { level: 1, name: 'hoi-dap' })).toBeInTheDocument()
+                // As the API: the list read again after the kick no longer has the server.
+                serversApi.fetchServers.mockResolvedValue([OT])
 
                 removed('nd', 'kick', 'Spam')
 

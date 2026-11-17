@@ -12,12 +12,20 @@ import { create } from 'zustand'
  * coordinates; the Toaster reads them (`toastPlace`).
  */
 
-/** The edges a toast follows: the content area's right, the top of the bottom bar, the top of the "N new" button. */
-export type ToastEdge = 'contentRight' | 'barTop' | 'liftTop'
+/**
+ * The edges a toast follows: the content area's right, the top of the bottom
+ * bar, the top of the "N new" button; and the inbox's right while it is open.
+ */
+export type ToastEdge = 'contentRight' | 'barTop' | 'liftTop' | 'panelRight'
 
 type ToastEdges = Record<ToastEdge, number | null>
 
-export const useToastArea = create<ToastEdges>(() => ({ contentRight: null, barTop: null, liftTop: null }))
+export const useToastArea = create<ToastEdges>(() => ({
+    contentRight: null,
+    barTop: null,
+    liftTop: null,
+    panelRight: null
+}))
 
 /** The element of each edge on the page now. */
 const elements = new Map<ToastEdge, HTMLElement>()
@@ -27,10 +35,10 @@ const elements = new Map<ToastEdge, HTMLElement>()
  * moves the "N new" button up without changing its size.
  */
 function measure() {
-    const next: ToastEdges = { contentRight: null, barTop: null, liftTop: null }
+    const next: ToastEdges = { contentRight: null, barTop: null, liftTop: null, panelRight: null }
     for (const [edge, element] of elements) {
         const rect = element.getBoundingClientRect()
-        next[edge] = edge === 'contentRight' ? rect.right : rect.top
+        next[edge] = edge === 'contentRight' || edge === 'panelRight' ? rect.right : rect.top
     }
     useToastArea.setState(next)
 }
@@ -77,7 +85,11 @@ export function toastPlace(edges: ToastEdges, viewport: { width: number; height:
             : edges.barTop !== null
               ? viewport.height - edges.barTop + GAP
               : CORNER
-    if (!wide) return { position: 'bottom-center', offset: { left: CORNER, right: CORNER, bottom } }
+    if (!wide) {
+        return edges.panelRight === null
+            ? { position: 'bottom-center', offset: { left: CORNER, right: CORNER, bottom } }
+            : { position: 'bottom-right', offset: { right: GAP, bottom } }
+    }
     const right = edges.contentRight === null ? CORNER : viewport.width - edges.contentRight + GAP
     return { position: 'bottom-right', offset: { right, bottom } }
 }

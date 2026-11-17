@@ -4,7 +4,7 @@ import { act, render } from '@testing-library/react'
 import { toastPlace, useToastArea, useToastEdge, type ToastEdge } from '../useToastArea'
 
 const VIEWPORT = { width: 1440, height: 900 }
-const NONE = { contentRight: null, barTop: null, liftTop: null }
+const NONE = { contentRight: null, barTop: null, liftTop: null, panelRight: null }
 
 describe('Where a toast sits (C-16)', () => {
     it('sits 24 from the corner of the window on a page with no content area to follow', () => {
@@ -30,11 +30,18 @@ describe('Where a toast sits (C-16)', () => {
     })
 
     it('sits in the middle at the bottom below 1024, still above the composer', () => {
-        expect(
-            toastPlace({ contentRight: 768, barTop: 820, liftTop: null }, { width: 768, height: 900 }, false)
-        ).toEqual({
+        expect(toastPlace({ ...NONE, contentRight: 768, barTop: 820 }, { width: 768, height: 900 }, false)).toEqual({
             position: 'bottom-center',
             offset: { left: 24, right: 24, bottom: 900 - 820 + 16 }
+        })
+    })
+
+    it('goes to the bottom right of the window below 1024 while the inbox is open, off its middle (06 toast-768)', () => {
+        expect(
+            toastPlace({ ...NONE, contentRight: 768, barTop: 820, panelRight: 520 }, { width: 768, height: 900 }, false)
+        ).toEqual({
+            position: 'bottom-right',
+            offset: { right: 16, bottom: 900 - 820 + 16 }
         })
     })
 })

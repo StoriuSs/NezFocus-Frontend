@@ -499,6 +499,33 @@ words for a full channel, else the API's. The form's refusals are its own
 (`lib/task-errors.ts`, FormMessage): those writes say `errorToast: false`.
 Deleting a task already gone counts as done.
 
+## The inbox, kept live
+
+One's inbox (S-NOTI-01, `src/features/notifications/api/`) is one infinite
+query, `notificationKeys.inbox()` (`useInbox`: 30 items a page by cursor,
+newest first, the first page with the unread count of the channels one
+views). The rail reads its first page at once for the badge
+(`useUnreadNotificationCount`), and it is never read again on its own:
+`liveNotifications.ts` puts `notification.created` in its place (once: the
+inbox read again may hold it), marks items read on `notification.read` (one's
+other tabs, or the channel read, D-199) and takes items out on
+`notification.deleted`, each taking the count the event carries; the changes
+are pure functions (`lib/inbox-cache.ts`). Each `ready` reads it again, and
+so do the signals after which the channels one views may change (`STANDING`,
+gathered and spread like the tasks'): the API leaves out the items of a
+channel one no longer views (REQ-NOTIF-03).
+
+Marking read (`useMarkNotificationsRead`: one item, or "Đọc hết" up to the
+newest item held) stops any read of the inbox on its way, then takes the
+dots and the count down at once. The count after comes with the
+`notification.read` the API sends for every mark, in order with the other
+events; the answer's own count is left, as an item created meanwhile would
+be counted out of it. A failure reads the inbox again, with no toast
+(`errorToast: false`), as marking a channel read does. A page whose items
+events took out keeps its cursor (`nextCursor`), so the list does not end
+early. Clicking an item of a channel no longer in the servers
+list takes that channel's items out at once (`hideChannelItems`).
+
 ## The servers, kept live
 
 Socket events about a server (`server.*`, `channel.*`, `category.*`,
