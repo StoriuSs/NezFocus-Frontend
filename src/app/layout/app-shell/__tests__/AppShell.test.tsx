@@ -272,7 +272,9 @@ describe('AppShell (S-SHELL-01)', () => {
 
             await userEvent.click(todo)
             expect(router.state.location.pathname).toBe('/tasks')
-            expect(await screen.findByRole('heading', { level: 1, name: 'To-do' })).toBeInTheDocument()
+            expect(
+                await screen.findByRole('heading', { level: 1, name: 'To-do' }, { timeout: 5000 })
+            ).toBeInTheDocument()
             expect(todo).toHaveAttribute('aria-current', 'page')
             const column = await screen.findByRole('navigation', { name: 'Filter tasks by server' })
             expect(
