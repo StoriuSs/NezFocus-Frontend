@@ -61,7 +61,8 @@ const css = tags('link')
     .filter(Boolean)
     .map(local)
 
-// A split feature's stylesheet: Vite names it after the lazy chunk (ChannelChat-<hash>.css).
+// A split feature's stylesheet: Vite names it after the lazy chunk (ChannelChat-<hash>.css);
+// the tasks' has a chunk of its own name, shared by the board and the detail (vite.config.ts).
 const chunkCss = (chunk) => {
     const found = readdirSync('dist/assets')
         .filter((file) => file.startsWith(`${chunk}-`) && file.endsWith('.css'))
@@ -70,7 +71,7 @@ const chunkCss = (chunk) => {
     return found
 }
 const chatCss = chunkCss('ChannelChat')
-const tasksCss = chunkCss('TaskBoard')
+const tasksCss = chunkCss('TaskStyles')
 
 // A split stylesheet loads after the main one: a class written in both would
 // let the later copy beat the main file's own rules everywhere in the app
@@ -106,5 +107,5 @@ export default [
     { name: 'Initial JS (gzip)', path: js, gzip: true, limit: '246.75 kB' },
     { name: 'Initial CSS (gzip)', path: css, gzip: true, limit: '8.80 kB' },
     { name: 'Chat CSS (gzip)', path: chatCss, gzip: true, limit: '647 B' },
-    { name: 'Tasks CSS (gzip)', path: tasksCss, gzip: true, limit: '625 B' }
+    { name: 'Tasks CSS (gzip)', path: tasksCss, gzip: true, limit: '880 B' }
 ]
