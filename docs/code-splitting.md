@@ -159,6 +159,17 @@ as the chunk's own stylesheet; `tailwind.config.js` leaves that folder out,
 so the stylesheet loaded before the first screen does not grow with the chat
 (CONSTRAINTS.md, "Chat CSS" in `.size-limit.mjs`; owner's call at M2 L4a).
 
+A channel's Task Board (S-TASK-01) is a chunk of its own the same way:
+`src/features/tasks/index.ts` exports `TaskBoard` lazily, and the channel
+page shows it in the right panel inside a `Suspense` whose fallback is the
+panel with a loader (the board draws the panel itself, its search field in
+the header). Its form, pickers, words and hooks come with it, and so do its
+classes: `tailwind.tasks.config.js` builds `tasks.css` the way the chat's is
+built (`tailwind.feature.js` holds the shared steps; the main config leaves
+both folders out), "Tasks CSS" in `.size-limit.mjs` (D-193, M3 L3). Only
+`useOpenTaskCount` is not lazy: the channel settings dialog, itself lazy,
+says how many tasks turning the board off hides.
+
 The pins panel (S-CHAT-02) is in the same chunk: `index.ts` exports
 `PinsPanel` as `lazy(() => import('./components/ChannelChat').then((chat) =>
 ({ default: chat.PinsPanel })))`, and `ChannelChat.tsx` re-exports it, so it

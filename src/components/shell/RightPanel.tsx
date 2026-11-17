@@ -60,18 +60,26 @@ export function usePanel(
 /**
  * RightPanel (C-08): 280 wide, `surface-1`, a 48-high header with the title.
  * As a sheet it also has a close button, and Esc or a click outside closes
- * it, giving focus back to the button that opened it; a menu opened from it
- * (drawn elsewhere in the page) counts as inside, and Esc closes that first.
+ * it, giving focus back to the button that opened it; a menu, a dialog or a
+ * Toast opened from it (drawn elsewhere in the page) counts as inside, and
+ * Esc closes that first.
+ * `heading` takes the title's place in the header (the Task Board's search
+ * field, 05 S-TASK-01 `search`; the title still names the panel), `actions`
+ * go at its end, before the sheet's close button.
  */
 export function RightPanel({
     state,
     buttonRef,
     title,
+    heading,
+    actions,
     children
 }: {
     state: PanelState
     buttonRef: RefObject<HTMLButtonElement | null>
     title: string
+    heading?: ReactNode
+    actions?: ReactNode
     children: ReactNode
 }) {
     const { t } = useTranslation()
@@ -89,11 +97,14 @@ export function RightPanel({
         const onKey = (event: KeyboardEvent) => {
             if (event.key === 'Escape' && !event.defaultPrevented) closeAndReturn()
         }
-        // A menu opened from the sheet is drawn outside it (a portal): a click there is not outside.
+        // A menu, dialog or Toast opened from the sheet is drawn outside it (a portal): a click there is not outside.
         const onPointer = (event: PointerEvent) => {
             const target = event.target as Element
             if (ref.current?.contains(target) || buttonRef.current?.contains(target)) return
-            if (target.closest?.('[data-radix-popper-content-wrapper]')) return
+            if (target.closest?.('[data-radix-popper-content-wrapper], [data-sonner-toaster]')) return
+            // A dialog over the page (its scrim too) has the clicks while it is open.
+            if (document.querySelector('[role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"]'))
+                return
             close()
         }
         document.addEventListener('keydown', onKey)
@@ -115,7 +126,8 @@ export function RightPanel({
             )}
         >
             <header className='flex h-12 shrink-0 items-center gap-2 border-b pl-4 pr-2'>
-                <h2 className='flex-1 truncate text-headline text-text-primary'>{title}</h2>
+                {heading ?? <h2 className='flex-1 truncate text-headline text-text-primary'>{title}</h2>}
+                {actions}
                 {sheet ? (
                     <WithTooltip label={t('shell.closePanel')} side='bottom'>
                         <IconButton label={t('shell.closePanel')} onClick={closeAndReturn}>

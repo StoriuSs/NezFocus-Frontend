@@ -25,6 +25,8 @@ const layoutApi = {
     moveInLayout: vi.fn()
 }
 vi.mock('@/features/servers/api/layout.api', () => layoutApi)
+const tasksApi = { fetchOpenTasks: vi.fn() }
+vi.mock('@/features/tasks/api/tasks.api', () => tasksApi)
 
 const { default: ChannelDialogs } = await import('../components/dialogs/ChannelDialogs')
 const { useChannelDialogs } = await import('../channel-dialogs.store')
@@ -378,6 +380,47 @@ describe('Channel settings (S-SET-05)', () => {
         expect(screen.getByRole('switch', { name: 'Private channel' })).toBeEnabled()
         await userEvent.click(screen.getByRole('button', { name: 'Save' }))
         await waitFor(() => expect(screen.getByRole('switch', { name: 'Private channel' })).toBeDisabled())
+    })
+
+    it('turns the Task Board on for a text channel, none for a room (S-SET-05, D-88)', async () => {
+        layoutApi.updateChannel.mockResolvedValue(OT)
+        useChannelDialogs.getState().show({ kind: 'channelSettings', serverId: 'ot', channelId: 'hoi-dap' })
+        renderDialogs()
+        await userEvent.click(await screen.findByRole('switch', { name: 'Task Board' }))
+        expect(screen.queryByRole('status')).not.toBeInTheDocument()
+        await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+        await waitFor(() =>
+            expect(layoutApi.updateChannel).toHaveBeenCalledWith('ot', 'hoi-dap', { taskBoardEnabled: true })
+        )
+        expect(tasksApi.fetchOpenTasks).not.toHaveBeenCalled()
+
+        useChannelDialogs.getState().show({ kind: 'channelSettings', serverId: 'ot', channelId: 'phong' })
+        await screen.findByRole('dialog')
+        expect(screen.queryByRole('switch', { name: 'Task Board' })).not.toBeInTheDocument()
+    })
+
+    it('says what turning the board off hides, under the switch, without a dialog (`taskboard-off`)', async () => {
+        const board = {
+            ...OT,
+            channels: OT.channels.map((one) => (one.id === 'hoi-dap' ? { ...one, taskBoardEnabled: true } : one))
+        }
+        tasksApi.fetchOpenTasks.mockResolvedValue({ items: [{ id: 't1' }, { id: 't2' }], doneCount: 5, hasMore: false })
+        layoutApi.updateChannel.mockResolvedValue(board)
+        useChannelDialogs.getState().show({ kind: 'channelSettings', serverId: 'ot', channelId: 'hoi-dap' })
+        renderDialogs(board)
+        const toggle = await screen.findByRole('switch', { name: 'Task Board' })
+        expect(toggle).toBeChecked()
+        await userEvent.click(toggle)
+        expect(
+            await screen.findByText(
+                "2 open tasks will be hidden from the channel and from everyone's tasks, with no more reminders. Turn it on again to bring them back as they were."
+            )
+        ).toBeInTheDocument()
+        expect(tasksApi.fetchOpenTasks).toHaveBeenCalledWith('hoi-dap', '')
+        await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+        await waitFor(() =>
+            expect(layoutApi.updateChannel).toHaveBeenCalledWith('ot', 'hoi-dap', { taskBoardEnabled: false })
+        )
     })
 
     it('marks the welcome channel, and refuses a rename onto another channel of the category', async () => {

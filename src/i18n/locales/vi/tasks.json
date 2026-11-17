@@ -1,0 +1,143 @@
+{
+    "board": {
+        "title": "Task Board",
+        "search": "Tìm việc",
+        "searchPlaceholder": "Tìm việc theo tên",
+        "closeSearch": "Đóng tìm kiếm",
+        "add": "Thêm việc",
+        "loading": "Đang tải danh sách việc",
+        "loadError": "Không tải được danh sách việc",
+        "retry": "Thử lại",
+        "more": "Xem thêm",
+        "offline": "Cần kết nối mạng",
+        "group": {
+            "doing": "ĐANG LÀM — {{count}}",
+            "todo": "CẦN LÀM — {{count}}",
+            "done": "XONG — {{count}}"
+        },
+        "empty": {
+            "title": "Chưa có việc nào",
+            "body": "Thêm việc đầu tiên để cả nhóm cùng theo dõi.",
+            "readOnly": "Chưa có việc nào trong kênh này.",
+            "action": "Thêm việc đầu tiên"
+        },
+        "noMatch": {
+            "title": "Không có việc nào khớp “{{query}}”",
+            "body": "Thử từ khóa khác."
+        },
+        "off": {
+            "title": "Task Board đã tắt",
+            "body": "Người quản lý kênh vừa tắt Task Board của kênh này. Việc cũ được giữ, bật lại thì hiện lại.",
+            "action": "Mở cài đặt kênh"
+        }
+    },
+    "status": {
+        "todo": "Cần làm",
+        "doing": "Đang làm",
+        "done": "Xong"
+    },
+    "people": {
+        "deleted": "Tài khoản đã bị xóa"
+    },
+    "row": {
+        "markDone": "Đánh dấu xong: {{title}}",
+        "reopen": "Mở lại: {{title}}",
+        "markDoneHint": "Đánh dấu xong",
+        "reopenHint": "Mở lại",
+        "readOnly": "Chỉ người được giao, người tạo hoặc người quản lý việc đổi được trạng thái",
+        "unassigned": "Chưa giao",
+        "more": "Tùy chọn của việc {{title}}",
+        "label": "{{title}}, {{status}}, {{due}}, {{people}}",
+        "andMore": "+{{count}}"
+    },
+    "menu": {
+        "status": "Trạng thái",
+        "edit": "Sửa",
+        "delete": "Xóa việc"
+    },
+    "due": {
+        "today": "Hôm nay",
+        "tomorrow": "Ngày mai",
+        "overdue": "Quá hạn",
+        "done": "Xong",
+        "none": "Không hạn",
+        "weekday": {
+            "0": "CN",
+            "1": "Thứ 2",
+            "2": "Thứ 3",
+            "3": "Thứ 4",
+            "4": "Thứ 5",
+            "5": "Thứ 6",
+            "6": "Thứ 7"
+        }
+    },
+    "toast": {
+        "done": "Đã xong “{{title}}”",
+        "reopened": "Đã mở lại “{{title}}”",
+        "moved": "Đã chuyển “{{title}}” sang {{status}}",
+        "undo": "Hoàn tác",
+        "added": "Đã thêm “{{title}}”",
+        "deleted": "Đã xóa “{{title}}”",
+        "full": "Kênh đã có 500 việc chưa xong. Đánh dấu xong hoặc xóa bớt rồi mở lại.",
+        "gone": "Việc này không còn khả dụng"
+    },
+    "form": {
+        "createTitle": "Thêm việc",
+        "editTitle": "Sửa việc",
+        "title": "Tiêu đề",
+        "titlePlaceholder": "VD: Nộp báo cáo giữa kỳ",
+        "description": "Mô tả (tùy chọn)",
+        "due": "Hạn",
+        "noDue": "Chưa đặt hạn",
+        "assignees": "Người được giao",
+        "unassigned": "Chưa giao",
+        "people_one": "{{count}} người",
+        "people_other": "{{count}} người",
+        "cancel": "Hủy",
+        "create": "Thêm việc",
+        "save": "Lưu",
+        "titleRequired": "Nhập tiêu đề",
+        "pastDue": "Hạn phải sau thời điểm hiện tại",
+        "invalidAssignee": "{{names}} không còn xem được kênh này nên không thể giao việc. Bỏ chọn {{names}} rồi lưu lại.",
+        "full": "Kênh đã có 500 việc chưa xong. Đánh dấu xong hoặc xóa bớt để thêm việc mới.",
+        "boardOff": "Task Board của kênh này vừa bị tắt nên không thêm được việc.",
+        "forbidden": "Bạn không còn quyền làm việc này",
+        "offline": "Cần kết nối mạng để lưu việc."
+    },
+    "picker": {
+        "today": "Hôm nay",
+        "tomorrow": "Ngày mai",
+        "nextFriday": "Thứ 6 tới",
+        "previousMonth": "Tháng trước",
+        "nextMonth": "Tháng sau",
+        "monthTitle": "Tháng {{month}}, {{year}}",
+        "time": "Giờ",
+        "timeError": "Giờ dạng 23:59",
+        "clear": "Bỏ hạn",
+        "apply": "Xong",
+        "weekday": {
+            "0": "CN",
+            "1": "T2",
+            "2": "T3",
+            "3": "T4",
+            "4": "T5",
+            "5": "T6",
+            "6": "T7"
+        }
+    },
+    "assignee": {
+        "search": "Tìm thành viên",
+        "me": "Tôi ({{name}})",
+        "picked_one": "Đã chọn {{count}}",
+        "picked_other": "Đã chọn {{count}}",
+        "none": "Không có thành viên nào khớp",
+        "loading": "Đang tải thành viên",
+        "loadError": "Không tải được thành viên"
+    },
+    "delete": {
+        "title": "Xóa “{{title}}”?",
+        "body": "Việc biến mất khỏi Task Board và Việc cần làm của mọi người. Không hoàn tác được.",
+        "cancel": "Hủy",
+        "confirm": "Xóa việc"
+    }
+}

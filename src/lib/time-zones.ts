@@ -128,6 +128,20 @@ export function wallClock(at: Date, id?: string): WallClock {
     }
 }
 
+/**
+ * The moment a date and a clock name in zone `id` (the browser's own when
+ * not given): what "Thứ 6, 23/10 · 23:59" picked in a form is (C-43, in the
+ * account's zone, NFR-I18N-01). The zone's offset is read at a first guess
+ * and again at the moment found, so a summer-time change between the two
+ * still lands on the clock asked for.
+ */
+export function instantAt(wall: Omit<WallClock, 'weekday'>, id?: string): Date {
+    const offset = (at: Date) => (id ? offsetMinutes(id, at) : -at.getTimezoneOffset())
+    const asUtc = Date.UTC(wall.year, wall.month - 1, wall.day, wall.hour, wall.minute)
+    const first = new Date(asUtc - offset(new Date(asUtc)) * 60_000)
+    return new Date(asUtc - offset(first) * 60_000)
+}
+
 function gmtOf(minutes: number): string {
     const sign = minutes < 0 ? '−' : '+'
     const whole = Math.abs(minutes)

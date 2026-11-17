@@ -49,6 +49,11 @@ const pinsApi = vi.hoisted(() => ({
     unpinMessage: vi.fn()
 }))
 vi.mock('@/features/messaging/api/pins.api', () => pinsApi)
+// The Task Board of a channel with it on: no tasks yet.
+const tasksApi = vi.hoisted(() => ({
+    fetchOpenTasks: vi.fn(async (..._: unknown[]) => ({ items: [], doneCount: 0, hasMore: false }))
+}))
+vi.mock('@/features/tasks/api/tasks.api', () => tasksApi)
 // The member panel's lists: nobody, unless a test says otherwise.
 vi.mock('@/features/servers/api/roles.api', async (original) => ({
     ...(await original<typeof import('@/features/servers/api/roles.api')>()),
@@ -869,6 +874,43 @@ describe('AppShell (S-SHELL-01)', () => {
             await userEvent.click(members)
             expect(await screen.findByRole('complementary', { name: 'Members' })).toBeInTheDocument()
             expect(screen.queryByRole('complementary', { name: 'Pinned messages' })).not.toBeInTheDocument()
+        })
+
+        it('opens the Task Board only on a channel with it on, one panel at a time (S-TASK-01, C-08)', async () => {
+            serversApi.fetchServers.mockResolvedValue([
+                {
+                    ...OT,
+                    channels: OT.channels.map((item) =>
+                        item.id === 'hoi-dap' ? { ...item, taskBoardEnabled: true } : item
+                    )
+                }
+            ])
+            const router = renderAt('/channels/ot/hoi-dap')
+            const board = await screen.findByRole('button', { name: 'Task Board' })
+            // Closed at first, as the pins.
+            expect(board).toHaveAttribute('aria-pressed', 'false')
+            await userEvent.click(board)
+            // Its chunk loads the first time (lazy), the panel drawn by it then.
+            await waitFor(() =>
+                expect(
+                    within(screen.getByRole('complementary', { name: 'Task Board' })).getByRole('heading', {
+                        name: 'No tasks yet'
+                    })
+                ).toBeInTheDocument()
+            )
+            expect(tasksApi.fetchOpenTasks).toHaveBeenCalledWith('hoi-dap', '')
+
+            await userEvent.click(screen.getByRole('button', { name: 'Pinned messages' }))
+            expect(await screen.findByRole('complementary', { name: 'Pinned messages' })).toBeInTheDocument()
+            expect(screen.queryByRole('complementary', { name: 'Task Board' })).not.toBeInTheDocument()
+            expect(board).toHaveAttribute('aria-pressed', 'false')
+            await userEvent.click(board)
+            expect(await screen.findByRole('complementary', { name: 'Task Board' })).toBeInTheDocument()
+            expect(screen.queryByRole('complementary', { name: 'Pinned messages' })).not.toBeInTheDocument()
+
+            // Another channel, its board off: no button.
+            await act(() => router.navigate('/channels/ot/chao-mung'))
+            await waitFor(() => expect(screen.queryByRole('button', { name: 'Task Board' })).not.toBeInTheDocument())
         })
 
         it('lets a moderator unpin from a card of the sheet; Esc closes the card menu, not the sheet', async () => {

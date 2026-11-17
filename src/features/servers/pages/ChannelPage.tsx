@@ -1,6 +1,6 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { Hash, LampDesk, Pin, Users, Volume2 } from 'lucide-react'
+import { Hash, LampDesk, ListChecks, Pin, Users, Volume2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import '@/i18n/servers'
@@ -12,9 +12,12 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { IconButton } from '@/components/ui/icon-button'
 import { WithTooltip } from '@/components/ui/tooltip'
 import { ChannelChat, ChatDropZone, PinsPanel } from '@/features/messaging'
+import { TaskBoard } from '@/features/tasks'
 import { useMentionSource } from '../api/useMentionSource'
 import { MemberPanel } from '../components/member-panel/MemberPanel'
 import { useServers } from '../api/useServers'
+import { useTaskBoardPlace } from '../api/useTaskBoardPlace'
+import { useChannelDialogs } from '../channel-dialogs.store'
 import { useGoneServerPath } from '../hooks/useGoneServerPath'
 import { linkedServers, readAppLink, type LinkedServer } from '../lib/app-links'
 import { chatPermissions } from '../lib/chat-permissions'
@@ -115,8 +118,11 @@ function Removed({ to }: { to: string }) {
  * at first and remembered as a column (SRS 1.71); a card opens its message's
  * link, closing the panel when it covers the chat (a sheet below 1280),
  * focus then on the message. [👥] opens the members (S-SHELL-01, D-175),
- * open at first as a column. One panel at a time: opening one closes the
- * other (S-CHAT-02 › Mở từ).
+ * open at first as a column. [list-checks], on a channel with its Task
+ * Board on, opens the board (S-TASK-01, the tasks feature's), closed at
+ * first and remembered as a column; turned off while open, the board says
+ * so (`board-off`) and the button stays until the panel closes. One panel
+ * at a time: opening one closes the others (S-CHAT-02 › Mở từ, C-08).
  */
 function TextChannel({ server, channel, messageId }: { server: Server; channel: ServerChannel; messageId?: string }) {
     const { t } = useTranslation('servers')
@@ -124,13 +130,33 @@ function TextChannel({ server, channel, messageId }: { server: Server; channel: 
     const navigate = useNavigate()
     const [pins, pinsButton] = usePanel('pins', { startClosed: true })
     const [members, membersButton] = usePanel('members')
-    const showMembers = members.open && !pins.open
-    // The pins hide the members while open; closed, the members come back as they were.
-    const togglePins = pins.toggle
+    const [tasks, tasksButton] = usePanel('tasks', { startClosed: true })
+    // The board turned off while shown here stays (`board-off`) until the panel closes.
+    const [boardShown, setBoardShown] = useState(false)
+    const showTasks = tasks.open && (channel.taskBoardEnabled || boardShown)
+    if (showTasks !== boardShown) setBoardShown(showTasks)
+    const showPins = pins.open && !showTasks
+    const showMembers = members.open && !pins.open && !showTasks
+    // The pins and the board hide the members while open; closed, the members come back as they were.
+    const togglePins = () => {
+        if (!pins.open && tasks.open) tasks.close()
+        pins.toggle()
+    }
+    const toggleTasks = () => {
+        if (!showTasks && pins.open) pins.close()
+        tasks.toggle()
+    }
     const toggleMembers = () => {
         if (!showMembers && pins.open) pins.close()
+        if (!showMembers && tasks.open) tasks.close()
         if (!members.open || showMembers) members.toggle()
     }
+    const showDialog = useChannelDialogs((state) => state.show)
+    const openSettings = useCallback(
+        () => showDialog({ kind: 'channelSettings', serverId: server.id, channelId: channel.id }),
+        [showDialog, server.id, channel.id]
+    )
+    const place = useTaskBoardPlace(server, channel, openSettings)
     const { id: serverId, timeoutUntil } = server
     const { id: channelId, permissions: bits, sendMode } = channel
     // Again when the server is read again: at the end of a timeout too (liveServers).
@@ -174,10 +200,22 @@ function TextChannel({ server, channel, messageId }: { server: Server; channel: 
             actions={
                 <>
                     <WithTooltip label={t('channel.pins')} side='bottom'>
-                        <IconButton ref={pinsButton} label={t('channel.pins')} on={pins.open} onClick={togglePins}>
+                        <IconButton ref={pinsButton} label={t('channel.pins')} on={showPins} onClick={togglePins}>
                             <Pin />
                         </IconButton>
                     </WithTooltip>
+                    {channel.taskBoardEnabled || showTasks ? (
+                        <WithTooltip label={t('channel.taskBoard.label')} side='bottom'>
+                            <IconButton
+                                ref={tasksButton}
+                                label={t('channel.taskBoard.label')}
+                                on={showTasks}
+                                onClick={toggleTasks}
+                            >
+                                <ListChecks />
+                            </IconButton>
+                        </WithTooltip>
+                    ) : null}
                     <WithTooltip label={common('shell.members.title')} side='bottom'>
                         <IconButton
                             ref={membersButton}
@@ -191,7 +229,22 @@ function TextChannel({ server, channel, messageId }: { server: Server; channel: 
                 </>
             }
             panel={
-                showMembers ? (
+                showTasks ? (
+                    <Suspense
+                        fallback={
+                            <RightPanel state={tasks} buttonRef={tasksButton} title={t('channel.taskBoard.label')}>
+                                <PageLoader className='min-h-0 py-6' />
+                            </RightPanel>
+                        }
+                    >
+                        <TaskBoard
+                            panel={tasks}
+                            buttonRef={tasksButton}
+                            place={place}
+                            enabled={channel.taskBoardEnabled}
+                        />
+                    </Suspense>
+                ) : showMembers ? (
                     <RightPanel state={members} buttonRef={membersButton} title={common('shell.members.title')}>
                         <MemberPanel serverId={serverId} />
                     </RightPanel>

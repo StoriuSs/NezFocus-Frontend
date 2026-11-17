@@ -66,6 +66,12 @@
       "label": "Bật phòng học",
       "description": "Có đồng hồ Pomodoro chung cho cả phòng, chu kỳ 25/5. Đổi trong cài đặt phòng."
     },
+    "taskBoard": {
+      "label": "Task Board",
+      "description": "Bảng việc chung của kênh: giao việc, đặt hạn, nhắc hạn.",
+      "offWarning_one": "{{count}} việc chưa xong sẽ ẩn khỏi kênh và khỏi Việc cần làm của mọi người, không còn nhắc hạn. Bật lại thì hiện lại như cũ.",
+      "offWarning_other": "{{count}} việc chưa xong sẽ ẩn khỏi kênh và khỏi Việc cần làm của mọi người, không còn nhắc hạn. Bật lại thì hiện lại như cũ."
+    },
     "private": {
       "label": "Kênh riêng tư",
       "description": "Chỉ chủ server và các vai trò được chọn thấy kênh này.",

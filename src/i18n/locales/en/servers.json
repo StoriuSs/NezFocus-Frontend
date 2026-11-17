@@ -66,6 +66,12 @@
       "label": "Make it a study room",
       "description": "A shared Pomodoro timer for the room, 25/5. Change it in the room settings."
     },
+    "taskBoard": {
+      "label": "Task Board",
+      "description": "The channel's shared task list: assign tasks, set due dates, get reminders.",
+      "offWarning_one": "{{count}} open task will be hidden from the channel and from everyone's tasks, with no more reminders. Turn it on again to bring it back as it was.",
+      "offWarning_other": "{{count}} open tasks will be hidden from the channel and from everyone's tasks, with no more reminders. Turn it on again to bring them back as they were."
+    },
     "private": {
       "label": "Private channel",
       "description": "Only the server owner and the roles chosen can see this channel.",

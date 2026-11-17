@@ -129,6 +129,17 @@ react-starter/
     │   │                      #   data, grid moves and recent picks, tooltip words, rows, times; files:
     │   │                      #   rules, posting one to the storage, downloading; drafts: the key of one draft),
     │   │                      #   messaging.css (the chat's classes)
+    │   ├── tasks/             # A text channel's Task Board (S-TASK-01) and its form (S-TASK-03), lazy
+    │   │                      #   (index.ts: TaskBoard; useOpenTaskCount for the channel settings'
+    │   │                      #   warning): api/ (the board, the done pages, writes answered with the
+    │   │                      #   task, D-191; liveTasks: task.* into the cache; rememberTask: one
+    │   │                      #   task into every board of its channel), components/ (the board, its
+    │   │                      #   row, the form, the date picker C-43, the people picker C-25 `multi`,
+    │   │                      #   the delete dialog), hooks/ (a status change and its Undo Toast, the
+    │   │                      #   words of due dates), lib/ (groups and order, cache changes, due
+    │   │                      #   lines, the calendar, who may do what, refusals the form names),
+    │   │                      #   held-tasks.store.ts (rows standing still while their Toast shows),
+    │   │                      #   tasks.css (its classes, D-193)
     │   └── users/             # The profile and the account's settings
     │       ├── api/           # users.api.ts (fetchProfile, removeAvatar),
     │       │                  #   settings.api.ts (fetchSettings, settingsQuery, updateSettings), hooks, keys
@@ -365,7 +376,8 @@ Habits worth keeping:
   a socket whose session ended asks the auth store, and
   `users, realtime ← messaging ← servers`: the channel page shows the chat,
   which hears the socket through `onRealtimeEvent`, realtime knowing no
-  feature). When the one imported
+  feature; `users, realtime ← tasks ← servers`: the channel page shows the
+  Task Board, and the channel settings ask it how many tasks are not done). When the one imported
   needs the other, it declares a port and is handed it: deleting the account
   (auth) asks the servers it owns through `ServerOwnership`
   (`auth/lib/server-ownership.ts`), the servers feature answers
@@ -377,7 +389,9 @@ Habits worth keeping:
   hands the servers feature's answer (`servers/api/useMentionSource.ts`). Its
   queries go as query options (`queryKey`, `queryFn`), so the key and the
   cache stay the servers feature's, as `settingsCache` does for the users
-  feature.
+  feature. The Task Board's `TaskBoardPlace` (`tasks/types.ts`) is the same:
+  the channel page hands what one may do there and the members who view the
+  channel (`servers/api/useTaskBoardPlace.ts`, D-192).
 - **Shared code imports no feature.** `src/lib`, `src/components` and
   `src/hooks` are refused any `@/features/...` import. When shared code needs
   something a feature owns, it says what in an interface and is handed it: the

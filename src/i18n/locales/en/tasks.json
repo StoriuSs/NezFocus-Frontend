@@ -1,0 +1,143 @@
+{
+    "board": {
+        "title": "Task Board",
+        "search": "Search tasks",
+        "searchPlaceholder": "Search tasks by name",
+        "closeSearch": "Close search",
+        "add": "Add task",
+        "loading": "Loading tasks",
+        "loadError": "Couldn't load the tasks",
+        "retry": "Try again",
+        "more": "Show more",
+        "offline": "You need a connection",
+        "group": {
+            "doing": "IN PROGRESS — {{count}}",
+            "todo": "TO DO — {{count}}",
+            "done": "DONE — {{count}}"
+        },
+        "empty": {
+            "title": "No tasks yet",
+            "body": "Add the first task so the whole group can follow it.",
+            "readOnly": "There are no tasks in this channel yet.",
+            "action": "Add the first task"
+        },
+        "noMatch": {
+            "title": "No task matches “{{query}}”",
+            "body": "Try other words."
+        },
+        "off": {
+            "title": "Task Board is off",
+            "body": "A channel manager just turned off this channel's Task Board. Its tasks are kept and come back when it is turned on again.",
+            "action": "Open channel settings"
+        }
+    },
+    "status": {
+        "todo": "To do",
+        "doing": "In progress",
+        "done": "Done"
+    },
+    "people": {
+        "deleted": "Deleted account"
+    },
+    "row": {
+        "markDone": "Mark done: {{title}}",
+        "reopen": "Reopen: {{title}}",
+        "markDoneHint": "Mark done",
+        "reopenHint": "Reopen",
+        "readOnly": "Only the people assigned, its creator or a task manager can change the status",
+        "unassigned": "Unassigned",
+        "more": "Options for task {{title}}",
+        "label": "{{title}}, {{status}}, {{due}}, {{people}}",
+        "andMore": "+{{count}}"
+    },
+    "menu": {
+        "status": "Status",
+        "edit": "Edit",
+        "delete": "Delete task"
+    },
+    "due": {
+        "today": "Today",
+        "tomorrow": "Tomorrow",
+        "overdue": "Overdue",
+        "done": "Done",
+        "none": "No due date",
+        "weekday": {
+            "0": "Sun",
+            "1": "Mon",
+            "2": "Tue",
+            "3": "Wed",
+            "4": "Thu",
+            "5": "Fri",
+            "6": "Sat"
+        }
+    },
+    "toast": {
+        "done": "Done “{{title}}”",
+        "reopened": "Reopened “{{title}}”",
+        "moved": "Moved “{{title}}” to {{status}}",
+        "undo": "Undo",
+        "added": "Added “{{title}}”",
+        "deleted": "Deleted “{{title}}”",
+        "full": "This channel has 500 open tasks. Mark some done or delete some, then reopen it.",
+        "gone": "This task is no longer available"
+    },
+    "form": {
+        "createTitle": "Add task",
+        "editTitle": "Edit task",
+        "title": "Title",
+        "titlePlaceholder": "E.g. Hand in the midterm report",
+        "description": "Description (optional)",
+        "due": "Due",
+        "noDue": "No due date",
+        "assignees": "Assigned to",
+        "unassigned": "Unassigned",
+        "people_one": "{{count}} person",
+        "people_other": "{{count}} people",
+        "cancel": "Cancel",
+        "create": "Add task",
+        "save": "Save",
+        "titleRequired": "Enter a title",
+        "pastDue": "The due date must be later than now",
+        "invalidAssignee": "{{names}} can no longer see this channel, so they can't be given the task. Unselect {{names}} and save again.",
+        "full": "This channel has 500 open tasks. Mark some done or delete some to add a new one.",
+        "boardOff": "This channel's Task Board was just turned off, so tasks can't be added.",
+        "forbidden": "You no longer have permission to do this",
+        "offline": "You need a connection to save the task."
+    },
+    "picker": {
+        "today": "Today",
+        "tomorrow": "Tomorrow",
+        "nextFriday": "Next Friday",
+        "previousMonth": "Previous month",
+        "nextMonth": "Next month",
+        "monthTitle": "{{monthName}} {{year}}",
+        "time": "Time",
+        "timeError": "Time as 23:59",
+        "clear": "Clear due date",
+        "apply": "Done",
+        "weekday": {
+            "0": "Su",
+            "1": "Mo",
+            "2": "Tu",
+            "3": "We",
+            "4": "Th",
+            "5": "Fr",
+            "6": "Sa"
+        }
+    },
+    "assignee": {
+        "search": "Search members",
+        "me": "Me ({{name}})",
+        "picked_one": "{{count}} selected",
+        "picked_other": "{{count}} selected",
+        "none": "No member matches",
+        "loading": "Loading members",
+        "loadError": "Couldn't load the members"
+    },
+    "delete": {
+        "title": "Delete “{{title}}”?",
+        "body": "The task disappears from the Task Board and from everyone's tasks. This can't be undone.",
+        "cancel": "Cancel",
+        "confirm": "Delete task"
+    }
+}

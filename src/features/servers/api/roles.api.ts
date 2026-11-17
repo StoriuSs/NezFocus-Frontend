@@ -62,6 +62,8 @@ export interface MemberQuery {
     presence?: 'online' | 'offline'
     /** The owner's "who may take it" (S-SET-07, D-161): without themselves and accounts waiting to be deleted. */
     transferable?: boolean
+    /** Only those who view this channel (D-192): whom a task there may be given to. */
+    channelId?: string
 }
 
 /** GET /servers/{id}/members (D-152): anyone in the server. */

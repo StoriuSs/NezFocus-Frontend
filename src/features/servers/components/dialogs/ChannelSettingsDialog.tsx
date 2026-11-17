@@ -10,6 +10,7 @@ import { DoorOpen, Loader2, Trash2 } from 'lucide-react'
 import { FormMessage } from '@/components/form/FormMessage'
 import { SwitchRow } from '@/components/settings/SwitchRow'
 import { Button } from '@/components/ui/button'
+import { useOpenTaskCount } from '@/features/tasks'
 import {
     Dialog,
     DialogContent,
@@ -37,7 +38,8 @@ const createSchema = (t: TFunction<'servers'>, server: Server, channel: ServerCh
             name: z.string(),
             sendMode: z.custom<SendMode>(),
             isPrivate: z.boolean(),
-            viewRoleIds: z.array(z.string())
+            viewRoleIds: z.array(z.string()),
+            taskBoardEnabled: z.boolean()
         })
         .superRefine((values, ctx) => {
             if (storedName(channel.type, values.name) === channel.name) return
@@ -53,17 +55,20 @@ function changesOf(server: Server, channel: ServerChannel, values: Values): Upda
     if (storedName(channel.type, values.name) !== channel.name) changes.name = values.name
     if (values.sendMode !== channel.sendMode) changes.sendMode = values.sendMode
     if (values.isPrivate !== channel.isPrivate) changes.isPrivate = values.isPrivate
+    if (values.taskBoardEnabled !== channel.taskBoardEnabled) changes.taskBoardEnabled = values.taskBoardEnabled
     const rolesToSend = values.viewRoleIds.filter((id) => server.roles.some((r) => r.id === id && !r.administrator))
     if (values.isPrivate && !sameSet(rolesToSend, channel.viewRoleIds ?? [])) changes.viewRoleIds = rolesToSend
     return changes
 }
 
 /**
- * "Channel settings" (S-SET-05): name, who may post (text channels), and
- * whether it is private, saved together by one PATCH of what changed; and
- * "Delete channel", over it. Type and category do not change here (the
- * category by dragging, S-SRV-06). The Task Board switch comes with tasks
- * (M3) and a room's study settings with rooms (S-SET-06, M4), D-144.
+ * "Channel settings" (S-SET-05): name, who may post and the Task Board
+ * (text channels), and whether it is private, saved together by one PATCH
+ * of what changed; and "Delete channel", over it. Turning the board off
+ * while tasks are not done says what happens to them, under the switch
+ * (`taskboard-off`, D-88): no dialog. Type and category do not change here
+ * (the category by dragging, S-SRV-06). A room's study settings come with
+ * rooms (S-SET-06, M4), D-144.
  */
 export function ChannelSettingsDialog({
     server,
@@ -84,9 +89,10 @@ export function ChannelSettingsDialog({
             name: channel.name,
             sendMode: channel.sendMode,
             isPrivate: channel.isPrivate,
-            viewRoleIds: channel.viewRoleIds ?? []
+            viewRoleIds: channel.viewRoleIds ?? [],
+            taskBoardEnabled: channel.taskBoardEnabled
         }),
-        [channel.name, channel.sendMode, channel.isPrivate, channel.viewRoleIds]
+        [channel.name, channel.sendMode, channel.isPrivate, channel.viewRoleIds, channel.taskBoardEnabled]
     )
     const {
         control,
@@ -102,9 +108,9 @@ export function ChannelSettingsDialog({
         values: current,
         resetOptions: { keepDirtyValues: true }
     })
-    const [name, sendMode, isPrivate, viewRoleIds] = useWatch({
+    const [name, sendMode, isPrivate, viewRoleIds, taskBoardEnabled] = useWatch({
         control,
-        name: ['name', 'sendMode', 'isPrivate', 'viewRoleIds']
+        name: ['name', 'sendMode', 'isPrivate', 'viewRoleIds', 'taskBoardEnabled']
     })
     const [failure, setFailure] = useState<LayoutFailure['form'] | null>(null)
     const [deleting, setDeleting] = useState(false)
@@ -114,7 +120,10 @@ export function ChannelSettingsDialog({
     const room = channel.type === 'voice'
     const prefix = room ? '' : '#'
 
-    const dirty = Object.keys(changesOf(server, channel, { name, sendMode, isPrivate, viewRoleIds })).length > 0
+    const dirty =
+        Object.keys(changesOf(server, channel, { name, sendMode, isPrivate, viewRoleIds, taskBoardEnabled })).length > 0
+    // How many tasks turning the board off hides (04 S-SET-05 `taskboard-off`).
+    const openTasks = useOpenTaskCount(channel.id, !room && channel.taskBoardEnabled)
 
     const send = handleSubmit(async (values) => {
         const changes = changesOf(server, channel, values)
@@ -222,6 +231,30 @@ export function ChannelSettingsDialog({
                                     </fieldset>
                                 )}
                             />
+                        ) : null}
+
+                        {!room ? (
+                            <div className='grid gap-2'>
+                                <Controller
+                                    control={control}
+                                    name='taskBoardEnabled'
+                                    render={({ field }) => (
+                                        <SwitchRow
+                                            className='items-start p-0'
+                                            label={t('channel.taskBoard.label')}
+                                            description={t('channel.taskBoard.description')}
+                                            checked={field.value}
+                                            onCheckedChange={field.onChange}
+                                            disabled={saving}
+                                        />
+                                    )}
+                                />
+                                {channel.taskBoardEnabled && !taskBoardEnabled && openTasks ? (
+                                    <FormMessage tone='neutral'>
+                                        {t('channel.taskBoard.offWarning', { count: openTasks })}
+                                    </FormMessage>
+                                ) : null}
+                            </div>
                         ) : null}
 
                         <Controller

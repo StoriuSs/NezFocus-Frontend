@@ -1,0 +1,66 @@
+import { useMemo } from 'react'
+import type { TaskBoardPlace } from '@/features/tasks'
+import { isTimedOut } from '../lib/moderation'
+import { can } from '../lib/permissions'
+import type { Server, ServerChannel } from '../types'
+import { serverKeys } from './keys'
+import { fetchMembers } from './roles.api'
+
+/** How long the people found are read from the cache before asking again: a few keystrokes. */
+const FRESH = 30_000
+/** People read for one search; the picker scrolls (C-25 `multi`, 320 high). */
+const PEOPLE = 100
+
+/**
+ * The servers feature's answer to the Task Board's port (S-TASK-01): the
+ * channel and server names, what one may do with tasks there (REQ-TASK-02,
+ * read from the channel's permission bits; a timeout leaves viewing only,
+ * D-188, unless MANAGE_TASKS stays: the owner and ADMINISTRATOR), and the
+ * members who view the channel, by name (D-192), read with this feature's
+ * routes and keys (a member or a role changing reads them again). The same
+ * object while none of these change.
+ */
+export function useTaskBoardPlace(
+    server: Pick<Server, 'id' | 'name' | 'timeoutUntil'>,
+    channel: Pick<ServerChannel, 'id' | 'name' | 'permissions'>,
+    openSettings: () => void
+): TaskBoardPlace {
+    const { id: serverId, name: serverName, timeoutUntil } = server
+    const { id: channelId, name: channelName, permissions } = channel
+    return useMemo<TaskBoardPlace>(() => {
+        const manage = can(permissions, 'MANAGE_TASKS')
+        return {
+            channelId,
+            channelName,
+            serverName,
+            create: can(permissions, 'CREATE_TASKS'),
+            manage,
+            manageChannel: can(permissions, 'MANAGE_CHANNELS'),
+            timedOut: !manage && isTimedOut({ timeoutUntil }, new Date()),
+            candidates: (query) => ({
+                queryKey: serverKeys.channelViewers(serverId, channelId, query),
+                queryFn: async () => {
+                    const page = await fetchMembers(serverId, {
+                        ...(query ? { q: query } : {}),
+                        channelId,
+                        sort: 'name',
+                        order: 'asc',
+                        limit: PEOPLE
+                    })
+                    // An account waiting to be deleted has no username, nor a task to take (D-182).
+                    return page.items
+                        .filter((member) => member.username !== null)
+                        .map((member) => ({
+                            id: member.userId,
+                            username: member.username,
+                            displayName: member.displayName,
+                            avatarUrl: member.avatarUrl,
+                            presence: member.status
+                        }))
+                },
+                staleTime: FRESH
+            }),
+            openSettings
+        }
+    }, [serverId, serverName, channelId, channelName, permissions, timeoutUntil, openSettings])
+}

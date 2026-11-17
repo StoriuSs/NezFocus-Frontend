@@ -454,6 +454,28 @@ of a burst, and so does each `ready` and each opening of the panel
 it. Who is typing is not cached data:
 `useTyping` keeps it in component state for 10 seconds per person.
 
+## A Task Board, kept live
+
+A channel's Task Board (S-TASK-01, `src/features/tasks/api/`) is read once
+(`useOpenTasks`: the tasks not done and how many are done; `useDoneTasks`:
+the done ones, 50 a page, read once the group opens) and never again on its
+own: `liveTasks.ts` takes `task.created` and `task.updated`, which carry the
+whole task, into place, and `task.deleted` out (D-163: every socket that
+views the channel hears them, board open or not; a board not read is not
+touched). Each write answers with the task (D-191), which goes in the same
+way (`rememberTask`), so the event of one's own write, coming after,
+changes nothing: a copy no newer (`updatedAt`) than the one held is left
+out. A search's boards read again instead, the matching being the
+server's (D-97). Each `ready` reads every board again.
+
+A status set from the box or the row's menu shows at once; the row and its
+group's count stand still while the Toast with "Hoàn tác" shows (8 s, one
+per task), held in `held-tasks.store.ts`, the Toast keyed by the task's id
+(`useStatusChange`). Its refusal puts the box back, with the Toast the spec
+words for a full channel, else the API's. The form's refusals are its own
+(`lib/task-errors.ts`, FormMessage): those writes say `errorToast: false`.
+Deleting a task already gone counts as done.
+
 ## The servers, kept live
 
 Socket events about a server (`server.*`, `channel.*`, `category.*`,

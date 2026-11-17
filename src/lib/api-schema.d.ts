@@ -1114,6 +1114,113 @@ export interface paths {
         patch?: never
         trace?: never
     }
+    '/api/v1/channels/{channelId}/tasks': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        /**
+         * Every task not done, and how many are done (D-186); `status=done`: 50
+         *     done tasks, the latest done first, after `before` (a task no longer
+         *     done there is CONFLICT_ERROR: start again). `q` searches titles,
+         *     whatever the accents and case (D-97).
+         */
+        get: operations['BoardController_list_v1']
+        put?: never
+        /**
+         * A new task (CREATE_TASKS), told to the channel as `task.created`. A due
+         *     date already passed is INVALID_TASK_DUE_DATE, someone who cannot view
+         *     the channel INVALID_TASK_ASSIGNEE, a 501st task not done
+         *     MAX_OPEN_TASKS_REACHED.
+         */
+        post: operations['BoardController_create_v1']
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/tasks/{taskId}': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        /** The task as it is now: a link to it (`?task=`), an inbox item, a reminder. */
+        get: operations['TasksController_get_v1']
+        put?: never
+        post?: never
+        /** Gone for everyone (the creator or MANAGE_TASKS), told as `task.deleted`. */
+        delete: operations['TasksController_delete_v1']
+        options?: never
+        head?: never
+        /**
+         * Title, description and due date (the creator or MANAGE_TASKS), status
+         *     (also anyone on it). Only what really changes is checked; a new due
+         *     date already passed is INVALID_TASK_DUE_DATE (D-96).
+         */
+        patch: operations['TasksController_update_v1']
+        trace?: never
+    }
+    '/api/v1/tasks/{taskId}/assignees': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        /**
+         * "Thêm người", or "Tôi làm" with one's own id: oneself by anyone who
+         *     views the channel, others by the creator, anyone on it or
+         *     MANAGE_TASKS. Someone who cannot view the channel is
+         *     INVALID_TASK_ASSIGNEE.
+         */
+        post: operations['TasksController_assign_v1']
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/tasks/{taskId}/assignees/{userId}': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        post?: never
+        /** "Rút khỏi việc này" with one's own id; another, by the creator or MANAGE_TASKS. */
+        delete: operations['TasksController_unassign_v1']
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/tasks/{taskId}/history': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        /** Its history, newest first: the latest 200 lines and how many there are (REQ-TASK-03). */
+        get: operations['TasksController_history_v1']
+        put?: never
+        post?: never
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
 }
 export type webhooks = Record<string, never>
 export interface components {
@@ -1581,6 +1688,8 @@ export interface components {
             is_private?: boolean
             /** @description Replaces the whole set. */
             view_role_ids?: string[]
+            /** @description Text channels: off hides its tasks and stops their reminders; on shows them again (REQ-TASK-01). */
+            task_board_enabled?: boolean
         }
         InviteResponseDto: {
             /** @description The link is /invite/{code}. */
@@ -2091,6 +2200,106 @@ export interface components {
             filename: string
             /** @description In bytes: at most 25 MB (UPLOAD_FILE_TOO_LARGE), which the storage keeps too. */
             size: number
+        }
+        TaskAssigneeResponseDto: {
+            /** Format: date-time */
+            assigned_at: string
+            id: string
+            username: string | null
+            display_name: string | null
+            avatar_url: string | null
+        }
+        TaskPersonResponseDto: {
+            id: string
+            username: string | null
+            display_name: string | null
+            avatar_url: string | null
+        }
+        TaskResponseDto: {
+            /** @enum {string} */
+            status: 'todo' | 'doing' | 'done'
+            /** Format: date-time */
+            due_at: string | null
+            /**
+             * Format: date-time
+             * @description When it became done; null while it is not (ARCHITECTURE 7).
+             */
+            completed_at: string | null
+            /** @description In the order they were given the task; none: "Chưa giao". */
+            assignees: components['schemas']['TaskAssigneeResponseDto'][]
+            id: string
+            server_id: string
+            channel_id: string
+            title: string
+            /** @description Empty: none. */
+            description: string
+            /** Format: date-time */
+            created_at: string
+            /**
+             * Format: date-time
+             * @description Moves on every change: of two copies of a task, the client keeps the later one.
+             */
+            updated_at: string
+            creator: components['schemas']['TaskPersonResponseDto']
+        }
+        TaskListResponseDto: {
+            items: components['schemas']['TaskResponseDto'][]
+            /** @description The "XONG — n" heading; null on a page of done tasks. */
+            done_count: number | null
+            has_more: boolean
+        }
+        CreateTaskRequestDto: {
+            title: string
+            /** @description Null or left out: none. */
+            description?: string | null
+            /**
+             * Format: date-time
+             * @description Later than now; null or left out: no due date.
+             */
+            due_at?: string | null
+            /** @description Members who view the channel; none: "Chưa giao". */
+            assignee_ids?: string[] | null
+        }
+        UpdateTaskRequestDto: {
+            title?: string
+            description?: string
+            /**
+             * Format: date-time
+             * @description A new one must be later than now (D-96). Null: no due date.
+             */
+            due_at?: string | null
+            /** @enum {string} */
+            status?: 'todo' | 'doing' | 'done'
+        }
+        AssignTaskRequestDto: {
+            /** @description People already on it are skipped. */
+            user_ids: string[]
+        }
+        TaskEventResponseDto: {
+            /** @enum {string} */
+            kind:
+                | 'created'
+                | 'title_changed'
+                | 'description_changed'
+                | 'due_changed'
+                | 'assignee_added'
+                | 'assignee_removed'
+                | 'status_changed'
+            /** @description Null when the app did it (an assignee who left the server). */
+            actor: components['schemas']['TaskPersonResponseDto'] | null
+            /** @description The person added or taken off; null for the other kinds. */
+            subject: components['schemas']['TaskPersonResponseDto'] | null
+            /** @description Title, due date (an ISO time, null: none) or status before the change; null for the other kinds. */
+            from: string | null
+            /** @description The same after the change. */
+            to: string | null
+            id: string
+            /** Format: date-time */
+            created_at: string
+        }
+        TaskHistoryResponseDto: {
+            items: components['schemas']['TaskEventResponseDto'][]
+            total: number
         }
     }
     responses: never
@@ -3744,6 +3953,8 @@ export interface operations {
                 q?: string
                 /** @description Only those holding this role. */
                 roleId?: string
+                /** @description Only those who view this channel, for someone who views it (D-192, the task assignee picker). */
+                channelId?: string
                 page?: number
                 /** @description 10, 50 or 100 (D-90); 50 when left out. */
                 limit?: 10 | 50 | 100
@@ -4330,6 +4541,220 @@ export interface operations {
                     'application/json': {
                         meta: components['schemas']['ApiResponseMetaDto']
                         data: components['schemas']['AttachmentResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    BoardController_list_v1: {
+        parameters: {
+            query?: {
+                status?: 'done'
+                /** @description Only tasks whose title holds these words, whatever the accents and case (D-97). */
+                q?: string
+                /** @description With `status=done`: the last done task the client holds; left out, the first page. */
+                before?: string
+            }
+            header?: never
+            path: {
+                channelId: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['TaskListResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    BoardController_create_v1: {
+        parameters: {
+            query?: never
+            header: {
+                /** @description UUID identifying one user intent */
+                'Idempotency-Key': string
+            }
+            path: {
+                channelId: string
+            }
+            cookie?: never
+        }
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['CreateTaskRequestDto']
+            }
+        }
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['TaskResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    TasksController_get_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                taskId: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['TaskResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    TasksController_delete_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                taskId: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: null
+                    }
+                }
+            }
+        }
+    }
+    TasksController_update_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                taskId: string
+            }
+            cookie?: never
+        }
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['UpdateTaskRequestDto']
+            }
+        }
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['TaskResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    TasksController_assign_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                taskId: string
+            }
+            cookie?: never
+        }
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['AssignTaskRequestDto']
+            }
+        }
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['TaskResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    TasksController_unassign_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                taskId: string
+                userId: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['TaskResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    TasksController_history_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                taskId: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['TaskHistoryResponseDto']
                     }
                 }
             }

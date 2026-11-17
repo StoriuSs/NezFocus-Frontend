@@ -20,6 +20,9 @@ export const serverKeys = {
     memberPanels: (serverId: string) => [...serverKeys.members(serverId), 'panel'] as const,
     memberPanel: (serverId: string, group: 'online' | 'offline') =>
         [...serverKeys.memberPanels(serverId), group] as const,
+    /** Those who view one channel, for what was typed: whom a task there may be given to (C-25 `multi`, D-192). */
+    channelViewers: (serverId: string, channelId: string, query: string) =>
+        [...serverKeys.members(serverId), 'channel', channelId, query] as const,
     /** The people suggested after @ for what was typed (C-12 › MentionSuggest). */
     mentionMembers: (serverId: string, query: string) => [...serverKeys.members(serverId), 'mention', query] as const,
     /** The ban list of one server, any page (S-SET-04). */

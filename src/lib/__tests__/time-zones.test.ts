@@ -3,12 +3,14 @@ import {
     accountTimeZone,
     endsAt,
     initialTimeZone,
+    instantAt,
     isSelectableTimeZone,
     matchesTimeZone,
     setTimeZoneSource,
     timeIn,
     timeZoneOption,
-    timeZoneOptions
+    timeZoneOptions,
+    wallClock
 } from '@/lib/time-zones'
 
 // A winter day: no summer time in the north.
@@ -117,5 +119,22 @@ describe('The account’s time zone, for code outside React (src/lib)', () => {
         expect(accountTimeZone()).toBe('Asia/Ho_Chi_Minh')
         zone = 'Europe/Paris'
         expect(accountTimeZone()).toBe('Europe/Paris')
+    })
+})
+
+describe('instantAt', () => {
+    it('reads a date and a clock in the account zone as the moment it is (C-43)', () => {
+        const wall = { year: 2026, month: 10, day: 23, hour: 23, minute: 59 }
+        expect(instantAt(wall, 'Asia/Ho_Chi_Minh').toISOString()).toBe('2026-10-23T16:59:00.000Z')
+        expect(instantAt(wall, 'America/New_York').toISOString()).toBe('2026-10-24T03:59:00.000Z')
+        expect(instantAt({ ...wall, month: 12 }, 'America/New_York').toISOString()).toBe('2026-12-24T04:59:00.000Z')
+    })
+
+    it('goes back to the same date and clock through wallClock', () => {
+        for (const zone of ['Asia/Kolkata', 'Europe/London', 'Pacific/Auckland']) {
+            const wall = { year: 2027, month: 3, day: 28, hour: 9, minute: 30 }
+            const at = instantAt(wall, zone)
+            expect(wallClock(at, zone)).toMatchObject(wall)
+        }
     })
 })
