@@ -8,7 +8,9 @@ import { apiUrl, asOwnClient, codeFromEmail, watchForProblems } from './helpers'
  * standing still while the Toast shows), An sees it go to Done; An turns the
  * board off in the channel settings while Bình has it open, and on again;
  * a task's detail (S-TASK-02): Bình opens one from its row and takes it on,
- * An opens it from its link on another page and takes Bình off, Bình told.
+ * An opens it from its link on another page and takes Bình off, Bình told;
+ * the To-do page (S-TASK-04): Bình's tasks from two servers in their
+ * groups, counted on the rail and in the column, one marked done there.
  *
  * Needs the API (with Redis, for the socket) and Mailpit, like
  * messaging.spec.ts. With E2E_SHOTS set to a folder, it also saves the
@@ -25,6 +27,7 @@ let anEmail: string
 let binhEmail: string
 let boardPath: string
 let anToken: string
+let binhToken: string
 let boardId: string
 
 async function ok(method: string, path: string, body?: object, token?: string, key?: string) {
@@ -88,6 +91,7 @@ test.beforeAll(async ({ browserName }) => {
     const board = server.channels.find((channel) => channel.name === 'viec-nhom')!
     boardPath = `/channels/${server.id}/${board.id}`
     anToken = an
+    binhToken = binh
     boardId = board.id
 })
 
@@ -285,5 +289,63 @@ test('a task opens in its detail from its row and from its link on any page, liv
     expect(an.problems).toEqual([])
     expect(binh.problems).toEqual([])
     await an.context.close()
+    await binh.context.close()
+})
+
+test('the To-do page gathers the tasks of every server, counts them, and marks one done', async ({ browser }) => {
+    test.setTimeout(120_000)
+    // Due in 10 minutes: today, or overdue by the time it is read; both count on the rail.
+    const binhId: string = ((await ok('GET', 'users/me', undefined, binhToken)).data as { id: string }).id
+    await ok(
+        'POST',
+        `channels/${boardId}/tasks`,
+        {
+            title: 'Ôn chương 4 tích phân bội',
+            due_at: new Date(Date.now() + 10 * 60_000).toISOString(),
+            assignee_ids: [binhId]
+        },
+        anToken,
+        crypto.randomUUID()
+    )
+    const own: { id: string; channels: { id: string; name: string }[] } = (
+        await ok('POST', 'servers', { name: 'Nhóm đồ án Mobile', template: 'study' }, binhToken, crypto.randomUUID())
+    ).data
+    const ownBoard = own.channels.find((channel) => channel.name === 'viec-nhom')!
+    await ok(
+        'POST',
+        `channels/${ownBoard.id}/tasks`,
+        { title: 'Làm slide thuyết trình' },
+        binhToken,
+        crypto.randomUUID()
+    )
+
+    const binh = await openAs(browser, binhEmail)
+    const todo = binh.page.getByRole('navigation', { name: 'Pages' }).getByRole('link', { name: /^To-do/ })
+    await expect(todo).toHaveAccessibleName('To-do, 1 task overdue or due today', { timeout: 15_000 })
+    await todo.click()
+    await expect(binh.page).toHaveURL(/\/tasks$/)
+    const column = binh.page.getByRole('navigation', { name: 'Filter tasks by server' })
+    await expect(column.getByRole('link', { name: 'Nhóm đồ án Mobile, 1 task not done' })).toBeVisible()
+    await expect(column.getByRole('link', { name: /^Ôn thi Giải tích 2, 1 task/ })).toBeVisible()
+    const page = binh.page.getByRole('main')
+    await expect(page.getByRole('heading', { name: /^(TODAY|OVERDUE) — 1$/ })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'NO DUE DATE — 1' })).toBeVisible()
+    await expect(page.getByText('No due date · Nhóm đồ án Mobile › #viec-nhom')).toBeVisible()
+    await shoot(binh.page, 'task04-default')
+
+    // One server's.
+    await column.getByRole('link', { name: /^Nhóm đồ án Mobile/ }).click()
+    await expect(binh.page.getByRole('heading', { level: 1, name: 'To-do · Nhóm đồ án Mobile' })).toBeVisible()
+    await expect(page.getByText('Ôn chương 4 tích phân bội')).toBeHidden()
+    await shoot(binh.page, 'task04-filter-server')
+    await column.getByRole('link', { name: /^All tasks/ }).click()
+
+    // Done here: the row stays while the Toast shows, the rail's count goes at once.
+    await page.getByRole('button', { name: 'Mark done: Ôn chương 4 tích phân bội' }).click()
+    await expect(binh.page.getByText(/^Done “Ôn chương 4/)).toBeVisible()
+    await expect(todo).toHaveAccessibleName('To-do', { timeout: 15_000 })
+    await shoot(binh.page, 'task04-marked-done')
+
+    expect(binh.problems).toEqual([])
     await binh.context.close()
 })

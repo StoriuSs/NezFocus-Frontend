@@ -7,6 +7,7 @@ import { SERVERS_PATHS } from './lib/paths'
 const ChannelPage = lazy(() => import('@/features/servers/pages/ChannelPage'))
 const ServerSettingsPage = lazy(() => import('@/features/servers/pages/ServerSettingsPage'))
 const InvitePage = lazy(() => import('@/features/servers/pages/InvitePage'))
+const MyTasksRoute = lazy(() => import('@/features/servers/components/MyTasksRoute'))
 
 /** An invite (S-SRV-03): a visitor's page, so the router puts it in the AuthShell; signed in, it opens the app. */
 export const serversInviteRoutes: RouteObject[] = [{ path: SERVERS_PATHS.invite, element: <InvitePage /> }]
@@ -22,3 +23,6 @@ export const serversSettingsRoutes: RouteObject[] = [
     { path: SERVERS_PATHS.settings, element: <ServerSettingsPage /> },
     { path: SERVERS_PATHS.roleEdit, element: <ServerSettingsPage /> }
 ]
+
+/** The To-do page (S-TASK-04, D-197), for a signed-in user (the router puts it in the AppShell). */
+export const serversTasksRoutes: RouteObject[] = [{ path: SERVERS_PATHS.tasks, element: <MyTasksRoute /> }]

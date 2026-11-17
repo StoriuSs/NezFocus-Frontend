@@ -1,8 +1,9 @@
 import type { QueryClient } from '@tanstack/react-query'
 import { onRealtimeEvent } from '@/features/realtime'
+import { userKeys, type UserProfile } from '@/features/users'
 import type { Task, TaskList } from '../types'
 import type { DonePages } from '../lib/task-cache'
-import { taskKeys } from './keys'
+import { isMineKey, taskKeys } from './keys'
 import { forgetTask, rememberTask } from './rememberTask'
 
 const listening = new WeakSet<QueryClient>()
@@ -62,16 +63,22 @@ export function listenForTasks(client: QueryClient): () => void {
         onRealtimeEvent('ready', () => void client.invalidateQueries({ queryKey: taskKeys.all })),
         ...STANDING.map((event) =>
             onRealtimeEvent(event, (data) => {
-                const { serverId } = data as { serverId: string }
-                if (timers.has(serverId)) return
+                const { serverId, userId } = data as { serverId: string; userId?: string }
+                // Another member coming, changing or going changes nothing of one's own list.
+                const me = client.getQueryData<UserProfile>(userKeys.profile())?.id
+                const mine = !event.startsWith('member.') || userId === me
+                const key = `${serverId} ${mine}`
+                if (timers.has(key)) return
                 timers.set(
-                    serverId,
+                    key,
                     setTimeout(
                         () => {
-                            timers.delete(serverId)
+                            timers.delete(key)
+                            // The To-do page's lists too, which may gain a task of a channel now in sight.
                             void client.invalidateQueries({
                                 queryKey: taskKeys.all,
-                                predicate: (query) => ofServer(query.state.data, serverId)
+                                predicate: (query) =>
+                                    (mine && isMineKey(query.queryKey)) || ofServer(query.state.data, serverId)
                             })
                         },
                         GATHER_MS + Math.random() * SPREAD_MS

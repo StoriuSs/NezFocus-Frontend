@@ -19,6 +19,7 @@ import { useTranslation } from 'react-i18next'
 import { WithTooltip } from '@/components/ui/tooltip'
 import { AUTH_PATHS } from '@/features/auth'
 import {
+    MyTasksColumn,
     ServerChannelColumn,
     serverSettingsPath,
     settingsSections,
@@ -232,6 +233,7 @@ export function ListColumn({ className, id }: { className?: string; id?: string 
             {column === 'settings' && <SettingsColumn />}
             {column === 'server' && <ServerChannelColumn serverId={deepest?.params.serverId} />}
             {column === 'serverSettings' && <ServerSettingsColumn serverId={deepest?.params.serverId} />}
+            {column === 'tasks' && <MyTasksColumn />}
         </div>
     )
 }

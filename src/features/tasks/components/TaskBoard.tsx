@@ -1,17 +1,14 @@
 import {
     useContext,
     useEffect,
-    useLayoutEffect,
     useMemo,
     useRef,
     useState,
-    type FocusEvent,
     type KeyboardEvent,
     type ReactNode,
     type RefObject
 } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useSearchParams } from 'react-router-dom'
 import { ChevronDown, ChevronRight, Plus, Search, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import '@/i18n/tasks'
@@ -34,6 +31,7 @@ import { useHeldTasks } from '../held-tasks.store'
 import { useStatusChange } from '../hooks/useStatusChange'
 import { useTaskLink } from '../hooks/useTaskLink'
 import { useDayWords } from '../hooks/useDayWords'
+import { useRowFocus } from '../hooks/useRowFocus'
 import { boardRows, type BoardRow } from '../lib/task-board'
 import { dueLine } from '../lib/due-text'
 import { mayChangeStatus, mayEdit } from '../lib/people'
@@ -186,58 +184,8 @@ export function TaskBoard({
         ...rows.done.map((row) => `x${row.task.id}`)
     ].join(' ')
 
-    // The row with the keyboard focus keeps it when it moves to another group,
-    // and the next one takes it when it goes (S-TASK-01 › Tương tác): a row
-    // drawn again in another list loses the focus to the page.
-    const focusedRow = useRef<string | null>(null)
-    const shownOrder = useRef<string[]>([])
+    const focus = useRowFocus(list, order, placing)
     const deletingOrder = useRef<string[]>([])
-    const focusIn = (event: FocusEvent<HTMLDivElement>) => {
-        const id = (event.target as HTMLElement).dataset.taskRow
-        focusedRow.current = id ?? null
-    }
-    const focusOut = (event: FocusEvent<HTMLDivElement>) => {
-        if (event.relatedTarget) {
-            if (!list.current?.contains(event.relatedTarget as Node)) focusedRow.current = null
-            return
-        }
-        // To nowhere: a click on the page, or the row taken out of it (kept then).
-        const left = event.target
-        setTimeout(() => {
-            if (left.isConnected) focusedRow.current = null
-        }, 0)
-    }
-    const focusAfter = (id: string, before: readonly string[]) => {
-        const now = shownOrder.current
-        const next = now.includes(id)
-            ? id
-            : (before.slice(before.indexOf(id) + 1).find((one) => now.includes(one)) ?? now.at(-1))
-        if (!next) return
-        list.current?.querySelector<HTMLElement>(`[data-task-row="${next}"]`)?.focus()
-    }
-    useLayoutEffect(() => {
-        const before = shownOrder.current
-        shownOrder.current = order ? order.split(' ') : []
-        const id = focusedRow.current
-        // Lost: on the page, or still on the row taken out (some browsers keep it there).
-        const active = document.activeElement
-        if (!id || (active && active !== document.body && active.isConnected)) return
-        focusAfter(id, before)
-        // `placing` changes when a row only moves to another group, `order` does not.
-    }, [order, placing])
-    // The detail opened from a row closes after its task went (deleted meanwhile, 05 Q11):
-    // the next row takes the focus, which Radix would give back to the row gone.
-    const opened = useRef<{ id: string; order: readonly string[] } | null>(null)
-    const openTask = useSearchParams()[0].get('task')
-    useEffect(() => {
-        const was = opened.current
-        if (openTask !== null || !was) return
-        opened.current = null
-        if (shownOrder.current.includes(was.id)) return
-        const timer = setTimeout(() => focusAfter(was.id, was.order), 0)
-        return () => clearTimeout(timer)
-        // focusAfter reads refs only.
-    }, [openTask])
     const rowOf = ({ task, status }: BoardRow) => (
         <TaskRow
             key={task.id}
@@ -252,7 +200,7 @@ export function TaskBoard({
             onFocus={() => setActiveId(task.id)}
             onKeyDown={rowKey}
             onOpen={() => {
-                opened.current = { id: task.id, order: shownOrder.current }
+                focus.opening(task.id)
                 link.open(task.id)
             }}
             onToggle={() => change(task, status === 'done' ? 'todo' : 'done')}
@@ -342,7 +290,7 @@ export function TaskBoard({
     } else {
         const doneRows = showDone ? rows.done : []
         body = (
-            <div ref={list} onFocus={focusIn} onBlur={focusOut} className='flex flex-col gap-1'>
+            <div ref={list} onFocus={focus.focusIn} onBlur={focus.focusOut} className='flex flex-col gap-1'>
                 {place.create && !place.timedOut && !searching ? (
                     <Offline offline={offline} label={t('board.offline')}>
                         <Button
@@ -414,7 +362,7 @@ export function TaskBoard({
                 <DeleteTaskDialog
                     task={deleting}
                     onClose={() => setDeleting(null)}
-                    onDeleted={() => focusAfter(deleting.id, deletingOrder.current)}
+                    onDeleted={() => focus.focusAfter(deleting.id, deletingOrder.current)}
                 />
             ) : null}
         </RightPanel>

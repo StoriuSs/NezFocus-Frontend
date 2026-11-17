@@ -18,7 +18,9 @@ export const SERVERS_PATHS = {
      */
     roleEdit: '/servers/:serverId/settings/:section/:roleId',
     /** An invite link (S-SRV-03): a visitor's page in the AuthShell. */
-    invite: '/invite/:code'
+    invite: '/invite/:code',
+    /** The To-do page (S-TASK-04): one's tasks from every server, `?server=` one of them (D-197). */
+    tasks: '/tasks'
 } as const
 
 /** Whether an id taken from a path can be one: ids are UUIDs (ARCHITECTURE 2.4), the API refuses anything else. */

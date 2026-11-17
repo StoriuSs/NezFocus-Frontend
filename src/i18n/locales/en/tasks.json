@@ -197,5 +197,34 @@
         "all_other": "Show the whole history ({{count}})",
         "less": "Show less",
         "loadError": "Couldn't load the history"
+    },
+    "page": {
+        "title": "To-do",
+        "titleIn": "To-do · {{server}}",
+        "nav": "Filter tasks by server",
+        "all": "All tasks",
+        "byServer": "BY SERVER",
+        "count_one": "{{name}}, {{count}} task not done",
+        "count_other": "{{name}}, {{count}} tasks not done",
+        "group": {
+            "overdue": "OVERDUE — {{count}}",
+            "today": "TODAY — {{count}}",
+            "next_7_days": "NEXT 7 DAYS — {{count}}",
+            "later": "LATER — {{count}}",
+            "no_due": "NO DUE DATE — {{count}}",
+            "done": "DONE — {{count}}"
+        },
+        "empty": {
+            "title": "No tasks yet",
+            "body": "Tasks given to you in channels with a Task Board show up here."
+        },
+        "allDone": {
+            "title": "All done",
+            "body": "Nothing left to do."
+        },
+        "noMatchIn": "Searching in {{server}}. Choose All tasks to search every server.",
+        "where": "{{server}} › #{{channel}}",
+        "whereChannel": "#{{channel}}",
+        "clearSearch": "Clear search"
     }
 }

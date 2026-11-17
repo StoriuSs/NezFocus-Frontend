@@ -1,11 +1,12 @@
-import { useMemo } from 'react'
-import type { TaskBoardPlace } from '@/features/tasks'
+import { useCallback, useMemo } from 'react'
+import type { PlaceOf, TaskBoardPlace } from '@/features/tasks'
 import { isTimedOut } from '../lib/moderation'
 import { channelPath } from '../lib/paths'
 import { can } from '../lib/permissions'
 import type { Server, ServerChannel } from '../types'
 import { serverKeys } from './keys'
 import { fetchMembers } from './roles.api'
+import { useServers } from './useServers'
 
 /** How long the people found are read from the cache before asking again: a few keystrokes. */
 const FRESH = 30_000
@@ -79,5 +80,26 @@ export function useTaskBoardPlace(
                 openSettings
             ),
         [serverId, serverName, channelId, channelName, permissions, timeoutUntil, openSettings]
+    )
+}
+
+/** The detail and the To-do page have no board to send to its settings. */
+const noSettings = () => undefined
+
+/**
+ * The place of a task of any of one's servers (S-TASK-02, S-TASK-04, D-197):
+ * its names and what one may do there, from the servers list; null when one
+ * is not in its server or its channel is gone, undefined while the list loads.
+ */
+export function useTaskPlaceOf(): PlaceOf {
+    const servers = useServers().data
+    return useCallback<PlaceOf>(
+        (serverId, channelId) => {
+            if (!servers) return undefined
+            const server = servers.find((candidate) => candidate.id === serverId)
+            const channel = server?.channels.find((candidate) => candidate.id === channelId)
+            return server && channel ? taskBoardPlace(server, channel, noSettings) : null
+        },
+        [servers]
     )
 }

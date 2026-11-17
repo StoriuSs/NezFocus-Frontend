@@ -11,11 +11,13 @@ import {
     ServerIcon,
     ServerMenuItems,
     serverSettingsPath,
+    SERVERS_PATHS,
     useCreateServerDialog,
     useServers,
     type Server
 } from '@/features/servers'
 import { useServerReadState } from '@/features/messaging'
+import { useDueTaskCount } from '@/features/tasks'
 import { cn } from '@/lib/utils'
 import { MeMenu } from './MeMenu'
 
@@ -155,7 +157,20 @@ function SoonItem({ icon: Icon, name, squircle }: { icon: LucideIcon; name: stri
     )
 }
 
-function PageItem({ to, icon: Icon, name }: { to: string; icon: LucideIcon; name: string }) {
+function PageItem({
+    to,
+    icon: Icon,
+    name,
+    label = name,
+    badge
+}: {
+    to: string
+    icon: LucideIcon
+    name: string
+    /** What a screen reader says: the name, and what the badge counts. */
+    label?: string
+    badge?: ReactNode
+}) {
     const isActive = useLocation().pathname.startsWith(to)
     return (
         <li className='relative flex w-full justify-center'>
@@ -163,7 +178,7 @@ function PageItem({ to, icon: Icon, name }: { to: string; icon: LucideIcon; name
             <WithTooltip label={name} side='right'>
                 <Link
                     to={to}
-                    aria-label={name}
+                    aria-label={label}
                     aria-current={isActive ? 'page' : undefined}
                     className={cn(
                         'flex size-12 items-center justify-center rounded-server transition-colors duration-micro hover:bg-surface-1',
@@ -173,7 +188,30 @@ function PageItem({ to, icon: Icon, name }: { to: string; icon: LucideIcon; name
                     <Icon className='size-[22px]' aria-hidden='true' />
                 </Link>
             </WithTooltip>
+            {badge}
         </li>
+    )
+}
+
+/**
+ * "Việc cần làm" (S-TASK-04): its badge counts one's tasks overdue or due
+ * today (C-05, 05 › luật dữ liệu 3), at the icon's corner as a server's
+ * mentions are; none at 0.
+ */
+function TasksItem() {
+    const { t } = useTranslation()
+    const due = useDueTaskCount()
+    const name = t('shell.rail.tasks')
+    return (
+        <PageItem
+            to={SERVERS_PATHS.tasks}
+            icon={ListChecks}
+            name={name}
+            label={due > 0 ? t('shell.rail.tasksDue', { name, count: due }) : name}
+            badge={
+                <CountBadge count={due} cutout='ring-bg' className='pointer-events-none absolute bottom-0 right-4' />
+            }
+        />
     )
 }
 
@@ -191,7 +229,7 @@ function Group({ label, children, className }: { label: string; children: ReactN
  * avatar, which opens your menu (S-ME-01).
  *
  * Servers come in the order they were joined (GET /servers). Direct
- * messages, To-do and Notifications are pages of later milestones and say so.
+ * messages and Notifications are pages of later milestones and say so.
  */
 export function Rail({ id, className }: { id?: string; className?: string }) {
     const { t } = useTranslation()
@@ -213,7 +251,7 @@ export function Rail({ id, className }: { id?: string; className?: string }) {
             </Group>
             <Group label={t('shell.rail.pages')} className='w-full'>
                 <PageItem to='/study' icon={GraduationCap} name={t('shell.rail.study')} />
-                <SoonItem icon={ListChecks} name={t('shell.rail.tasks')} />
+                <TasksItem />
                 <SoonItem icon={Bell} name={t('shell.rail.notifications')} />
             </Group>
             <MeMenu />

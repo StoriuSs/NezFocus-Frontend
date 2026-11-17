@@ -176,7 +176,12 @@ parameter is there, and it shows `TaskDetail`, the tasks feature's second
 lazy export. The board and the detail share the form, the pickers and the
 stylesheet, so `vite.config.ts` puts `tasks.css` in a chunk of its own name
 (`FEATURE_STYLES`: `TaskStyles-<hash>.css`), which `.size-limit.mjs` finds
-whichever lazy chunks import it (M3 L4).
+whichever lazy chunks import it (M3 L4). The To-do page (`/tasks`,
+S-TASK-04) and its column are two more lazy exports, `MyTasks` and
+`MyTasksNav`, shown by the servers feature's lazy `MyTasksRoute` and its
+`MyTasksColumn` (D-197); they share that stylesheet. The rail's "Việc" badge
+needs `useDueTaskCount` at once, so it is not lazy: it sits in the AppShell's
+chunk, not in the first download (M3 L5).
 
 The pins panel (S-CHAT-02) is in the same chunk: `index.ts` exports
 `PinsPanel` as `lazy(() => import('./components/ChannelChat').then((chat) =>

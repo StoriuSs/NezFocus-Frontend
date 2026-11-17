@@ -1,6 +1,6 @@
 import api from '@/lib/api'
 import type { ApiEnvelope } from '@/lib/api-types'
-import type { CreateTaskRequest, Task, TaskHistory, TaskList, UpdateTaskRequest } from '../types'
+import type { CreateTaskRequest, MyTaskList, Task, TaskHistory, TaskList, UpdateTaskRequest } from '../types'
 
 /** GET /channels/{id}/tasks (S-TASK-01): the tasks not done and how many are done; `q` searches titles (D-97). */
 export async function fetchOpenTasks(channelId: string, q: string): Promise<TaskList> {
@@ -14,6 +14,25 @@ export async function fetchOpenTasks(channelId: string, q: string): Promise<Task
 export async function fetchDoneTasks(channelId: string, q: string, before: string | null): Promise<TaskList> {
     const response = await api.get<ApiEnvelope<TaskList>>(`/channels/${channelId}/tasks`, {
         params: { status: 'done', ...(q ? { q } : {}), ...(before ? { before } : {}) }
+    })
+    return response.data.data
+}
+
+/**
+ * GET /me/tasks (S-TASK-04, D-186): one's tasks not done, each in its group
+ * by due date, with the counts; `server` keeps one server's, `q` searches titles.
+ */
+export async function fetchMyTasks(server: string | null, q: string): Promise<MyTaskList> {
+    const response = await api.get<ApiEnvelope<MyTaskList>>('/me/tasks', {
+        params: { ...(server ? { server } : {}), ...(q ? { q } : {}) }
+    })
+    return response.data.data
+}
+
+/** `status=done`: one's done tasks, 50 a page, latest done first, after the task `before` (D-97). */
+export async function fetchMyDoneTasks(server: string | null, q: string, before: string | null): Promise<MyTaskList> {
+    const response = await api.get<ApiEnvelope<MyTaskList>>('/me/tasks', {
+        params: { status: 'done', ...(server ? { server } : {}), ...(q ? { q } : {}), ...(before ? { before } : {}) }
     })
     return response.data.data
 }

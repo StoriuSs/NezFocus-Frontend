@@ -479,6 +479,18 @@ gathered and spread like the servers' reads, so "Mất quyền xem kênh" follow
 and a detail one may no longer view closes. A deleted task tells an open
 detail through `onTaskDeleted`, so it closes with its own words.
 
+The To-do page (S-TASK-04) reads `taskKeys.mineOpen(server, search)`
+(`useMyTasks`: one's tasks not done, each in the group the server put it in
+by the account's time zone, with `doneCount` and `dueCount`) and
+`taskKeys.mineDone(server, search)` (`useMyDoneTasks`, 50 a page). The
+server groups them (D-186), so they are never patched: `rememberTask` and
+`forgetTask` read them again when the task is one's own (given to one, or
+made by one for no one) or one of them holds it, and every `STANDING`
+signal reads them all again (a channel coming into sight may bring tasks no
+list holds). The rail's badge (`useDueTaskCount`) reads the list of every
+server, the page's "Tất cả việc", and `useMidnightReload` reads them all
+again when the day or the zone changes (D-196).
+
 A status set from the box or the row's menu shows at once; the row and its
 group's count stand still while the Toast with "Hoàn tác" shows (8 s, one
 per task), held in `held-tasks.store.ts`, the Toast keyed by the task's id

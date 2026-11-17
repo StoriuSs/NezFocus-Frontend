@@ -56,7 +56,9 @@
       "addServer": "Create or join a server",
       "study": "Study",
       "tasks": "To-do",
-      "notifications": "Notifications"
+      "notifications": "Notifications",
+      "tasksDue_one": "{{name}}, {{count}} task overdue or due today",
+      "tasksDue_other": "{{name}}, {{count}} tasks overdue or due today"
     },
     "channels": {
       "label": "Channels of {{name}}",

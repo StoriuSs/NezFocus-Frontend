@@ -56,7 +56,9 @@
       "addServer": "Tạo hoặc tham gia server",
       "study": "Học",
       "tasks": "Việc cần làm",
-      "notifications": "Thông báo"
+      "notifications": "Thông báo",
+      "tasksDue_one": "{{name}}, {{count}} việc quá hạn hoặc đến hạn hôm nay",
+      "tasksDue_other": "{{name}}, {{count}} việc quá hạn hoặc đến hạn hôm nay"
     },
     "channels": {
       "label": "Kênh của {{name}}",

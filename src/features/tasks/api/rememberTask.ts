@@ -1,4 +1,5 @@
 import type { QueryClient } from '@tanstack/react-query'
+import { userKeys, type UserProfile } from '@/features/users'
 import { dropDone, dropOpen, putDone, putOpen, type DonePages } from '../lib/task-cache'
 import type { Task, TaskList } from '../types'
 import { taskKeys } from './keys'
@@ -36,6 +37,41 @@ function readAgainIfReading(client: QueryClient, channelId: string) {
     }
 }
 
+/** The lists a task query holds: one list, or the pages of a done group. */
+const listsOf = (data: unknown): TaskList[] =>
+    !data || typeof data !== 'object'
+        ? []
+        : 'pages' in data
+          ? (data as DonePages).pages
+          : 'items' in data
+            ? [data as TaskList]
+            : []
+
+/**
+ * The To-do page's lists (D-186): the server groups them, so they are read
+ * again, not patched, when the task is one's own (given to one, or made by
+ * one for no one) or one of them holds it (one just taken off it). A done
+ * task may be one of "ĐÃ XONG — n" that no page read holds (the group
+ * folded): `maybeDone` reads again the lists that count some.
+ */
+function readMineAgain(client: QueryClient, taskId: string, mine: boolean, maybeDone: boolean): void {
+    void client.invalidateQueries({
+        queryKey: taskKeys.mine(),
+        predicate: (query) =>
+            mine ||
+            listsOf(query.state.data).some(
+                (list) => list.items.some((item) => item.id === taskId) || (maybeDone && (list.doneCount ?? 0) > 0)
+            )
+    })
+}
+
+/** Whether the To-do page lists the task for the account signed in (REQ-TASK-05). */
+function isMine(client: QueryClient, task: Task): boolean {
+    const me = client.getQueryData<UserProfile>(userKeys.profile())?.id
+    if (!me) return false
+    return task.assignees.some((person) => person.id === me) || (task.creator.id === me && task.assignees.length === 0)
+}
+
 /**
  * A task as a write answered it or an event told it (D-191), into every
  * board of its channel held in the cache. The board without a search takes
@@ -63,6 +99,7 @@ export function rememberTask(client: QueryClient, task: Task, change: 'created' 
         queryKey: taskKeys.board(task.channelId),
         predicate: (query) => query.queryKey[4] !== ''
     })
+    readMineAgain(client, task.id, isMine(client, task), task.status === 'done')
 }
 
 /** A task deleted: out of every board of its channel; a done one no page holds reads the count again. */
@@ -91,15 +128,19 @@ export function forgetTask(client: QueryClient, channelId: string, taskId: strin
         queryKey: taskKeys.board(channelId),
         predicate: (query) => query.queryKey[4] !== ''
     })
+    readMineAgain(client, taskId, false, true)
     for (const listener of [...deletions]) listener(taskId)
 }
 
-/** The task as a board in the cache holds it: its detail opens with it at once (S-TASK-02 › loading). */
+/** The task as a board or the To-do page in the cache holds it: its detail opens with it at once (S-TASK-02 › loading). */
 export function heldTask(client: QueryClient, taskId: string): Task | undefined {
-    for (const [, data] of client.getQueriesData<TaskList | DonePages>({ queryKey: taskKeys.boards() })) {
-        const lists = data && 'pages' in data ? data.pages : data ? [data] : []
-        const found = lists.flatMap((list) => list.items).find((item) => item.id === taskId)
-        if (found) return found
+    for (const key of [taskKeys.boards(), taskKeys.mine()]) {
+        for (const [, data] of client.getQueriesData<TaskList | DonePages>({ queryKey: key })) {
+            const found = listsOf(data)
+                .flatMap((list) => list.items)
+                .find((item) => item.id === taskId)
+            if (found) return found
+        }
     }
     return undefined
 }

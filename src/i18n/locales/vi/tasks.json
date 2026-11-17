@@ -197,5 +197,34 @@
         "all_other": "Xem toàn bộ lịch sử ({{count}})",
         "less": "Thu gọn",
         "loadError": "Không tải được lịch sử"
+    },
+    "page": {
+        "title": "Việc cần làm",
+        "titleIn": "Việc cần làm · {{server}}",
+        "nav": "Lọc việc theo server",
+        "all": "Tất cả việc",
+        "byServer": "THEO SERVER",
+        "count_one": "{{name}}, {{count}} việc chưa xong",
+        "count_other": "{{name}}, {{count}} việc chưa xong",
+        "group": {
+            "overdue": "QUÁ HẠN — {{count}}",
+            "today": "HÔM NAY — {{count}}",
+            "next_7_days": "7 NGÀY TỚI — {{count}}",
+            "later": "SAU ĐÓ — {{count}}",
+            "no_due": "KHÔNG HẠN — {{count}}",
+            "done": "ĐÃ XONG — {{count}}"
+        },
+        "empty": {
+            "title": "Chưa có việc nào",
+            "body": "Việc được giao cho bạn ở các kênh có Task Board sẽ hiện ở đây."
+        },
+        "allDone": {
+            "title": "Xong hết rồi",
+            "body": "Không còn việc nào cần làm."
+        },
+        "noMatchIn": "Đang tìm trong {{server}}. Chọn Tất cả việc để tìm ở mọi server.",
+        "where": "{{server}} › #{{channel}}",
+        "whereChannel": "#{{channel}}",
+        "clearSearch": "Xóa từ khóa"
     }
 }

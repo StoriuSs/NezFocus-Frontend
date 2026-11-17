@@ -1,12 +1,8 @@
-import { Suspense, useCallback } from 'react'
+import { Suspense } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { TaskDetail, type PlaceOf } from '@/features/tasks'
-import { taskBoardPlace } from '../api/useTaskBoardPlace'
-import { useServers } from '../api/useServers'
+import { TaskDetail } from '@/features/tasks'
+import { useTaskPlaceOf } from '../api/useTaskBoardPlace'
 import { channelPath } from '../lib/paths'
-
-/** The detail has no board to send to its settings. */
-const noSettings = () => undefined
 
 /**
  * A task's detail on whatever page has `?task=` (05 Q6, S-TASK-02), drawn
@@ -16,17 +12,8 @@ const noSettings = () => undefined
  * channel line goes to that channel with its Task Board open.
  */
 export default function TaskDetailRoute({ taskId, onClose }: { taskId: string; onClose: () => void }) {
-    const servers = useServers().data
     const navigate = useNavigate()
-    const placeOf = useCallback<PlaceOf>(
-        (serverId, channelId) => {
-            if (!servers) return undefined
-            const server = servers.find((candidate) => candidate.id === serverId)
-            const channel = server?.channels.find((candidate) => candidate.id === channelId)
-            return server && channel ? taskBoardPlace(server, channel, noSettings) : null
-        },
-        [servers]
-    )
+    const placeOf = useTaskPlaceOf()
     return (
         <Suspense fallback={null}>
             <TaskDetail

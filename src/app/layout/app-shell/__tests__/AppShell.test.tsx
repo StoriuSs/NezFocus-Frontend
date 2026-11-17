@@ -49,9 +49,12 @@ const pinsApi = vi.hoisted(() => ({
     unpinMessage: vi.fn()
 }))
 vi.mock('@/features/messaging/api/pins.api', () => pinsApi)
-// The Task Board of a channel with it on: no tasks yet.
+// The Task Board of a channel with it on: no tasks yet. One's tasks (the rail's badge, the To-do page): none either.
 const tasksApi = vi.hoisted(() => ({
-    fetchOpenTasks: vi.fn(async (..._: unknown[]) => ({ items: [], doneCount: 0, hasMore: false }))
+    fetchOpenTasks: vi.fn(async (..._: unknown[]) => ({ items: [], doneCount: 0, hasMore: false })),
+    fetchMyTasks: vi.fn(
+        async (..._: unknown[]): Promise<unknown> => ({ items: [], doneCount: 0, dueCount: 0, hasMore: false })
+    )
 }))
 vi.mock('@/features/tasks/api/tasks.api', () => tasksApi)
 // The member panel's lists: nobody, unless a test says otherwise.
@@ -93,6 +96,7 @@ const { useRealtimeStore } = await import('@/features/realtime/realtime.store')
 const { default: ChannelPage } = await import('@/features/servers/pages/ChannelPage')
 const { default: Study } = await import('@/pages/Study')
 const { default: ServerSettingsPage } = await import('@/features/servers/pages/ServerSettingsPage')
+const { default: MyTasksRoute } = await import('@/features/servers/components/MyTasksRoute')
 const { useCreateServerDialog } = await import('@/features/servers')
 
 /** VIEW_CHANNEL, SEND_MESSAGES, CONNECT; and the same without CONNECT. */
@@ -192,6 +196,7 @@ function renderAt(path: string | { pathname: string; state: unknown }) {
                         handle: { column: 'serverSettings' }
                     },
                     { path: '/panel', element: <PanelPage />, handle: { column: 'study' } },
+                    { path: '/tasks', element: <MyTasksRoute />, handle: { column: 'tasks' } },
                     { path: '/settings/account', element: <h1>Settings page</h1>, handle: { column: 'settings' } },
                     { path: '/settings/profile', element: <h1>Profile page</h1>, handle: { column: 'settings' } }
                 ]
@@ -240,7 +245,40 @@ describe('AppShell (S-SHELL-01)', () => {
             expect(dm).toHaveAttribute('aria-disabled', 'true')
             await userEvent.click(dm)
             expect(router.state.location.pathname).toBe('/study')
-            expect(screen.getByRole('button', { name: 'To-do · coming soon' })).toBeInTheDocument()
+            expect(screen.getByRole('button', { name: 'Notifications · coming soon' })).toBeInTheDocument()
+        })
+
+        it('counts on To-do the tasks overdue or due today, and opens the page with its column (S-TASK-04)', async () => {
+            const due = {
+                id: 't1',
+                serverId: 'nd',
+                channelId: 'hoi-dap',
+                title: 'Sửa lỗi đăng nhập',
+                description: '',
+                status: 'doing',
+                dueAt: '2026-10-16T16:59:00.000Z',
+                completedAt: null,
+                createdAt: '2026-10-12T00:00:00.000Z',
+                updatedAt: '2026-10-12T00:00:00.000Z',
+                creator: { id: 'user-1', username: 'an.nguyen', displayName: 'An', avatarUrl: null, leftServer: false },
+                assignees: [],
+                group: 'overdue'
+            }
+            tasksApi.fetchMyTasks.mockResolvedValue({ items: [due], doneCount: 0, dueCount: 1, hasMore: false })
+            const router = renderAt('/study')
+            const pages = screen.getByRole('navigation', { name: 'Pages' })
+            const todo = await within(pages).findByRole('link', { name: 'To-do, 1 task overdue or due today' })
+            expect(within(todo.closest('li')!).getByText('1')).toBeInTheDocument()
+
+            await userEvent.click(todo)
+            expect(router.state.location.pathname).toBe('/tasks')
+            expect(await screen.findByRole('heading', { level: 1, name: 'To-do' })).toBeInTheDocument()
+            expect(todo).toHaveAttribute('aria-current', 'page')
+            const column = await screen.findByRole('navigation', { name: 'Filter tasks by server' })
+            expect(
+                await within(column).findByRole('link', { name: 'Nhóm đồ án Mobile, 1 task not done' })
+            ).toBeVisible()
+            expect(await screen.findByRole('heading', { name: 'OVERDUE — 1' })).toBeInTheDocument()
         })
 
         it('lists your servers in the order they came, each by its picture or its initials', async () => {

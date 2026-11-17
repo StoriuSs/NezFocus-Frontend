@@ -1142,6 +1142,30 @@ export interface paths {
         patch?: never
         trace?: never
     }
+    '/api/v1/me/tasks': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        /**
+         * Every task not done, each with its `group` by due date in the time zone
+         *     of one's settings, with how many are done and how many are overdue or
+         *     due today (D-186); `status=done`: 50 done tasks, the latest done first,
+         *     after `before` (a task no longer among them is CONFLICT_ERROR: start
+         *     again). `server` keeps one server's, `q` searches titles whatever the
+         *     accents and case (D-97).
+         */
+        get: operations['MyTasksController_list_v1']
+        put?: never
+        post?: never
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
     '/api/v1/tasks/{taskId}': {
         parameters: {
             query?: never
@@ -2263,6 +2287,48 @@ export interface components {
             due_at?: string | null
             /** @description Members who view the channel; none: "Chưa giao". */
             assignee_ids?: string[] | null
+        }
+        MyTaskResponseDto: {
+            /** @enum {string} */
+            status: 'todo' | 'doing' | 'done'
+            /** Format: date-time */
+            due_at: string | null
+            /**
+             * Format: date-time
+             * @description When it became done; null while it is not (ARCHITECTURE 7).
+             */
+            completed_at: string | null
+            /** @description In the order they were given the task; none: "Chưa giao". */
+            assignees: components['schemas']['TaskAssigneeResponseDto'][]
+            /**
+             * @description Overdue, today, the next 7 days (tomorrow to today + 6), later, no due
+             *     date: counted in the time zone of one's settings when the list was read
+             *     (D-186). Null on a page of done tasks.
+             * @enum {string|null}
+             */
+            group: 'overdue' | 'today' | 'next_7_days' | 'later' | 'no_due' | null
+            id: string
+            server_id: string
+            channel_id: string
+            title: string
+            /** @description Empty: none. */
+            description: string
+            /** Format: date-time */
+            created_at: string
+            /**
+             * Format: date-time
+             * @description Moves on every change: of two copies of a task, the client keeps the later one.
+             */
+            updated_at: string
+            creator: components['schemas']['TaskCreatorResponseDto']
+        }
+        MyTaskListResponseDto: {
+            items: components['schemas']['MyTaskResponseDto'][]
+            /** @description The "ĐÃ XONG — n" heading; null on a page of done tasks. */
+            done_count: number | null
+            /** @description The tasks overdue or due today: the rail's "Việc" badge (C-05); null on a page of done tasks. */
+            due_count: number | null
+            has_more: boolean
         }
         UpdateTaskRequestDto: {
             title?: string
@@ -4612,6 +4678,36 @@ export interface operations {
                     'application/json': {
                         meta: components['schemas']['ApiResponseMetaDto']
                         data: components['schemas']['TaskResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    MyTasksController_list_v1: {
+        parameters: {
+            query?: {
+                status?: 'done'
+                /** @description Only tasks whose title holds these words, whatever the accents and case (D-97). */
+                q?: string
+                /** @description With `status=done`: the last done task the client holds; left out, the first page. */
+                before?: string
+                /** @description Only the tasks of this server; one is not in, or has no tasks of: none. */
+                server?: string
+            }
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['MyTaskListResponseDto']
                     }
                 }
             }

@@ -29,8 +29,9 @@ export interface RowPowers {
 }
 
 /**
- * TaskRow `board` (C-28): the status box, the title (2 lines then …), the
- * due line, the people on it. The box marks it done, or opens it again; a
+ * TaskRow (C-28): the status box, the title (2 lines then …), the due line,
+ * the people on it; `page` (the To-do page, S-TASK-04) adds where the task
+ * is to the due line ("{hạn} · {server} › #{kênh}"). The box marks it done, or opens it again; a
  * viewer who may not change it sees a still box with the reason in a
  * Tooltip. ⋯ (on hover or keyboard focus, in place of the avatars; always
  * there on a touch screen), a right click or Shift+F10 open the row's menu:
@@ -44,6 +45,7 @@ export function TaskRow({
     task,
     status,
     due,
+    where,
     me,
     powers,
     offline,
@@ -62,6 +64,8 @@ export function TaskRow({
     /** What the box shows (the status just clicked, while the row stands still). */
     status: TaskStatus
     due: DueLine
+    /** `page`: the task's server and channel, or its channel alone while one server is shown. */
+    where?: string
     me: string | undefined
     powers: RowPowers
     offline: boolean
@@ -88,6 +92,7 @@ export function TaskRow({
         .map((person) => nameOf(person, t('people.deleted')))
         .join(', ')
     const can = powers.status && !offline
+    const line = where ? `${due.text} · ${where}` : due.text
 
     const keyDown = (event: KeyboardEvent<HTMLElement>) => {
         if (event.key === ' ' && can) {
@@ -129,7 +134,7 @@ export function TaskRow({
                 aria-label={t(lost ? 'row.labelLost' : 'row.label', {
                     title: task.title,
                     status: t(`status.${status}`),
-                    due: due.text,
+                    due: line,
                     people: names || t('row.unassigned'),
                     names: lost
                 })}
@@ -162,7 +167,7 @@ export function TaskRow({
                         )}
                     >
                         <DueIcon className='size-3 shrink-0' aria-hidden='true' />
-                        <span className='truncate'>{due.text}</span>
+                        <span className='truncate'>{line}</span>
                     </span>
                     {lost ? (
                         <WithTooltip label={t('row.lostAccessHint', { names: lost })}>

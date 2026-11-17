@@ -129,10 +129,11 @@ react-starter/
     │   │                      #   data, grid moves and recent picks, tooltip words, rows, times; files:
     │   │                      #   rules, posting one to the storage, downloading; drafts: the key of one draft),
     │   │                      #   messaging.css (the chat's classes)
-    │   ├── tasks/             # A text channel's Task Board (S-TASK-01), its form (S-TASK-03) and a task's
-    │   │                      #   detail (S-TASK-02, `?task=`), lazy (index.ts: TaskBoard, TaskDetail;
-    │   │                      #   useOpenTaskCount for the channel settings'
-    │   │                      #   warning): api/ (the board, the done pages, one task and its history, writes answered with the
+    │   ├── tasks/             # A text channel's Task Board (S-TASK-01), its form (S-TASK-03), a task's
+    │   │                      #   detail (S-TASK-02, `?task=`) and the To-do page with its column (S-TASK-04),
+    │   │                      #   lazy (index.ts: TaskBoard, TaskDetail, MyTasks, MyTasksNav;
+    │   │                      #   useOpenTaskCount for the channel settings' warning, useDueTaskCount
+    │   │                      #   for the rail's badge): api/ (the board, the done pages, one task and its history, writes answered with the
     │   │                      #   task, D-191; liveTasks: task.* into the cache; rememberTask: one
     │   │                      #   task into every board of its channel), components/ (the board, its
     │   │                      #   row, the form, the detail and its person rows, the date picker C-43,
@@ -396,7 +397,11 @@ Habits worth keeping:
   channel (`servers/api/useTaskBoardPlace.ts`, D-192). A task's detail, on
   any page, is handed a `PlaceOf` (the place of any channel of one's
   servers) by `servers/components/TaskDetailRoute.tsx`, which the AppShell
-  shows when `?task=` is there.
+  shows when `?task=` is there. The To-do page is drawn the same way
+  (D-197): `servers/components/MyTasksRoute.tsx` (the route `/tasks`) and
+  `MyTasksColumn.tsx` hand the tasks feature one's servers in the rail's
+  order (`hooks/useTaskServers.tsx`) and the same `PlaceOf`
+  (`useTaskPlaceOf`).
 - **Shared code imports no feature.** `src/lib`, `src/components` and
   `src/hooks` are refused any `@/features/...` import. When shared code needs
   something a feature owns, it says what in an interface and is handed it: the

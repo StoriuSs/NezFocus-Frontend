@@ -8,11 +8,18 @@ import { lazy } from 'react'
  * and stylesheet are chunks of their own, fetched the first time one opens
  * (docs/code-splitting.md, D-193).
  *
+ * The To-do page (S-TASK-04) and its column, lazy too, handed the servers
+ * and what one may do there by the servers feature (D-197).
+ *
  * `useOpenTaskCount`: the channel settings' warning before the board is
- * turned off (04 S-SET-05 `taskboard-off`).
+ * turned off (04 S-SET-05 `taskboard-off`). `useDueTaskCount`: the rail's
+ * "Việc" badge, with the To-do lists read again at midnight (D-196).
  */
 export const TaskBoard = lazy(() => import('./components/TaskBoard'))
 export const TaskDetail = lazy(() => import('./components/TaskDetail'))
+export const MyTasks = lazy(() => import('./components/MyTasks'))
+export const MyTasksNav = lazy(() => import('./components/MyTasksNav'))
 export type { PlaceOf } from './components/TaskDetail'
 export { useOpenTaskCount } from './api/useTaskBoard'
-export type { TaskBoardPlace, TaskCandidate } from './types'
+export { useDueTaskCount } from './api/useMyTasks'
+export type { TaskBoardPlace, TaskCandidate, TaskServer } from './types'

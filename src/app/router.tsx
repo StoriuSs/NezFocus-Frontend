@@ -9,7 +9,12 @@ import { useAuthStore } from '@/features/auth/auth.store'
 import { ProtectedRoute } from '@/features/auth/components/ProtectedRoute'
 import { AUTH_PATHS } from '@/features/auth/lib/paths'
 import { authAppRoutes, authRoutes } from '@/features/auth/routes'
-import { serversChannelRoutes, serversInviteRoutes, serversSettingsRoutes } from '@/features/servers/routes'
+import {
+    serversChannelRoutes,
+    serversInviteRoutes,
+    serversSettingsRoutes,
+    serversTasksRoutes
+} from '@/features/servers/routes'
 import { usersRoutes } from '@/features/users/routes'
 
 // The two layouts load lazily, each with its own pages: a visitor on the
@@ -72,6 +77,7 @@ export const router = createBrowserRouter([
                     ...column('study')([{ path: '/study', element: <Study /> }]),
                     ...column('server')(serversChannelRoutes),
                     ...column('serverSettings')(serversSettingsRoutes),
+                    ...column('tasks')(serversTasksRoutes),
                     ...column('settings')([...authAppRoutes, ...usersRoutes])
                 ]
             },

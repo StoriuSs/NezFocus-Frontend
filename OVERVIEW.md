@@ -232,7 +232,7 @@ src/
 │   ├── servers/    # Servers, channels, invites, server settings: api/ · components/ · hooks/ · lib/ · pages/ · routes.tsx
 │   ├── realtime/   # The tab's socket, its connection Banner, signals (typing, presence): api/ · hooks/ · lib/ · realtime.store.ts
 │   ├── messaging/  # A text channel's chat (mentions included) and its pins, lazy; how far the reader has read (unread, mentions, marking read): api/ · components/ · hooks/ · lib/ · types.ts
-│   ├── tasks/      # A text channel's Task Board (S-TASK-01), its form (S-TASK-03) and a task's detail (S-TASK-02, `?task=` on any page), lazy, with its own stylesheet (D-193): api/ · components/ · hooks/ · lib/ · held-tasks.store.ts · types.ts
+│   ├── tasks/      # A text channel's Task Board (S-TASK-01), its form (S-TASK-03), a task's detail (S-TASK-02, `?task=` on any page) and the To-do page `/tasks` (S-TASK-04, D-197), lazy, with its own stylesheet (D-193): api/ · components/ · hooks/ · lib/ · held-tasks.store.ts · types.ts
 │   └── users/      # api/ · components/ · hooks/ · lib/ · pages/ · routes.tsx · types.ts
 ├── hooks/          # Shared hooks
 ├── i18n/           # Translations

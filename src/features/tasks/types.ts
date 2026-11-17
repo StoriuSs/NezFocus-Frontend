@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import type { Presence } from '@/components/ui/presence-dot'
 import type { ApiModel } from '@/lib/api-types'
 
@@ -13,6 +14,11 @@ export type TaskEvent = ApiModel<'TaskEventResponseDto'>
 export type TaskHistory = ApiModel<'TaskHistoryResponseDto'>
 /** A Task Board page: the tasks not done and how many are done (S-TASK-01), or a page of the done ones. */
 export type TaskList = ApiModel<'TaskListResponseDto'>
+/** A task on the To-do page: the task, and its group by due date in the account's zone; null when done (D-186). */
+export type MyTask = ApiModel<'MyTaskResponseDto'>
+export type DueGroup = NonNullable<MyTask['group']>
+/** The To-do page's tasks not done with its counts and the rail's (`dueCount`), or a page of done ones. */
+export type MyTaskList = ApiModel<'MyTaskListResponseDto'>
 export type CreateTaskRequest = ApiModel<'CreateTaskRequestDto'>
 export type UpdateTaskRequest = ApiModel<'UpdateTaskRequestDto'>
 
@@ -55,4 +61,14 @@ export interface TaskBoardPlace {
     openSettings: () => void
     /** The link of one of its tasks: its channel with `?task=` ("Sao chép link việc", 05 Q6). */
     linkTo: (taskId: string) => string
+}
+
+/**
+ * A server the To-do page's column lists (S-TASK-04), handed by the servers
+ * feature in the rail's order (D-197): its name, and its picture drawn by it.
+ */
+export interface TaskServer {
+    id: string
+    name: string
+    icon: ReactNode
 }
