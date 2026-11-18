@@ -1,0 +1,51 @@
+{
+    "preview": {
+        "count_one": "{{count}} người đang trong phòng",
+        "count_other": "{{count}} người đang trong phòng",
+        "empty": "Phòng đang trống",
+        "you": "Bạn",
+        "join": "Vào phòng",
+        "switch": "Chuyển sang phòng này",
+        "joinHere": "Vào lại ở đây",
+        "joinError": "Không vào được phòng. Kiểm tra mạng rồi thử lại.",
+        "timedOut": "Bạn đang bị tạm khóa tới {{time}} · chưa vào phòng được.",
+        "noConnect": "Bạn không có quyền vào phòng này.",
+        "offline": "Cần kết nối mạng để vào phòng",
+        "otherTab": "Bạn đã vào phòng này ở tab hoặc thiết bị khác"
+    },
+    "controls": {
+        "mic": "Mic",
+        "micOn": "Bật mic (Ctrl Shift M)",
+        "micOff": "Tắt mic (Ctrl Shift M)",
+        "micBlocked": "Trình duyệt đang chặn mic",
+        "noSpeak": "Bạn không có quyền nói trong phòng này",
+        "leave": "Rời phòng"
+    },
+    "micBlocked": {
+        "banner": "Trình duyệt đang chặn mic · vẫn nghe được",
+        "howTo": "Cách bật lại",
+        "title": "Bật lại mic",
+        "step1": "1. Bấm biểu tượng ở đầu thanh địa chỉ, cạnh địa chỉ trang.",
+        "step2": "2. Ở mục Micrô, chọn Cho phép.",
+        "step3": "3. Nếu nút Mic chưa đổi, tải lại trang."
+    },
+    "room": {
+        "people": "Người trong phòng",
+        "left": "Đã rời {{room}}",
+        "joinAgain": "Vào lại"
+    },
+    "dock": {
+        "inRoom": "Đang trong phòng",
+        "open": "Mở {{room}}",
+        "people_one": "{{count}} người",
+        "people_other": "{{count}} người",
+        "reconnecting": "Đang kết nối lại…"
+    },
+    "person": {
+        "deletedAccount": "Tài khoản đã bị xóa",
+        "micOn": "đang bật mic",
+        "micOff": "mic tắt",
+        "cameraOn": "đang bật camera",
+        "speaking": "đang nói"
+    }
+}

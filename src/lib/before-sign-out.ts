@@ -26,6 +26,18 @@ export function tokenNow(): string | undefined {
     return tokenSource()
 }
 
+/**
+ * The options of a request sent as the tab signs out or closes (axios):
+ * `keepalive`, so the browser finishes it after the page is gone, and the
+ * token in memory as it is (`tokenNow`): there is no time to refresh it, and
+ * signing out forgets it right after. Removing an avatar, leaving a voice room.
+ */
+export function leavingRequest() {
+    const token = tokenNow()
+    const keepalive = { adapter: 'fetch' as const, fetchOptions: { keepalive: true } }
+    return token ? { ...keepalive, skipAuth: true, headers: { Authorization: `Bearer ${token}` } } : keepalive
+}
+
 /** Run `flush` before the next sign-out. Returns the function that takes it back. */
 export function onBeforeSignOut(flush: Flush): () => void {
     flushes.add(flush)

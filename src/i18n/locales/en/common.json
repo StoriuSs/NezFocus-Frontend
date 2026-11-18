@@ -121,9 +121,15 @@
       "create": "Create a Study Server",
       "joinByCode": "Join with an invite code"
     },
-    "voiceSoon": {
-      "title": "Voice rooms come in a later version",
-      "body": "The room is in your list already. Joining it, talking and studying together arrive with voice rooms."
+    "voice": {
+      "rejoined": "Back in {{room}} · your mic is off",
+      "movedElsewhere": "You joined {{room}} in another tab or on another device",
+      "morePeople_one": "+{{count}} more",
+      "morePeople_other": "+{{count}} more",
+      "micOn": "mic on",
+      "cameraOn": "camera on",
+      "sharing": "sharing their screen",
+      "deletedAccount": "Deleted account"
     },
     "serverMenu": {
       "createChannel": "Create channel",

@@ -4,7 +4,8 @@ import { onRealtimeEvent } from '@/features/realtime'
 import { userKeys, type UserProfile } from '@/features/users'
 import { getApiErrorInfo, getApiErrorType, retryAfterSeconds } from '@/lib/api-error'
 import { reportError } from '@/lib/error-tracking'
-import type { Server } from '../types'
+import { withRoomPeople } from '../lib/room-people'
+import type { RoomPerson, Server } from '../types'
 import { serverKeys } from './keys'
 import { fetchServer } from './servers.api'
 import { forgetServer } from './useServers'
@@ -18,6 +19,12 @@ export interface ServerNotices {
     deleted: (server: Server) => void
     /** They were kicked or banned from it (S-MOD-02, L9b). */
     removed: (server: Server, by: RemovedBy, reason: string | null) => void
+}
+
+/** A voice room's whole list (`voice_state.updated`, D-205). */
+interface RoomNews {
+    channelId: string
+    voiceStates: RoomPerson[]
 }
 
 interface ServerNews {
@@ -100,6 +107,13 @@ const listening = new WeakSet<QueryClient>()
  * only ever written into a list already held: an event never makes one. A
  * server this tab is deleting itself is left to its dialog.
  *
+ * Who is in each voice room comes whole with `voice_state.updated` (D-205):
+ * the room's list is swapped at once, no read. It is not a change that makes
+ * a read answered meanwhile old, so that read is still written; but its rooms
+ * told since it began keep the list told, newer than what the read saw. The
+ * same for every read of the whole list, whoever asked for it (`ready`, L2-e;
+ * a change this tab made).
+ *
  * A timeout ends with no event: a server whose timeout runs is read again
  * once it is over, for the channels it gives back (the composer opens again,
  * 02 `timed-out`). Given, changed or lifted, the read that tells of it moves
@@ -125,9 +139,29 @@ export function listenForServers(client: QueryClient, notices: ServerNotices): (
     let stopped = false
     // Each change to the list, whoever made it: a read answered after one is not written.
     let version = 0
+    // A room's list swapped is not such a change (the cache tells its listeners at once, inside the write).
+    let swapping = false
+    /** Each room's last list told, and when (a count of lists told): put back over a read older than it. */
+    const told = new Map<string, { at: number; people: RoomPerson[] }>()
+    let tellings = 0
+    /** The lists told when the list's current read (GET /servers, whoever asked for it) began. */
+    let listReadFrom: number | null = null
     const listHash = JSON.stringify(serverKeys.list())
     const stopVersions = client.getQueryCache().subscribe((event) => {
-        if (event.type === 'updated' && event.action.type === 'success' && event.query.queryHash === listHash) {
+        if (swapping) return
+        if (event.type !== 'updated' || event.query.queryHash !== listHash) return
+        const { action } = event
+        if (action.type === 'fetch') listReadFrom = tellings
+        if (action.type === 'error') listReadFrom = null
+        if (action.type === 'success' && !action.manual && listReadFrom !== null) {
+            const since = listReadFrom
+            listReadFrom = null
+            // After the cache has told everyone of the read, not inside its telling.
+            queueMicrotask(() => {
+                if (!stopped) keepToldSince(since)
+            })
+        }
+        if (action.type === 'success') {
             version += 1
             followTimeouts()
         }
@@ -167,6 +201,23 @@ export function listenForServers(client: QueryClient, notices: ServerNotices): (
         }
     }
 
+    function swapPeople(channelId: string, people: RoomPerson[]): void {
+        const servers = client.getQueryData<Server[]>(serverKeys.list())
+        const next = withRoomPeople(servers, channelId, people)
+        if (next === servers) return
+        swapping = true
+        try {
+            client.setQueryData<Server[]>(serverKeys.list(), next)
+        } finally {
+            swapping = false
+        }
+    }
+
+    /** The rooms told since `since` keep the list told: a read begun before it saw an older one. */
+    function keepToldSince(since: number): void {
+        for (const [channelId, { at, people }] of told) if (at > since) swapPeople(channelId, people)
+    }
+
     function gone(serverId: string): Server | undefined {
         const server = listed(serverId)
         clearTimeout(timers.get(serverId))
@@ -196,6 +247,7 @@ export function listenForServers(client: QueryClient, notices: ServerNotices): (
         reading.add(serverId)
         const before = listed(serverId)
         const seen = version
+        const toldBefore = tellings
         try {
             const server = await fetchServer(serverId)
             failures.delete(serverId)
@@ -206,6 +258,7 @@ export function listenForServers(client: QueryClient, notices: ServerNotices): (
                 return
             }
             put(server, before)
+            keepToldSince(toldBefore)
         } catch (error) {
             const type = getApiErrorType(error)
             // Not theirs any more (left, removed, deleted meanwhile): it goes.
@@ -261,6 +314,12 @@ export function listenForServers(client: QueryClient, notices: ServerNotices): (
             const server = gone(serverId)
             if (server) notices.deleted(server)
         }),
+        onRealtimeEvent('voice_state.updated', (data) => {
+            const { channelId, voiceStates } = data as RoomNews
+            tellings += 1
+            told.set(channelId, { at: tellings, people: voiceStates })
+            swapPeople(channelId, voiceStates)
+        }),
         onRealtimeEvent('ready', () => {
             void client.invalidateQueries({
                 queryKey: serverKeys.all,
@@ -279,6 +338,7 @@ export function listenForServers(client: QueryClient, notices: ServerNotices): (
         ends.clear()
         late.clear()
         again.clear()
+        told.clear()
         listening.delete(client)
     }
 }

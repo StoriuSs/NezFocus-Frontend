@@ -63,6 +63,7 @@ SENTRY_DSN=${VITE_SENTRY_DSN:-}
 SENTRY_RELEASE=${VITE_SENTRY_RELEASE:-}
 IMAGE_ORIGINS=${CSP_IMG_SRC:-}
 STORAGE_ORIGINS=${CSP_STORAGE_SRC:-}
+LIVEKIT_URL=${CSP_LIVEKIT_URL:-}
 
 # ─── The browser's settings ──────────────────────────────────────────────────
 {
@@ -90,6 +91,17 @@ for value in $STORAGE_ORIGINS; do
 done
 [ -n "$storage_origins" ] || echo "runtime-config: CSP_STORAGE_SRC is empty: files cannot be sent in messages" >&2
 
+# Voice rooms (ARCHITECTURE §4) talk to LiveKit itself: its ws(s):// address,
+# and the http(s):// of the same host, which the client asks when a join fails.
+livekit_origins=''
+if [ -n "$LIVEKIT_URL" ]; then
+	livekit_ws=$(printf '%s' "$LIVEKIT_URL" | sed -n -E 's#^(wss?://)([^/?#]+).*#\1\2#p')
+	[ -n "$livekit_ws" ] || die "CSP_LIVEKIT_URL is not a ws(s) URL: $LIVEKIT_URL"
+	livekit_origins="$livekit_ws $(printf '%s' "$livekit_ws" | sed -E 's#^ws#http#')"
+else
+	echo "runtime-config: CSP_LIVEKIT_URL is empty: no one can join a voice room" >&2
+fi
+
 # The socket (SRS 5.2) connects to the same host over ws:// or wss://.
 API_SOCKET_ORIGIN=$(origin VITE_API_URL "$API_URL" | sed -E 's#^http#ws#')
 
@@ -99,6 +111,7 @@ sed -e "s#__API_SOCKET_ORIGIN__#$API_SOCKET_ORIGIN#g" 	-e "s#__API_ORIGIN__#$(or
 	-e "s#__SENTRY_ORIGIN__#$([ -z "$SENTRY_DSN" ] || origin VITE_SENTRY_DSN "$SENTRY_DSN")#g" \
 	-e "s#__EXTRA_IMAGE_ORIGINS__#${image_origins# }#g" \
 	-e "s#__STORAGE_ORIGINS__#${storage_origins# }#g" \
+	-e "s#__LIVEKIT_ORIGINS__#$livekit_origins#g" \
 	-e 's/  */ /g' \
 	-e "s#frame-src ;#frame-src 'none';#" \
 	"$CSP_TEMPLATE" > "$CSP_FILE"

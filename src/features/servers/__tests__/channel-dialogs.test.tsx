@@ -46,6 +46,7 @@ const channel = (id: string, extra: Partial<ServerChannel> = {}): ServerChannel 
     taskBoardEnabled: false,
     permissions: CHI_BITS,
     viewRoleIds: [],
+    voiceStates: null,
     ...extra
 })
 

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { QueryClient, QueryObserver } from '@tanstack/react-query'
 import { apiError } from '@/test/helpers'
 import { userKeys } from '@/features/users'
-import type { Server, ServerChannel } from '../types'
+import type { RoomPerson, Server, ServerChannel } from '../types'
 
 const fetchServer = vi.fn<(serverId: string) => Promise<Server>>()
 vi.mock('../api/servers.api', () => ({ fetchServer }))
@@ -22,7 +22,8 @@ const channel = (id: string): ServerChannel => ({
     isStudyRoom: false,
     taskBoardEnabled: false,
     permissions: '1024',
-    viewRoleIds: null
+    viewRoleIds: null,
+    voiceStates: null
 })
 const server = (id: string, channels: string[], name = id): Server => ({
     id,
@@ -358,6 +359,117 @@ describe('Keeping the servers live from events (D-178)', () => {
             stop()
             await vi.advanceTimersByTimeAsync(120_000)
             expect(fetchServer).not.toHaveBeenCalled()
+        })
+    })
+
+    describe('who is in each voice room (D-205)', () => {
+        const person = (id: string, micOn = false): RoomPerson => ({
+            user: { id, username: id, displayName: id, avatarUrl: null },
+            joinedAt: '2026-11-18T14:40:00.000Z',
+            micOn,
+            cameraOn: false,
+            screenSharing: false,
+            modMuted: false
+        })
+        const room = (id: string, people: RoomPerson[] = []): ServerChannel => ({
+            ...channel(id),
+            type: 'voice',
+            voiceStates: people
+        })
+        const withRoom = (people: RoomPerson[] = []): Server => ({
+            ...server('ot', ['chung'], 'Ôn thi'),
+            channels: [channel('chung'), room('thao-luan', people)]
+        })
+        const peopleIn = (channelId: string) =>
+            list()
+                ?.flatMap((one) => one.channels)
+                .find((one) => one.id === channelId)
+                ?.voiceStates?.map((one) => `${one.user.id}${one.micOn ? '+mic' : ''}`)
+
+        beforeEach(() => {
+            client.setQueryData(serverKeys.list(), [withRoom([person('tuan')]), server('nd', ['chung'])])
+        })
+
+        it("swaps a room's whole list for the event's: no read of the server", () => {
+            emitRealtimeEvent('voice_state.updated', {
+                channelId: 'thao-luan',
+                voiceStates: [person('tuan', true), person('minh')]
+            })
+            expect(peopleIn('thao-luan')).toEqual(['tuan+mic', 'minh'])
+            expect(fetchServer).not.toHaveBeenCalled()
+        })
+
+        it('makes no list from an event: a room not held, or nothing held', () => {
+            const before = list()
+            emitRealtimeEvent('voice_state.updated', { channelId: 'chung', voiceStates: [person('tuan')] })
+            emitRealtimeEvent('voice_state.updated', { channelId: 'elsewhere', voiceStates: [person('tuan')] })
+            expect(list()).toBe(before)
+            client.removeQueries({ queryKey: serverKeys.list() })
+            emitRealtimeEvent('voice_state.updated', { channelId: 'thao-luan', voiceStates: [] })
+            expect(list()).toBeUndefined()
+        })
+
+        it("does not drop a server's read for a room's list told meanwhile: the read is written once", async () => {
+            let answer!: (value: Server) => void
+            fetchServer.mockImplementationOnce(() => new Promise((resolve) => (answer = resolve)))
+            emitRealtimeEvent('channel.updated', { serverId: 'ot' })
+            await settle()
+            emitRealtimeEvent('voice_state.updated', { channelId: 'thao-luan', voiceStates: [] })
+            answer({ ...withRoom([person('tuan')]), name: 'Ôn thi 2' })
+            await settle()
+            expect(fetchServer).toHaveBeenCalledTimes(1)
+            expect(list()?.[0]?.name).toBe('Ôn thi 2')
+        })
+
+        it('keeps a list told while the server was read: the read is older for that room', async () => {
+            let answer!: (value: Server) => void
+            fetchServer.mockImplementationOnce(() => new Promise((resolve) => (answer = resolve)))
+            emitRealtimeEvent('channel.updated', { serverId: 'ot' })
+            await settle()
+            emitRealtimeEvent('voice_state.updated', {
+                channelId: 'thao-luan',
+                voiceStates: [person('tuan'), person('minh')]
+            })
+            answer(withRoom([person('tuan')]))
+            await settle()
+            expect(peopleIn('thao-luan')).toEqual(['tuan', 'minh'])
+        })
+
+        it('keeps a list told while everything is read again on ready (L2-e)', async () => {
+            let answer!: (value: Server[]) => void
+            const unsubscribe = new QueryObserver(client, {
+                queryKey: serverKeys.list(),
+                queryFn: () => new Promise<Server[]>((resolve) => (answer = resolve))
+            }).subscribe(() => undefined)
+            emitRealtimeEvent('ready', {})
+            await vi.advanceTimersByTimeAsync(0)
+            emitRealtimeEvent('voice_state.updated', { channelId: 'thao-luan', voiceStates: [person('minh')] })
+            answer([withRoom([person('tuan')]), server('nd', ['chung'])])
+            await vi.advanceTimersByTimeAsync(0)
+            expect(peopleIn('thao-luan')).toEqual(['minh'])
+            unsubscribe()
+        })
+
+        it('keeps a list told while the servers are read again for any other reason (a change of this tab)', async () => {
+            let answer!: (value: Server[]) => void
+            const unsubscribe = new QueryObserver(client, {
+                queryKey: serverKeys.list(),
+                queryFn: () => new Promise<Server[]>((resolve) => (answer = resolve))
+            }).subscribe(() => undefined)
+            void client.invalidateQueries({ queryKey: serverKeys.list() })
+            await vi.advanceTimersByTimeAsync(0)
+            emitRealtimeEvent('voice_state.updated', { channelId: 'thao-luan', voiceStates: [person('minh')] })
+            answer([withRoom([person('tuan')]), server('nd', ['chung'])])
+            await vi.advanceTimersByTimeAsync(0)
+            expect(peopleIn('thao-luan')).toEqual(['minh'])
+
+            // A read begun after the list was told is newer: it is kept.
+            void client.invalidateQueries({ queryKey: serverKeys.list() })
+            await vi.advanceTimersByTimeAsync(0)
+            answer([withRoom([person('nam')]), server('nd', ['chung'])])
+            await vi.advanceTimersByTimeAsync(0)
+            expect(peopleIn('thao-luan')).toEqual(['nam'])
+            unsubscribe()
         })
     })
 })

@@ -70,7 +70,8 @@ const ND = server('nd', 'Nhóm đồ án Mobile', {
             isStudyRoom: false,
             taskBoardEnabled: false,
             permissions: '1',
-            viewRoleIds: null
+            viewRoleIds: null,
+            voiceStates: null
         }
     ]
 })

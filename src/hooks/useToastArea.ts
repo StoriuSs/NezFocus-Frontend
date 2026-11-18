@@ -27,8 +27,12 @@ export const useToastArea = create<ToastEdges>(() => ({
     panelRight: null
 }))
 
-/** The element of each edge on the page now. */
-const elements = new Map<ToastEdge, HTMLElement>()
+/**
+ * The elements of each edge on the page now, the latest last. A right edge
+ * follows the latest; a top edge the highest: two bars at the bottom (the
+ * Composer over the room dock's strip below 1024, C-09) keep toasts above both.
+ */
+const elements = new Map<ToastEdge, HTMLElement[]>()
 
 /**
  * Every edge read again, not only the one that changed: the Composer growing
@@ -36,9 +40,13 @@ const elements = new Map<ToastEdge, HTMLElement>()
  */
 function measure() {
     const next: ToastEdges = { contentRight: null, barTop: null, liftTop: null, panelRight: null }
-    for (const [edge, element] of elements) {
-        const rect = element.getBoundingClientRect()
-        next[edge] = edge === 'contentRight' || edge === 'panelRight' ? rect.right : rect.top
+    for (const [edge, held] of elements) {
+        const latest = held.at(-1)
+        if (!latest) continue
+        next[edge] =
+            edge === 'contentRight' || edge === 'panelRight'
+                ? latest.getBoundingClientRect().right
+                : Math.min(...held.map((element) => element.getBoundingClientRect().top))
     }
     useToastArea.setState(next)
 }
@@ -48,7 +56,7 @@ export function useToastEdge(edge: ToastEdge, ref: RefObject<HTMLElement | null>
     useEffect(() => {
         const element = ref.current
         if (!element || !on) return
-        elements.set(edge, element)
+        elements.set(edge, [...(elements.get(edge) ?? []), element])
         measure()
         // The element, and the page itself for the window's size: the shell fills the window.
         // (Not the window's event by name: Tailwind would read the word as a class for the first CSS.)
@@ -57,8 +65,11 @@ export function useToastEdge(edge: ToastEdge, ref: RefObject<HTMLElement | null>
         observer?.observe(document.documentElement)
         return () => {
             observer?.disconnect()
-            // Another element may hold the edge already (the Composer swapped for its locked line).
-            if (elements.get(edge) === element) elements.delete(edge)
+            // Others may hold the edge too (the Composer swapped for its locked line): only this one goes.
+            elements.set(
+                edge,
+                (elements.get(edge) ?? []).filter((one) => one !== element)
+            )
             measure()
         }
     }, [edge, ref, on])

@@ -1286,6 +1286,66 @@ export interface paths {
         patch?: never
         trace?: never
     }
+    '/api/v1/voice/token': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        /**
+         * A token to join a voice room (CONNECT), sending what SPEAK and VIDEO
+         *     allow (D-210). Being in another room puts one out of it first. A room
+         *     one may not view is NOT_FOUND; no CONNECT FORBIDDEN_ERROR; a timeout
+         *     MEMBER_TIMED_OUT with `timeout_until`; LiveKit unreachable
+         *     SERVICE_UNAVAILABLE_ERROR. Not `@Idempotent()`: a retry is simply
+         *     another token.
+         */
+        post: operations['VoiceController_token_v1']
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/voice/leave': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        /**
+         * Leave the room one is in: out of LiveKit and off the room's list at
+         *     once. In no room: answered the same.
+         */
+        post: operations['VoiceController_leave_v1']
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/voice/livekit-webhook': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        post: operations['LiveKitWebhookController_receive_v1']
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
 }
 export type webhooks = Record<string, never>
 export interface components {
@@ -1604,6 +1664,23 @@ export interface components {
             /** @description Order among the categories, 0 first. */
             position: number
         }
+        RoomPersonUserResponseDto: {
+            id: string
+            username: string | null
+            display_name: string | null
+            avatar_url: string | null
+        }
+        RoomPersonResponseDto: {
+            user: components['schemas']['RoomPersonUserResponseDto']
+            /** Format: date-time */
+            joined_at: string
+            /** @description What their own browser says (D-206): icons only. */
+            mic_on: boolean
+            camera_on: boolean
+            screen_sharing: boolean
+            /** @description A moderator turned their microphone off (D-207). */
+            mod_muted: boolean
+        }
         ServerChannelResponseDto: {
             /**
              * @description What they may do in this channel (appendix B, steps 1–6).
@@ -1612,6 +1689,11 @@ export interface components {
             permissions: string
             /** @description The roles that see it when private, sent only to those who may edit that; null otherwise. */
             view_role_ids: string[] | null
+            /**
+             * @description A voice room: who is in it, in the order they joined (D-205); kept up to
+             *     date by `voice_state.updated`. Null for a text channel.
+             */
+            voice_states: components['schemas']['RoomPersonResponseDto'][] | null
             id: string
             /** @description Null: listed above the first category. */
             category_id: string | null
@@ -2545,6 +2627,16 @@ export interface components {
             all?: true
             /** Format: uuid */
             before_id?: string
+        }
+        VoiceTokenResponseDto: {
+            /** @description Good for the first connection within 10 minutes; LiveKit renews it itself once in. */
+            token: string
+            /** @description LiveKit's address: ws://localhost:7880 in development, wss:// in production. */
+            url: string
+        }
+        JoinVoiceRequestDto: {
+            /** Format: uuid */
+            channel_id: string
         }
     }
     responses: never
@@ -5083,6 +5175,76 @@ export interface operations {
                     'application/json': {
                         meta: components['schemas']['ApiResponseMetaDto']
                         data: components['schemas']['NotificationsReadResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    VoiceController_token_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['JoinVoiceRequestDto']
+            }
+        }
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['VoiceTokenResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    VoiceController_leave_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: null
+                    }
+                }
+            }
+        }
+    }
+    LiveKitWebhookController_receive_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: null
                     }
                 }
             }

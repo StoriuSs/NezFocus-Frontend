@@ -18,7 +18,7 @@ import { serverOwnership } from '@/features/servers/api/serverOwnership'
 import { connectServerOwnership } from '@/features/auth'
 import { useConnectionBanner, useRealtimeConnection } from '@/features/realtime'
 import { useMentionTotal } from '@/features/messaging'
-import { useServers } from '@/features/servers'
+import { RoomDock, useServers, useVoiceRooms } from '@/features/servers'
 import { useTitleCount } from '@/hooks/useDocumentTitle'
 import { cn } from '@/lib/utils'
 import { ListColumn } from './ListColumn'
@@ -97,6 +97,8 @@ export default function AppShell() {
     useRemovedWhileAway()
     // The tab's socket (SRS 5.2), opened after this first paint; and the Banner it shows when lost.
     useRealtimeConnection()
+    // The voice room this tab is in: joined again on a reload, its state told again (07, D-206).
+    useVoiceRooms()
     const connection = useConnectionBanner()
     // The tab title starts with every mention still unread, whatever the page (REQ-MSG-09, X-01):
     // in the channels the server list shows (a server left, a channel deleted, no longer counts).
@@ -146,30 +148,34 @@ export default function AppShell() {
 
     return (
         <ShellContext.Provider value={shell}>
-            <div className='flex h-dvh overflow-hidden bg-bg'>
-                <Rail
-                    id={SHELL_RAIL_ID}
-                    className={cn(
-                        'hidden md:flex',
-                        navOpen &&
-                            'max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-40 max-md:flex max-md:animate-in max-md:slide-in-from-left max-md:duration-medium max-md:ease-out'
-                    )}
-                />
-                <ListColumn
-                    id={SHELL_LIST_ID}
-                    className={cn(
-                        'hidden lg:flex',
-                        navOpen &&
-                            'max-lg:fixed max-lg:inset-y-0 max-lg:left-rail max-lg:z-40 max-lg:flex max-lg:shadow-sheet-left max-lg:animate-in max-lg:slide-in-from-left max-lg:duration-medium max-lg:ease-out'
-                    )}
-                />
-                <main className='flex min-w-0 flex-1'>
-                    <ErrorBoundary key={pathname} onReset={resetQueryErrors}>
-                        <Suspense fallback={<PageLoader className='min-h-0 flex-1' />}>
-                            <Outlet />
-                        </Suspense>
-                    </ErrorBoundary>
-                </main>
+            <div className='flex h-dvh flex-col overflow-hidden bg-bg'>
+                <div className='flex min-h-0 flex-1'>
+                    <Rail
+                        id={SHELL_RAIL_ID}
+                        className={cn(
+                            'hidden md:flex',
+                            navOpen &&
+                                'max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-40 max-md:flex max-md:animate-in max-md:slide-in-from-left max-md:duration-medium max-md:ease-out'
+                        )}
+                    />
+                    <ListColumn
+                        id={SHELL_LIST_ID}
+                        className={cn(
+                            'hidden lg:flex',
+                            navOpen &&
+                                'max-lg:fixed max-lg:inset-y-0 max-lg:left-rail max-lg:z-40 max-lg:flex max-lg:shadow-sheet-left max-lg:animate-in max-lg:slide-in-from-left max-lg:duration-medium max-lg:ease-out'
+                        )}
+                    />
+                    <main className='flex min-w-0 flex-1'>
+                        <ErrorBoundary key={pathname} onReset={resetQueryErrors}>
+                            <Suspense fallback={<PageLoader className='min-h-0 flex-1' />}>
+                                <Outlet />
+                            </Suspense>
+                        </ErrorBoundary>
+                    </main>
+                </div>
+                {/* Below 1024 the list column is a sheet: the dock is a strip across the window (C-09). */}
+                <RoomDock shape='strip' />
             </div>
             {creatingServer ? (
                 <Suspense fallback={null}>

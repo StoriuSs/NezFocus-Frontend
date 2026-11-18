@@ -153,6 +153,14 @@ react-starter/
     │   │                      #   liveNotifications: notification.* into the cache), components/ (the
     │   │                      #   panel, NotificationRow C-29), lib/ (cache changes, day groups and times,
     │   │                      #   a row's words), notifications.css (its classes, D-193)
+    │   ├── voice/             # Voice rooms (07, M4): index.ts (VoiceRoomView: the preview page and the
+    │   │                      #   room, InRoomDock C-09, both lazy with LiveKit; useVoiceSession,
+    │   │                      #   useOrderedPeople, useVoiceStore, not lazy), voice.store.ts (the room
+    │   │                      #   this tab is in, its mic, the last join's problem), api/ (token,
+    │   │                      #   leave), lib/ (session.ts: join, leave, mic, outliving every page;
+    │   │                      #   people order and grid, reload, the browser's mic), components/,
+    │   │                      #   hooks/, voice.css (its classes). The rooms' people are the servers'
+    │   │                      #   data (D-205), handed in as VoiceRoom
     │   └── users/             # The profile and the account's settings
     │       ├── api/           # users.api.ts (fetchProfile, removeAvatar),
     │       │                  #   settings.api.ts (fetchSettings, settingsQuery, updateSettings), hooks, keys
@@ -169,7 +177,7 @@ react-starter/
     │       ├── types.ts
     │       └── index.ts       # What other features may import
     ├── hooks/                 # Shared hooks: useTheme, useMediaQuery, useDebouncedValue, useCountdown, useMinuteClock,
-    │                          #   useDocumentTitle, useIdempotentMutation, useToastArea (where toasts sit)
+    │                          #   useDocumentTitle, useIdempotentMutation, useToastArea (where toasts sit), useBrowserOnline
     ├── i18n/                  # i18next setup and the translation catalogues (settings.ts, deletion.ts, servers.ts: words loaded with their pages)
     ├── lib/                   # Shared, feature-free: the API client, and friends
     ├── pages/                 # Pages that belong to no feature: Study, Legal, NotFound
@@ -295,6 +303,7 @@ Shared and feature-free.
 | `time-zones.ts` | The time zones to pick from (C-25), named and ordered, and the search over them; `wallClock()`, the calendar and clock in a zone (times shown in the account's zone); `endsAt()` / `endsAtText()`, when a timeout ends ("22:30", "22:30, 19/10" on another day); `accountTimeZone()`, the account's zone for code outside React, from the source the users feature sets (`setTimeZoneSource`) |
 | `phase-sound.ts` | `playPhaseSound()`: the phase sound, two short notes (C6 then E6) made with Web Audio (D-140), silent where the browser cannot play. "Play sample" on Notifications now, the end of a study phase later |
 | `socket.ts` | `openSocket()`: the tab's one socket.io connection (SRS 5.2), websocket only, a new ticket for each attempt, a refused handshake tried again with a growing wait, a session that ended asked about (still signed in: connect again). Loaded with `import()` after the AppShell's first paint; knows no feature (the ticket and what to do come in its options) |
+| `livekit/` | `joinRoom()`: the tab's link to a LiveKit room (ARCHITECTURE §4): others' sound played whatever the page, the mic switched, how the link ended in the app's words (`other-tab`, `removed`, `lost`). Loaded with `import()` when a room is joined, never with the first screen; knows no feature |
 | `simple-markdown.ts` | The small Markdown subset the legal pages are written in, read into blocks React draws (never `innerHTML`) |
 
 ### `src/pages/`
@@ -394,7 +403,12 @@ Habits worth keeping:
   Task Board, and the channel settings ask it how many tasks are not done;
   `users, realtime, messaging ← notifications ← servers`: the inbox reads
   a message's words with the chat's mention names, and the servers feature
-  hands it the names of channels and servers). When the one imported
+  hands it the names of channels and servers;
+  `users, realtime ← voice ← servers`: the channel page shows a room's page
+  and the channel list the people in each room, the servers feature handing
+  voice each room as a `VoiceRoom` (`servers/lib/voice-room.ts`), what one
+  may do there read from the bits, and keeping who is in it in its own list
+  (`voice_state.updated` in `liveServers.ts`, D-205)). When the one imported
   needs the other, it declares a port and is handed it: deleting the account
   (auth) asks the servers it owns through `ServerOwnership`
   (`auth/lib/server-ownership.ts`), the servers feature answers

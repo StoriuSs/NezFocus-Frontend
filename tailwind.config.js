@@ -48,7 +48,14 @@ export default {
     darkMode: 'class',
     // The chat's, the tasks' and the inbox's own classes go in their own stylesheets
     // (tailwind.feature.js), loaded with their chunks, not in the one loaded before the first screen.
-    content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}', '!./src/features/messaging/**', '!./src/features/tasks/**', '!./src/features/notifications/**'],
+    content: [
+        './index.html',
+        './src/**/*.{js,ts,jsx,tsx}',
+        '!./src/features/messaging/**',
+        '!./src/features/tasks/**',
+        '!./src/features/notifications/**',
+        '!./src/features/voice/**'
+    ],
     // Words of the code read as classes the app never uses: `element.blur()` (useRemovedWhileAway).
     blocklist: ['blur'],
     theme: {

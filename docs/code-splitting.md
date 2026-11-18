@@ -191,6 +191,17 @@ chunk of its own name, `NotificationStyles-<hash>.css`, "Notifications CSS"
 in `.size-limit.mjs`). The badge's `useUnreadNotificationCount` is not lazy
 and sits in the AppShell's chunk (M3 L6b).
 
+Voice rooms (M4 L3a) are the heaviest: `src/features/voice/index.ts`
+exports `VoiceRoomView` (a room's preview page and the room, with the hooks
+of `@livekit/components-react`) and `InRoomDock` lazily, the servers feature
+shows them inside a `Suspense`; LiveKit's client itself (`src/lib/livekit`,
+about 155 kB gzipped) is read with `import()` only when a room is joined, as
+`socket.ts` is. Their words (`voice`) and classes (`tailwind.voice.config.js`,
+`voice.css`, `VoiceStyles-<hash>.css`) come with them: "Voice CSS" and "Voice
+JS" in `.size-limit.mjs`. What the shell needs at once is light and not lazy:
+the store of the room this tab is in, `useVoiceSession` (joining again after
+a reload) and the order people show in under a room in the channel list.
+
 The pins panel (S-CHAT-02) is in the same chunk: `index.ts` exports
 `PinsPanel` as `lazy(() => import('./components/ChannelChat').then((chat) =>
 ({ default: chat.PinsPanel })))`, and `ChannelChat.tsx` re-exports it, so it

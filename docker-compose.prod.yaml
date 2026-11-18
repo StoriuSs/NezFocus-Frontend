@@ -50,6 +50,7 @@ services:
       VITE_SENTRY_RELEASE: ${APP_TAG:-}
       CSP_IMG_SRC: ${CSP_IMG_SRC:-}
       CSP_STORAGE_SRC: ${CSP_STORAGE_SRC:-}
+      CSP_LIVEKIT_URL: ${CSP_LIVEKIT_URL:-}
     ports:
       # Bind to 127.0.0.1, NOT 0.0.0.0. In production, Nginx on the host
       # terminates TLS and reverse-proxies to this container. The container

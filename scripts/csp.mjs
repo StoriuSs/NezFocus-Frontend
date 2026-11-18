@@ -39,7 +39,9 @@ export const PLACEHOLDERS = {
     errorTracking: '__SENTRY_ORIGIN__',
     images: '__EXTRA_IMAGE_ORIGINS__',
     // Where the browser uploads message files itself (D-165): the bucket.
-    storage: '__STORAGE_ORIGINS__'
+    storage: '__STORAGE_ORIGINS__',
+    // LiveKit (ARCHITECTURE §4): its wss:// signalling and the https:// of the same host.
+    livekit: '__LIVEKIT_ORIGINS__'
 }
 
 /**
@@ -55,12 +57,13 @@ export function cspTemplate(pages) {
         errorTracking: [PLACEHOLDERS.errorTracking],
         extraImages: [PLACEHOLDERS.images],
         storage: [PLACEHOLDERS.storage],
+        livekit: [PLACEHOLDERS.livekit],
         pages
     })
 }
 
 /** The policy from origins that are already resolved (or placeholders). */
-function policy({ api, apiSocket, errorTracking, extraImages, storage, pages }) {
+function policy({ api, apiSocket, errorTracking, extraImages, storage, livekit, pages }) {
     const hashes = pages
         .flatMap(inlineScripts)
         .map((body) => `'sha256-${createHash('sha256').update(body, 'utf8').digest('base64')}'`)
@@ -82,8 +85,10 @@ function policy({ api, apiSocket, errorTracking, extraImages, storage, pages }) 
         "font-src 'self' data:",
         // The socket's origin on its own: an https: source does not cover
         // wss:, and only 'self' stretches to ws/wss (CSP3). The storage: message
-        // files are posted to the bucket by the browser itself (D-165).
-        `connect-src ${unique("'self'", api, apiSocket, ...errorTracking, ...storage)}`,
+        // files are posted to the bucket by the browser itself (D-165). A voice
+        // room's media goes straight to LiveKit, never through the API
+        // (ARCHITECTURE §4): its wss:// signalling and its https:// checks.
+        `connect-src ${unique("'self'", api, apiSocket, ...errorTracking, ...storage, ...livekit)}`,
         // A message's video and sound play from the bucket (C-10).
         `media-src ${unique("'self'", ...storage)}`,
         // The only frames: a message's PDF from the bucket, in the browser's

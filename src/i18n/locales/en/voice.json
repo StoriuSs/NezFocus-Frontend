@@ -1,0 +1,51 @@
+{
+    "preview": {
+        "count_one": "{{count}} person in the room",
+        "count_other": "{{count}} people in the room",
+        "empty": "No one is in the room",
+        "you": "You",
+        "join": "Join room",
+        "switch": "Switch to this room",
+        "joinHere": "Join here instead",
+        "joinError": "Couldn't join the room. Check your connection and try again.",
+        "timedOut": "You're timed out until {{time}} · you can't join rooms yet.",
+        "noConnect": "You don't have permission to join this room.",
+        "offline": "You need a connection to join a room",
+        "otherTab": "You're in this room in another tab or on another device"
+    },
+    "controls": {
+        "mic": "Mic",
+        "micOn": "Unmute (Ctrl Shift M)",
+        "micOff": "Mute (Ctrl Shift M)",
+        "micBlocked": "Your browser is blocking the mic",
+        "noSpeak": "You don't have permission to speak in this room",
+        "leave": "Leave room"
+    },
+    "micBlocked": {
+        "banner": "Your browser is blocking the mic · you can still listen",
+        "howTo": "How to fix",
+        "title": "Turn the mic back on",
+        "step1": "1. Click the icon at the start of the address bar, next to the page address.",
+        "step2": "2. Under Microphone, choose Allow.",
+        "step3": "3. If the Mic button hasn't changed, reload the page."
+    },
+    "room": {
+        "people": "People in the room",
+        "left": "Left {{room}}",
+        "joinAgain": "Join again"
+    },
+    "dock": {
+        "inRoom": "In a room",
+        "open": "Open {{room}}",
+        "people_one": "{{count}} person",
+        "people_other": "{{count}} people",
+        "reconnecting": "Reconnecting…"
+    },
+    "person": {
+        "deletedAccount": "Deleted account",
+        "micOn": "mic on",
+        "micOff": "mic off",
+        "cameraOn": "camera on",
+        "speaking": "speaking"
+    }
+}

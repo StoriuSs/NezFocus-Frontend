@@ -73,6 +73,19 @@ describe('The edges a toast follows', () => {
         expect(useToastArea.getState()).toMatchObject({ contentRight: 1160, barTop: null })
     })
 
+    it('keeps toasts above the highest of two bottom bars (the Composer over the room dock strip, C-09), whichever came last', () => {
+        const view = render(
+            <>
+                <Edge edge='barTop' rect={{ top: 900, right: 768 }} />
+                <Edge edge='barTop' rect={{ top: 820, right: 768 }} />
+                <Edge edge='barTop' rect={{ top: 972, right: 768 }} />
+            </>
+        )
+        expect(useToastArea.getState().barTop).toBe(820)
+        view.rerender(<Edge edge='barTop' rect={{ top: 900, right: 768 }} />)
+        expect(useToastArea.getState().barTop).toBe(900)
+    })
+
     it('measures every edge again when the window changes: one moved without changing size', () => {
         let barTop = 820
         function Bar() {

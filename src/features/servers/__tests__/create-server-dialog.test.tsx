@@ -56,7 +56,8 @@ const created: Server = {
             isStudyRoom: false,
             taskBoardEnabled: false,
             permissions: '8388607',
-            viewRoleIds: []
+            viewRoleIds: [],
+            voiceStates: null
         }
     ]
 }

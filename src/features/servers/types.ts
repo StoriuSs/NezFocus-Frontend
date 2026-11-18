@@ -62,3 +62,9 @@ export type BanItem = ApiModel<'BanResponseDto'>
 
 /** One page of bans, newest first. */
 export type BanPage = ApiModel<'BanPageResponseDto'>
+
+/**
+ * Someone in a voice room as everyone who may view it sees them (D-205): who,
+ * since when, and their icons (mic and camera self-reported, D-206).
+ */
+export type RoomPerson = ApiModel<'RoomPersonResponseDto'>

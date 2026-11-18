@@ -87,7 +87,7 @@ export function getApiErrorMessage(error: unknown, fallbackKey: ApiMessageKey = 
 }
 
 /** The end of a timeout a `MEMBER_TIMED_OUT` answer carries (`data.timeoutUntil`), if it is a time. */
-function timedOutUntil(error: unknown): Date | null {
+export function timedOutUntil(error: unknown): Date | null {
     if (!axios.isAxiosError(error)) return null
     const until = (error.response?.data as { data?: { timeoutUntil?: unknown } } | undefined)?.data?.timeoutUntil
     const end = typeof until === 'string' ? new Date(until) : null

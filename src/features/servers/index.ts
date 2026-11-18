@@ -9,6 +9,8 @@ export { ServerChannelColumn } from './components/channel-list/ServerChannelColu
 export { MyTasksColumn } from './components/MyTasksColumn'
 export { useInboxPlaces } from './hooks/useInboxPlaces'
 export { NoServers } from './components/NoServers'
+export { RoomDock } from './components/RoomDock'
+export { useVoiceRooms } from './hooks/useVoiceRooms'
 export { ServerIcon } from './components/ServerIcon'
 export { ServerMenuItems } from './components/ServerMenuItems'
 export { channelGroups, firstTextChannel, type ChannelGroup } from './lib/channel-list'

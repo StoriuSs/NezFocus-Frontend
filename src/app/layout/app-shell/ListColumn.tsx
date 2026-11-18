@@ -20,6 +20,7 @@ import { WithTooltip } from '@/components/ui/tooltip'
 import { AUTH_PATHS } from '@/features/auth'
 import {
     MyTasksColumn,
+    RoomDock,
     ServerChannelColumn,
     serverSettingsPath,
     settingsSections,
@@ -217,7 +218,8 @@ function ServerSettingsColumn({ serverId }: { serverId: string | undefined }) {
 
 /**
  * The 240-wide list column (`surface-1`) next to the rail. Which list it
- * shows is the route's choice, in its `handle` (ShellHandle).
+ * shows is the route's choice, in its `handle` (ShellHandle). At its bottom,
+ * the InRoomDock while in a voice room (C-09, `column`).
  */
 export function ListColumn({ className, id }: { className?: string; id?: string }) {
     const matches = useMatches()
@@ -234,6 +236,7 @@ export function ListColumn({ className, id }: { className?: string; id?: string 
             {column === 'server' && <ServerChannelColumn serverId={deepest?.params.serverId} />}
             {column === 'serverSettings' && <ServerSettingsColumn serverId={deepest?.params.serverId} />}
             {column === 'tasks' && <MyTasksColumn />}
+            <RoomDock shape='column' />
         </div>
     )
 }

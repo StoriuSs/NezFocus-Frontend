@@ -56,7 +56,9 @@ describe('configuration stays in sync', () => {
             }
         ).services.app.environment
         expect(
-            [...schemaKeys, 'CSP_IMG_SRC', 'CSP_STORAGE_SRC'].filter((key) => environment[key] === undefined)
+            [...schemaKeys, 'CSP_IMG_SRC', 'CSP_STORAGE_SRC', 'CSP_LIVEKIT_URL'].filter(
+                (key) => environment[key] === undefined
+            )
         ).toEqual([])
         // `${NAME:?…}`: compose stops with the message rather than starting a
         // container that would refuse to serve anyway.

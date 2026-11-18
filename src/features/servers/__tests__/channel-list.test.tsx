@@ -12,15 +12,17 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { expectNoA11yViolations } from '@/test/a11y'
 import { queryWrapper } from '@/test/helpers'
 import { serverKeys } from '../api/keys'
-import type { Server, ServerChannel } from '../types'
+import type { RoomPerson, Server, ServerChannel } from '../types'
 
 const serversApi = { fetchServers: vi.fn(), createServer: vi.fn(), uploadServerIcon: vi.fn() }
 vi.mock('@/features/servers/api/servers.api', () => serversApi)
 const layoutApi = { moveInLayout: vi.fn() }
 vi.mock('@/features/servers/api/layout.api', () => layoutApi)
+vi.mock('@/features/users/api/useProfile', () => ({ useProfile: () => ({ data: { id: 'an' } }) }))
 
 const { ServerChannelColumn } = await import('../components/channel-list/ServerChannelColumn')
 const { useChannelDialogs } = await import('../channel-dialogs.store')
+const { useVoiceStore } = await import('@/features/voice')
 
 const MEMBER = String((1n << 8n) | (1n << 10n) | (1n << 15n))
 /** And MANAGE_CHANNELS. */
@@ -38,6 +40,7 @@ const channel = (id: string, extra: Partial<ServerChannel> = {}): ServerChannel 
     taskBoardEnabled: false,
     permissions: MANAGER,
     viewRoleIds: [],
+    voiceStates: null,
     ...extra
 })
 
@@ -476,5 +479,61 @@ describe('The channel list for a member', () => {
         screen.getByRole('link', { name: 'hoi-dap' }).focus()
         await userEvent.keyboard(' ')
         expect(screen.queryByText(/Picked up/)).not.toBeInTheDocument()
+    })
+
+    describe('who is in each voice room (C-06 occupied, D-205)', () => {
+        const person = (id: string, on: Partial<RoomPerson> = {}): RoomPerson => ({
+            user: { id, username: id, displayName: id.toUpperCase(), avatarUrl: null },
+            joinedAt: '2026-11-18T14:40:00.000Z',
+            micOn: false,
+            cameraOn: false,
+            screenSharing: false,
+            modMuted: false,
+            ...on
+        })
+        const withPeople = (people: RoomPerson[]) => {
+            const data = server(MEMBER)
+            return {
+                ...data,
+                channels: data.channels.map((c) => (c.type === 'voice' ? { ...c, voiceStates: people } : c))
+            }
+        }
+        afterEach(() => useVoiceStore.setState({ call: null }))
+
+        it('lists them under the room, oneself first, then mic or camera on, with what they have on', async () => {
+            renderColumn(
+                withPeople([
+                    person('nam'),
+                    person('tuan', { micOn: true }),
+                    person('an'),
+                    person('minh', { cameraOn: true, screenSharing: true })
+                ])
+            )
+            await screen.findByRole('link', { name: /Phòng học im lặng/ })
+            const people = screen.getAllByRole('listitem').filter((item) => item.hasAttribute('aria-label'))
+            expect(people.map((item) => item.getAttribute('aria-label'))).toEqual([
+                'AN',
+                'TUAN, mic on',
+                'MINH, sharing their screen, camera on',
+                'NAM'
+            ])
+            await expectNoA11yViolations()
+        })
+
+        it('shows 10, then "+N more" opening the room (not unfolded in place)', async () => {
+            renderColumn(withPeople(Array.from({ length: 13 }, (_, i) => person(`p${i}`))))
+            const more = await screen.findByRole('link', { name: '+3 more' })
+            expect(more).toHaveAttribute('href', '/channels/ot/phong')
+            expect(screen.getAllByRole('listitem').filter((item) => item.hasAttribute('aria-label'))).toHaveLength(10)
+        })
+
+        it('marks the room this tab is in as connected', async () => {
+            useVoiceStore.setState({
+                call: { serverId: 'ot', channelId: 'phong', name: 'Phòng học im lặng', phase: 'connected' }
+            })
+            renderColumn(withPeople([person('an')]))
+            const room = await screen.findByRole('link', { name: /Phòng học im lặng/ })
+            expect(room).toHaveClass('font-semibold', 'text-text-primary')
+        })
     })
 })

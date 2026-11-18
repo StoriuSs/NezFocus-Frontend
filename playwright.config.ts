@@ -25,8 +25,26 @@ export default defineConfig({
     },
     // Firefox too: its CSP enforcement and navigation differ in the details.
     // Install with `pnpm exec playwright install chromium firefox`.
+    // Voice rooms (M4): a fake microphone and camera, allowed without asking.
     projects: [
-        { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-        { name: 'firefox', use: { ...devices['Desktop Firefox'] } }
+        {
+            name: 'chromium',
+            use: {
+                ...devices['Desktop Chrome'],
+                launchOptions: { args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] }
+            }
+        },
+        {
+            name: 'firefox',
+            use: {
+                ...devices['Desktop Firefox'],
+                launchOptions: {
+                    firefoxUserPrefs: {
+                        'media.navigator.streams.fake': true,
+                        'media.navigator.permission.disabled': true
+                    }
+                }
+            }
+        }
     ]
 })

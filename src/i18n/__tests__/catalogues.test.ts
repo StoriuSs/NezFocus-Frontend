@@ -4,6 +4,7 @@ import { settingsResources } from '@/i18n/settings'
 import { deletionResources } from '@/i18n/deletion'
 import { serversResources } from '@/i18n/servers'
 import { messagingResources } from '@/i18n/messaging'
+import { voiceResources } from '@/i18n/voice'
 
 /** Every leaf key, dotted and namespaced: { a: { b: 'x' } } in "ns" -> ['ns:a.b']. */
 function keysOf(value: unknown, prefix: string): string[] {
@@ -26,6 +27,7 @@ describe('translation catalogues', () => {
         expect(all({ deletion: deletionResources.vi })).toEqual(all({ deletion: deletionResources.en }))
         expect(all({ servers: serversResources.vi })).toEqual(all({ servers: serversResources.en }))
         expect(all({ messaging: messagingResources.vi })).toEqual(all({ messaging: messagingResources.en }))
+        expect(all({ voice: voiceResources.vi })).toEqual(all({ voice: voiceResources.en }))
     })
 
     it('adds the settings words to i18n once their pages load', async () => {

@@ -8,11 +8,11 @@ import { PageLoader } from '@/components/PageLoader'
 import { RightPanel, usePanel } from '@/components/shell/RightPanel'
 import { ShellNotFound } from '@/components/shell/ShellNotFound'
 import { ShellPage } from '@/components/shell/ShellPage'
-import { EmptyState } from '@/components/ui/empty-state'
 import { IconButton } from '@/components/ui/icon-button'
 import { WithTooltip } from '@/components/ui/tooltip'
 import { ChannelChat, ChatDropZone, PinsPanel } from '@/features/messaging'
 import { TaskBoard } from '@/features/tasks'
+import { VoiceRoomView } from '@/features/voice'
 import { useMentionSource } from '../api/useMentionSource'
 import { MemberPanel } from '../components/member-panel/MemberPanel'
 import { useServers } from '../api/useServers'
@@ -23,6 +23,7 @@ import { useGoneServerPath } from '../hooks/useGoneServerPath'
 import { linkedServers, readAppLink, type LinkedServer } from '../lib/app-links'
 import { chatPermissions } from '../lib/chat-permissions'
 import { firstTextChannel } from '../lib/channel-list'
+import { voiceRoomOf } from '../lib/voice-room'
 import { channelPath, isId, messageLink, messagePath } from '../lib/paths'
 import type { Server, ServerChannel } from '../types'
 
@@ -44,10 +45,10 @@ import type { Server, ServerChannel } from '../types'
  * (11 S-MOD-06), the URL kept, saying nothing of what is there (REQ-MSG-05).
  *
  * A text channel holds its chat (S-CHAT-01, the messaging feature's), a
- * chunk of its own; voice rooms come in M4 (D-144), which until then say so.
+ * chunk of its own; a voice room its preview page or, once joined, the room
+ * (07, the voice feature's), a chunk of its own too.
  */
 export default function ChannelPage() {
-    const { t } = useTranslation()
     const { serverId, channelId, messageId } = useParams()
     const servers = useServers()
     const goneTo = useGoneServerPath(serverId, servers.data)
@@ -82,9 +83,9 @@ export default function ChannelPage() {
     if (channel.type === 'voice') {
         return (
             <ShellPage title={channel.name} icon={channel.isStudyRoom ? LampDesk : Volume2}>
-                <div className='flex min-h-full items-start justify-center px-4 pt-[18vh]'>
-                    <EmptyState title={t('shell.voiceSoon.title')}>{t('shell.voiceSoon.body')}</EmptyState>
-                </div>
+                <Suspense fallback={<PageLoader className='min-h-0 flex-1' />}>
+                    <VoiceRoomView room={voiceRoomOf(server, channel)} />
+                </Suspense>
             </ShellPage>
         )
     }

@@ -18,5 +18,8 @@ export function useMediaQuery(query: string): boolean {
     )
 }
 
+/** DESIGN.md › Layout: the channel list is a column from here up, a sheet below. */
+export const LIST_SHOWS = '(min-width: 1024px)'
+
 /** DESIGN.md › Layout: the right panel docks as a column from here up. */
 export const PANEL_DOCKS = '(min-width: 1280px)'

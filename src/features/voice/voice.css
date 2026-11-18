@@ -1,0 +1,9 @@
+/*
+ * The classes of voice rooms (tailwind.voice.config.js): only the utilities
+ * the voice feature's files use that the main stylesheet lacks, loaded with
+ * a room's page or the dock. The base styles and the design tokens come from
+ * src/index.css, loaded first.
+ */
+@config "../../../tailwind.voice.config.js";
+
+@tailwind utilities;

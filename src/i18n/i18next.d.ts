@@ -6,14 +6,15 @@ import type { serversResources } from './servers'
 import type { messagingResources } from './messaging'
 import type { tasksResources } from './tasks'
 import type { notificationsResources } from './notifications'
+import type { voiceResources } from './voice'
 
 /**
  * Types t() against the English catalogue: a key that doesn't exist is a
  * compile error instead of a raw key rendered on screen. Vietnamese must have
  * the same keys (checked by src/i18n/__tests__/catalogues.test.ts).
- * `settings`, `deletion`, `servers`, `messaging`, `tasks` and `notifications` are added by their
- * pages when they load (src/i18n/settings.ts, deletion.ts, servers.ts, messaging.ts, tasks.ts,
- * notifications.ts).
+ * `settings`, `deletion`, `servers`, `messaging`, `tasks`, `notifications` and `voice` are added by
+ * their pages when they load (src/i18n/settings.ts, deletion.ts, servers.ts, messaging.ts, tasks.ts,
+ * notifications.ts, voice.ts).
  */
 declare module 'i18next' {
     interface CustomTypeOptions {
@@ -29,7 +30,8 @@ declare module 'i18next' {
             'servers',
             'messaging',
             'tasks',
-            'notifications'
+            'notifications',
+            'voice'
         ]
         resources: (typeof resources)['en'] & {
             settings: (typeof settingsResources)['en']
@@ -38,6 +40,7 @@ declare module 'i18next' {
             messaging: (typeof messagingResources)['en']
             tasks: (typeof tasksResources)['en']
             notifications: (typeof notificationsResources)['en']
+            voice: (typeof voiceResources)['en']
         }
     }
 }

@@ -17,11 +17,13 @@ import { useTranslation } from 'react-i18next'
 import { CountBadge } from '@/components/ui/count-badge'
 import { WithTooltip } from '@/components/ui/tooltip'
 import { useChannelReadState } from '@/features/messaging'
+import { useVoiceStore } from '@/features/voice'
 import { cn } from '@/lib/utils'
 import { categoryDropId, channelDropId } from '../../lib/drop-target'
 import { channelPath } from '../../lib/paths'
 import { can } from '../../lib/permissions'
 import type { Server, ServerCategory, ServerChannel } from '../../types'
+import { RoomPeople } from './RoomPeople'
 
 const ROW =
     'flex h-8 items-center gap-2 rounded-input px-2 text-body-sm transition-colors duration-micro [&_svg]:size-4 [&_svg]:shrink-0'
@@ -83,6 +85,9 @@ export function DropLine({ blocked }: { blocked?: boolean }) {
  * and the mentions of the reader still unread as a badge at the end, open or
  * not (REQ-MSG-09, C-06 `unread`, `mention`); a screen reader hears it after
  * the name (and "Private channel").
+ *
+ * A voice room shows who is in it under its row (C-06 `occupied`); the one
+ * this tab is in is `connected`: icon and name `text-primary` 600.
  */
 export function ChannelRow({
     server,
@@ -107,6 +112,7 @@ export function ChannelRow({
     const { setNodeRef: dragRef, listeners } = useDraggable({ id, disabled: !manages })
     const { setNodeRef: dropRef } = useDroppable({ id, disabled: !acceptsDrops })
     const locked = channel.type === 'voice' && !can(channel.permissions, 'CONNECT')
+    const connected = useVoiceStore((state) => state.call?.channelId === channel.id && state.call.phase !== 'joining')
     const read = useChannelReadState(channel.id)
     const mentions = read?.mentionCount ?? 0
     const unread = mentions > 0 || (read?.unreadCount ?? 0) > 0
@@ -141,14 +147,14 @@ export function ChannelRow({
                           'hover:bg-surface-2',
                           locked
                               ? 'font-medium text-text-tertiary'
-                              : unread
+                              : unread || connected
                                 ? 'font-semibold text-text-primary'
                                 : 'font-medium text-text-secondary'
                       )
             )}
         >
             {createElement(channelIcon(channel), {
-                className: active ? 'text-text-primary' : 'text-text-tertiary',
+                className: active || connected ? 'text-text-primary' : 'text-text-tertiary',
                 'aria-hidden': true
             })}
             {/* Not stretched: the lock follows the name, as C-06 draws it. */}
@@ -184,6 +190,7 @@ export function ChannelRow({
                     />
                 </span>
             ) : null}
+            {channel.voiceStates?.length ? <RoomPeople people={channel.voiceStates} to={path} /> : null}
         </li>
     )
 }

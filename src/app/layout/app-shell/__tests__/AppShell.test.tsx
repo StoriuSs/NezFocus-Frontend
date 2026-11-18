@@ -129,6 +129,7 @@ const channel = (id: string, extra: Partial<ServerChannel> = {}): ServerChannel 
     taskBoardEnabled: false,
     permissions: MEMBER,
     viewRoleIds: null,
+    voiceStates: null,
     ...extra
 })
 
@@ -461,10 +462,11 @@ describe('AppShell (S-SHELL-01)', () => {
             expect(screen.getByRole('link', { name: 'chao-mung' })).toBeInTheDocument()
         })
 
-        it('says a voice room arrives later', async () => {
+        it("opens a voice room's preview page: who is in it and the way in (S-ROOM-01, M4)", async () => {
             renderAt('/channels/ot/quiet')
             expect(await screen.findByRole('heading', { level: 1, name: 'Phòng học im lặng' })).toBeInTheDocument()
-            expect(screen.getByRole('heading', { level: 2, name: 'Voice rooms come in a later version' })).toBeVisible()
+            expect(await screen.findByText('No one is in the room', {}, { timeout: 5000 })).toBeVisible()
+            expect(screen.getByRole('button', { name: 'Join room' })).toBeEnabled()
         })
 
         it('says "Page not found" for the address of a channel one cannot see (02 S-CHAT-01 forbidden)', async () => {

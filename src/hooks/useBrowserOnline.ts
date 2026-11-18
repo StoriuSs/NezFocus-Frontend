@@ -9,7 +9,7 @@ function subscribe(onChange: () => void): () => void {
     }
 }
 
-/** Whether the browser says it is online, kept up to date: a queued message shows "will send when back online" (S-CHAT-01). */
+/** Whether the browser says it is online, kept up to date: a queued message shows "will send when back online" (S-CHAT-01); a room cannot be joined (07 `offline`). */
 export function useBrowserOnline(): boolean {
     return useSyncExternalStore(
         subscribe,
