@@ -53,6 +53,7 @@ const message = (n: number, author = BINH): Message => ({
     systemEvent: null,
     systemData: null,
     systemUser: null,
+    systemUsers: [],
     pinned: false,
     reactions: [],
     replyTo: null,

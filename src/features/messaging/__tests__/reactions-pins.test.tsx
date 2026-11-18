@@ -91,6 +91,7 @@ const message = (
     systemEvent: null,
     systemData: null,
     systemUser: null,
+    systemUsers: [],
     pinned: false,
     reactions: [],
     replyTo: null,

@@ -18,6 +18,7 @@ const pinned = (id: string): PinnedMessage => ({
     systemEvent: null,
     systemData: null,
     systemUser: null,
+    systemUsers: [],
     replyTo: null,
     editedAt: null,
     pinned: true,

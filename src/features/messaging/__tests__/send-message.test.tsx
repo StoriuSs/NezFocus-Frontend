@@ -36,6 +36,7 @@ const savedFrom = (body: { content: string }, id = 'm9'): Message => ({
     systemEvent: null,
     systemData: null,
     systemUser: null,
+    systemUsers: [],
     pinned: false,
     reactions: [],
     replyTo: null,

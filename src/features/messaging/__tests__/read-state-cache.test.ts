@@ -37,6 +37,7 @@ const message = (n: number, more: Partial<BareMessage> = {}): BareMessage => ({
     systemEvent: null,
     systemData: null,
     systemUser: null,
+    systemUsers: [],
     pinned: false,
     replyTo: null,
     editedAt: null,

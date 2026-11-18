@@ -2,6 +2,7 @@ import type { TFunction } from 'i18next'
 import '@/i18n/notifications'
 import { plainMessage, type MentionWords } from '@/features/messaging'
 import type { InboxPlace, InboxPlaces, Notification } from '../types'
+import { dueDate } from './inbox-time'
 
 /** What a row says (C-29): its title, the message's words, and where it is. */
 export interface NotificationText {
@@ -18,6 +19,9 @@ interface TextSources {
     t: TFunction<'notifications'>
     words: MentionWords
     places: InboxPlaces
+    /** Now and the account's zone: a due date says its year when it is another. */
+    now: Date
+    timeZone?: string
 }
 
 /** Who the item is from: the name, else the username; a deleted account says so (D-182). */
@@ -59,21 +63,60 @@ function contentOf(item: Notification, { t, words, places }: TextSources): strin
     return allImages ? t('row.images', { count }) : t('row.files', { count })
 }
 
-/** The words of a mention or a reply (06 › Nội dung chữ). */
+/**
+ * The words of a task item, as the task was when it was made (D-98): who gave
+ * it and its due date then; how long is left before it is due, no line under
+ * it (05 R3); no one on it any more, and why (D-95).
+ */
+function taskWords(item: Notification, { t, now, timeZone }: TextSources): { title: string; content: string | null } {
+    const task = item.task
+    const title = task?.title ?? ''
+    const name = actorName(item, t)
+    switch (item.type) {
+        case 'task_assigned':
+            return {
+                title: t('row.taskAssigned', { name, title }),
+                content: task?.dueAt
+                    ? t('row.taskDue', { due: dueDate(new Date(task.dueAt), now, timeZone) })
+                    : t('row.taskNoDue')
+            }
+        case 'task_reminder':
+            return {
+                title: t(task?.reminder === '2h' ? 'row.taskReminder2h' : 'row.taskReminder24h', { title }),
+                content: null
+            }
+        default:
+            return {
+                title: t('row.taskUnassigned', { title }),
+                content: t(task?.unassignedBy === 'left_server' ? 'row.taskLeftServer' : 'row.taskWithdrew', { name })
+            }
+    }
+}
+
+/** Whether an item is about a task (05 S-TASK-02 opens it). */
+export const isTaskItem = (item: Notification) =>
+    item.type === 'task_assigned' || item.type === 'task_reminder' || item.type === 'task_unassigned'
+
+/** The words of an item (06 › Nội dung chữ): a mention, a reply, a task item. */
 export function notificationText(item: Notification, sources: TextSources): NotificationText {
     const { t, places } = sources
     const name = actorName(item, t)
     const whom = item.type === 'mention' ? reached(item, sources.words) : null
-    const title =
-        item.type === 'reply'
-            ? t('row.reply', { name })
-            : whom
-              ? t('row.mentionWide', { name, whom })
-              : t('row.mention', { name })
+    const { title, content } = isTaskItem(item)
+        ? taskWords(item, sources)
+        : {
+              title:
+                  item.type === 'reply'
+                      ? t('row.reply', { name })
+                      : whom
+                        ? t('row.mentionWide', { name, whom })
+                        : t('row.mention', { name }),
+              content: contentOf(item, sources)
+          }
     const place = item.serverId && item.channelId ? places.placeOf(item.serverId, item.channelId) : null
     return {
         title,
-        content: contentOf(item, sources),
+        content,
         source: place ? t('row.source', { channel: place.channelName, server: place.serverName }) : null,
         place: place ?? null
     }

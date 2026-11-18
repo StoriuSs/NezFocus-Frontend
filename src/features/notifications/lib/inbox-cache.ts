@@ -78,12 +78,13 @@ export function withRead(pages: InboxPages, event: NotificationsRead, at: string
     return changed(pages, read(event, at), () => event.unreadCount)
 }
 
-/** `notification.deleted`: the items gone; the count when it changed. */
+/** `notification.deleted`: the items gone, those of a task deleted too (D-200); the count when it changed. */
 export function withDeleted(pages: InboxPages, event: NotificationsDeleted): InboxPages {
     const gone = new Set(event.ids)
+    const isGone = (item: Notification) => gone.has(item.id) || (!!event.taskId && item.taskId === event.taskId)
     return changed(
         pages,
-        (items) => items.filter((item) => !gone.has(item.id)),
+        (items) => items.filter((item) => !isGone(item)),
         (old) => event.unreadCount ?? old
     )
 }

@@ -9,7 +9,7 @@ import {
     type KeyboardEvent,
     type MouseEvent
 } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowUp, CloudOff, EyeOff, Settings } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -30,7 +30,7 @@ import { useToastEdge } from '@/hooks/useToastArea'
 import { hideChannelItems, useInbox, useMarkNotificationsRead } from '../api/useInbox'
 import { itemsOf, unreadCountOf } from '../lib/inbox-cache'
 import { groupsOf, momentOf, rowTime } from '../lib/inbox-time'
-import { notificationText } from '../lib/notification-text'
+import { isTaskItem, notificationText } from '../lib/notification-text'
 import type { InboxPlaces, Notification } from '../types'
 import { NotificationRow } from './NotificationRow'
 
@@ -68,8 +68,9 @@ function RowSkeletons({ count }: { count: number }) {
  * is and shows "↑ N thông báo mới".
  *
  * Clicking a row marks it read (not offline, D-24), closes the inbox and
- * opens the message lit up; a channel no longer viewed says so and its items
- * leave. ↑ ↓ Home End move between rows, Enter opens one, Tab reaches its ✓.
+ * opens the message lit up, or a task's detail on the page one is on (`?task=`,
+ * which says itself when the task is gone, 05 Q6); a channel no longer viewed
+ * says so and its items leave. ↑ ↓ Home End move between rows, Enter opens one, Tab reaches its ✓.
  * Opening it reads nothing on its own. `places`: the servers feature's names
  * and paths, handed by the app (D-197).
  */
@@ -77,6 +78,7 @@ export default function InboxPanel({ places, onClose }: { places: InboxPlaces; o
     const { t } = useTranslation('notifications')
     const client = useQueryClient()
     const navigate = useNavigate()
+    const location = useLocation()
     const inbox = useInbox()
     const markRead = useMarkNotificationsRead()
     const words = useMentionWords()
@@ -171,7 +173,9 @@ export default function InboxPanel({ places, onClose }: { places: InboxPlaces; o
             // S-NOTI-EDGE `lost-access-tap`: stay, and the channel's items go.
             event.preventDefault()
             hideChannelItems(client, item.channelId)
-            toast(t('inbox.lostAccess'), { icon: <EyeOff className='size-4' aria-hidden='true' /> })
+            // A task says what its detail would (05 Q6), once, as the detail keys it.
+            if (isTaskItem(item) && item.taskId) toast(t('row.taskGone'), { id: `task-gone-${item.taskId}` })
+            else toast(t('inbox.lostAccess'), { icon: <EyeOff className='size-4' aria-hidden='true' /> })
             return
         }
         if (!item.readAt && !offline) markRead.mutate({ ids: [item.id] })
@@ -180,10 +184,17 @@ export default function InboxPanel({ places, onClose }: { places: InboxPlaces; o
         onClose()
     }
 
-    const pathOf = (item: Notification) =>
-        item.serverId && item.channelId && item.messageId
+    const pathOf = (item: Notification) => {
+        // A task item always has its task: deleting the task deletes its items (D-200).
+        if (isTaskItem(item) && item.taskId) {
+            const params = new URLSearchParams(location.search)
+            params.set('task', item.taskId)
+            return `${location.pathname}?${params.toString()}`
+        }
+        return item.serverId && item.channelId && item.messageId
             ? places.messagePath(item.serverId, item.channelId, item.messageId)
             : '#'
+    }
 
     const readAll = () => {
         const newest = items[0]
@@ -249,7 +260,7 @@ export default function InboxPanel({ places, onClose }: { places: InboxPlaces; o
                                     <NotificationRow
                                         key={item.id}
                                         item={item}
-                                        text={notificationText(item, { t, words, places })}
+                                        text={notificationText(item, { t, words, places, now, timeZone })}
                                         time={rowTime(at, now, timeZone)}
                                         fullTime={t('row.full', {
                                             weekday: t(`row.weekday_${moment.weekday as 0 | 1 | 2 | 3 | 4 | 5 | 6}`),
@@ -257,6 +268,7 @@ export default function InboxPanel({ places, onClose }: { places: InboxPlaces; o
                                             time: moment.time
                                         })}
                                         to={pathOf(item)}
+                                        replace={isTaskItem(item)}
                                         current={item.id === current}
                                         offline={offline}
                                         onOpen={open(item)}

@@ -31,6 +31,17 @@ export function rowTime(at: Date, now: Date, timeZone?: string): string {
     return year === wallClock(now, timeZone).year ? date : `${date}/${year}`
 }
 
+/**
+ * A task's due date in an item's words, "05/11 · 23:59", the year when it is
+ * another: an item's words stay as made, so never "Hôm nay" (06 › Quy ước ›
+ * Thời gian).
+ */
+export function dueDate(at: Date, now: Date, timeZone?: string): string {
+    const { year, month, day } = wallClock(at, timeZone)
+    const date = `${two(day)}/${two(month)}`
+    return `${year === wallClock(now, timeZone).year ? date : `${date}/${year}`} · ${timeIn(timeZone, at)}`
+}
+
 /** The whole moment, for the tooltip: the weekday (0 is Sunday), the date and the clock. */
 export function momentOf(at: Date, timeZone?: string): { weekday: number; date: string; time: string } {
     const { year, month, day, weekday } = wallClock(at, timeZone)

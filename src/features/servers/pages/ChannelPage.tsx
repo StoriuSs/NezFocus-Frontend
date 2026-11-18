@@ -1,5 +1,5 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Hash, LampDesk, ListChecks, Pin, Users, Volume2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -167,6 +167,20 @@ function TextChannel({ server, channel, messageId }: { server: Server; channel: 
         [timeoutUntil, bits, sendMode]
     )
     const linkTo = useCallback((id: string) => messageLink(serverId, channelId, id), [serverId, channelId])
+    // "Xem việc" on a due-date reminder: the task's detail over this page, no step in the history (05 Q6).
+    const [, setParams] = useSearchParams()
+    const showTask = useCallback(
+        (taskId: string) =>
+            setParams(
+                (before) => {
+                    const next = new URLSearchParams(before)
+                    next.set('task', taskId)
+                    return next
+                },
+                { replace: true }
+            ),
+        [setParams]
+    )
     const linked = linkedServers(useServers().data ?? [])
     const readLink = useMemo(() => {
         const servers = JSON.parse(linked) as LinkedServer[]
@@ -283,6 +297,7 @@ function TextChannel({ server, channel, messageId }: { server: Server; channel: 
                     readLink={readLink}
                     mentions={mentions}
                     target={target}
+                    showTask={showTask}
                 />
             </Suspense>
         </ShellPage>

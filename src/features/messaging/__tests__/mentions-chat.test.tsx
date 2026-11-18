@@ -55,6 +55,7 @@ const message = (id: string, author: typeof an, content: string, extra: Partial<
     systemEvent: null,
     systemData: null,
     systemUser: null,
+    systemUsers: [],
     pinned: false,
     reactions: [],
     replyTo: null,

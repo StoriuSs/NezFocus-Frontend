@@ -51,6 +51,7 @@ const message = (id: string, author: Message['author'], content: string, created
     systemEvent: null,
     systemData: null,
     systemUser: null,
+    systemUsers: [],
     pinned: false,
     reactions: [],
     replyTo: null,

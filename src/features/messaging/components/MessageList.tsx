@@ -175,7 +175,9 @@ export function MessageList({
                                             now={now}
                                             timeZone={timeZone}
                                             tabbable={row.key === tabbable}
+                                            me={handlers.me}
                                             onShow={handlers.show}
+                                            onShowTask={handlers.showTask}
                                         />
                                     ) : (
                                         <MessageRow

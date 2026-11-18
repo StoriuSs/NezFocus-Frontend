@@ -86,6 +86,7 @@ const message = (id: string, content: string, change: Partial<Message> = {}): Me
     systemEvent: null,
     systemData: null,
     systemUser: null,
+    systemUsers: [],
     pinned: false,
     reactions: [],
     replyTo: null,

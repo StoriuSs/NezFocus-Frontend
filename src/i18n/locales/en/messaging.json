@@ -144,6 +144,12 @@
     "joined": "<0>{{name}}</0> joined the server",
     "view": "View",
     "viewLabel": "View the pinned message",
+    "taskDue24h": "24 hours left: <0>{{title}}</0>",
+    "taskDue2h": "2 hours left: <0>{{title}}</0>",
+    "taskDueOthers_one": "{{names}} and {{count}} other",
+    "taskDueOthers_other": "{{names}} and {{count}} others",
+    "viewTask": "View task",
+    "viewTaskLabel": "View task {{title}}",
     "label": "{{text}}, {{time}}"
   },
   "mention": {

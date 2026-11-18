@@ -21,6 +21,8 @@ const item = (n: number, more: Partial<Notification> = {}): Notification => ({
     channelId: 'hoi-dap',
     messageId: `m${n}`,
     roleId: null,
+    taskId: null,
+    task: null,
     reason: 'user',
     actor: { id: 'minh', username: 'minh', displayName: 'Minh', avatarUrl: null },
     message: null,
@@ -126,6 +128,19 @@ describe('withDeleted', () => {
             ids: [item(3).id],
             unreadCount: null
         })
+        expect(unreadCountOf(next)).toBe(1)
+    })
+})
+
+describe('withDeleted · a task deleted (D-200)', () => {
+    it('takes out every item of the task, whatever its ids', () => {
+        const ofTask = (n: number, readAt: string | null) => item(n, { type: 'task_assigned', taskId: 't1', readAt })
+        const next = withDeleted(inbox(page([ofTask(4, null), item(3), ofTask(2, AT)], 2)), {
+            ids: [],
+            unreadCount: 1,
+            taskId: 't1'
+        })
+        expect(ids(next)).toEqual(['3'])
         expect(unreadCountOf(next)).toBe(1)
     })
 })

@@ -86,6 +86,7 @@ const message = (id: string, attachments: Attachment[], content = ''): Message =
     systemEvent: null,
     systemData: null,
     systemUser: null,
+    systemUsers: [],
     pinned: false,
     reactions: [],
     replyTo: null,

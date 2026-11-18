@@ -54,7 +54,10 @@ const tasksApi = vi.hoisted(() => ({
     fetchOpenTasks: vi.fn(async (..._: unknown[]) => ({ items: [], doneCount: 0, hasMore: false })),
     fetchMyTasks: vi.fn(
         async (..._: unknown[]): Promise<unknown> => ({ items: [], doneCount: 0, dueCount: 0, hasMore: false })
-    )
+    ),
+    // A task's detail (`?task=`): still loading, these tests are about what opens it.
+    fetchTask: vi.fn(() => new Promise<never>(() => undefined)),
+    fetchTaskHistory: vi.fn(() => new Promise<never>(() => undefined))
 }))
 vi.mock('@/features/tasks/api/tasks.api', () => tasksApi)
 // One's inbox (the rail's badge, S-NOTI-01): empty unless a test says otherwise.
@@ -873,6 +876,61 @@ describe('AppShell (S-SHELL-01)', () => {
             await userEvent.keyboard('{Escape}')
             expect(screen.queryByRole('complementary', { name: 'Members' })).not.toBeInTheDocument()
             expect(button).toHaveFocus()
+        })
+    })
+
+    describe('a due-date reminder in a text channel (05 S-TASK-01)', () => {
+        afterEach(() => {
+            messagesApi.fetchMessages.mockImplementation(async (..._: unknown[]) => ({
+                items: [],
+                hasMoreBefore: false,
+                hasMoreAfter: false
+            }))
+        })
+
+        it('opens the task over the channel from "View task", with ?task= and no step in the history', async () => {
+            messagesApi.fetchMessages.mockImplementation(async (..._: unknown[]) => ({
+                items: [
+                    {
+                        id: '0190a0b0-0000-7000-8000-000000000009',
+                        channelId: 'hoi-dap',
+                        type: 'system',
+                        author: null,
+                        content: '',
+                        mentionUsers: [],
+                        mentionRoles: [],
+                        mentionEveryone: false,
+                        mentionHereUserIds: [],
+                        attachments: [],
+                        systemEvent: 'task_due',
+                        systemData: {
+                            taskId: 't1',
+                            title: 'Ôn chương 4',
+                            reminder: '24h',
+                            dueAt: '2026-10-17T16:59:00.000Z',
+                            userIds: ['an']
+                        },
+                        systemUser: null,
+                        systemUsers: [{ id: 'an', username: 'an.nguyen', displayName: 'An', avatarUrl: null }],
+                        replyTo: null,
+                        editedAt: null,
+                        pinned: false,
+                        reactions: [],
+                        createdAt: '2026-10-16T16:59:00.000Z'
+                    }
+                ] as never[],
+                hasMoreBefore: false,
+                hasMoreAfter: false
+            }))
+            const router = renderAt('/channels/ot/hoi-dap')
+
+            await userEvent.click(
+                await screen.findByRole('button', { name: 'View task Ôn chương 4' }, { timeout: 5000 })
+            )
+
+            await waitFor(() => expect(router.state.location.search).toBe('?task=t1'))
+            expect(router.state.location.pathname).toBe('/channels/ot/hoi-dap')
+            expect(router.state.historyAction).toBe('REPLACE')
         })
     })
 

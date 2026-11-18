@@ -1,6 +1,6 @@
 import type { KeyboardEvent, MouseEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { AtSign, Check, Reply } from 'lucide-react'
+import { AlarmClock, AtSign, Check, ListChecks, Reply, UserX } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import '@/i18n/notifications'
 import { Avatar, AvatarFallback, AvatarImage, AvatarInitial } from '@/components/ui/avatar'
@@ -10,8 +10,10 @@ import { cn } from '@/lib/utils'
 import type { NotificationText } from '../lib/notification-text'
 import type { Notification } from '../types'
 
-/** The small round of the item's type at the avatar's corner (C-29): `at-sign`, `reply`. */
-const TYPE_ICONS = { mention: AtSign, reply: Reply } as const
+/** The small round of the item's type at the avatar's corner (C-29): `at-sign`, `reply`, `list-checks`. */
+const TYPE_ICONS = { mention: AtSign, reply: Reply, task_assigned: ListChecks } as const
+/** An item no person is the subject of: its type's square in place of an avatar (C-29). */
+const SYSTEM_ICONS = { task_reminder: AlarmClock, task_unassigned: UserX } as const
 
 export interface NotificationRowProps {
     item: Notification
@@ -19,8 +21,10 @@ export interface NotificationRowProps {
     /** The time column: "21:30", "16/10", "28/12/2025"; and the whole moment for its Tooltip. */
     time: string
     fullTime: string
-    /** Where clicking goes: the message, lit up (D-48). */
+    /** Where clicking goes: the message, lit up (D-48); a task, on the page one is on (`?task=`). */
     to: string
+    /** Opening it takes no step in the history: a task's detail over the page (05 Q6). */
+    replace?: boolean
     /** The row keyboard focus is on in the list: the one Tab stop of the list, its buttons after it. */
     current: boolean
     offline: boolean
@@ -34,8 +38,9 @@ export interface NotificationRowProps {
 }
 
 /**
- * NotificationRow (C-29), a mention or a reply: the person's avatar 40 with
- * the type's round at its corner; the title (600 while unread), the message
+ * NotificationRow (C-29), a mention, a reply or a task item: the person's
+ * avatar 40 with the type's round at its corner, or for an item no one is
+ * the subject of (a reminder, a task no one is on) the type's square 40; the title (600 while unread), the message
  * now (2 lines), "#kênh · Server" (1 line, the server's name cut first); on
  * the right the time and, unread, the dot. The whole row is a link to the
  * message (Ctrl / ⌘ opens a tab); hovered or focused, an unread row shows ✓
@@ -48,6 +53,7 @@ export function NotificationRow({
     time,
     fullTime,
     to,
+    replace = false,
     current,
     offline,
     onOpen,
@@ -60,6 +66,7 @@ export function NotificationRow({
     const { t } = useTranslation('notifications')
     const unread = !item.readAt
     const TypeIcon = TYPE_ICONS[item.type as keyof typeof TYPE_ICONS] ?? AtSign
+    const SystemIcon = SYSTEM_ICONS[item.type as keyof typeof SYSTEM_ICONS]
     const name = item.actor?.displayName ?? item.actor?.username
     const head = text.content ? `${text.title}: ${text.content}` : text.title
     const tail = [text.place ? `#${text.place.channelName}, ${text.place.serverName}` : null, time]
@@ -77,6 +84,7 @@ export function NotificationRow({
             <Link
                 id={labelId}
                 to={to}
+                replace={replace}
                 aria-label={label}
                 tabIndex={current ? 0 : -1}
                 data-notification-row
@@ -85,20 +93,30 @@ export function NotificationRow({
                 onKeyDown={onKeyDown}
                 className='absolute inset-0 z-[1] rounded-input outline-none focus-visible:ring-2 focus-visible:ring-primary'
             />
-            <span className='relative size-10 shrink-0'>
-                <Avatar className='size-10'>
-                    <AvatarImage src={item.actor?.avatarUrl ?? undefined} alt='' className='object-cover' />
-                    <AvatarFallback className='bg-surface-3 text-body font-semibold text-text-primary'>
-                        <AvatarInitial name={name} />
-                    </AvatarFallback>
-                </Avatar>
+            {SystemIcon ? (
                 <span
                     aria-hidden='true'
-                    className='absolute -bottom-0.5 -right-0.5 flex size-5 items-center justify-center rounded-full border-2 border-surface-1 bg-surface-3 text-text-secondary group-hover:border-surface-2'
+                    data-type-square
+                    className='flex size-10 shrink-0 items-center justify-center rounded-input bg-surface-2 text-text-secondary group-hover:bg-surface-3'
                 >
-                    <TypeIcon className='size-3' />
+                    <SystemIcon className='size-5' />
                 </span>
-            </span>
+            ) : (
+                <span className='relative size-10 shrink-0'>
+                    <Avatar className='size-10'>
+                        <AvatarImage src={item.actor?.avatarUrl ?? undefined} alt='' className='object-cover' />
+                        <AvatarFallback className='bg-surface-3 text-body font-semibold text-text-primary'>
+                            <AvatarInitial name={name} />
+                        </AvatarFallback>
+                    </Avatar>
+                    <span
+                        aria-hidden='true'
+                        className='absolute -bottom-0.5 -right-0.5 flex size-5 items-center justify-center rounded-full border-2 border-surface-1 bg-surface-3 text-text-secondary group-hover:border-surface-2'
+                    >
+                        <TypeIcon className='size-3' />
+                    </span>
+                </span>
+            )}
             <span aria-hidden='true' className='flex min-w-0 flex-1 flex-col gap-0.5'>
                 <span className={cn('line-clamp-2 text-body text-text-primary', unread && 'font-semibold')}>
                     {text.title}

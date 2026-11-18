@@ -144,6 +144,12 @@
     "joined": "<0>{{name}}</0> đã tham gia server",
     "view": "Xem",
     "viewLabel": "Xem tin đã ghim",
+    "taskDue24h": "Còn 24 giờ tới hạn: <0>{{title}}</0>",
+    "taskDue2h": "Còn 2 giờ tới hạn: <0>{{title}}</0>",
+    "taskDueOthers_one": "{{names}} và {{count}} người khác",
+    "taskDueOthers_other": "{{names}} và {{count}} người khác",
+    "viewTask": "Xem việc",
+    "viewTaskLabel": "Xem việc {{title}}",
     "label": "{{text}}, {{time}}"
   },
   "mention": {

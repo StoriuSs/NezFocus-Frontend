@@ -34,6 +34,7 @@ const saved = (id: string): Message => ({
     systemEvent: null,
     systemData: null,
     systemUser: null,
+    systemUsers: [],
     pinned: false,
     reactions: [],
     replyTo: null,

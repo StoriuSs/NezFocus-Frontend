@@ -509,7 +509,8 @@ views). The rail reads its first page at once for the badge
 `liveNotifications.ts` puts `notification.created` in its place (once: the
 inbox read again may hold it), marks items read on `notification.read` (one's
 other tabs, or the channel read, D-199) and takes items out on
-`notification.deleted`, each taking the count the event carries; the changes
+`notification.deleted` (by id, or, for a task deleted, every item of that
+`taskId`, D-200), each taking the count the event carries; the changes
 are pure functions (`lib/inbox-cache.ts`). Each `ready` reads it again, and
 so do the signals after which the channels one views may change (`STANDING`,
 gathered and spread like the tasks'): the API leaves out the items of a

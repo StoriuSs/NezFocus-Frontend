@@ -20,6 +20,7 @@ const at = (who: string | null, time: string, day = '2026-10-18'): Message => ({
     systemEvent: who ? null : 'member_joined',
     systemData: null,
     systemUser: null,
+    systemUsers: [],
     pinned: false,
     reactions: [],
     replyTo: null,

@@ -103,7 +103,8 @@ export default function ChannelChat({
     linkTo,
     readLink,
     mentions,
-    target
+    target,
+    showTask
 }: {
     channelId: string
     channelName: string
@@ -117,6 +118,8 @@ export default function ChannelChat({
     mentions: MentionSource
     /** The message the page was opened on, if any. */
     target?: ChatTarget
+    /** A task's detail opened over the page (`?task=`), from "Xem việc" on its reminder (05 S-TASK-01). */
+    showTask?: (taskId: string) => void
 }) {
     const { t } = useTranslation('messaging')
     const words = useMentionWords()
@@ -247,11 +250,26 @@ export default function ChannelChat({
             pin: (message) => pin(message.id),
             unpin: (message) => unpin(message.id),
             show: jump.show,
+            showTask,
             readLink,
             mentions,
             openFile: (message, file, from) => setViewing({ messageId: message.id, fileId: file.id, from, open: true })
         }),
-        [me, permissions, backToComposer, copy, words, mentions, linkTo, react, pin, unpin, jump.show, readLink]
+        [
+            me,
+            permissions,
+            backToComposer,
+            copy,
+            words,
+            mentions,
+            linkTo,
+            react,
+            pin,
+            unpin,
+            jump.show,
+            showTask,
+            readLink
+        ]
     )
 
     const stopEditing = useCallback(() => {

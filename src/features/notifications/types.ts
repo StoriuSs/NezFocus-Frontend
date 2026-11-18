@@ -27,10 +27,14 @@ export interface NotificationsRead {
     unreadCount: number
 }
 
-/** `notification.deleted`: these items are gone; the count after when it changed, else null. */
+/**
+ * `notification.deleted`: these items are gone, and with a task deleted every
+ * item of that task (D-200); the count after when it changed, else null.
+ */
 export interface NotificationsDeleted {
     ids: string[]
     unreadCount: number | null
+    taskId?: string | null
 }
 
 /** The names of a channel and its server, as the servers list has them. */

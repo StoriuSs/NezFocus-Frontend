@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { MemoryRouter, useLocation } from 'react-router-dom'
+import { MemoryRouter, useLocation, useNavigationType } from 'react-router-dom'
 import { toast, Toaster } from 'sonner'
 import i18n from '@/i18n'
 import { ShellContext, type ConnectionNotice } from '@/components/shell/shell-context'
@@ -52,6 +52,8 @@ const mention = (n: number, name: string, content: string, more: Partial<Notific
     channelId: HOI_DAP_ND,
     messageId: `m${n}`,
     roleId: null,
+    taskId: null,
+    task: null,
     reason: 'user',
     actor: person(name),
     message: {
@@ -83,6 +85,35 @@ const CHI = mention(2, 'Chi', 'Slide chương 4 ở đây nhé, có cả bài t�
     createdAt: today('15:20', 1),
     readAt: today('15:30', 1)
 })
+/** 06 › Hộp thư mẫu: a task given by Minh, a reminder, a task no one is on any more. */
+const taskItem = (
+    n: number,
+    type: Notification['type'],
+    task: Partial<NonNullable<Notification['task']>>,
+    more: Partial<Notification> = {}
+): Notification =>
+    mention(n, 'Minh', '', {
+        type,
+        messageId: null,
+        reason: null,
+        message: null,
+        taskId: `t${n}`,
+        task: { title: 'Chuẩn bị demo cuối kỳ', dueAt: null, reminder: null, unassignedBy: null, ...task },
+        ...more
+    })
+const GIVEN = taskItem(8, 'task_assigned', { dueAt: today('23:59') }, { createdAt: today('21:05') })
+const REMINDED = taskItem(
+    7,
+    'task_reminder',
+    { title: 'Cập nhật tiến độ tuần', reminder: '24h' },
+    { actor: null, createdAt: today('20:59') }
+)
+const NO_ONE = taskItem(
+    6,
+    'task_unassigned',
+    { title: 'Làm slide thuyết trình', unassignedBy: 'withdrew' },
+    { actor: person('Giang'), createdAt: today('20:30'), readAt: today('20:31') }
+)
 const page = (items: Notification[], unreadCount: number, hasMore = false): NotificationList => ({
     items,
     unreadCount,
@@ -104,19 +135,27 @@ const PLACES: InboxPlaces = {
 }
 
 function WhereAmI() {
-    return <output aria-label='where'>{useLocation().pathname}</output>
+    const { pathname, search } = useLocation()
+    const how = useNavigationType()
+    return (
+        <>
+            <output aria-label='where'>{`${pathname}${search}`}</output>
+            <output aria-label='how'>{how}</output>
+        </>
+    )
 }
 
 function renderInbox({
     places = PLACES,
-    connection = null
-}: { places?: InboxPlaces; connection?: ConnectionNotice | null } = {}) {
+    connection = null,
+    at = '/tasks'
+}: { places?: InboxPlaces; connection?: ConnectionNotice | null; at?: string } = {}) {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
     client.setQueryData(userKeys.profile(), { id: AN, username: 'an.x', displayName: 'An', avatarUrl: null })
     client.setQueryData(userKeys.settings(), { timezone: ZONE })
     const onClose = vi.fn()
     const view = render(
-        <MemoryRouter initialEntries={['/tasks']}>
+        <MemoryRouter initialEntries={[at]}>
             <QueryClientProvider client={client}>
                 <ShellContext.Provider value={{ navOpen: false, toggleNav: () => undefined, connection }}>
                     <TooltipProvider>
@@ -201,6 +240,62 @@ describe('Hộp thư thông báo (S-NOTI-01)', () => {
         expect(notificationsApi.markNotificationsRead).toHaveBeenCalledWith({ ids: [MINH.id] })
         expect(onClose).toHaveBeenCalled()
         expect(where()).toBe(`/channels/${ND}/${HOI_DAP_ND}/m4`)
+    })
+
+    it('says the task items as made: who gave it and its due date, the time left, no one on it (06 › Nội dung chữ)', async () => {
+        notificationsApi.fetchNotifications.mockResolvedValue(page([GIVEN, REMINDED, NO_ONE], 2))
+        const { container } = renderInbox()
+
+        expect(
+            await screen.findByRole('link', {
+                name: /^Chưa đọc\. Minh giao cho bạn: Chuẩn bị demo cuối kỳ: Hạn \d\d\/\d\d · 23:59\. #hoi-dap, Nhóm đồ án Mobile, 21:05$/
+            })
+        ).toBeVisible()
+        expect(
+            row(/^Chưa đọc\. Còn 24 giờ tới hạn: Cập nhật tiến độ tuần\. #hoi-dap, Nhóm đồ án Mobile, 20:59$/)
+        ).toBeVisible()
+        expect(row(/^Không còn ai làm: Làm slide thuyết trình: Giang đã rút khỏi việc\. #hoi-dap/)).toBeVisible()
+        // The person who gave it is pictured; a reminder and "no one on it" have their type's square (C-29).
+        const articles = within(screen.getByRole('feed')).getAllByRole('article')
+        expect(within(articles[0]!).getByText('M')).toBeInTheDocument()
+        expect(articles[1]!.querySelector('[data-type-square]')).not.toBeNull()
+        expect(articles[2]!.querySelector('[data-type-square]')).not.toBeNull()
+        expect(articles[0]!.querySelector('[data-type-square]')).toBeNull()
+        await expectNoA11yViolations(container)
+    })
+
+    it('opening a task item marks it read, closes the inbox and opens the task on this page (05 S-TASK-02)', async () => {
+        notificationsApi.fetchNotifications.mockResolvedValue(page([GIVEN, REMINDED, NO_ONE], 2))
+        const user = userEvent.setup()
+        const { onClose } = renderInbox({ at: '/tasks?server=nd' })
+
+        await user.click(await screen.findByRole('link', { name: /Còn 24 giờ tới hạn/ }))
+
+        expect(notificationsApi.markNotificationsRead).toHaveBeenCalledWith({ ids: [REMINDED.id] })
+        expect(onClose).toHaveBeenCalled()
+        // The page's own query stays; the detail takes no step in the history (05 Q6).
+        expect(where()).toBe('/tasks?server=nd&task=t7')
+        expect(screen.getByRole('status', { name: 'how' })).toHaveTextContent('REPLACE')
+    })
+
+    it('a task item of a channel no longer viewed says the task is not available, and its items leave', async () => {
+        notificationsApi.fetchNotifications.mockResolvedValue(page([GIVEN, REMINDED], 2))
+        const user = userEvent.setup()
+        const { onClose } = renderInbox({
+            places: {
+                ...PLACES,
+                placeOf: (serverId, channelId) =>
+                    channelId === HOI_DAP_ND ? null : PLACES.placeOf(serverId, channelId)
+            }
+        })
+
+        await user.click(await screen.findByRole('link', { name: /Minh giao cho bạn/ }))
+
+        expect(await screen.findByText('Việc này không còn khả dụng')).toBeVisible()
+        expect(screen.queryByText(/Còn 24 giờ tới hạn/)).not.toBeInTheDocument()
+        expect(notificationsApi.markNotificationsRead).not.toHaveBeenCalled()
+        expect(onClose).not.toHaveBeenCalled()
+        expect(where()).toBe('/tasks')
     })
 
     it('a row of a channel no longer viewed stays, says so, and its items leave (lost-access-tap)', async () => {

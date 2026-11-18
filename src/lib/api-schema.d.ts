@@ -2037,14 +2037,20 @@ export interface components {
             mention_users: components['schemas']['MentionedUserResponseDto'][]
             /** @description The roles it mentions in effect, as named now; a role deleted since is left out (D-171). */
             mention_roles: components['schemas']['MentionedRoleResponseDto'][]
-            /** @description What a system message reports (`member_joined`, `message_pinned`); null on a regular one. */
+            /** @description What a system message reports (`member_joined`, `message_pinned`, `task_due`); null on a regular one. */
             system_event: string | null
-            /** @description Whom a system message is about (`{ user_id }`, `{ user_id, message_id }`, D-168); null on a regular one. */
+            /**
+             * @description Whom a system message is about (`{ user_id }`, `{ user_id, message_id }`,
+             *     D-168); a task's reminder: `{ task_id, title, reminder, due_at, user_ids }`,
+             *     its title when sent. Null on a regular one.
+             */
             system_data: {
                 [key: string]: unknown
             } | null
             /** @description That person, named and pictured like an author; null on a regular message, or one naming no one. */
             system_user: components['schemas']['MessageAuthorResponseDto'] | null
+            /** @description The people a task's reminder is for, in order, named like authors (D-95, D-182); empty on any other message. */
+            system_users: components['schemas']['MessageAuthorResponseDto'][]
             /** @description The message this one answers; null if none (REQ-MSG-05). */
             reply_to: components['schemas']['RepliedMessageResponseDto'] | null
             /**
@@ -2090,14 +2096,20 @@ export interface components {
             mention_users: components['schemas']['MentionedUserResponseDto'][]
             /** @description The roles it mentions in effect, as named now; a role deleted since is left out (D-171). */
             mention_roles: components['schemas']['MentionedRoleResponseDto'][]
-            /** @description What a system message reports (`member_joined`, `message_pinned`); null on a regular one. */
+            /** @description What a system message reports (`member_joined`, `message_pinned`, `task_due`); null on a regular one. */
             system_event: string | null
-            /** @description Whom a system message is about (`{ user_id }`, `{ user_id, message_id }`, D-168); null on a regular one. */
+            /**
+             * @description Whom a system message is about (`{ user_id }`, `{ user_id, message_id }`,
+             *     D-168); a task's reminder: `{ task_id, title, reminder, due_at, user_ids }`,
+             *     its title when sent. Null on a regular one.
+             */
             system_data: {
                 [key: string]: unknown
             } | null
             /** @description That person, named and pictured like an author; null on a regular message, or one naming no one. */
             system_user: components['schemas']['MessageAuthorResponseDto'] | null
+            /** @description The people a task's reminder is for, in order, named like authors (D-95, D-182); empty on any other message. */
+            system_users: components['schemas']['MessageAuthorResponseDto'][]
             /** @description The message this one answers; null if none (REQ-MSG-05). */
             reply_to: components['schemas']['RepliedMessageResponseDto'] | null
             /**
@@ -2171,14 +2183,20 @@ export interface components {
             mention_users: components['schemas']['MentionedUserResponseDto'][]
             /** @description The roles it mentions in effect, as named now; a role deleted since is left out (D-171). */
             mention_roles: components['schemas']['MentionedRoleResponseDto'][]
-            /** @description What a system message reports (`member_joined`, `message_pinned`); null on a regular one. */
+            /** @description What a system message reports (`member_joined`, `message_pinned`, `task_due`); null on a regular one. */
             system_event: string | null
-            /** @description Whom a system message is about (`{ user_id }`, `{ user_id, message_id }`, D-168); null on a regular one. */
+            /**
+             * @description Whom a system message is about (`{ user_id }`, `{ user_id, message_id }`,
+             *     D-168); a task's reminder: `{ task_id, title, reminder, due_at, user_ids }`,
+             *     its title when sent. Null on a regular one.
+             */
             system_data: {
                 [key: string]: unknown
             } | null
             /** @description That person, named and pictured like an author; null on a regular message, or one naming no one. */
             system_user: components['schemas']['MessageAuthorResponseDto'] | null
+            /** @description The people a task's reminder is for, in order, named like authors (D-95, D-182); empty on any other message. */
+            system_users: components['schemas']['MessageAuthorResponseDto'][]
             /** @description The message this one answers; null if none (REQ-MSG-05). */
             reply_to: components['schemas']['RepliedMessageResponseDto'] | null
             /**
@@ -2444,6 +2462,25 @@ export interface components {
             content: string
             files: components['schemas']['NotificationFilesResponseDto']
         }
+        NotificationTaskResponseDto: {
+            /**
+             * Format: date-time
+             * @description The due date then; null when it had none.
+             */
+            due_at: string | null
+            /**
+             * @description `task_reminder`: 24 hours or 2 hours before it is due (REQ-TASK-04); null on the other kinds.
+             * @enum {string|null}
+             */
+            reminder: '24h' | '2h' | null
+            /**
+             * @description `task_unassigned`: its last person took themselves off, or left the
+             *     server (D-95); `actor` is who. Null on the other kinds.
+             * @enum {string|null}
+             */
+            unassigned_by: 'withdrew' | 'left_server' | null
+            title: string
+        }
         NotificationResponseDto: {
             /** @enum {string} */
             type:
@@ -2461,6 +2498,7 @@ export interface components {
              */
             reason: 'user' | 'role' | 'everyone' | 'here' | null
             message: components['schemas']['NotificationMessageResponseDto'] | null
+            task: components['schemas']['NotificationTaskResponseDto'] | null
             /**
              * Format: date-time
              * @description Null while unread.
@@ -2470,6 +2508,7 @@ export interface components {
             server_id: string | null
             channel_id: string | null
             message_id: string | null
+            task_id: string | null
             role_id: string | null
             /** Format: date-time */
             created_at: string

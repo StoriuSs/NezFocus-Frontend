@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { dayGroupOf, groupsOf, momentOf, rowTime } from '../lib/inbox-time'
+import { dayGroupOf, dueDate, groupsOf, momentOf, rowTime } from '../lib/inbox-time'
 
 const ZONE = 'Asia/Ho_Chi_Minh'
 /** 21:47 on Saturday 17/10/2026 in Hồ Chí Minh (06 › Luật nhất quán dữ liệu 6). */
@@ -27,6 +27,15 @@ describe('rowTime', () => {
         expect(rowTime(at('2026-10-16T09:05:00'), NOW, ZONE)).toBe('09:05')
         expect(rowTime(at('2026-10-12T20:40:00'), NOW, ZONE)).toBe('12/10')
         expect(rowTime(at('2025-12-28T20:40:00'), NOW, ZONE)).toBe('28/12/2025')
+    })
+})
+
+describe('dueDate', () => {
+    it('is the date and the clock of a due date, the year when it is another (06 › Quy ước › Thời gian)', () => {
+        expect(dueDate(at('2026-11-05T23:59:00'), NOW, ZONE)).toBe('05/11 · 23:59')
+        expect(dueDate(at('2027-01-05T08:00:00'), NOW, ZONE)).toBe('05/01/2027 · 08:00')
+        // 23:59 on the 5th in Hồ Chí Minh is the 5th at 16:59 in UTC.
+        expect(dueDate(at('2026-11-05T23:59:00'), NOW, 'UTC')).toBe('05/11 · 16:59')
     })
 })
 

@@ -219,6 +219,8 @@ export interface MessageHandlers {
     unpin: (message: Message) => void
     /** A message of this channel shown and lit up: the original of a reply, a pinned one (S-CHAT-01). */
     show: (messageId: string) => void
+    /** A task's detail opened over the page, from its due-date reminder (05 S-TASK-01); none where no task opens. */
+    showTask?: (taskId: string) => void
     /** How a link in a message shows: null for another site. */
     readLink: (href: string) => AppLink | null
     /** The server's side of mentions: how a channel token shows, one's own roles (REQ-MSG-03). */

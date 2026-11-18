@@ -31,6 +31,7 @@ const message = (n: number, who = person): Message => ({
     systemEvent: null,
     systemData: null,
     systemUser: null,
+    systemUsers: [],
     pinned: false,
     reactions: [],
     replyTo: null,

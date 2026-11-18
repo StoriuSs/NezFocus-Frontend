@@ -37,10 +37,10 @@ function update(client: QueryClient, change: (pages: InboxPages) => InboxPages):
  * Keeps the inbox in the cache live (06 S-NOTI-01, SRS 5.2), whether it is
  * open or not, for the rail's badge: `notification.created` puts the item in
  * its place, `notification.read` (another tab, the channel read in it, D-199)
- * marks items read, `notification.deleted` takes them out, each with the
- * count after. Each `ready` (the socket live again) reads the inbox again:
- * events may have been missed meanwhile. Once per query client, for the
- * app's life.
+ * marks items read, `notification.deleted` takes them out (a task deleted:
+ * every item of it, D-200), each with the count after. Each `ready` (the
+ * socket live again) reads the inbox again: events may have been missed
+ * meanwhile. Once per query client, for the app's life.
  *
  * Returns the way to stop (the first call only; tests use it).
  */

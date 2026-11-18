@@ -8,7 +8,10 @@ import { apiUrl, asOwnClient, codeFromEmail, watchForProblems } from './helpers'
  * what and where; opening the row goes to the message, and reading it in
  * the channel marks the item read (D-199 / NOTIF-02). Then three more: ✓
  * marks one, "Mark all read" the rest, and a message An deletes takes its
- * item away while the inbox is open.
+ * item away while the inbox is open. Task items (M3 L7): a task given to
+ * Bình opens over the page from its item, a task deleted takes its items
+ * away, and a task due in 2 hours reminds Bình in the inbox and in its
+ * channel, whose "View task" opens it (the tasks queue's job, D-95).
  *
  * Needs the API (with Redis, for the socket) and Mailpit, like
  * messaging.spec.ts. With E2E_SHOTS set to a folder, it also saves the
@@ -26,6 +29,7 @@ let binhEmail: string
 let binhId: string
 let serverId: string
 let channelId: string
+let boardId: string
 
 async function ok(method: string, path: string, body?: object, token?: string, key?: string) {
     const response = await fetch(`${apiUrl}/${path}`, {
@@ -100,7 +104,23 @@ test.beforeAll(async ({ browserName }) => {
     await ok('POST', `invites/${invite.code}/accept`, {}, binh)
     serverId = server.id
     channelId = server.channels.find((channel) => channel.name === 'hoi-dap')!.id
+    // The Study template's #viec-nhom has its Task Board on.
+    boardId = server.channels.find((channel) => channel.name === 'viec-nhom')!.id
 })
+
+/** An's task in #viec-nhom given to Bình; its id. */
+async function giveTask(title: string, dueAt: Date): Promise<string> {
+    const task: { id: string } = (
+        await ok(
+            'POST',
+            `channels/${boardId}/tasks`,
+            { title, due_at: dueAt.toISOString(), assignee_ids: [binhId] },
+            anToken,
+            crypto.randomUUID()
+        )
+    ).data
+    return task.id
+}
 
 const shoot = async (page: Page, name: string) => {
     if (!SHOTS) return
@@ -202,6 +222,91 @@ test('✓ marks one item read, "Mark all read" the rest, and a deleted message t
     await expect(inbox(binh.page).getByRole('link', { name: /^Unread\./ })).toHaveCount(0)
     await expect(inbox(binh.page).getByText("That's every notification from the last 90 days")).toBeVisible()
     await shoot(binh.page, 'noti01-all-read')
+
+    expect(binh.problems).toEqual([])
+    await binh.context.close()
+})
+
+test('a task given opens over the page from its item, and a task deleted takes its items away', async ({ browser }) => {
+    test.setTimeout(120_000)
+    const binh = await openAsBinh(browser)
+    await expect(pages(binh.page).getByRole('button', { name: 'Notifications', exact: true })).toBeVisible({
+        timeout: 20_000
+    })
+
+    const taskId = await giveTask('Chuẩn bị demo cuối kỳ', new Date(Date.now() + 3 * 86_400_000))
+    const bell = pages(binh.page).getByRole('button', { name: 'Notifications, 1 unread' })
+    await expect(bell).toBeVisible({ timeout: 15_000 })
+    await bell.click()
+    const row = inbox(binh.page).getByRole('link', {
+        name: /^Unread\. An gave you a task: Chuẩn bị demo cuối kỳ: Due \d\d\/\d\d · \d\d:\d\d\. #viec-nhom, Nhóm đồ án Mobile, \d\d:\d\d$/
+    })
+    await expect(row).toBeVisible()
+    await shoot(binh.page, 'noti01-task-assigned')
+
+    await row.click()
+    await expect(inbox(binh.page)).toBeHidden()
+    await expect(binh.page).toHaveURL(new RegExp(`/study\\?task=${taskId}$`))
+    const detail = binh.page.getByRole('dialog', { name: 'Chuẩn bị demo cuối kỳ' })
+    await expect(detail).toBeVisible({ timeout: 15_000 })
+    await binh.page.keyboard.press('Escape')
+    await expect(detail).toBeHidden()
+    await expect(pages(binh.page).getByRole('button', { name: 'Notifications', exact: true })).toBeVisible()
+
+    // A second task, then deleted while the inbox is open: its item leaves, and the count with it.
+    const second = await giveTask('Làm slide thuyết trình', new Date(Date.now() + 3 * 86_400_000))
+    await expect(pages(binh.page).getByRole('button', { name: 'Notifications, 1 unread' })).toBeVisible({
+        timeout: 15_000
+    })
+    await pages(binh.page).getByRole('button', { name: 'Notifications, 1 unread' }).click()
+    await expect(
+        inbox(binh.page).getByRole('link', { name: /An gave you a task: Làm slide thuyết trình/ })
+    ).toBeVisible()
+    await ok('DELETE', `tasks/${second}`, undefined, anToken)
+    await expect(inbox(binh.page).getByRole('link', { name: /Làm slide thuyết trình/ })).toHaveCount(0, {
+        timeout: 15_000
+    })
+    await expect(pages(binh.page).getByRole('button', { name: 'Notifications', exact: true })).toBeVisible()
+    await expect(inbox(binh.page).getByRole('link', { name: /Chuẩn bị demo cuối kỳ/ })).toBeVisible()
+
+    expect(binh.problems).toEqual([])
+    await binh.context.close()
+})
+
+test('a task due in 2 hours reminds in the inbox and in its channel, whose "View task" opens it', async ({
+    browser
+}) => {
+    test.setTimeout(150_000)
+    const binh = await openAsBinh(browser)
+    await expect(pages(binh.page).getByRole('button', { name: 'Notifications', exact: true })).toBeVisible({
+        timeout: 20_000
+    })
+
+    // The 2-hour mark 20 seconds from now; the 24-hour one is gone already, so not sent (D-95).
+    const taskId = await giveTask('Nộp báo cáo giữa kỳ', new Date(Date.now() + 2 * 3_600_000 + 20_000))
+    await expect(pages(binh.page).getByRole('button', { name: 'Notifications, 1 unread' })).toBeVisible({
+        timeout: 15_000
+    })
+    await expect(pages(binh.page).getByRole('button', { name: 'Notifications, 2 unread' })).toBeVisible({
+        timeout: 60_000
+    })
+    await pages(binh.page).getByRole('button', { name: 'Notifications, 2 unread' }).click()
+    await expect(
+        inbox(binh.page).getByRole('link', {
+            name: /^Unread\. 2 hours left: Nộp báo cáo giữa kỳ\. #viec-nhom, Nhóm đồ án Mobile, \d\d:\d\d$/
+        })
+    ).toBeVisible()
+    await expect(inbox(binh.page).getByRole('link', { name: /24 hours left/ })).toHaveCount(0)
+    await shoot(binh.page, 'noti01-task-reminder')
+    await binh.page.keyboard.press('Escape')
+
+    await binh.page.goto(`/channels/${serverId}/${boardId}`)
+    const reminder = binh.page.getByRole('article', { name: /^2 hours left: Nộp báo cáo giữa kỳ · Bình, \d\d:\d\d$/ })
+    await expect(reminder).toBeVisible({ timeout: 15_000 })
+    await shoot(binh.page, 'task01-reminder')
+    await reminder.getByRole('button', { name: 'View task' }).click()
+    await expect(binh.page).toHaveURL(new RegExp(`/channels/${serverId}/${boardId}\\?task=${taskId}$`))
+    await expect(binh.page.getByRole('dialog', { name: 'Nộp báo cáo giữa kỳ' })).toBeVisible({ timeout: 15_000 })
 
     expect(binh.problems).toEqual([])
     await binh.context.close()
