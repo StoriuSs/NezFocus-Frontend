@@ -22,7 +22,8 @@ export interface PanelState {
  * choice is remembered in this browser, per kind, and it starts open, or
  * closed with `startClosed` (the pins, SRS 1.71); as a
  * sheet over the content it starts closed and is not remembered, so a narrow
- * window never opens with the content covered.
+ * window never opens with the content covered; one open as a column when the
+ * window narrows stays open as a sheet.
  *
  * Also returns the ref for the header button that opens it: focus goes back
  * there when the sheet closes.
@@ -39,6 +40,13 @@ export function usePanel(
     })
     const [sheetOpen, setSheetOpen] = useState(false)
     const buttonRef = useRef<HTMLButtonElement | null>(null)
+    // Open as a column when the window narrows: open as a sheet, in the same render, so what is
+    // in it (a form being filled, its dialog) is kept (M3 A3, chosen by the owner 18/11/2026).
+    const [wasDocked, setWasDocked] = useState(docked)
+    if (docked !== wasDocked) {
+        setWasDocked(docked)
+        if (!docked && columnOpen) setSheetOpen(true)
+    }
 
     const setColumn = useCallback(
         (open: boolean) => {

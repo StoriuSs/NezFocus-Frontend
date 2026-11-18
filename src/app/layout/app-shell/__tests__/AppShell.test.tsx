@@ -8,6 +8,7 @@ import i18n from '@/i18n'
 import { IconButton } from '@/components/ui/icon-button'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { RightPanel, usePanel } from '@/components/shell/RightPanel'
+import { PANEL_DOCKS } from '@/hooks/useMediaQuery'
 import { ShellPage } from '@/components/shell/ShellPage'
 import { expectNoA11yViolations } from '@/test/a11y'
 import { mockAuthStore, queryWrapper } from '@/test/helpers'
@@ -920,6 +921,36 @@ describe('AppShell (S-SHELL-01)', () => {
             await userEvent.keyboard('{Escape}')
             expect(screen.queryByRole('complementary', { name: 'Members' })).not.toBeInTheDocument()
             expect(button).toHaveFocus()
+        })
+
+        it('stays open, what is in it kept, when the window narrows below 1280 while it is open (A3)', async () => {
+            // A window that docks the panel, then narrows.
+            let wide = true
+            const listeners = new Set<() => void>()
+            const before = window.matchMedia
+            window.matchMedia = ((query: string) => ({
+                get matches() {
+                    return query === PANEL_DOCKS ? wide : false
+                },
+                media: query,
+                addEventListener: (_: string, listener: () => void) => listeners.add(listener),
+                removeEventListener: (_: string, listener: () => void) => listeners.delete(listener)
+            })) as never
+            try {
+                renderAt('/panel')
+                // A column starts open; what it holds stays the same element through the change (a form typed in, a dialog).
+                const held = within(await screen.findByRole('complementary', { name: 'Members' })).getByText('Bình')
+
+                act(() => {
+                    wide = false
+                    listeners.forEach((listener) => listener())
+                })
+
+                expect(screen.getByRole('complementary', { name: 'Members' })).toBeInTheDocument()
+                expect(held.isConnected).toBe(true)
+            } finally {
+                window.matchMedia = before
+            }
         })
     })
 
