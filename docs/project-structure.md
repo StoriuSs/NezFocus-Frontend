@@ -156,9 +156,9 @@ react-starter/
     │   ├── voice/             # Voice rooms (07, M4): index.ts (VoiceRoomView: the preview page and the
     │   │                      #   room, InRoomDock C-09, both lazy with LiveKit; useVoiceSession,
     │   │                      #   useOrderedPeople, useVoiceStore, not lazy), voice.store.ts (the room
-    │   │                      #   this tab is in, its mic, the last join's problem), api/ (token,
-    │   │                      #   leave), lib/ (session.ts: join, leave, mic, outliving every page;
-    │   │                      #   people order and grid, reload, the browser's mic), components/,
+    │   │                      #   this tab is in, its mic and camera, the last join's problem), api/ (token,
+    │   │                      #   leave), lib/ (session.ts: join, leave, mic, camera, outliving every page;
+    │   │                      #   people order and grid, reload, the browser's mic and camera), components/,
     │   │                      #   hooks/, voice.css (its classes). The rooms' people are the servers'
     │   │                      #   data (D-205), handed in as VoiceRoom
     │   └── users/             # The profile and the account's settings
@@ -303,7 +303,7 @@ Shared and feature-free.
 | `time-zones.ts` | The time zones to pick from (C-25), named and ordered, and the search over them; `wallClock()`, the calendar and clock in a zone (times shown in the account's zone); `endsAt()` / `endsAtText()`, when a timeout ends ("22:30", "22:30, 19/10" on another day); `accountTimeZone()`, the account's zone for code outside React, from the source the users feature sets (`setTimeZoneSource`) |
 | `phase-sound.ts` | `playPhaseSound()`: the phase sound, two short notes (C6 then E6) made with Web Audio (D-140), silent where the browser cannot play. "Play sample" on Notifications now, the end of a study phase later |
 | `socket.ts` | `openSocket()`: the tab's one socket.io connection (SRS 5.2), websocket only, a new ticket for each attempt, a refused handshake tried again with a growing wait, a session that ended asked about (still signed in: connect again). Loaded with `import()` after the AppShell's first paint; knows no feature (the ticket and what to do come in its options) |
-| `livekit/` | `joinRoom()`: the tab's link to a LiveKit room (ARCHITECTURE §4): others' sound played whatever the page, the mic switched, how the link ended in the app's words (`other-tab`, `removed`, `lost`). Loaded with `import()` when a room is joined, never with the first screen; knows no feature |
+| `livekit/` | `joinRoom()`: the tab's link to a LiveKit room (ARCHITECTURE §4): others' sound played whatever the page, the mic and camera switched, how the link ended in the app's words (`other-tab`, `removed`, `lost`). Loaded with `import()` when a room is joined, never with the first screen; knows no feature |
 | `simple-markdown.ts` | The small Markdown subset the legal pages are written in, read into blocks React draws (never `innerHTML`) |
 
 ### `src/pages/`

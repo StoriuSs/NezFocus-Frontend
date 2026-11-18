@@ -19,20 +19,37 @@
         "micOff": "Tắt mic (Ctrl Shift M)",
         "micBlocked": "Trình duyệt đang chặn mic",
         "noSpeak": "Bạn không có quyền nói trong phòng này",
+        "camera": "Camera",
+        "cameraOn": "Bật camera",
+        "cameraOff": "Tắt camera",
+        "cameraBlocked": "Trình duyệt đang chặn camera",
+        "noVideo": "Bạn không có quyền bật camera trong phòng này",
         "leave": "Rời phòng"
     },
     "micBlocked": {
         "banner": "Trình duyệt đang chặn mic · vẫn nghe được",
-        "howTo": "Cách bật lại",
         "title": "Bật lại mic",
         "step1": "1. Bấm biểu tượng ở đầu thanh địa chỉ, cạnh địa chỉ trang.",
         "step2": "2. Ở mục Micrô, chọn Cho phép.",
         "step3": "3. Nếu nút Mic chưa đổi, tải lại trang."
     },
+    "cameraBlocked": {
+        "banner": "Trình duyệt đang chặn camera",
+        "title": "Bật lại camera",
+        "step1": "1. Bấm biểu tượng ở đầu thanh địa chỉ, cạnh địa chỉ trang.",
+        "step2": "2. Ở mục Máy ảnh, chọn Cho phép.",
+        "step3": "3. Nếu nút Camera chưa đổi, tải lại trang."
+    },
+    "devicesBlocked": {
+        "banner": "Trình duyệt đang chặn mic và camera · vẫn nghe được",
+        "howTo": "Cách bật lại"
+    },
     "room": {
         "people": "Người trong phòng",
         "left": "Đã rời {{room}}",
-        "joinAgain": "Vào lại"
+        "joinAgain": "Vào lại",
+        "zoomed": "{{name}}, đang phóng to",
+        "zoomOut": "Thu nhỏ"
     },
     "dock": {
         "inRoom": "Đang trong phòng",
@@ -46,6 +63,7 @@
         "micOn": "đang bật mic",
         "micOff": "mic tắt",
         "cameraOn": "đang bật camera",
-        "speaking": "đang nói"
+        "speaking": "đang nói",
+        "zoomHint": "bấm để phóng to"
     }
 }

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { apiError } from '@/test/helpers'
-import type { LinkEvents, MicState } from '@/lib/livekit'
+import type { DeviceState, JoinDevices, LinkEvents } from '@/lib/livekit'
 import type { VoiceToken } from '../types'
 
 const voiceApi = {
@@ -10,16 +10,23 @@ const voiceApi = {
 vi.mock('../api/voice.api', () => voiceApi)
 
 /** A link as `@/lib/livekit` gives it, with the events it was given. */
-const links: { leave: ReturnType<typeof vi.fn>; setMic: ReturnType<typeof vi.fn>; events: LinkEvents }[] = []
+const links: {
+    leave: ReturnType<typeof vi.fn>
+    setMic: ReturnType<typeof vi.fn>
+    setCamera: ReturnType<typeof vi.fn>
+    events: LinkEvents
+}[] = []
 const livekit = {
-    joinRoom: vi.fn(async (_url: string, _token: string, mic: boolean, events: LinkEvents) => {
+    joinRoom: vi.fn(async (_url: string, _token: string, devices: JoinDevices, events: LinkEvents) => {
         const link = {
             room: { name: 'room' },
             leave: vi.fn(async () => undefined),
-            setMic: vi.fn(async (on: boolean) => (on ? 'on' : 'off'))
+            setMic: vi.fn(async (on: boolean) => (on ? 'on' : 'off')),
+            setCamera: vi.fn(async (on: boolean) => (on ? 'on' : 'off'))
         }
         links.push({ ...link, events })
-        return { link, micState: (mic ? 'on' : 'off') as MicState }
+        const said = (on: boolean): DeviceState => (on ? 'on' : 'off')
+        return { link, micState: said(devices.mic), cameraState: said(devices.camera) }
     })
 }
 vi.mock('@/lib/livekit', () => livekit)
@@ -27,8 +34,17 @@ vi.mock('@/lib/livekit', () => livekit)
 const sendRealtimeSignal = vi.fn()
 vi.mock('@/features/realtime', () => ({ sendRealtimeSignal }))
 
-const { joinRoom, leaveRoom, switchMic, micAllowedAgain, resetSession, tellOwnState, JOIN_MS } =
-    await import('../lib/session')
+const {
+    joinRoom,
+    leaveRoom,
+    switchMic,
+    switchCamera,
+    stopPreviewCamera,
+    deviceAllowedAgain,
+    resetSession,
+    tellOwnState,
+    JOIN_MS
+} = await import('../lib/session')
 const { useVoiceStore } = await import('../voice.store')
 const { flushBeforeSignOut } = await import('@/lib/before-sign-out')
 
@@ -36,6 +52,16 @@ const LOUNGE = { serverId: 'ot', channelId: 'thao-luan', name: 'Phòng thảo lu
 const QUIET = { serverId: 'ot', channelId: 'quiet', name: 'Phòng học im lặng' }
 const state = () => useVoiceStore.getState()
 const kept = () => sessionStorage.getItem('voice.room')
+const OFF = { mic: false, camera: false }
+
+/** The browser's camera before joining: a stream of one track, stopped when the camera goes off. */
+function aCamera() {
+    const stop = vi.fn()
+    const stream = { getTracks: () => [{ stop }] } as unknown as MediaStream
+    const getUserMedia = vi.fn().mockResolvedValue(stream)
+    Object.defineProperty(navigator, 'mediaDevices', { value: { getUserMedia }, configurable: true })
+    return { stream, stop, getUserMedia }
+}
 
 describe("a tab's time in a voice room (REQ-VC-01 → VC-03)", () => {
     beforeEach(() => {
@@ -56,22 +82,167 @@ describe("a tab's time in a voice room (REQ-VC-01 → VC-03)", () => {
         expect(await joining).toBe(true)
 
         expect(voiceApi.requestVoiceToken).toHaveBeenCalledWith('thao-luan')
-        expect(livekit.joinRoom).toHaveBeenCalledWith('ws://lk', 'token', false, expect.any(Object))
+        expect(livekit.joinRoom).toHaveBeenCalledWith('ws://lk', 'token', OFF, expect.any(Object))
         expect(state().call).toMatchObject({ channelId: 'thao-luan', phase: 'connected' })
         expect(state().room).not.toBeNull()
         expect(JSON.parse(kept() ?? '')).toEqual({ serverId: 'ot', channelId: 'thao-luan' })
         expect(sendRealtimeSignal).toHaveBeenCalledWith('voice.self_state', { mic: false, camera: false })
     })
 
-    it('joins with the mic the preview page turned on, unless told to keep it off (a reload)', async () => {
-        useVoiceStore.setState({ mic: 'on' })
+    it('joins with the mic and camera the preview page turned on, unless told to keep them off (a reload)', async () => {
+        useVoiceStore.setState({ mic: 'on', camera: 'on' })
         await joinRoom(LOUNGE)
-        expect(livekit.joinRoom).toHaveBeenLastCalledWith('ws://lk', 'token', true, expect.any(Object))
-        expect(state().mic).toBe('on')
+        expect(livekit.joinRoom).toHaveBeenLastCalledWith(
+            'ws://lk',
+            'token',
+            { mic: true, camera: true },
+            expect.any(Object)
+        )
+        expect(state()).toMatchObject({ mic: 'on', camera: 'on' })
+        expect(sendRealtimeSignal).toHaveBeenLastCalledWith('voice.self_state', { mic: true, camera: true })
 
-        await joinRoom(QUIET, { micOff: true })
-        expect(livekit.joinRoom).toHaveBeenLastCalledWith('ws://lk', 'token', false, expect.any(Object))
-        expect(state().mic).toBe('off')
+        await joinRoom(QUIET, { devicesOff: true })
+        expect(livekit.joinRoom).toHaveBeenLastCalledWith('ws://lk', 'token', OFF, expect.any(Object))
+        expect(state()).toMatchObject({ mic: 'off', camera: 'off' })
+    })
+
+    it("before joining, opens the camera for one's own tile (D-53); refused, it is blocked until allowed again", async () => {
+        const camera = aCamera()
+        await switchCamera(true)
+        expect(camera.getUserMedia).toHaveBeenCalledWith({ video: true })
+        expect(state()).toMatchObject({ camera: 'on', cameraPreview: camera.stream })
+        expect(sendRealtimeSignal).not.toHaveBeenCalled()
+
+        await switchCamera(false)
+        expect(camera.stop).toHaveBeenCalled()
+        expect(state()).toMatchObject({ camera: 'off', cameraPreview: null })
+
+        camera.getUserMedia.mockRejectedValueOnce(new DOMException('no', 'NotAllowedError'))
+        await switchCamera(true)
+        expect(state()).toMatchObject({ camera: 'blocked', cameraPreview: null })
+        deviceAllowedAgain('camera')
+        expect(state().camera).toBe('off')
+
+        camera.getUserMedia.mockRejectedValueOnce(new DOMException('none', 'NotFoundError'))
+        await switchCamera(true)
+        expect(state().camera).toBe('off')
+    })
+
+    it('lets go of a picture the browser gives after the camera was pressed off, or a join began', async () => {
+        const camera = aCamera()
+        let answer!: (stream: MediaStream) => void
+        camera.getUserMedia.mockImplementationOnce(() => new Promise((resolve) => (answer = resolve)))
+        const asking = switchCamera(true)
+        await switchCamera(false)
+        answer(camera.stream)
+        await asking
+        expect(camera.stop).toHaveBeenCalled()
+        expect(state()).toMatchObject({ camera: 'off', cameraPreview: null })
+
+        camera.stop.mockClear()
+        camera.getUserMedia.mockImplementationOnce(() => new Promise((resolve) => (answer = resolve)))
+        const again = switchCamera(true)
+        const joining = joinRoom(LOUNGE)
+        answer(camera.stream)
+        await again
+        await joining
+        expect(camera.stop).toHaveBeenCalled()
+        expect(state().cameraPreview).toBeNull()
+    })
+
+    it('hands the camera to LiveKit once in the room: the preview stops', async () => {
+        const camera = aCamera()
+        await switchCamera(true)
+        await joinRoom(LOUNGE)
+        expect(camera.stop).toHaveBeenCalled()
+        expect(state()).toMatchObject({ camera: 'on', cameraPreview: null })
+
+        await switchCamera(false)
+        expect(links[0]?.setCamera).toHaveBeenCalledWith(false)
+        expect(state().camera).toBe('off')
+        expect(sendRealtimeSignal).toHaveBeenLastCalledWith('voice.self_state', { mic: false, camera: false })
+    })
+
+    it('turns off a camera the browser allows only after the preview page went', async () => {
+        const camera = aCamera()
+        let answer!: (stream: MediaStream) => void
+        camera.getUserMedia.mockImplementationOnce(() => new Promise((resolve) => (answer = resolve)))
+        const asking = switchCamera(true)
+        stopPreviewCamera()
+        answer(camera.stream)
+        await asking
+        expect(camera.stop).toHaveBeenCalled()
+        expect(state()).toMatchObject({ camera: 'off', cameraPreview: null })
+    })
+
+    it('a join that fails after its preview page went leaves the camera off; on the page, as it was', async () => {
+        const camera = aCamera()
+        await switchCamera(true)
+        voiceApi.requestVoiceToken.mockRejectedValueOnce(apiError(503, 'SERVICE_UNAVAILABLE_ERROR'))
+        await joinRoom(LOUNGE)
+        expect(state()).toMatchObject({ camera: 'on', cameraPreview: camera.stream })
+
+        let refuse!: (error: unknown) => void
+        voiceApi.requestVoiceToken.mockImplementationOnce(() => new Promise((_, reject) => (refuse = reject)))
+        const joining = joinRoom(LOUNGE)
+        stopPreviewCamera()
+        expect(camera.stop).toHaveBeenCalled()
+        refuse(apiError(503, 'SERVICE_UNAVAILABLE_ERROR'))
+        await joining
+        expect(state()).toMatchObject({ camera: 'off', cameraPreview: null })
+    })
+
+    it('keeps what was pressed while joining: the mic and camera as last set (07 joining)', async () => {
+        aCamera()
+        await switchCamera(true)
+        let answer!: (token: VoiceToken) => void
+        voiceApi.requestVoiceToken.mockImplementationOnce(() => new Promise((resolve) => (answer = resolve)))
+        const joining = joinRoom(LOUNGE)
+        await switchCamera(false)
+        answer({ token: 'token', url: 'ws://lk' })
+        await vi.waitFor(() => expect(livekit.joinRoom).toHaveBeenCalled())
+        await joining
+        expect(state()).toMatchObject({ camera: 'off', mic: 'off' })
+
+        let again!: (token: VoiceToken) => void
+        voiceApi.requestVoiceToken.mockImplementationOnce(() => new Promise((resolve) => (again = resolve)))
+        livekit.joinRoom.mockClear()
+        const second = joinRoom(QUIET)
+        await vi.waitFor(() => expect(voiceApi.requestVoiceToken).toHaveBeenCalledTimes(2))
+        livekit.joinRoom.mockImplementationOnce(async (_url, _token, _devices, events) => {
+            const link = {
+                room: { name: 'room' },
+                leave: vi.fn(async () => undefined),
+                setMic: vi.fn(async (on: boolean) => (on ? 'on' : 'off')),
+                setCamera: vi.fn(async (on: boolean) => (on ? 'on' : 'off'))
+            }
+            links.push({ ...link, events })
+            // The mic pressed on while LiveKit was joining with it off.
+            useVoiceStore.setState({ mic: 'on' })
+            return { link, micState: 'off' as DeviceState, cameraState: 'off' as DeviceState }
+        })
+        again({ token: 'token', url: 'ws://lk' })
+        await second
+        expect(links.at(-1)?.setMic).toHaveBeenCalledWith(true)
+        expect(state().mic).toBe('on')
+    })
+
+    it('turns the camera off when the preview page goes without joining (07 câu L3b-c), not once joined', async () => {
+        const camera = aCamera()
+        await switchCamera(true)
+        stopPreviewCamera()
+        expect(camera.stop).toHaveBeenCalled()
+        expect(state()).toMatchObject({ camera: 'off', cameraPreview: null })
+
+        await switchCamera(true)
+        await joinRoom(LOUNGE)
+        stopPreviewCamera()
+        expect(state().camera).toBe('on')
+
+        await leaveRoom()
+        useVoiceStore.setState({ camera: 'blocked' })
+        stopPreviewCamera()
+        expect(state().camera).toBe('blocked')
     })
 
     it('leaves the room it was in before joining another (VC-02)', async () => {
@@ -117,7 +288,7 @@ describe("a tab's time in a voice room (REQ-VC-01 → VC-03)", () => {
         expect(state()).toMatchObject({ call: null, problem: { kind: 'network' } })
 
         const late = { room: {}, leave: vi.fn(async () => undefined), setMic: vi.fn() }
-        answer({ link: late as never, micState: 'off' })
+        answer({ link: late as never, micState: 'off', cameraState: 'off' })
         await vi.advanceTimersByTimeAsync(0)
         expect(late.leave).toHaveBeenCalled()
     })
@@ -129,7 +300,7 @@ describe("a tab's time in a voice room (REQ-VC-01 → VC-03)", () => {
         await vi.waitFor(() => expect(livekit.joinRoom).toHaveBeenCalled())
         await leaveRoom()
         const late = { room: {}, leave: vi.fn(async () => undefined), setMic: vi.fn() }
-        answer({ link: late as never, micState: 'off' })
+        answer({ link: late as never, micState: 'off', cameraState: 'off' })
         expect(await joining).toBe(false)
         expect(late.leave).toHaveBeenCalled()
         expect(state().call).toBeNull()
@@ -137,11 +308,11 @@ describe("a tab's time in a voice room (REQ-VC-01 → VC-03)", () => {
 
     it('leaves at once on the page, then asks the API to take one off the list', async () => {
         await joinRoom(LOUNGE)
-        useVoiceStore.setState({ mic: 'on' })
+        useVoiceStore.setState({ mic: 'on', camera: 'on' })
         await leaveRoom()
         expect(links[0]?.leave).toHaveBeenCalled()
         expect(voiceApi.leaveVoiceRoom).toHaveBeenCalledWith()
-        expect(state()).toMatchObject({ call: null, room: null, mic: 'off' })
+        expect(state()).toMatchObject({ call: null, room: null, mic: 'off', camera: 'off' })
         expect(kept()).toBeNull()
     })
 
@@ -154,8 +325,9 @@ describe("a tab's time in a voice room (REQ-VC-01 → VC-03)", () => {
 
     it('ends when LiveKit ends the link: elsewhere in this room, or put out (07 câu L3-b)', async () => {
         await joinRoom(LOUNGE)
+        useVoiceStore.setState({ camera: 'on' })
         links[0]?.events.onEnd('other-tab')
-        expect(state()).toMatchObject({ call: null, room: null, removed: null })
+        expect(state()).toMatchObject({ call: null, room: null, removed: null, camera: 'off' })
         expect(kept()).toBeNull()
 
         vi.spyOn(Date, 'now').mockReturnValue(1000)
@@ -208,7 +380,7 @@ describe("a tab's time in a voice room (REQ-VC-01 → VC-03)", () => {
         getUserMedia.mockRejectedValueOnce(new DOMException('no', 'NotAllowedError'))
         await switchMic(true)
         expect(state().mic).toBe('blocked')
-        micAllowedAgain()
+        deviceAllowedAgain('mic')
         expect(state().mic).toBe('off')
 
         getUserMedia.mockRejectedValueOnce(new DOMException('none', 'NotFoundError'))

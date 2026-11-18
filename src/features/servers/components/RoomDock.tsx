@@ -33,6 +33,7 @@ export function RoomDock({ shape }: { shape: 'column' | 'strip' }) {
                     name: room?.name ?? call.name,
                     // The room gone from the list meanwhile: the dock goes with the link in a moment.
                     canSpeak: room?.canSpeak ?? false,
+                    canVideo: room?.canVideo ?? false,
                     // Oneself at least, while the list waits for LiveKit's word.
                     count: Math.max(room?.people.length ?? 0, 1)
                 }}

@@ -10,7 +10,10 @@ class FakeRoom {
         this.fire('disconnected', 1)
     })
     startAudio = vi.fn(async () => undefined)
-    localParticipant = { setMicrophoneEnabled: vi.fn(async (_on: boolean) => undefined) }
+    localParticipant = {
+        setMicrophoneEnabled: vi.fn(async (_on: boolean) => undefined),
+        setCameraEnabled: vi.fn(async (_on: boolean) => undefined)
+    }
     constructor(public options: unknown) {
         FakeRoom.last = this
     }
@@ -42,8 +45,10 @@ vi.mock('livekit-client', () => ({
     }
 }))
 
-const { joinRoom, micStateOf } = await import('../livekit')
+const { joinRoom, deviceStateOf } = await import('../livekit')
 
+const OFF = { mic: false, camera: false }
+const MIC = { mic: true, camera: false }
 const events = () => ({ onEnd: vi.fn(), onReconnecting: vi.fn(), onReconnected: vi.fn() })
 const refused = () => new DOMException('no', 'NotAllowedError')
 
@@ -58,36 +63,60 @@ describe('the link to a LiveKit room (ARCHITECTURE §4)', () => {
     afterEach(() => vi.restoreAllMocks())
 
     it('joins with the address and token, the mic on only when asked', async () => {
-        const muted = await joinRoom('ws://lk', 'token-1', false, events())
+        const muted = await joinRoom('ws://lk', 'token-1', OFF, events())
         expect(FakeRoom.last.connect).toHaveBeenCalledWith('ws://lk', 'token-1')
         expect(FakeRoom.last.localParticipant.setMicrophoneEnabled).not.toHaveBeenCalled()
         expect(muted.micState).toBe('off')
 
-        const speaking = await joinRoom('ws://lk', 'token-2', true, events())
+        const speaking = await joinRoom('ws://lk', 'token-2', MIC, events())
         expect(FakeRoom.last.localParticipant.setMicrophoneEnabled).toHaveBeenCalledWith(true)
         expect(speaking.micState).toBe('on')
         expect(speaking.link.room).toBe(FakeRoom.last)
     })
 
+    it('joins with the camera on when asked on the preview page, blocked when refused (REQ-VC-03)', async () => {
+        const filmed = await joinRoom('ws://lk', 'token', { mic: false, camera: true }, events())
+        expect(FakeRoom.last.localParticipant.setCameraEnabled).toHaveBeenCalledWith(true)
+        expect(filmed.cameraState).toBe('on')
+        expect(filmed.micState).toBe('off')
+
+        const plain = await joinRoom('ws://lk', 'token', OFF, events())
+        expect(FakeRoom.last.localParticipant.setCameraEnabled).not.toHaveBeenCalled()
+        expect(plain.cameraState).toBe('off')
+
+        const refusing = joinRoom('ws://lk', 'token', { mic: false, camera: true }, events())
+        FakeRoom.last.localParticipant.setCameraEnabled.mockRejectedValueOnce(refused())
+        expect((await refusing).cameraState).toBe('blocked')
+    })
+
+    it('switches the camera, and says what the browser answered', async () => {
+        const { link } = await joinRoom('ws://lk', 'token', OFF, events())
+        expect(await link.setCamera(true)).toBe('on')
+        expect(FakeRoom.last.localParticipant.setCameraEnabled).toHaveBeenLastCalledWith(true)
+        expect(await link.setCamera(false)).toBe('off')
+        FakeRoom.last.localParticipant.setCameraEnabled.mockRejectedValueOnce(refused())
+        expect(await link.setCamera(true)).toBe('blocked')
+    })
+
     it('still joins when the browser refuses the mic: it is blocked (S-MOD-04, VC-03)', async () => {
-        const room = joinRoom('ws://lk', 'token', true, events())
+        const room = joinRoom('ws://lk', 'token', MIC, events())
         FakeRoom.last.localParticipant.setMicrophoneEnabled.mockRejectedValueOnce(refused())
         expect((await room).micState).toBe('blocked')
     })
 
     it('switches the mic, and says what the browser answered', async () => {
-        const { link } = await joinRoom('ws://lk', 'token', false, events())
+        const { link } = await joinRoom('ws://lk', 'token', OFF, events())
         expect(await link.setMic(true)).toBe('on')
         expect(await link.setMic(false)).toBe('off')
         FakeRoom.last.localParticipant.setMicrophoneEnabled.mockRejectedValueOnce(refused())
         expect(await link.setMic(true)).toBe('blocked')
         FakeRoom.last.localParticipant.setMicrophoneEnabled.mockRejectedValueOnce(new Error('no device'))
         expect(await link.setMic(true)).toBe('off')
-        expect(micStateOf(refused())).toBe('blocked')
+        expect(deviceStateOf(refused())).toBe('blocked')
     })
 
     it("plays others' sound whatever the page, and stops it when the track goes", async () => {
-        await joinRoom('ws://lk', 'token', false, events())
+        await joinRoom('ws://lk', 'token', OFF, events())
         const track = soundTrack('TR_1')
         FakeRoom.last.fire('trackSubscribed', track)
         expect(document.body.contains(track.player)).toBe(true)
@@ -102,7 +131,7 @@ describe('the link to a LiveKit room (ARCHITECTURE §4)', () => {
     })
 
     it('plays sound at the next touch when the browser held it back (a reload joins with no click)', async () => {
-        await joinRoom('ws://lk', 'token', false, events())
+        await joinRoom('ws://lk', 'token', OFF, events())
         FakeRoom.last.canPlaybackAudio = false
         FakeRoom.last.fire('audioPlaybackChanged')
         document.dispatchEvent(new Event('pointerdown'))
@@ -116,7 +145,7 @@ describe('the link to a LiveKit room (ARCHITECTURE §4)', () => {
 
     it('says how the link ended, in the app words; not after leaving here', async () => {
         const told = events()
-        await joinRoom('ws://lk', 'token', false, told)
+        await joinRoom('ws://lk', 'token', OFF, told)
         FakeRoom.last.fire('reconnecting')
         FakeRoom.last.fire('reconnected')
         expect(told.onReconnecting).toHaveBeenCalled()
@@ -134,7 +163,7 @@ describe('the link to a LiveKit room (ARCHITECTURE §4)', () => {
         expect(told.onEnd).toHaveBeenLastCalledWith('lost')
 
         const left = events()
-        const { link } = await joinRoom('ws://lk', 'token', false, left)
+        const { link } = await joinRoom('ws://lk', 'token', OFF, left)
         await link.leave()
         expect(FakeRoom.last.disconnect).toHaveBeenCalled()
         expect(left.onEnd).not.toHaveBeenCalled()

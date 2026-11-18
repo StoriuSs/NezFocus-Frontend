@@ -14,12 +14,12 @@ export const MOVED_WINDOW_MS = 15_000
 /**
  * What voice does in every tab, whatever the page, given the rooms the app
  * holds (`directory`, from the servers' data):
- * - A reload of a tab that was in a room joins it again, mic off, and says so
+ * - A reload of a tab that was in a room joins it again, mic and camera off, and says so
  *   (07 ROOM-EDGE `reload-rejoin`, VC-02, D-51); a room gone or closed to one
  *   meanwhile is not joined.
  * - Put out because the account joined another room elsewhere: once that
  *   room's list shows one in it, a Toast says where (07 câu L3-b).
- * - One's own row in the room's list differs from this tab's mic, or the
+ * - One's own row in the room's list differs from this tab's mic or camera, or the
  *   socket is live again: the tab says its state again (D-206).
  */
 export function useVoiceSession(directory: VoiceDirectory | undefined): void {
@@ -32,7 +32,7 @@ export function useVoiceSession(directory: VoiceDirectory | undefined): void {
         const room = directory.room(rejoin.channelId)
         const timedOut = room?.timeoutUntil != null && new Date(room.timeoutUntil) > new Date()
         if (!room?.canConnect || timedOut) return
-        void joinRoom(room, { micOff: true }).then((joined) => {
+        void joinRoom(room, { devicesOff: true }).then((joined) => {
             if (joined) toast(t('shell.voice.rejoined', { room: room.name }), { id: 'voice-rejoined' })
         })
     }, [directory, t])
@@ -55,10 +55,11 @@ export function useVoiceSession(directory: VoiceDirectory | undefined): void {
 
     const call = useVoiceStore((state) => state.call)
     const mic = useVoiceStore((state) => state.mic)
+    const camera = useVoiceStore((state) => state.camera)
     const connectedTo = call?.phase === 'connected' ? call.channelId : undefined
     const ownRow =
         connectedTo && me ? directory?.room(connectedTo)?.people.find((one) => one.user.id === me) : undefined
-    const differs = ownRow !== undefined && (ownRow.micOn !== (mic === 'on') || ownRow.cameraOn)
+    const differs = ownRow !== undefined && (ownRow.micOn !== (mic === 'on') || ownRow.cameraOn !== (camera === 'on'))
     useEffect(() => {
         if (differs) tellOwnState()
     }, [differs, ownRow])

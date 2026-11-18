@@ -2,11 +2,12 @@ import { expect, test, type Browser, type Page } from '@playwright/test'
 import { apiUrl, asOwnClient, codeFromEmail, watchForProblems } from './helpers'
 
 /**
- * Voice rooms (M4 L3a, REQ-VC-01 → VC-03), two people in their own browsers
- * with a fake microphone: joining from the preview page, who is in the room
- * live in the channel list and the room (D-205), the mic (D-206), the dock
- * away from the room, leaving, a reload joining again (D-51) and the same
- * account in a second tab (`other-tab`).
+ * Voice rooms (M4 L3a, L3b, REQ-VC-01 → VC-03), two people in their own
+ * browsers with a fake microphone and camera: joining from the preview page
+ * with the camera on, who is in the room live in the channel list and the
+ * room (D-205), the mic and camera (D-206), a picture zoomed in, the dock
+ * away from the room, leaving, a reload joining again with both off (D-51)
+ * and the same account in a second tab (`other-tab`).
  *
  * Needs the API with LiveKit (the backend's `pnpm test:services:up` starts
  * it, its webhook to the API) and Mailpit, like messaging.spec.ts.
@@ -104,28 +105,50 @@ async function openAs(browser: Browser, email: string, path: string) {
 const grid = (page: Page) => page.getByRole('list', { name: 'People in the room' })
 const channelList = (page: Page) => page.getByRole('navigation', { name: 'Channels of Ôn thi Giải tích 2' })
 const OTHER_TAB = "You're in this room in another tab or on another device"
+/** The width of the picture a <video> plays: 0 until frames arrive. */
+const pictureWidth = (video: ReturnType<Page['locator']>) => video.evaluate((one: HTMLVideoElement) => one.videoWidth)
 
 test('joining, the mic, the dock and leaving show live to everyone who views the room', async ({ browser }) => {
     const an = await openAs(browser, anEmail, roomPath)
     const binh = await openAs(browser, binhEmail, firstPath)
 
     await expect(an.page.getByText('No one is in the room')).toBeVisible({ timeout: 20_000 })
+    // The camera on before joining: one's own tile plays its picture (D-53), and the room gets it (REQ-VC-03).
+    await an.page.getByRole('button', { name: 'Turn on camera' }).click()
+    await expect(an.page.getByRole('button', { name: 'Turn off camera' })).toBeVisible()
+    await expect.poll(() => pictureWidth(an.page.getByTestId('own-picture'))).toBeGreaterThan(0)
     await an.page.getByRole('button', { name: 'Join room' }).click()
-    await expect(grid(an.page).getByRole('listitem', { name: 'You, mic off' })).toBeVisible({ timeout: 15_000 })
+    await expect(grid(an.page).getByRole('button', { name: 'You, mic off, camera on, press to zoom in' })).toBeVisible({
+        timeout: 15_000
+    })
 
     // Bình sees An under the room in the list, then on the preview page.
-    await expect(channelList(binh.page).getByRole('listitem', { name: 'An' })).toBeVisible({ timeout: 15_000 })
+    await expect(channelList(binh.page).getByRole('listitem', { name: 'An, camera on' })).toBeVisible({
+        timeout: 15_000
+    })
     await binh.page.goto(roomPath)
     await expect(binh.page.getByText('1 person in the room')).toBeVisible({ timeout: 20_000 })
     await binh.page.getByRole('button', { name: 'Join room' }).click()
-    await expect(grid(binh.page).getByRole('listitem', { name: /^An, mic off/ })).toBeVisible({ timeout: 15_000 })
-    await expect(grid(an.page).getByRole('listitem', { name: /^Bình, mic off/ })).toBeVisible({ timeout: 15_000 })
+    await expect(grid(binh.page).getByRole('button', { name: /^An, mic off, camera on/ })).toBeVisible({
+        timeout: 15_000
+    })
+    await expect(grid(an.page).getByRole('button', { name: /^Bình, mic off/ })).toBeVisible({ timeout: 15_000 })
+
+    // Bình zooms in on An's picture, and back to the grid with Esc (C-20, 07 câu L3b-a).
+    await grid(binh.page).getByRole('button', { name: /^An,/ }).click()
+    const zoomed = binh.page.getByRole('group', { name: 'An, zoomed in' })
+    await expect(zoomed).toBeVisible()
+    // The whole stage, not a strip: what is left of 900 under the Header and above the controls.
+    expect((await zoomed.boundingBox())?.height).toBeGreaterThan(500)
+    await expect.poll(() => pictureWidth(zoomed.locator('video'))).toBeGreaterThan(0)
+    await binh.page.keyboard.press('Escape')
+    await expect(grid(binh.page)).toBeVisible()
 
     // An's mic on: Bình's tile of An and the channel list say so (D-206).
     await an.page.getByRole('button', { name: 'Unmute (Ctrl Shift M)' }).click()
     await expect(an.page.getByRole('button', { name: 'Mute (Ctrl Shift M)' })).toBeVisible()
-    await expect(grid(binh.page).getByRole('listitem', { name: /^An, mic on/ })).toBeVisible({ timeout: 15_000 })
-    await expect(channelList(binh.page).getByRole('listitem', { name: 'An, mic on' })).toBeVisible({
+    await expect(grid(binh.page).getByRole('button', { name: /^An, mic on/ })).toBeVisible({ timeout: 15_000 })
+    await expect(channelList(binh.page).getByRole('listitem', { name: 'An, camera on, mic on' })).toBeVisible({
         timeout: 15_000
     })
 
@@ -145,22 +168,25 @@ test('joining, the mic, the dock and leaving show live to everyone who views the
     await binh.context.close()
 })
 
-test('a reload joins the room again with the mic off; a second tab offers to join there instead', async ({
+test('a reload joins the room again with the mic and camera off; a second tab offers to join there instead', async ({
     browser
 }) => {
     const binh = await openAs(browser, binhEmail, roomPath)
     await binh.page.getByRole('button', { name: 'Join room' }).click({ timeout: 20_000 })
-    await expect(grid(binh.page).getByRole('listitem', { name: 'You, mic off' })).toBeVisible({ timeout: 15_000 })
+    await expect(grid(binh.page).getByRole('button', { name: 'You, mic off' })).toBeVisible({ timeout: 15_000 })
+    await binh.page.getByRole('button', { name: 'Turn on camera' }).click()
+    await expect(grid(binh.page).getByRole('button', { name: /^You, mic off, camera on/ })).toBeVisible()
 
     await binh.page.reload()
     await expect(binh.page.getByText(`Back in ${ROOM} · your mic is off`)).toBeVisible({ timeout: 20_000 })
     await expect(binh.page.getByRole('button', { name: 'Leave room' })).toBeVisible()
+    await expect(binh.page.getByRole('button', { name: 'Turn on camera' })).toBeVisible()
 
     const second = await binh.context.newPage()
     await second.goto(roomPath)
     await expect(second.getByText(OTHER_TAB)).toBeVisible({ timeout: 20_000 })
     await second.getByRole('button', { name: 'Join here instead' }).click()
-    await expect(grid(second).getByRole('listitem', { name: 'You, mic off' })).toBeVisible({ timeout: 15_000 })
+    await expect(grid(second).getByRole('button', { name: 'You, mic off' })).toBeVisible({ timeout: 15_000 })
     // The first tab is put out of the room (VC-02) and says the account is in it elsewhere.
     await expect(binh.page.getByText(OTHER_TAB)).toBeVisible({ timeout: 15_000 })
     await second.getByRole('button', { name: 'Leave room' }).click()

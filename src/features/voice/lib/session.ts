@@ -1,15 +1,15 @@
 import { sendRealtimeSignal } from '@/features/realtime'
 import { getApiErrorType, timedOutUntil } from '@/lib/api-error'
 import { onBeforeSignOut } from '@/lib/before-sign-out'
-import type { LinkEnd, RoomLink } from '@/lib/livekit'
+import type { DeviceState, LinkEnd, RoomLink } from '@/lib/livekit'
 import { leaveVoiceRoom, requestVoiceToken } from '../api/voice.api'
 import { useVoiceStore } from '../voice.store'
-import { askMicrophone } from './devices'
+import { askMicrophone, closeCamera, openCamera, type Device } from './devices'
 import { forgetRoom, keepRoom } from './rejoin'
 
 /**
  * This tab's time in a voice room (REQ-VC-01 → VC-03): join, leave, the
- * microphone. Not React: the link outlives every page (the dock follows the
+ * microphone and camera. Not React: the link outlives every page (the dock follows the
  * person around the app), so it lives here, and the store says where it is.
  *
  * One room a tab (VC-02): joining another leaves this one first; the API
@@ -32,15 +32,29 @@ let link: RoomLink | null = null
 /** Each join and leave: a join answered after a later one is stale. */
 let attempt = 0
 let stopSignOut: (() => void) | null = null
+/** Each Camera press before joining: an answer from the browser after a later press is stale. */
+let cameraAsk = 0
 
 const set = useVoiceStore.setState
 const get = useVoiceStore.getState
 
 /** Mic and camera as this tab has them, for the room's list (D-206): sent while in a room. */
 export function tellOwnState(): void {
-    const { call, mic } = get()
+    const { call, mic, camera } = get()
     if (call?.phase !== 'connected') return
-    sendRealtimeSignal('voice.self_state', { mic: mic === 'on', camera: false })
+    sendRealtimeSignal('voice.self_state', { mic: mic === 'on', camera: camera === 'on' })
+}
+
+/** Out of a room: mic and camera off, a browser's refusal kept (the Banner stays until it allows them). */
+const devicesOut = (state: ReturnType<typeof get>) => ({
+    mic: state.mic === 'blocked' ? ('blocked' as const) : ('off' as const),
+    camera: state.camera === 'blocked' ? ('blocked' as const) : ('off' as const)
+})
+
+/** The preview's picture stopped, its stream let go (LiveKit has the camera, or it is off). */
+function dropPreview(): void {
+    closeCamera(get().cameraPreview)
+    set({ cameraPreview: null })
 }
 
 class TooLong extends Error {}
@@ -81,23 +95,27 @@ function ended(id: number, room: RoomToJoin) {
         set((state) => ({
             call: null,
             room: null,
-            mic: state.mic === 'blocked' ? 'blocked' : 'off',
+            ...devicesOut(state),
             removed: end === 'removed' ? { channelId: room.channelId, at: Date.now() } : state.removed
         }))
     }
 }
 
 /**
- * Joins `room`, the microphone as the preview page left it (REQ-VC-03).
- * True once in; false when it failed (the store holds why) or another join or
- * a leave came first.
+ * Joins `room`, the microphone and camera as the preview page left them
+ * (REQ-VC-03); `devicesOff` (a reload, D-51) joins with both off. True once
+ * in; false when it failed (the store holds why) or another join or a leave
+ * came first. The preview's picture stays until LiveKit has the camera.
  */
-export async function joinRoom(room: RoomToJoin, options: { micOff?: boolean } = {}): Promise<boolean> {
+export async function joinRoom(room: RoomToJoin, options: { devicesOff?: boolean } = {}): Promise<boolean> {
     attempt += 1
     const id = attempt
     const before = link
     link = null
-    if (options.micOff && get().mic === 'on') set({ mic: 'off' })
+    if (options.devicesOff) {
+        dropPreview()
+        set((state) => devicesOut(state))
+    }
     set({ call: { ...room, phase: 'joining' }, room: null, problem: null })
     const deadline = Date.now() + JOIN_MS
     try {
@@ -111,21 +129,29 @@ export async function joinRoom(room: RoomToJoin, options: { micOff?: boolean } =
         const token = await within(requestVoiceToken(room.channelId), JOIN_MS, () => undefined)
         const livekit = await import('@/lib/livekit')
         const joined = await within(
-            livekit.joinRoom(token.url, token.token, get().mic === 'on', {
-                onEnd: ended(id, room),
-                onReconnecting: () => {
-                    if (id === attempt)
-                        set((state) => ({ call: state.call && { ...state.call, phase: 'reconnecting' } }))
-                },
-                onReconnected: () => {
-                    if (id !== attempt) return
-                    set((state) => ({ call: state.call && { ...state.call, phase: 'connected' } }))
-                    tellOwnState()
+            livekit.joinRoom(
+                token.url,
+                token.token,
+                { mic: get().mic === 'on', camera: get().camera === 'on' },
+                {
+                    onEnd: ended(id, room),
+                    onReconnecting: () => {
+                        if (id === attempt)
+                            set((state) => ({ call: state.call && { ...state.call, phase: 'reconnecting' } }))
+                    },
+                    onReconnected: () => {
+                        if (id !== attempt) return
+                        set((state) => ({ call: state.call && { ...state.call, phase: 'connected' } }))
+                        tellOwnState()
+                    }
                 }
-            }),
+            ),
             Math.max(deadline - Date.now(), 0),
             (late) => void late.link.leave()
         )
+        // Pressed while LiveKit was joining (07 `joining`: Mic and Camera still work): it joined with what was set when it began.
+        const micState = await settle(joined.micState, get().mic, joined.link.setMic)
+        const cameraState = await settle(joined.cameraState, get().camera, joined.link.setCamera)
         if (id !== attempt) {
             await joined.link.leave()
             return false
@@ -133,7 +159,13 @@ export async function joinRoom(room: RoomToJoin, options: { micOff?: boolean } =
         link = joined.link
         stopSignOut ??= onBeforeSignOut(signOutLeave)
         keepRoom({ serverId: room.serverId, channelId: room.channelId })
-        set({ call: { ...room, phase: 'connected' }, room: joined.link.room, mic: joined.micState })
+        dropPreview()
+        set({
+            call: { ...room, phase: 'connected' },
+            room: joined.link.room,
+            mic: micState,
+            camera: cameraState
+        })
         tellOwnState()
         return true
     } catch (error) {
@@ -149,8 +181,20 @@ export async function joinRoom(room: RoomToJoin, options: { micOff?: boolean } =
                 ...(until ? { until } : {})
             }
         })
+        // Its preview page gone meanwhile: nothing shows the camera any more, so it is off (07 câu L3b-c).
+        if (!get().cameraPreview && get().camera === 'on') set({ camera: 'off' })
         return false
     }
+}
+
+/** A device as LiveKit joined with it, switched to the state pressed since, unless the browser refused it. */
+async function settle(
+    joined: DeviceState,
+    wanted: DeviceState,
+    apply: (on: boolean) => Promise<DeviceState>
+): Promise<DeviceState> {
+    if (joined === 'blocked' || wanted === 'blocked' || (joined === 'on') === (wanted === 'on')) return joined
+    return apply(wanted === 'on')
 }
 
 /**
@@ -166,7 +210,7 @@ export async function leaveRoom(): Promise<void> {
     stopSignOut?.()
     stopSignOut = null
     forgetRoom()
-    set((state) => ({ call: null, room: null, mic: state.mic === 'blocked' ? 'blocked' : 'off' }))
+    set((state) => ({ call: null, room: null, ...devicesOut(state) }))
     await before?.leave()
     await leaveVoiceRoom().catch(() => undefined)
 }
@@ -174,12 +218,14 @@ export async function leaveRoom(): Promise<void> {
 /** Signing out while in a room: out of LiveKit, and off the list with the token still in hand. */
 function signOutLeave(): void {
     attempt += 1
+    cameraAsk += 1
     const before = link
     link = null
     stopSignOut?.()
     stopSignOut = null
     forgetRoom()
-    set({ call: null, room: null })
+    dropPreview()
+    set((state) => ({ call: null, room: null, ...devicesOut(state) }))
     void before?.leave()
     void leaveVoiceRoom(true).catch(() => undefined)
 }
@@ -195,21 +241,73 @@ export async function switchMic(on: boolean): Promise<void> {
     tellOwnState()
 }
 
+/**
+ * The Camera button (C-21), in a room or on the preview page: in a room it
+ * starts or stops sending the picture; before joining it opens the camera
+ * for one's own tile, the browser asking the person on this first press
+ * (D-53). Refused: `blocked` (S-MOD-04).
+ */
+export async function switchCamera(on: boolean): Promise<void> {
+    if (link) {
+        set({ camera: await link.setCamera(on) })
+        tellOwnState()
+        return
+    }
+    dropPreview()
+    cameraAsk += 1
+    const ask = cameraAsk
+    if (!on) {
+        set({ camera: 'off' })
+        return
+    }
+    const opened = await openCamera()
+    // Pressed again, the page gone, or in a room by now, while the browser was asking: this picture is not wanted.
+    if (ask !== cameraAsk || link) {
+        closeCamera(opened.stream)
+        return
+    }
+    set({ camera: opened.state, cameraPreview: opened.stream })
+}
+
+/**
+ * The preview page goes, or may no longer use the camera (07 câu L3b-c):
+ * its picture stops, a camera the browser is still asking for is not kept,
+ * and the camera is off, the light with it. Joining or in a room, the
+ * camera is LiveKit's and stays (a join that then fails turns it off).
+ */
+export function stopPreviewCamera(): void {
+    cameraAsk += 1
+    dropPreview()
+    // Joining (it fails: off then) or in a room: the camera is LiveKit's.
+    if (get().call) return
+    if (get().camera === 'on') set({ camera: 'off' })
+}
+
 /** The page of a room that refused a join goes, or that room opens to one again: the refusal is no longer news. */
 export function forgetProblem(channelId: string): void {
     if (get().problem?.channelId === channelId) set({ problem: null })
 }
 
-/** The browser allows the microphone again (S-MOD-04): the button back to `off`, the mic not switched on. */
-export function micAllowedAgain(): void {
-    if (get().mic === 'blocked') set({ mic: 'off' })
+/** The browser allows the device again (S-MOD-04): the button back to `off`, the device not switched on. */
+export function deviceAllowedAgain(device: Device): void {
+    if (get()[device] === 'blocked') set({ [device]: 'off' })
 }
 
 /** For tests: back to no room. */
 export function resetSession(): void {
     attempt += 1
+    cameraAsk += 1
     link = null
     stopSignOut?.()
     stopSignOut = null
-    useVoiceStore.setState({ call: null, room: null, mic: 'off', problem: null, removed: null })
+    closeCamera(get().cameraPreview)
+    useVoiceStore.setState({
+        call: null,
+        room: null,
+        mic: 'off',
+        camera: 'off',
+        cameraPreview: null,
+        problem: null,
+        removed: null
+    })
 }

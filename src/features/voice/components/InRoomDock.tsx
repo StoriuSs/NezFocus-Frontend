@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { Mic, MicOff, PhoneOff, Volume2 } from 'lucide-react'
+import { Mic, MicOff, PhoneOff, Video, VideoOff, Volume2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import '@/i18n/voice'
 import '../voice.css'
@@ -9,7 +9,7 @@ import { WithTooltip } from '@/components/ui/tooltip'
 import { useToastEdge } from '@/hooks/useToastArea'
 import { cn } from '@/lib/utils'
 import { useLeaveRoom } from '../hooks/useLeaveRoom'
-import { switchMic } from '../lib/session'
+import { switchCamera, switchMic } from '../lib/session'
 import type { VoiceRoom } from '../types'
 import { useVoiceStore } from '../voice.store'
 
@@ -20,8 +20,10 @@ const BUTTON =
 /**
  * The bar that keeps the room at hand away from its page (InRoomDock `voice`,
  * C-09, S-ROOM-06 `voice-only`): "In a room" (`+reconnecting`: "Reconnecting…"),
- * the room's name · how many people; Mic, then Leave apart at the right
- * (the Camera comes with L3b). The words open the room's page, with a
+ * the room's name · how many people; Mic, Camera, then Leave apart at the
+ * right (C-09; the frame `voice-only` lacks the Camera). Without SPEAK /
+ * VIDEO, or blocked by the browser, a button says why and does nothing (its
+ * help is on the room's page). The words open the room's page, with a
  * Tooltip "Open {room}". `column`:
  * the bottom of the channel list, 240 wide (≥ 1024); `strip`: a 52-high band
  * at the bottom of the window (below 1024), toasts kept above it (C-16).
@@ -33,7 +35,7 @@ export default function InRoomDock({
     to,
     shape
 }: {
-    room: Pick<VoiceRoom, 'serverId' | 'channelId' | 'name' | 'canSpeak'> & { count: number }
+    room: Pick<VoiceRoom, 'serverId' | 'channelId' | 'name' | 'canSpeak' | 'canVideo'> & { count: number }
     /** The room's page. */
     to: string
     shape: 'column' | 'strip'
@@ -41,6 +43,7 @@ export default function InRoomDock({
     const { t } = useTranslation('voice')
     const phase = useVoiceStore((state) => state.call?.phase)
     const mic = useVoiceStore((state) => state.mic)
+    const camera = useVoiceStore((state) => state.camera)
     const leave = useLeaveRoom(room)
     const strip = useRef<HTMLDivElement>(null)
     useToastEdge('barTop', strip, shape === 'strip')
@@ -50,6 +53,12 @@ export default function InRoomDock({
           ? t('controls.micBlocked')
           : t(mic === 'on' ? 'controls.micOff' : 'controls.micOn')
     const micUsable = room.canSpeak && mic !== 'blocked'
+    const cameraHint = !room.canVideo
+        ? t('controls.noVideo')
+        : camera === 'blocked'
+          ? t('controls.cameraBlocked')
+          : t(camera === 'on' ? 'controls.cameraOff' : 'controls.cameraOn')
+    const cameraUsable = room.canVideo && camera !== 'blocked'
     const sub = phase === 'reconnecting' ? t('dock.reconnecting') : t('dock.people', { count: room.count })
 
     return (
@@ -88,6 +97,16 @@ export default function InRoomDock({
                         onClick={micUsable ? () => void switchMic(mic !== 'on') : undefined}
                     >
                         {micUsable && mic === 'on' ? <Mic /> : <MicOff />}
+                    </IconButton>
+                </WithTooltip>
+                <WithTooltip label={cameraHint}>
+                    <IconButton
+                        label={cameraHint}
+                        aria-disabled={cameraUsable ? undefined : true}
+                        className={cn(BUTTON, !cameraUsable && 'text-text-tertiary')}
+                        onClick={cameraUsable ? () => void switchCamera(camera !== 'on') : undefined}
+                    >
+                        {cameraUsable && camera === 'on' ? <Video /> : <VideoOff />}
                     </IconButton>
                 </WithTooltip>
                 {shape === 'column' ? <span className='flex-1' /> : null}

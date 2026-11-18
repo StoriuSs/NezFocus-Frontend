@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { gridOf, orderPeople, personName } from '../lib/people'
 import { forgetRoom, keepRoom, takeRoomToRejoin, wasReloaded } from '../lib/rejoin'
-import { askMicrophone, whenMicrophoneAllowed } from '../lib/devices'
+import { askMicrophone, closeCamera, openCamera, whenDeviceAllowed } from '../lib/devices'
 import type { RoomPerson } from '../types'
 
 const person = (
@@ -113,7 +113,7 @@ describe("the browser's microphone (S-MOD-04)", () => {
         const query = vi.fn(async () => status)
         Object.defineProperty(navigator, 'permissions', { value: { query }, configurable: true })
         const allowed = vi.fn()
-        const stop = whenMicrophoneAllowed(allowed)
+        const stop = whenDeviceAllowed('mic', allowed)
         await vi.waitFor(() => expect(query).toHaveBeenCalledWith({ name: 'microphone' }))
         await Promise.resolve()
         status.dispatchEvent(new Event('change'))
@@ -131,17 +131,53 @@ describe("the browser's microphone (S-MOD-04)", () => {
             value: { query: vi.fn(async () => Promise.reject(new TypeError('microphone'))) },
             configurable: true
         })
-        expect(() => whenMicrophoneAllowed(vi.fn())()).not.toThrow()
+        expect(() => whenDeviceAllowed('mic', vi.fn())()).not.toThrow()
         const status = Object.assign(new EventTarget(), { state: 'denied' as PermissionState })
         Object.defineProperty(navigator, 'permissions', {
             value: { query: vi.fn(async () => status) },
             configurable: true
         })
         const allowed = vi.fn()
-        whenMicrophoneAllowed(allowed)()
+        whenDeviceAllowed('mic', allowed)()
         await Promise.resolve()
         status.state = 'granted'
         status.dispatchEvent(new Event('change'))
         expect(allowed).not.toHaveBeenCalled()
+    })
+})
+
+describe("the browser's camera before joining (D-53, S-MOD-04)", () => {
+    afterEach(() => vi.restoreAllMocks())
+
+    it('opens it for the preview and closes it: on, refused, or no device', async () => {
+        const stop = vi.fn()
+        const stream = { getTracks: () => [{ stop }] }
+        const getUserMedia = vi
+            .fn()
+            .mockResolvedValueOnce(stream)
+            .mockRejectedValueOnce(new DOMException('no', 'NotAllowedError'))
+            .mockRejectedValueOnce(new Error('none'))
+        Object.defineProperty(navigator, 'mediaDevices', { value: { getUserMedia }, configurable: true })
+        expect(await openCamera()).toEqual({ state: 'on', stream })
+        expect(getUserMedia).toHaveBeenCalledWith({ video: true })
+        expect(stop).not.toHaveBeenCalled()
+        closeCamera(stream as unknown as MediaStream)
+        expect(stop).toHaveBeenCalled()
+        expect(await openCamera()).toEqual({ state: 'blocked', stream: null })
+        expect(await openCamera()).toEqual({ state: 'off', stream: null })
+        expect(() => closeCamera(null)).not.toThrow()
+    })
+
+    it("hears the browser allow the camera again, by the camera's own permission", async () => {
+        const status = Object.assign(new EventTarget(), { state: 'denied' as PermissionState })
+        const query = vi.fn(async () => status)
+        Object.defineProperty(navigator, 'permissions', { value: { query }, configurable: true })
+        const allowed = vi.fn()
+        whenDeviceAllowed('camera', allowed)
+        await vi.waitFor(() => expect(query).toHaveBeenCalledWith({ name: 'camera' }))
+        await Promise.resolve()
+        status.state = 'granted'
+        status.dispatchEvent(new Event('change'))
+        expect(allowed).toHaveBeenCalledTimes(1)
     })
 })

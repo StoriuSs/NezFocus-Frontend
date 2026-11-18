@@ -19,20 +19,37 @@
         "micOff": "Mute (Ctrl Shift M)",
         "micBlocked": "Your browser is blocking the mic",
         "noSpeak": "You don't have permission to speak in this room",
+        "camera": "Camera",
+        "cameraOn": "Turn on camera",
+        "cameraOff": "Turn off camera",
+        "cameraBlocked": "Your browser is blocking the camera",
+        "noVideo": "You don't have permission to turn on your camera in this room",
         "leave": "Leave room"
     },
     "micBlocked": {
         "banner": "Your browser is blocking the mic · you can still listen",
-        "howTo": "How to fix",
         "title": "Turn the mic back on",
         "step1": "1. Click the icon at the start of the address bar, next to the page address.",
         "step2": "2. Under Microphone, choose Allow.",
         "step3": "3. If the Mic button hasn't changed, reload the page."
     },
+    "cameraBlocked": {
+        "banner": "Your browser is blocking the camera",
+        "title": "Turn the camera back on",
+        "step1": "1. Click the icon at the start of the address bar, next to the page address.",
+        "step2": "2. Under Camera, choose Allow.",
+        "step3": "3. If the Camera button hasn't changed, reload the page."
+    },
+    "devicesBlocked": {
+        "banner": "Your browser is blocking the mic and camera · you can still listen",
+        "howTo": "How to fix"
+    },
     "room": {
         "people": "People in the room",
         "left": "Left {{room}}",
-        "joinAgain": "Join again"
+        "joinAgain": "Join again",
+        "zoomed": "{{name}}, zoomed in",
+        "zoomOut": "Zoom out"
     },
     "dock": {
         "inRoom": "In a room",
@@ -46,6 +63,7 @@
         "micOn": "mic on",
         "micOff": "mic off",
         "cameraOn": "camera on",
-        "speaking": "speaking"
+        "speaking": "speaking",
+        "zoomHint": "press to zoom in"
     }
 }

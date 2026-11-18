@@ -137,7 +137,12 @@ avatar waits out the toast's **Undo**, then still runs if the page closed,
 the tab was closed or the user signed out. `removeAvatarWithUndo`
 (`src/features/users/lib/avatar-removal.ts`) calls the API and updates the
 profile's cache itself, from the feature's `lib/`, which the rule does not
-hold.
+hold. A voice room is the same (M4, owner's call L3a-a): the tab's link to
+LiveKit follows the person to every page, so joining, leaving, the mic and
+the camera (with its picture before joining, a `MediaStream`) live in `src/features/voice/lib/session.ts`, which calls `voice.api.ts` and
+writes the voice store; components call it directly, with no hook in
+`api/` around it. It changes no query cache: who is in each room comes from
+the servers' list (D-205).
 
 The auth store writes the profile into this same entry at sign-in
 (`queryClient.setQueryData(userKeys.profile(), profile)`), so your menu, the

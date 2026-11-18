@@ -9,7 +9,7 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { userKeys } from '@/features/users'
 import { expectNoA11yViolations } from '@/test/a11y'
 import { apiError } from '@/test/helpers'
-import type { LinkEvents } from '@/lib/livekit'
+import type { JoinDevices, LinkEvents } from '@/lib/livekit'
 import type { RoomPerson, VoiceDirectory, VoiceRoom, VoiceToken } from '../types'
 
 const voiceApi = {
@@ -19,26 +19,60 @@ const voiceApi = {
 vi.mock('../api/voice.api', () => voiceApi)
 
 const linkEvents: LinkEvents[] = []
+const setCamera = vi.fn(async (on: boolean) => (on ? 'on' : 'off'))
 const livekit = {
-    joinRoom: vi.fn(async (_url: string, _token: string, _mic: boolean, events: LinkEvents) => {
+    joinRoom: vi.fn(async (_url: string, _token: string, devices: JoinDevices, events: LinkEvents) => {
         linkEvents.push(events)
         return {
-            link: { room: { name: 'live' }, leave: vi.fn(async () => undefined), setMic: vi.fn(async () => 'on') },
-            micState: 'off'
+            link: {
+                room: { name: 'live' },
+                leave: vi.fn(async () => undefined),
+                setMic: vi.fn(async () => 'on'),
+                setCamera
+            },
+            micState: 'off',
+            cameraState: devices.camera ? 'on' : 'off'
         }
     })
 }
 vi.mock('@/lib/livekit', () => livekit)
 
-/** LiveKit's view of the room, as `@livekit/components-react` gives it. */
+/**
+ * LiveKit's view of the room, as `@livekit/components-react` gives it:
+ * people, and whose camera sends a picture (a camera track, attached to a
+ * <video> by the page).
+ */
 const live = vi.hoisted(() => ({
-    participants: [] as { identity: string; name: string; isMicrophoneEnabled: boolean; speaking?: boolean }[]
+    participants: [] as { identity: string; name: string; isMicrophoneEnabled: boolean; speaking?: boolean }[],
+    cameras: [] as string[],
+    tracks: new Map<string, { attach: (element: HTMLVideoElement) => void; detach: () => void }>()
 }))
+const cameraTrack = (identity: string) => {
+    if (!live.tracks.has(identity)) live.tracks.set(identity, { attach: vi.fn(), detach: vi.fn() })
+    return live.tracks.get(identity)
+}
+vi.mock('livekit-client', () => ({ Track: { Source: { Camera: 'camera' } } }))
 vi.mock('@livekit/components-react', () => ({
     RoomContext: createContext(undefined),
-    useParticipants: () => live.participants,
+    useParticipants: () =>
+        live.participants.map((participant) => ({
+            ...participant,
+            getTrackPublication: (source: string) =>
+                source === 'camera' && live.cameras.includes(participant.identity)
+                    ? { isMuted: false, track: cameraTrack(participant.identity) }
+                    : undefined
+        })),
     useIsSpeaking: (participant?: { speaking?: boolean }) => participant?.speaking ?? false
 }))
+
+/** The browser's camera on the preview page: one track, stopped when the camera goes off. */
+function aCamera() {
+    const stop = vi.fn()
+    const stream = { getTracks: () => [{ stop }] }
+    const getUserMedia = vi.fn().mockResolvedValue(stream)
+    Object.defineProperty(navigator, 'mediaDevices', { value: { getUserMedia }, configurable: true })
+    return { stream, stop, getUserMedia }
+}
 
 const sendRealtimeSignal = vi.fn()
 const realtime = vi.hoisted(() => ({ listeners: new Map<string, () => void>() }))
@@ -102,6 +136,9 @@ beforeEach(() => {
     sessionStorage.clear()
     linkEvents.length = 0
     live.participants = []
+    live.cameras = []
+    live.tracks.clear()
+    setCamera.mockClear()
     voiceApi.requestVoiceToken.mockReset()
     voiceApi.requestVoiceToken.mockResolvedValue({ token: 'token', url: 'ws://lk' })
     sendRealtimeSignal.mockClear()
@@ -127,8 +164,85 @@ describe("a voice room's preview page (S-ROOM-01 voice-preview)", () => {
         expect(screen.getByText('3 people in the room')).toBeVisible()
         expect(screen.getByText('You')).toBeVisible()
         expect(screen.getByRole('button', { name: 'Unmute (Ctrl Shift M)' })).toBeVisible()
+        expect(screen.getByRole('button', { name: 'Turn on camera' })).toBeVisible()
         expect(screen.getByRole('button', { name: 'Join room' })).toBeEnabled()
         await expectNoA11yViolations()
+    })
+
+    it("turns the camera on for one's own mirrored tile, and off when the page goes without joining (D-53, 07 câu L3b-c)", async () => {
+        const camera = aCamera()
+        const { unmount } = show(room())
+        await userEvent.click(screen.getByRole('button', { name: 'Turn on camera' }))
+        expect(await screen.findByRole('button', { name: 'Turn off camera' })).toBeVisible()
+        const picture = screen.getByTestId('own-picture') as HTMLVideoElement
+        expect(picture.srcObject).toBe(camera.stream)
+        expect(picture).toHaveStyle({ transform: 'scaleX(-1)', objectFit: 'cover' })
+        await expectNoA11yViolations()
+        unmount()
+        expect(camera.stop).toHaveBeenCalled()
+        expect(useVoiceStore.getState().camera).toBe('off')
+    })
+
+    it('turns the camera off when the room closes to one, or VIDEO goes, while it is on', async () => {
+        const camera = aCamera()
+        const { rerender } = show(room())
+        await userEvent.click(screen.getByRole('button', { name: 'Turn on camera' }))
+        await screen.findByRole('button', { name: 'Turn off camera' })
+        rerender(<VoiceRoomView room={room({ canVideo: false })} />)
+        expect(camera.stop).toHaveBeenCalled()
+        expect(useVoiceStore.getState()).toMatchObject({ camera: 'off', cameraPreview: null })
+
+        camera.stop.mockClear()
+        rerender(<VoiceRoomView room={room()} />)
+        await userEvent.click(screen.getByRole('button', { name: 'Turn on camera' }))
+        await screen.findByRole('button', { name: 'Turn off camera' })
+        rerender(<VoiceRoomView room={room({ timeoutUntil: new Date(Date.now() + 3_600_000).toISOString() })} />)
+        expect(camera.stop).toHaveBeenCalled()
+        expect(useVoiceStore.getState().camera).toBe('off')
+    })
+
+    it('joins with the camera the preview page turned on (REQ-VC-03)', async () => {
+        aCamera()
+        show(room())
+        await userEvent.click(screen.getByRole('button', { name: 'Turn on camera' }))
+        await screen.findByRole('button', { name: 'Turn off camera' })
+        await userEvent.click(screen.getByRole('button', { name: 'Join room' }))
+        await waitFor(() => expect(useVoiceStore.getState().call?.phase).toBe('connected'))
+        expect(livekit.joinRoom).toHaveBeenCalledWith(
+            'ws://lk',
+            'token',
+            { mic: false, camera: true },
+            expect.anything()
+        )
+        expect(useVoiceStore.getState().camera).toBe('on')
+    })
+
+    it('shows the camera blocked with how to fix it; mic and camera blocked share one Banner (S-MOD-04)', async () => {
+        useVoiceStore.setState({ camera: 'blocked' })
+        const { unmount } = show(room())
+        expect(screen.getByText('Your browser is blocking the camera')).toBeVisible()
+        expect(screen.getByRole('button', { name: 'Your browser is blocking the camera' })).toBeVisible()
+        await userEvent.click(screen.getByRole('button', { name: 'How to fix' }))
+        expect(await screen.findByText('Turn the camera back on')).toBeVisible()
+        expect(screen.getByText('2. Under Camera, choose Allow.')).toBeVisible()
+        await expectNoA11yViolations()
+        unmount()
+
+        useVoiceStore.setState({ mic: 'blocked', camera: 'blocked' })
+        show(room())
+        expect(screen.getByText('Your browser is blocking the mic and camera · you can still listen')).toBeVisible()
+        expect(screen.getAllByRole('button', { name: 'How to fix' })).toHaveLength(1)
+    })
+
+    it('leaves the Camera off without VIDEO, saying why (07 câu L3-c)', async () => {
+        const camera = aCamera()
+        show(room({ canVideo: false }))
+        const button = screen.getByRole('button', {
+            name: "You don't have permission to turn on your camera in this room"
+        })
+        expect(button).toHaveAttribute('aria-disabled', 'true')
+        await userEvent.click(button)
+        expect(camera.getUserMedia).not.toHaveBeenCalled()
     })
 
     it('says the room is empty', () => {
@@ -273,7 +387,7 @@ describe('the room once joined (S-ROOM-06 voice)', () => {
         const grid = screen.getByRole('list', { name: 'People in the room' })
         expect(
             within(grid)
-                .getAllByRole('listitem')
+                .getAllByRole('button')
                 .map((tile) => tile.getAttribute('aria-label'))
         ).toEqual(['You, mic off', 'Tuấn, mic on, speaking', 'Lan, mic off'])
         expect(grid.style.gridTemplateColumns).toBe('repeat(2, minmax(0, 480px))')
@@ -308,6 +422,144 @@ describe('the room once joined (S-ROOM-06 voice)', () => {
         await userEvent.keyboard('{Control>}{Shift>}m{/Shift}{/Control}')
         await waitFor(() => expect(useVoiceStore.getState().mic).toBe('on'))
     })
+
+    it('shows the mic blocked in the room too, with how to fix it (S-ROOM-02 mic-blocked)', async () => {
+        await joined()
+        act(() => useVoiceStore.setState({ mic: 'blocked' }))
+        expect(screen.getByText('Your browser is blocking the mic · you can still listen')).toBeVisible()
+        await userEvent.click(screen.getByRole('button', { name: 'How to fix' }))
+        expect(await screen.findByText('Turn the mic back on')).toBeVisible()
+    })
+
+    it('switches the camera in the room, sending the picture (C-21)', async () => {
+        await joined()
+        await userEvent.click(screen.getByRole('button', { name: 'Turn on camera' }))
+        expect(setCamera).toHaveBeenCalledWith(true)
+        await waitFor(() => expect(useVoiceStore.getState().camera).toBe('on'))
+        expect(screen.getByRole('button', { name: 'Turn off camera' })).toBeVisible()
+    })
+
+    describe('pictures and zooming in (C-20, 07 câu L3b-a, L3b-b)', () => {
+        const filmed = async () => {
+            await joinRoom({ serverId: 'ot', channelId: 'thao-luan', name: 'Phòng thảo luận nhóm' })
+            live.participants = [
+                { identity: AN, name: 'An', isMicrophoneEnabled: false },
+                { identity: 'minh', name: 'Minh', isMicrophoneEnabled: false },
+                { identity: 'nam', name: 'Nam', isMicrophoneEnabled: false }
+            ]
+            live.cameras = [AN, 'minh']
+            const view = show(room({ people: [person(AN, 'An'), MINH, NAM] }))
+            const tile = (name: RegExp) =>
+                within(screen.getByRole('list', { name: 'People in the room' })).getByRole('button', { name })
+            return { ...view, tile }
+        }
+
+        it("shows the pictures of those with their camera on, one's own mirrored", async () => {
+            const { tile } = await filmed()
+            expect(tile(/^You/)).toHaveAccessibleName('You, mic off, camera on, press to zoom in')
+            expect(tile(/^Minh/)).toHaveAccessibleName('Minh, mic off, camera on, press to zoom in')
+            expect(tile(/^Nam/)).toHaveAccessibleName('Nam, mic off')
+            const own = tile(/^You/).querySelector('video')
+            expect(own).toHaveStyle({ transform: 'scaleX(-1)', objectFit: 'cover' })
+            expect(live.tracks.get(AN)?.attach).toHaveBeenCalledWith(own)
+            const minh = tile(/^Minh/).querySelector('video')
+            expect(minh?.style.transform).toBe('')
+            expect(live.tracks.get('minh')?.attach).toHaveBeenCalledWith(minh)
+            expect(tile(/^Nam/).querySelector('video')).toBeNull()
+            await expectNoA11yViolations()
+        })
+
+        it('zooms a tile with a picture onto the stage, and back with a click, the button or Esc', async () => {
+            const { tile } = await filmed()
+            await userEvent.click(tile(/^Nam/))
+            expect(screen.getByRole('list', { name: 'People in the room' })).toBeVisible()
+
+            await userEvent.click(tile(/^Minh/))
+            expect(screen.queryByRole('list', { name: 'People in the room' })).not.toBeInTheDocument()
+            const stage = screen.getByRole('group', { name: 'Minh, zoomed in' })
+            expect(stage.querySelector('video')).toHaveStyle({ objectFit: 'contain' })
+            await expectNoA11yViolations()
+            await userEvent.keyboard('{Escape}')
+            expect(tile(/^Minh/)).toHaveFocus()
+
+            await userEvent.click(tile(/^Minh/))
+            await userEvent.click(screen.getByRole('button', { name: 'Zoom out' }))
+            expect(screen.getByRole('list', { name: 'People in the room' })).toBeVisible()
+
+            await userEvent.click(tile(/^Minh/))
+            await userEvent.click(screen.getByRole('group', { name: 'Minh, zoomed in' }).querySelector('video')!)
+            expect(screen.getByRole('list', { name: 'People in the room' })).toBeVisible()
+        })
+
+        it('goes back to the grid, the keyboard on that tile, when the person zoomed in on turns their camera off', async () => {
+            const { tile, rerender } = await filmed()
+            tile(/^Minh/).focus()
+            await userEvent.keyboard('{Enter}')
+            expect(screen.getByRole('button', { name: 'Zoom out' })).toHaveFocus()
+            live.cameras = [AN]
+            rerender(<VoiceRoomView room={room({ people: [person(AN, 'An'), MINH, NAM] })} />)
+            expect(screen.getByRole('list', { name: 'People in the room' })).toBeVisible()
+            expect(tile(/^Minh/)).toHaveFocus()
+            live.cameras = [AN, 'minh']
+            rerender(<VoiceRoomView room={room({ people: [person(AN, 'An'), MINH, NAM] })} />)
+            expect(screen.getByRole('list', { name: 'People in the room' })).toBeVisible()
+        })
+
+        it('goes back to the grid when the person zoomed in on leaves, the keyboard in the grid', async () => {
+            const { tile, rerender } = await filmed()
+            tile(/^Minh/).focus()
+            await userEvent.keyboard('{Enter}')
+            live.participants = live.participants.filter((one) => one.identity !== 'minh')
+            rerender(<VoiceRoomView room={room({ people: [person(AN, 'An'), NAM] })} />)
+            expect(screen.getByRole('list', { name: 'People in the room' })).toBeVisible()
+            expect(tile(/^You/).ownerDocument.activeElement?.closest('ul')).toBe(
+                screen.getByRole('list', { name: 'People in the room' })
+            )
+        })
+
+        it('an Esc that closes the help leaves the tile zoomed in', async () => {
+            const { tile } = await filmed()
+            await userEvent.click(tile(/^Minh/))
+            act(() => useVoiceStore.setState({ mic: 'blocked' }))
+            await userEvent.click(screen.getByRole('button', { name: 'How to fix' }))
+            await screen.findByText('Turn the mic back on')
+            await userEvent.keyboard('{Escape}')
+            await waitFor(() => expect(screen.queryByText('Turn the mic back on')).not.toBeInTheDocument())
+            expect(screen.getByRole('group', { name: 'Minh, zoomed in' })).toBeVisible()
+        })
+
+        it('keeps the keyboard stop on the same person when someone before them leaves', async () => {
+            const { tile, rerender } = await filmed()
+            const LAN = person('lan', 'Lan')
+            live.participants = [...live.participants, { identity: 'lan', name: 'Lan', isMicrophoneEnabled: false }]
+            rerender(<VoiceRoomView room={room({ people: [person(AN, 'An'), MINH, NAM, LAN] })} />)
+            tile(/^Nam/).focus()
+            live.participants = live.participants.filter((one) => one.identity !== 'minh')
+            rerender(<VoiceRoomView room={room({ people: [person(AN, 'An'), NAM, LAN] })} />)
+            expect(tile(/^Nam/).tabIndex).toBe(0)
+            expect(tile(/^Lan/).tabIndex).toBe(-1)
+        })
+
+        it('moves between tiles with ← →, one stop for the group, and zooms with Enter (S-ROOM-06 › Tương tác)', async () => {
+            const { tile } = await filmed()
+            const tiles = within(screen.getByRole('list', { name: 'People in the room' })).getAllByRole('button')
+            expect(tiles.map((one) => one.tabIndex)).toEqual([0, -1, -1])
+            tiles[0]?.focus()
+            await userEvent.keyboard('{ArrowLeft}')
+            expect(tiles[0]).toHaveFocus()
+            await userEvent.keyboard('{ArrowRight}{ArrowRight}{ArrowRight}')
+            expect(tile(/^Nam/)).toHaveFocus()
+            await userEvent.keyboard('{Enter}')
+            expect(screen.getByRole('list', { name: 'People in the room' })).toBeVisible()
+            await userEvent.keyboard('{ArrowLeft}')
+            expect(tile(/^Minh/)).toHaveFocus()
+            expect(tile(/^Minh/).tabIndex).toBe(0)
+            await userEvent.keyboard('{Enter}')
+            expect(screen.getByRole('group', { name: 'Minh, zoomed in' })).toBeVisible()
+            await userEvent.keyboard('{Escape}')
+            expect(tile(/^Minh/)).toHaveFocus()
+        })
+    })
 })
 
 describe('the dock away from the room (InRoomDock voice, C-09)', () => {
@@ -316,7 +568,14 @@ describe('the dock away from the room (InRoomDock voice, C-09)', () => {
             <InRoomDock
                 shape={shape}
                 to='/channels/ot/thao-luan'
-                room={{ serverId: 'ot', channelId: 'thao-luan', name: 'Phòng thảo luận nhóm', canSpeak, count: 4 }}
+                room={{
+                    serverId: 'ot',
+                    channelId: 'thao-luan',
+                    name: 'Phòng thảo luận nhóm',
+                    canSpeak,
+                    canVideo: canSpeak,
+                    count: 4
+                }}
             />,
             { wrapper: Providers }
         )
@@ -331,6 +590,9 @@ describe('the dock away from the room (InRoomDock voice, C-09)', () => {
         await expectNoA11yViolations()
         await userEvent.click(screen.getByRole('button', { name: 'Unmute (Ctrl Shift M)' }))
         await waitFor(() => expect(useVoiceStore.getState().mic).toBe('on'))
+        await userEvent.click(screen.getByRole('button', { name: 'Turn on camera' }))
+        await waitFor(() => expect(useVoiceStore.getState().camera).toBe('on'))
+        expect(setCamera).toHaveBeenCalledWith(true)
         await userEvent.click(screen.getByRole('button', { name: 'Leave room' }))
         expect(useVoiceStore.getState().call).toBeNull()
         expect(await screen.findByText('Left Phòng thảo luận nhóm')).toBeVisible()
@@ -343,6 +605,10 @@ describe('the dock away from the room (InRoomDock voice, C-09)', () => {
         expect(screen.getByText(/Reconnecting…/)).toBeVisible()
         await userEvent.click(screen.getByRole('button', { name: "You don't have permission to speak in this room" }))
         expect(useVoiceStore.getState().mic).toBe('off')
+        await userEvent.click(
+            screen.getByRole('button', { name: "You don't have permission to turn on your camera in this room" })
+        )
+        expect(setCamera).not.toHaveBeenCalled()
     })
 })
 
@@ -428,5 +694,10 @@ describe('voice in every tab (useVoiceSession)', () => {
         sendRealtimeSignal.mockClear()
         act(() => realtime.listeners.get('ready')?.())
         expect(sendRealtimeSignal).toHaveBeenCalledTimes(1)
+
+        sendRealtimeSignal.mockClear()
+        act(() => useVoiceStore.setState({ camera: 'on' }))
+        rerender({ rooms: directory([room({ people: [person(AN, 'An')] })]) })
+        expect(sendRealtimeSignal).toHaveBeenCalledWith('voice.self_state', { mic: false, camera: true })
     })
 })

@@ -18,8 +18,14 @@ import { DisconnectReason, MediaDeviceFailure, Room, RoomEvent, Track, type Remo
  */
 export type LinkEnd = 'left' | 'other-tab' | 'removed' | 'lost'
 
-/** The microphone after a switch: on, off, or refused by the browser (S-MOD-04). */
-export type MicState = 'on' | 'off' | 'blocked'
+/** The microphone or camera after a switch: on, off, or refused by the browser (S-MOD-04). */
+export type DeviceState = 'on' | 'off' | 'blocked'
+
+/** What to send as the room is joined (asked on the preview page, REQ-VC-03). */
+export interface JoinDevices {
+    mic: boolean
+    camera: boolean
+}
 
 export interface LinkEvents {
     /** The link ended without a word from this tab (not after `leave`). */
@@ -32,7 +38,8 @@ export interface LinkEvents {
 export interface RoomLink {
     /** The LiveKit room, for the room page's hooks (`@livekit/components-react`). */
     room: Room
-    setMic: (on: boolean) => Promise<MicState>
+    setMic: (on: boolean) => Promise<DeviceState>
+    setCamera: (on: boolean) => Promise<DeviceState>
     /** Leaves the room; `onEnd` is not called. */
     leave: () => Promise<void>
 }
@@ -44,27 +51,28 @@ const ENDS: Partial<Record<DisconnectReason, LinkEnd>> = {
     [DisconnectReason.ROOM_DELETED]: 'removed'
 }
 
-/** What the browser answered when asked for the microphone. */
-export function micStateOf(error: unknown): MicState {
+/** What the browser answered when asked for the microphone or camera. */
+export function deviceStateOf(error: unknown): DeviceState {
     return MediaDeviceFailure.getFailure(error) === MediaDeviceFailure.PermissionDenied ? 'blocked' : 'off'
 }
 
 /**
- * Joins the room at `url` with `token`, the microphone on when `mic` (asked
- * on the preview page, REQ-VC-03); the camera stays off. Others' sound plays
+ * Joins the room at `url` with `token`, the microphone and camera on as
+ * `devices` says (asked on the preview page, REQ-VC-03). Others' sound plays
  * whatever page is open: each sound track gets an <audio> of its own, out of
  * the page's layout. A browser that keeps sound until the page is touched
- * (no click before a reload's join) plays it at the next touch.
+ * (no click before a reload's join) plays it at the next touch. Others'
+ * pictures are attached by the room page to its own <video>, only where shown.
  *
- * Rejects when the room cannot be reached; a microphone refused only leaves
- * it off (`micState` then says `blocked`).
+ * Rejects when the room cannot be reached; a microphone or camera refused
+ * only leaves it off (`micState` / `cameraState` then say `blocked`).
  */
 export async function joinRoom(
     url: string,
     token: string,
-    mic: boolean,
+    devices: JoinDevices,
     events: LinkEvents
-): Promise<{ link: RoomLink; micState: MicState }> {
+): Promise<{ link: RoomLink; micState: DeviceState; cameraState: DeviceState }> {
     const room = new Room({ adaptiveStream: true, dynacast: true, disconnectOnPageLeave: true })
     let leaving = false
     const players = new Map<string, HTMLMediaElement>()
@@ -106,26 +114,31 @@ export async function joinRoom(
         if (!leaving) events.onEnd((reason !== undefined && ENDS[reason]) || 'lost')
     })
 
-    const setMic = async (on: boolean): Promise<MicState> => {
+    const switched = async (on: boolean, apply: (on: boolean) => Promise<unknown>): Promise<DeviceState> => {
         try {
-            await room.localParticipant.setMicrophoneEnabled(on)
+            await apply(on)
             return on ? 'on' : 'off'
         } catch (error) {
-            return micStateOf(error)
+            return deviceStateOf(error)
         }
     }
+    const setMic = (on: boolean) => switched(on, (value) => room.localParticipant.setMicrophoneEnabled(value))
+    const setCamera = (on: boolean) => switched(on, (value) => room.localParticipant.setCameraEnabled(value))
 
     await room.connect(url, token)
-    const micState = mic ? await setMic(true) : 'off'
+    const micState = devices.mic ? await setMic(true) : 'off'
+    const cameraState = devices.camera ? await setCamera(true) : 'off'
     return {
         link: {
             room,
             setMic,
+            setCamera,
             leave: async () => {
                 leaving = true
                 await room.disconnect()
             }
         },
-        micState
+        micState,
+        cameraState
     }
 }
