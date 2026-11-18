@@ -49,7 +49,10 @@
 // download (CONSTRAINTS.md): the room's page, the dock and LiveKit's client,
 // "Voice JS" below (the chunks a room's page and the dock bring, found by their
 // imports, and LiveKit's client), 187.35 kB when it began; both limits with the same 0.5%
-// tolerance.
+// tolerance. Voice JS raised to 190.61 kB after M4 L3b (18/11/2026, 189.66 kB: the
+// camera on the preview page and in the room, its blocked Banner and help, zooming a
+// tile, the keyboard between tiles; pictures attached to a <video> by hand rather
+// than with VideoTrack and useTracks, which cost 3 kB more).
 // Raise them
 // only as CONSTRAINTS.md says: the owner decides, in a commit of its own.
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
@@ -157,5 +160,5 @@ export default [
     { name: 'Tasks CSS (gzip)', path: tasksCss, gzip: true, limit: '880 B' },
     { name: 'Notifications CSS (gzip)', path: notificationsCss, gzip: true, limit: '508 B' },
     { name: 'Voice CSS (gzip)', path: voiceCss, gzip: true, limit: '286 B' },
-    { name: 'Voice JS (gzip)', path: voiceJs, gzip: true, limit: '188.29 kB' }
+    { name: 'Voice JS (gzip)', path: voiceJs, gzip: true, limit: '190.61 kB' }
 ]
