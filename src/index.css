@@ -121,7 +121,8 @@
     outline-offset: 2px;
   }
 
-  /* Reduced motion (DESIGN.md › Motion): no movement; changes happen at once. */
+  /* Reduced motion (DESIGN.md › Motion): no movement; changes happen at once,
+     opening and closing crossfade (below). */
   @media (prefers-reduced-motion: reduce) {
     *,
     ::before,
@@ -130,6 +131,19 @@
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
+    }
+
+    /* Opening and closing (dialogs, menus, popovers, sheets): a crossfade of
+       200 ms, nothing slides or grows (DESIGN.md › Motion). */
+    [class*='animate-in'],
+    [class*='animate-out'] {
+      animation-duration: 200ms !important;
+      --tw-enter-translate-x: 0 !important;
+      --tw-enter-translate-y: 0 !important;
+      --tw-enter-scale: 1 !important;
+      --tw-exit-translate-x: 0 !important;
+      --tw-exit-translate-y: 0 !important;
+      --tw-exit-scale: 1 !important;
     }
 
     /* A message opened by a link fades its background in and out (C-10

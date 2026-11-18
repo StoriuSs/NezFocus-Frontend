@@ -130,7 +130,8 @@ export function RightPanel({
             aria-label={title}
             className={cn(
                 'flex w-panel shrink-0 flex-col border-l bg-surface-1',
-                sheet && 'fixed inset-y-0 right-0 z-40 shadow-sheet-right'
+                sheet &&
+                    'fixed inset-y-0 right-0 z-40 shadow-sheet-right animate-in slide-in-from-right duration-medium ease-out'
             )}
         >
             <header className='flex h-12 shrink-0 items-center gap-2 border-b pl-4 pr-2'>

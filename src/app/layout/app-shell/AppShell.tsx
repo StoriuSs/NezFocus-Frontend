@@ -151,7 +151,8 @@ export default function AppShell() {
                     id={SHELL_RAIL_ID}
                     className={cn(
                         'hidden md:flex',
-                        navOpen && 'max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-40 max-md:flex'
+                        navOpen &&
+                            'max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-40 max-md:flex max-md:animate-in max-md:slide-in-from-left max-md:duration-medium max-md:ease-out'
                     )}
                 />
                 <ListColumn
@@ -159,7 +160,7 @@ export default function AppShell() {
                     className={cn(
                         'hidden lg:flex',
                         navOpen &&
-                            'max-lg:fixed max-lg:inset-y-0 max-lg:left-rail max-lg:z-40 max-lg:flex max-lg:shadow-sheet-left'
+                            'max-lg:fixed max-lg:inset-y-0 max-lg:left-rail max-lg:z-40 max-lg:flex max-lg:shadow-sheet-left max-lg:animate-in max-lg:slide-in-from-left max-lg:duration-medium max-lg:ease-out'
                     )}
                 />
                 <main className='flex min-w-0 flex-1'>

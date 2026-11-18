@@ -390,3 +390,37 @@ test('the To-do page gathers the tasks of every server, counts them, and marks o
     expect(binh.problems).toEqual([])
     await binh.context.close()
 })
+
+test('a dialog moves as DESIGN.md › Motion says, and only fades when less motion is asked for', async ({ browser }) => {
+    const an = await openAs(browser, anEmail)
+    const dialog = an.page.getByRole('dialog', { name: 'Add task' })
+    const motion = () =>
+        dialog.evaluate((element) => {
+            const style = getComputedStyle(element)
+            return {
+                name: style.animationName,
+                duration: style.animationDuration,
+                scale: style.getPropertyValue('--tw-enter-scale').trim()
+            }
+        })
+
+    // A dialog: 320 ms (`medium`), fading and growing a little.
+    await board(an.page)
+        .getByRole('button', { name: /^Add (the first )?task$/ })
+        .click()
+    const moving = await motion()
+    expect(moving).toMatchObject({ name: 'enter', duration: '0.32s' })
+    expect(moving.scale).not.toBe('1')
+    await an.page.keyboard.press('Escape')
+    await expect(dialog).toBeHidden()
+
+    // Less motion: a crossfade of 200 ms, nothing grows or slides.
+    await an.page.emulateMedia({ reducedMotion: 'reduce' })
+    await board(an.page)
+        .getByRole('button', { name: /^Add (the first )?task$/ })
+        .click()
+    expect(await motion()).toEqual({ name: 'enter', duration: '0.2s', scale: '1' })
+
+    expect(an.problems).toEqual([])
+    await an.context.close()
+})

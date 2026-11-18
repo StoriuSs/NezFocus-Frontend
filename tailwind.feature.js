@@ -55,6 +55,9 @@ export function featureConfig(feature) {
         ...base,
         // Tests need no styles.
         content: [`./src/features/${feature}/**/*.{js,ts,jsx,tsx}`, `!./src/features/${feature}/__tests__/**`],
-        blocklist: classesOfTheMain()
+        blocklist: classesOfTheMain(),
+        // No open / close plugin: its keyframes come with every stylesheet it is in, and the
+        // classes that use them are the main stylesheet's (src/components/ui).
+        plugins: []
     }
 }

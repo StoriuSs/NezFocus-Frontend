@@ -1,3 +1,5 @@
+import animate from 'tailwindcss-animate'
+
 /**
  * Tailwind reads the design tokens of DESIGN.md from the CSS variables in
  * src/index.css. Class names keep DESIGN.md's token names, so a class can be
@@ -118,6 +120,10 @@ export default {
                 'sheet-right': '-4px 0 24px var(--shadow)',
                 sheet: '0 -4px 24px var(--shadow)'
             },
+            // An open / close lasts `short` unless it says otherwise (dialogs, sheets: `medium`).
+            animationDuration: {
+                DEFAULT: '200ms'
+            },
             transitionDuration: {
                 micro: '120ms',
                 short: '200ms',
@@ -150,5 +156,7 @@ export default {
             }
         }
     },
-    plugins: []
+    // The open / close of dialogs, menus, popovers and sheets (`animate-in`, `fade-in-0`,
+    // `slide-in-from-*`), as shadcn/ui writes them; their timing: DESIGN.md › Motion.
+    plugins: [animate]
 }

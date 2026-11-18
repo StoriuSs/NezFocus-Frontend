@@ -108,8 +108,10 @@ export function ImageCropDialog({
 
     return (
         <Dialog open onOpenChange={(open) => !open && !waiting && onClose()}>
+            {/* Fades in without growing: the cropper measures the picture as it mounts, and a
+                dialog still at 95% made it larger than the mask at the smallest zoom. */}
             <DialogContent
-                className='sm:max-w-[520px]'
+                className='sm:max-w-[520px] data-[state=open]:zoom-in-100'
                 onCloseAutoFocus={(event) => {
                     if (!returnFocus?.current) return
                     event.preventDefault()
