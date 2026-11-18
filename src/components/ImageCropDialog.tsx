@@ -109,9 +109,10 @@ export function ImageCropDialog({
     return (
         <Dialog open onOpenChange={(open) => !open && !waiting && onClose()}>
             {/* Fades in without growing: the cropper measures the picture as it mounts, and a
-                dialog still at 95% made it larger than the mask at the smallest zoom. */}
+                dialog still at 95% made it larger than the mask at the smallest zoom. Important: Tailwind
+                writes the 100 before the dialog's own 95, which would win (sorted as words). */}
             <DialogContent
-                className='sm:max-w-[520px] data-[state=open]:zoom-in-100'
+                className='sm:max-w-[520px] data-[state=open]:!zoom-in-100'
                 onCloseAutoFocus={(event) => {
                     if (!returnFocus?.current) return
                     event.preventDefault()

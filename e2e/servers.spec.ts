@@ -94,6 +94,8 @@ test('from no server to a Study Server with a picture, opened at its welcome cha
 
     await dialog.locator('input[type=file]').setInputFiles(picture)
     await expect(crop).toBeVisible()
+    // The dialog moves in (DESIGN.md › Motion): measured once still, the picture and the mask at one moment.
+    await crop.evaluate((element) => Promise.all(element.getAnimations({ subtree: true }).map((a) => a.finished)))
     // At its smallest the picture still fills the mask: what the mask shows is what is kept.
     const image = await crop.locator('.reactEasyCrop_Image').boundingBox()
     const mask = await crop.locator('.reactEasyCrop_CropArea').boundingBox()
