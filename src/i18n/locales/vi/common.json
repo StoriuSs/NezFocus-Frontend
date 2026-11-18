@@ -165,6 +165,7 @@
       "bans": "Danh sách cấm"
     },
     "serverGone": "Bạn không còn ở {{name}}",
+    "serverGoneView": "Xem",
     "channelGone": "Kênh này không còn khả dụng",
     "serverDeleted": "{{name}} đã bị xóa",
     "notFound": {

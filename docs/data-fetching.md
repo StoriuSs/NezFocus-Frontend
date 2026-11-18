@@ -525,7 +525,9 @@ be counted out of it. A failure reads the inbox again, with no toast
 (`errorToast: false`), as marking a channel read does. A page whose items
 events took out keeps its cursor (`nextCursor`), so the list does not end
 early. Clicking an item of a channel no longer in the servers
-list takes that channel's items out at once (`hideChannelItems`).
+list takes that channel's items out at once (`hideChannelItems`). The open
+inbox marks the kicks and bans it holds read (they have nowhere to open, 06 ›
+Luật hộp thư), unless offline.
 
 ## The servers, kept live
 
@@ -562,7 +564,7 @@ the fields not touched (`values` with `keepDirtyValues`).
 
 Besides the events, the app learns that someone was kicked, banned, or saw
 their server deleted from requests (D-143), and from the list read again
-once the socket is back (D-179, until the inbox of M3).
+once the socket is back.
 `src/features/servers/hooks/useServerGoneWatch.ts`, run once by the AppShell,
 starts `listenForServers` with the Toasts it shows, and listens to the query
 cache and the mutation cache (`getQueryCache().subscribe`,
@@ -573,11 +575,24 @@ cache and the mutation cache (`getQueryCache().subscribe`,
   alone cannot say the server is gone: the API answers the same for a gone
   channel, role or member (NFR-SEC-05). The list decides;
 - a list read from the API that no longer has a server the last one had
-  gets a Toast "You are no longer in {server}"; the page on it goes to the
-  next server on the rail.
+  lets go of what was read about it; the page on it goes to the next server
+  on the rail. It says nothing: until M3 it said "You are no longer in
+  {server}" (D-179), now the inbox says it.
+
+Kicked or banned while away (no tab connected, D-187), the inbox has an
+unread `moderation` item for it. `useRemovedWhileAway` (same folder, run by
+the AppShell) reads those items (`useUnreadRemovals` of notifications) with
+the server list, and says each server not in the list any more in a Toast
+"You are no longer in {server}" with **View**, which opens the inbox
+(`openInbox`), where the item is read (11 S-MOD-02 › H1): once per item in a
+tab, taken away once the item is read elsewhere; none while the inbox is
+open, for a server whose dialog the tab shows or showed, nor for a server in
+the list again (joined from a new invite), judged by a list read after the
+item was made, so a list held from before the socket came back is waited out.
 
 Leaving or deleting one oneself takes it out with `setQueryData`, which React
-Query marks `manual`: the watch moves on without that Toast. The order there
+Query marks `manual`: the watch moves on, the leaving having let go of its
+data already. The order there
 matters: the hook awaits the page's move first
 (`useMoveAwayFrom`, `navigate(..., { flushSync: true })`), then changes the
 cache. The router otherwise hands the move to React as a transition, still

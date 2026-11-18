@@ -31,7 +31,7 @@ function setup() {
 const notFoundUnder = (url: string) =>
     apiError(404, 'NOT_FOUND_ERROR', { config: { url, headers: new AxiosHeaders() } })
 
-// D-143, D-179: a server one is no longer in, noticed from requests and from the list read again.
+// D-143: a server one is no longer in, noticed from requests and from the list read again (its Toast is the inbox's since M3 L8, H1).
 describe('useServerGoneWatch', () => {
     beforeEach(async () => {
         await i18n.changeLanguage('en')
@@ -39,14 +39,10 @@ describe('useServerGoneWatch', () => {
     })
     afterEach(() => vi.restoreAllMocks())
 
-    it('says so when a list read from the API no longer has a server', async () => {
+    it('says nothing itself when a list read from the API no longer has a server: the inbox says it (H1, D-187)', async () => {
         const { client } = setup()
         await client.fetchQuery({ queryKey: serverKeys.list(), queryFn: async () => [ND], staleTime: 0 })
-        expect(toast).toHaveBeenCalledWith(
-            'You are no longer in Ôn thi Giải tích 2',
-            expect.objectContaining({ id: 'server-gone-ot', icon: expect.anything() })
-        )
-        expect(toast).toHaveBeenCalledTimes(1)
+        expect(toast).not.toHaveBeenCalled()
     })
 
     it('lets go of what was read about it: its lists and the histories of its channels (gone while offline)', async () => {

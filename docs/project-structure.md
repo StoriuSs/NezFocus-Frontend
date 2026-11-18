@@ -83,7 +83,8 @@ react-starter/
     │   │   ├── hooks/         # useFoldedCategories (the categories folded, kept in this browser), useMoveAwayFrom,
     │   │   │                  #   useServerGoneWatch (D-143, D-178: starts liveServers, run by the AppShell),
     │   │   │                  #   useGoneServerPath (where a page of a server gone goes),
-    │   │   │                  #   useInboxPlaces (the names and paths the inbox is handed)
+    │   │   │                  #   useInboxPlaces (the names and paths the inbox is handed),
+    │   │   │                  #   useRemovedWhileAway (kicked / banned while away: the Toast of H1, run by the AppShell)
     │   │   ├── lib/           # paths (SERVERS_PATHS and channelPath, messagePath, messageLink, invitePath,
     │   │   │                  #   serverSettingsPath, roleEditPath, isId), app-links (how a link in a message
     │   │   │                  #   shows: a message chip, "can't view", a page of the app, D-117; and a channel
@@ -146,7 +147,8 @@ react-starter/
     │   │                      #   tasks.css (its classes, D-193)
     │   ├── notifications/     # The inbox (S-NOTI-01), a Popover the rail opens, lazy with its own
     │   │                      #   stylesheet (index.ts: InboxPanel; useUnreadNotificationCount for the
-    │   │                      #   rail's badge, not lazy): api/ (one's inbox 30 a page, marking read,
+    │   │                      #   rail's badge, useUnreadRemovals and openInbox / useInboxStore for the
+    │   │                      #   Toast of H1, not lazy): inbox.store.ts (open or not), api/ (one's inbox 30 a page, marking read,
     │   │                      #   liveNotifications: notification.* into the cache), components/ (the
     │   │                      #   panel, NotificationRow C-29), lib/ (cache changes, day groups and times,
     │   │                      #   a row's words), notifications.css (its classes, D-193)
@@ -415,8 +417,9 @@ Habits worth keeping:
   (`notifications/types.ts`: an item's channel and server by name, a channel
   mentioned in a message, the path to a message) from
   `servers/hooks/useInboxPlaces.ts`, handed by the rail (the app wires the
-  two), so the servers feature may later use notifications (L8: the
-  "Xem" of a removal's Toast opens the inbox).
+  two), so the servers feature may use notifications: the Toast of a kick
+  or a ban while away (`servers/hooks/useRemovedWhileAway.ts`) reads the
+  inbox's unread ones and its "Xem" opens the inbox (`openInbox`, M3 L8).
 - **Shared code imports no feature.** `src/lib`, `src/components` and
   `src/hooks` are refused any `@/features/...` import. When shared code needs
   something a feature owns, it says what in an interface and is handed it: the

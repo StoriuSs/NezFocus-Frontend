@@ -31,6 +31,7 @@ a few small Zustand stores, or in a component.**
 | The rows of a Task Board standing still while the Toast of their status change shows (05 Q4, R5) | `useHeldTasks`, `src/features/tasks/held-tasks.store.ts`: a store, as the Toast outlives a panel closed meanwhile | `useStatusChange` holds and lets go; the board reads it |
 | What is typed in a channel's composer | `sessionStorage`, one key per channel, until the tab closes (C-12) | `useDraft` (`src/features/messaging/hooks/`) |
 | The files chosen for messages: each channel's tray, the files of messages on their way, how far each upload is (S-CHAT-04) | `useUploads`, `src/features/messaging/attachment-tray.store.ts`, filled by `api/attachmentUploads.ts` | `useAttachmentTray(channelId)` |
+| Whether the inbox (S-NOTI-01) is open | `useInboxStore`, `src/features/notifications/inbox.store.ts`: a store, as the "Xem" of the Toast of a kick or a ban while away opens it from outside the rail (11 S-MOD-02 › H1) | the rail's "Thông báo" reads and sets it; `openInbox()` |
 | The tab's connection: the socket's state, the browser online or not (S-SHELL-01) | `useRealtimeStore`, `src/features/realtime/realtime.store.ts`, kept by `useRealtimeConnection` in the AppShell | `useConnectionBanner()`, which Banner the page shows |
 | Whether a dialog its own component opens is open, a tab, a hover | `useState` in the component | — |
 

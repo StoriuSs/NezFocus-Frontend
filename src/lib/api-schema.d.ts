@@ -2481,6 +2481,22 @@ export interface components {
             unassigned_by: 'withdrew' | 'left_server' | null
             title: string
         }
+        NotificationServerResponseDto: {
+            /**
+             * @description `moderation`: put out, banned, or timed out (a new length too); null on `owner_transferred`.
+             * @enum {string|null}
+             */
+            action: 'kick' | 'ban' | 'timeout' | null
+            /**
+             * Format: date-time
+             * @description A timeout: when it ends; null otherwise.
+             */
+            timeout_until: string | null
+            /** @description Why, when one was given (≤ 512 characters); null otherwise. */
+            reason: string | null
+            /** @description The server's name then. */
+            name: string
+        }
         NotificationResponseDto: {
             /** @enum {string} */
             type:
@@ -2499,6 +2515,7 @@ export interface components {
             reason: 'user' | 'role' | 'everyone' | 'here' | null
             message: components['schemas']['NotificationMessageResponseDto'] | null
             task: components['schemas']['NotificationTaskResponseDto'] | null
+            server: components['schemas']['NotificationServerResponseDto'] | null
             /**
              * Format: date-time
              * @description Null while unread.

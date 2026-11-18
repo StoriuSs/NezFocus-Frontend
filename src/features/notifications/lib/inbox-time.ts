@@ -42,6 +42,16 @@ export function dueDate(at: Date, now: Date, timeZone?: string): string {
     return `${year === wallClock(now, timeZone).year ? date : `${date}/${year}`} · ${timeIn(timeZone, at)}`
 }
 
+/**
+ * When a timeout ends, in its item's words (06 › moderation · tạm khóa): "22:30"
+ * the day the item was made, "19/10 · 08:00" another day.
+ */
+export function timeoutEnd(until: Date, made: Date, now: Date, timeZone?: string): string {
+    return dayNumber(until, timeZone) === dayNumber(made, timeZone)
+        ? timeIn(timeZone, until)
+        : dueDate(until, now, timeZone)
+}
+
 /** The whole moment, for the tooltip: the weekday (0 is Sunday), the date and the clock. */
 export function momentOf(at: Date, timeZone?: string): { weekday: number; date: string; time: string } {
     const { year, month, day, weekday } = wallClock(at, timeZone)

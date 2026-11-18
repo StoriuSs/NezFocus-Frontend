@@ -1,4 +1,12 @@
-import type { InboxPages, Notification, NotificationList, NotificationsDeleted, NotificationsRead } from '../types'
+import type {
+    InboxPages,
+    Notification,
+    NotificationList,
+    NotificationsDeleted,
+    NotificationsRead,
+    RemovalNotice
+} from '../types'
+import { isRemoval } from './notification-kinds'
 
 /*
  * Changes to the inbox in the cache (S-NOTI-01), from socket events and from
@@ -21,6 +29,21 @@ export const nextCursor = (last: NotificationList, lastCursor: unknown): string 
 
 /** The rail's badge: unread items of the channels one views (C-05); 0 before the inbox is read. */
 export const unreadCountOf = (pages: InboxPages | undefined): number => pages?.pages[0]?.unreadCount ?? 0
+
+/**
+ * The kicks and bans held not read yet, newest first (11 S-MOD-02 › H1);
+ * undefined before the inbox is read.
+ */
+export const unreadRemovalsOf = (pages: InboxPages | undefined): RemovalNotice[] | undefined =>
+    pages &&
+    itemsOf(pages)
+        .filter((item) => isRemoval(item) && !item.readAt)
+        .map((item) => ({
+            id: item.id,
+            serverId: item.serverId ?? '',
+            name: item.server?.name ?? '',
+            createdAt: item.createdAt
+        }))
 
 /** Each page's items changed by `change`, and the count set to `count(old)`. */
 function changed(

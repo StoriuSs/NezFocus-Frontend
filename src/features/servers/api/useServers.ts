@@ -28,8 +28,8 @@ export function rememberServer(queryClient: QueryClient, server: Server) {
 /**
  * Take a server one left or deleted off the rail, and drop what was read
  * about it, its channels' histories too (their trays stop with them).
- * `setQueryData` is marked manual, so useServerGoneWatch does not say "You
- * are no longer in" about it.
+ * `setQueryData` is marked manual, so useServerGoneWatch does not let go of
+ * it a second time.
  */
 export function forgetServer(queryClient: QueryClient, serverId: string) {
     const gone = queryClient.getQueryData<Server[]>(serverKeys.list())?.find((server) => server.id === serverId)

@@ -23,7 +23,10 @@ const PLACES: InboxPlaces = {
               : undefined,
     mentionChannel: (channelId) =>
         channelId === TAI_LIEU ? { kind: 'channel', to: '/x', name: 'tai-lieu' } : { kind: 'hidden' },
-    messagePath: (serverId, channelId, messageId) => `/channels/${serverId}/${channelId}/${messageId}`
+    messagePath: (serverId, channelId, messageId) => `/channels/${serverId}/${channelId}/${messageId}`,
+    inServer: () => true,
+    serverPath: (serverId) => `/channels/${serverId}`,
+    settingsPath: (serverId) => `/servers/${serverId}/settings`
 }
 
 const LAN = { id: 'lan', username: 'lan.pham', displayName: 'Lan', avatarUrl: null }
@@ -36,6 +39,7 @@ const item = (more: Partial<Notification> = {}): Notification => ({
     roleId: null,
     taskId: null,
     task: null,
+    server: null,
     reason: 'user',
     actor: LAN,
     message: {
@@ -74,6 +78,25 @@ const taskItem = (
         message: null,
         taskId: 't1',
         task: { title: 'Chuẩn bị demo cuối kỳ', dueAt: null, reminder: null, unassignedBy: null, ...task },
+        ...more
+    })
+
+/** A server item: its name and what was done, as they were when it was made (06 › Chữ của mục). */
+const serverItem = (
+    server: Partial<NonNullable<Notification['server']>>,
+    more: Partial<Notification> = {}
+): Notification =>
+    item({
+        type: 'moderation',
+        serverId: 'cg',
+        channelId: null,
+        messageId: null,
+        reason: null,
+        message: null,
+        actor: null,
+        server: { name: 'CLB Guitar PTIT', action: 'kick', timeoutUntil: null, reason: null, ...server },
+        // 20:00 on 13/10/2026 in Hồ Chí Minh.
+        createdAt: '2026-10-13T13:00:00.000Z',
         ...more
     })
 
@@ -152,6 +175,55 @@ describe('notificationText', () => {
         expect(left('withdrew').title).toBe('Không còn ai làm: Làm slide thuyết trình')
         expect(left('withdrew').content).toBe('Giang đã rút khỏi việc')
         expect(left('left_server').content).toBe('Giang đã rời server')
+    })
+
+    it('says who handed you a server, its name then the source (06 › owner_transferred)', () => {
+        expect(
+            text(
+                serverItem(
+                    { name: 'Nhóm đồ án Mobile', action: null },
+                    { type: 'owner_transferred', serverId: 'nd', actor: MINH }
+                )
+            )
+        ).toEqual({
+            title: 'Minh đã chuyển quyền chủ server Nhóm đồ án Mobile cho bạn',
+            content: null,
+            source: 'Nhóm đồ án Mobile',
+            place: null
+        })
+    })
+
+    it('says a timeout, until when (the date when another day), and why (06 › moderation · tạm khóa)', () => {
+        const timedOut = (until: string, reason: string | null) =>
+            text(serverItem({ action: 'timeout', timeoutUntil: until, reason }))
+        expect(timedOut('2026-10-13T14:10:00.000Z', 'Gửi tin liên tục')).toEqual({
+            title: 'Bạn bị tạm khóa ở CLB Guitar PTIT tới 21:10',
+            content: 'Chưa gửi tin hay vào phòng được. Lý do: Gửi tin liên tục',
+            source: 'CLB Guitar PTIT',
+            place: null
+        })
+        expect(text(serverItem({ action: 'timeout' })).title).toBe('Bạn bị tạm khóa ở CLB Guitar PTIT')
+        expect(timedOut('2026-10-19T01:00:00.000Z', null)).toMatchObject({
+            title: 'Bạn bị tạm khóa ở CLB Guitar PTIT tới 19/10 · 08:00',
+            content: 'Chưa gửi tin hay vào phòng được.'
+        })
+    })
+
+    it('says a kick or a ban, why, and what follows, with no source (06 › moderation, 11 S-MOD-02)', () => {
+        expect(text(serverItem({ action: 'kick', reason: 'Nhắn ngoài chủ đề nhiều lần' }))).toEqual({
+            title: 'Bạn đã bị mời ra khỏi CLB Guitar PTIT',
+            content: 'Lý do: Nhắn ngoài chủ đề nhiều lần. Bạn có thể quay lại khi có lời mời mới.',
+            source: null,
+            place: null
+        })
+        // A reason that ends its own sentence gets no second stop.
+        expect(text(serverItem({ action: 'ban', reason: 'Bán đề thi có đáp án!' })).content).toBe(
+            'Lý do: Bán đề thi có đáp án! Bạn không thể tham gia lại server này.'
+        )
+        expect(text(serverItem({ action: 'ban' }))).toMatchObject({
+            title: 'Bạn đã bị cấm khỏi CLB Guitar PTIT',
+            content: 'Bạn không thể tham gia lại server này.'
+        })
     })
 
     it('has no source while the servers load, or for a channel no longer viewed', () => {

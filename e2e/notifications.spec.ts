@@ -11,7 +11,10 @@ import { apiUrl, asOwnClient, codeFromEmail, watchForProblems } from './helpers'
  * item away while the inbox is open. Task items (M3 L7): a task given to
  * Bình opens over the page from its item, a task deleted takes its items
  * away, and a task due in 2 hours reminds Bình in the inbox and in its
- * channel, whose "View task" opens it (the tasks queue's job, D-95).
+ * channel, whose "View task" opens it (the tasks queue's job, D-95). Server
+ * items (M3 L8): a server handed to Bình opens its settings, a timeout its
+ * first text channel; kicked while away, his next visit says so in a Toast
+ * whose "View" opens the inbox, the kick read there (11 S-MOD-02 › H1, D-201).
  *
  * Needs the API (with Redis, for the socket) and Mailpit, like
  * messaging.spec.ts. With E2E_SHOTS set to a folder, it also saves the
@@ -27,6 +30,7 @@ const ip = `198.51.100.${Math.floor(Math.random() * 254) + 1}`
 let anToken: string
 let binhEmail: string
 let binhId: string
+let binhToken: string
 let serverId: string
 let channelId: string
 let boardId: string
@@ -88,6 +92,7 @@ test.beforeAll(async ({ browserName }) => {
     anToken = await account(`e2e-noti-an-${browserName}${stamp}@example.test`, 'An', `e2e_na${stamp}`)
     const binh = await account(binhEmail, 'Bình', `e2e_nb${stamp}`)
     binhId = ((await ok('GET', 'users/me', undefined, binh)).data as { id: string }).id
+    binhToken = binh
 
     const server: { id: string; channels: { id: string; name: string }[] } = (
         await ok('POST', 'servers', { name: 'Nhóm đồ án Mobile', template: 'study' }, anToken, crypto.randomUUID())
@@ -310,4 +315,91 @@ test('a task due in 2 hours reminds in the inbox and in its channel, whose "View
 
     expect(binh.problems).toEqual([])
     await binh.context.close()
+})
+
+test('a handed server and a timeout open their places; kicked while away, the next visit says so (11 › H1)', async ({
+    browser
+}) => {
+    test.setTimeout(120_000)
+    // A second server of An's, handed to Bình (D-91: not to one timed out, so before the timeout).
+    const guitar: { id: string } = (
+        await ok('POST', 'servers', { name: 'CLB Guitar PTIT', template: 'study' }, anToken, crypto.randomUUID())
+    ).data
+    const invite: { code: string } = (
+        await ok(
+            'POST',
+            `servers/${guitar.id}/invites`,
+            { max_age_seconds: null, max_uses: null },
+            anToken,
+            crypto.randomUUID()
+        )
+    ).data
+    await ok('POST', `invites/${invite.code}/accept`, {}, binhToken)
+    await ok('POST', `servers/${guitar.id}/transfer`, { user_id: binhId, password: PASSWORD }, anToken)
+    await ok(
+        'PATCH',
+        `servers/${serverId}/members/${binhId}`,
+        { timeout_seconds: 3600, reason: 'Gửi tin liên tục' },
+        anToken
+    )
+
+    const binh = await openAsBinh(browser)
+    const bell = pages(binh.page).getByRole('button', { name: /^Notifications/ })
+    await bell.click()
+    const handed = inbox(binh.page).getByRole('link', {
+        name: /^Unread\. An made you the owner of CLB Guitar PTIT\. CLB Guitar PTIT, \d\d:\d\d$/
+    })
+    const timedOut = inbox(binh.page).getByRole('link', {
+        name: /^Unread\. You are timed out in Nhóm đồ án Mobile until \d\d:\d\d\. You cannot send messages or join rooms yet\. Reason: Gửi tin liên tục\. Nhóm đồ án Mobile, \d\d:\d\d$/
+    })
+    await expect(handed).toBeVisible({ timeout: 15_000 })
+    await expect(timedOut).toBeVisible()
+    await shoot(binh.page, 'noti01-server-items')
+    await handed.click()
+    await expect(binh.page).toHaveURL(new RegExp(`/servers/${guitar.id}/settings`))
+    await bell.click()
+    await inbox(binh.page)
+        .getByRole('link', { name: /You are timed out/ })
+        .click()
+    await expect(binh.page).toHaveURL(new RegExp(`/channels/${serverId}/[0-9a-f-]{36}$`))
+    expect(binh.problems).toEqual([])
+    await binh.context.close()
+
+    // No tab of his left: the kick's item is made unread (D-187, D-201). The socket's goodbye
+    // reaches the API a moment after the tab closes; the item is checked below, not assumed.
+    await new Promise((resolve) => setTimeout(resolve, 1_500))
+    await ok('DELETE', `servers/${serverId}/members/${binhId}`, { reason: 'Nhắn ngoài chủ đề nhiều lần' }, anToken)
+    await expect
+        .poll(async () => {
+            const inboxNow: { items: { server: { action: string | null } | null; read_at: string | null }[] } = (
+                await ok('GET', 'me/notifications', undefined, binhToken)
+            ).data
+            const kick = inboxNow.items.find((item) => item.server?.action === 'kick')
+            return kick ? (kick.read_at === null ? 'unread' : 'read') : 'none'
+        })
+        .toBe('unread')
+
+    const back = await openAsBinh(browser)
+    const toast = back.page.locator('[data-sonner-toast]').filter({ hasText: 'You are no longer in Nhóm đồ án Mobile' })
+    await expect(toast).toBeVisible({ timeout: 20_000 })
+    await shoot(back.page, 'shell-h1-toast')
+    await toast.getByRole('button', { name: 'View' }).click()
+    const kicked = inbox(back.page).getByRole('article', {
+        name: /You were removed from Nhóm đồ án Mobile\. Reason: Nhắn ngoài chủ đề nhiều lần\. You can come back with a new invite\. \d\d:\d\d$/
+    })
+    await expect(kicked).toBeVisible()
+    // Shown, it is read; nowhere to open, no link (06 › Luật hộp thư).
+    await expect(kicked).not.toHaveAccessibleName(/^Unread/)
+    await expect(inbox(back.page).getByRole('link', { name: /removed from/ })).toHaveCount(0)
+    await expect(inbox(back.page).getByRole('article', { name: /You are timed out/ })).toBeVisible()
+    await expect(inbox(back.page).getByRole('link', { name: /You are timed out/ })).toHaveCount(0)
+    await shoot(back.page, 'noti01-moderation-kick')
+
+    // Read, the next visit says nothing.
+    await back.page.reload()
+    await expect(pages(back.page).getByRole('button', { name: /^Notifications/ })).toBeVisible({ timeout: 20_000 })
+    await back.page.waitForTimeout(2_000)
+    await expect(back.page.getByText('You are no longer in Nhóm đồ án Mobile')).toHaveCount(0)
+    expect(back.problems).toEqual([])
+    await back.context.close()
 })

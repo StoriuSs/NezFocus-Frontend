@@ -1,6 +1,6 @@
 import { afterEach, describe, it, expect, vi, beforeEach } from 'vitest'
 import { Toaster } from 'sonner'
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { Users } from 'lucide-react'
@@ -110,6 +110,7 @@ const { default: Study } = await import('@/pages/Study')
 const { default: ServerSettingsPage } = await import('@/features/servers/pages/ServerSettingsPage')
 const { default: MyTasksRoute } = await import('@/features/servers/components/MyTasksRoute')
 const { useCreateServerDialog } = await import('@/features/servers')
+const { useInboxStore } = await import('@/features/notifications')
 
 /** VIEW_CHANNEL, SEND_MESSAGES, CONNECT; and the same without CONNECT. */
 const MEMBER = String((1n << 8n) | (1n << 10n) | (1n << 15n))
@@ -237,6 +238,8 @@ describe('AppShell (S-SHELL-01)', () => {
         readStatesApi.fetchReadStates.mockResolvedValue([])
         // One dialog for the whole app: a test that opened it must not leave it over the next.
         useCreateServerDialog.getState().hide()
+        // The inbox closed, as a test that opened it may have left it.
+        useInboxStore.getState().setOpen(false)
     })
 
     describe('on the Study page', () => {
@@ -257,6 +260,18 @@ describe('AppShell (S-SHELL-01)', () => {
             expect(dm).toHaveAttribute('aria-disabled', 'true')
             await userEvent.click(dm)
             expect(router.state.location.pathname).toBe('/study')
+        })
+
+        it('closes the inbox with the shell: the next sign-in in this tab starts with it closed', async () => {
+            renderAt('/study')
+            await within(screen.getByRole('navigation', { name: 'Pages' })).findByRole('button', {
+                name: /^Notifications/
+            })
+            act(() => useInboxStore.getState().setOpen(true))
+
+            cleanup()
+
+            expect(useInboxStore.getState().open).toBe(false)
         })
 
         it('counts on Notifications the unread items, and opens the inbox over the page (S-NOTI-01)', async () => {
@@ -515,7 +530,7 @@ describe('AppShell (S-SHELL-01)', () => {
         })
     })
 
-    describe('live changes to servers (D-178, D-179)', () => {
+    describe('live changes to servers (D-178, H1)', () => {
         // A server is read again 300 ms after an event, plus up to 500 at random: none here.
         beforeEach(() => void vi.spyOn(Math, 'random').mockReturnValue(0))
         afterEach(() => vi.mocked(Math.random).mockRestore())
@@ -721,15 +736,44 @@ describe('AppShell (S-SHELL-01)', () => {
             await waitFor(() => expect(router.state.location.pathname).toBe('/study'))
         })
 
-        it('says a server gone while the socket was down, once it is back, until M3 says it in the inbox (D-179)', async () => {
+        it('says a server one was put out of while the socket was down, from the inbox, whose View opens it (H1, D-187)', async () => {
             render(<Toaster />)
             renderAt('/channels/ot/hoi-dap')
             expect(await screen.findByRole('heading', { level: 1, name: 'hoi-dap' })).toBeInTheDocument()
+            const kicked = {
+                id: '0193a000-0000-7000-8000-000000000012',
+                type: 'moderation',
+                serverId: 'nd',
+                channelId: null,
+                messageId: null,
+                roleId: null,
+                taskId: null,
+                task: null,
+                server: { name: 'Nhóm đồ án Mobile', action: 'kick', timeoutUntil: null, reason: null },
+                reason: null,
+                actor: null,
+                message: null,
+                readAt: null,
+                createdAt: new Date().toISOString()
+            }
             serversApi.fetchServers.mockResolvedValue([OT])
+            notificationsApi.fetchNotifications.mockResolvedValue({ items: [kicked], unreadCount: 1, hasMore: false })
 
+            // Back online: the list and the inbox are read again.
             act(() => emitRealtimeEvent('ready', {}))
 
-            expect(await screen.findByText('You are no longer in Nhóm đồ án Mobile')).toBeInTheDocument()
+            const toast = (await screen.findByText('You are no longer in Nhóm đồ án Mobile')).closest('li')!
+            await userEvent.click(within(toast).getByRole('button', { name: 'View' }))
+            const inbox = await screen.findByRole('dialog', { name: 'Notifications' }, { timeout: 5000 })
+            expect(
+                await within(inbox).findByRole('article', { name: /You were removed from Nhóm đồ án Mobile/ })
+            ).toBeVisible()
+            await waitFor(() =>
+                expect(notificationsApi.markNotificationsRead).toHaveBeenCalledWith({ ids: [kicked.id] })
+            )
+
+            await userEvent.keyboard('{Escape}')
+            notificationsApi.fetchNotifications.mockResolvedValue({ items: [], unreadCount: 0, hasMore: false })
         })
     })
 

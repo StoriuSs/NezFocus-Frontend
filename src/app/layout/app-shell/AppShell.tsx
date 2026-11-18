@@ -12,6 +12,7 @@ import { useChannelDialogs } from '@/features/servers/channel-dialogs.store'
 import { useInviteDialogs } from '@/features/servers/invite-dialogs.store'
 import { useMembershipDialogs } from '@/features/servers/membership-dialogs.store'
 import { useServerRemovals } from '@/features/servers/server-removals.store'
+import { useRemovedWhileAway } from '@/features/servers/hooks/useRemovedWhileAway'
 import { useServerGoneWatch } from '@/features/servers/hooks/useServerGoneWatch'
 import { serverOwnership } from '@/features/servers/api/serverOwnership'
 import { connectServerOwnership } from '@/features/auth'
@@ -90,8 +91,10 @@ export default function AppShell() {
     )
     // The account's theme and language, here and in this browser's other tabs (REQ-AUTH-08).
     useAccountSettings()
-    // The servers kept live by the socket; one no longer in leaves the rail, with a dialog or a Toast (D-178, D-179).
+    // The servers kept live by the socket; one no longer in leaves the rail, with a dialog or a Toast (D-178).
     useServerGoneWatch()
+    // Put out of or banned from one while away: a Toast from the inbox's unread item, "Xem" opening it (H1, D-187).
+    useRemovedWhileAway()
     // The tab's socket (SRS 5.2), opened after this first paint; and the Banner it shows when lost.
     useRealtimeConnection()
     const connection = useConnectionBanner()

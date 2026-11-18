@@ -2,14 +2,20 @@ import type { TFunction } from 'i18next'
 import '@/i18n/notifications'
 import { plainMessage, type MentionWords } from '@/features/messaging'
 import type { InboxPlace, InboxPlaces, Notification } from '../types'
-import { dueDate } from './inbox-time'
+import { dueDate, timeoutEnd } from './inbox-time'
+import { isRemoval, isServerItem, isTaskItem } from './notification-kinds'
+
+export { isRemoval, isServerItem, isTaskItem }
 
 /** What a row says (C-29): its title, the message's words, and where it is. */
 export interface NotificationText {
     title: string
     /** The message now, plain and on one line (2 lines shown); null when it has nothing to say. */
     content: string | null
-    /** "#{kênh} · {Server}"; null while the servers load, or for a channel no longer viewed. */
+    /**
+     * "#{kênh} · {Server}"; a server item's server, as named then; null while
+     * the servers load, for a channel no longer viewed, for a kick or a ban.
+     */
     source: string | null
     /** The names in it: the row cuts the server's name first, keeping the channel's (C-29). */
     place: InboxPlace | null
@@ -93,13 +99,50 @@ function taskWords(item: Notification, { t, now, timeZone }: TextSources): { tit
     }
 }
 
-/** Whether an item is about a task (05 S-TASK-02 opens it). */
-export const isTaskItem = (item: Notification) =>
-    item.type === 'task_assigned' || item.type === 'task_reminder' || item.type === 'task_unassigned'
+/** Sentences in a row: each but the last ends with a stop, unless it ends its own ("…!"). */
+export function sentences(...parts: (string | null)[]): string {
+    return parts
+        .filter((part): part is string => !!part)
+        .map((part, index, all) => (index < all.length - 1 && !/[.!?…]$/.test(part) ? `${part}.` : part))
+        .join(' ')
+}
 
-/** The words of an item (06 › Nội dung chữ): a mention, a reply, a task item. */
+/**
+ * The words of a server item, as it was when it was made (06 › Chữ của mục):
+ * who handed one the server; a timeout, until when, and why; a kick or a ban,
+ * why, and what follows, as the dialog of 11 S-MOD-02 says it.
+ */
+function serverWords(item: Notification, { t, now, timeZone }: TextSources): { title: string; content: string | null } {
+    const server = item.server
+    const name = server?.name ?? ''
+    if (item.type === 'owner_transferred')
+        return { title: t('row.ownerTransferred', { name: actorName(item, t), server: name }), content: null }
+    const reason = server?.reason ? t('row.reason', { reason: server.reason }) : null
+    switch (server?.action) {
+        case 'timeout': {
+            const content = sentences(t('row.timedOutNote'), reason)
+            // The API always says when a timeout ends; without it, the title alone.
+            if (!server.timeoutUntil) return { title: t('row.timedOutNoEnd', { server: name }), content }
+            const until = timeoutEnd(new Date(server.timeoutUntil), new Date(item.createdAt), now, timeZone)
+            return { title: t('row.timedOut', { server: name, until }), content }
+        }
+        case 'ban':
+            return { title: t('row.banned', { server: name }), content: sentences(reason, t('row.bannedNote')) }
+        case 'kick':
+        default:
+            return { title: t('row.kicked', { server: name }), content: sentences(reason, t('row.kickedNote')) }
+    }
+}
+
+/** The words of an item (06 › Nội dung chữ): a mention, a reply, a task item, a server item. */
 export function notificationText(item: Notification, sources: TextSources): NotificationText {
     const { t, places } = sources
+    if (isServerItem(item))
+        return {
+            ...serverWords(item, sources),
+            source: isRemoval(item) ? null : (item.server?.name ?? null),
+            place: null
+        }
     const name = actorName(item, t)
     const whom = item.type === 'mention' ? reached(item, sources.words) : null
     const { title, content } = isTaskItem(item)

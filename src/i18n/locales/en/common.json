@@ -165,6 +165,7 @@
       "bans": "Bans"
     },
     "serverGone": "You are no longer in {{name}}",
+    "serverGoneView": "View",
     "channelGone": "This channel is no longer available",
     "serverDeleted": "{{name}} was deleted",
     "notFound": {

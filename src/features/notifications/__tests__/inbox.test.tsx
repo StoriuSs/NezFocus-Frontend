@@ -54,6 +54,7 @@ const mention = (n: number, name: string, content: string, more: Partial<Notific
     roleId: null,
     taskId: null,
     task: null,
+    server: null,
     reason: 'user',
     actor: person(name),
     message: {
@@ -114,6 +115,49 @@ const NO_ONE = taskItem(
     { title: 'Làm slide thuyết trình', unassignedBy: 'withdrew' },
     { actor: person('Giang'), createdAt: today('20:30'), readAt: today('20:31') }
 )
+/** 06 S-NOTI-01 `types`: a server handed over by Minh; a timeout, a kick and a ban, no one named (ROLE-04). */
+const CG = 'cg'
+const serverItem = (
+    n: number,
+    type: Notification['type'],
+    server: Partial<NonNullable<Notification['server']>>,
+    more: Partial<Notification> = {}
+): Notification =>
+    mention(n, 'Minh', '', {
+        type,
+        serverId: CG,
+        channelId: null,
+        messageId: null,
+        reason: null,
+        message: null,
+        actor: null,
+        server: { name: 'CLB Guitar PTIT', action: null, timeoutUntil: null, reason: null, ...server },
+        ...more
+    })
+const HANDED = serverItem(
+    14,
+    'owner_transferred',
+    { name: 'Nhóm đồ án Mobile' },
+    { serverId: ND, actor: person('Minh'), createdAt: today('21:40') }
+)
+const TIMED_OUT = serverItem(
+    13,
+    'moderation',
+    { action: 'timeout', timeoutUntil: today('22:30'), reason: 'Gửi tin liên tục' },
+    { createdAt: today('21:30') }
+)
+const KICKED = serverItem(
+    12,
+    'moderation',
+    { action: 'kick', reason: 'Nhắn ngoài chủ đề nhiều lần' },
+    { createdAt: today('21:20') }
+)
+const BANNED = serverItem(
+    11,
+    'moderation',
+    { name: 'Toán rời rạc', action: 'ban' },
+    { serverId: 'trr', createdAt: today('21:10') }
+)
 const page = (items: Notification[], unreadCount: number, hasMore = false): NotificationList => ({
     items,
     unreadCount,
@@ -131,7 +175,10 @@ const PLACES: InboxPlaces = {
                 ? null
                 : undefined,
     mentionChannel: () => ({ kind: 'hidden' }),
-    messagePath: (serverId, channelId, messageId) => `/channels/${serverId}/${channelId}/${messageId}`
+    messagePath: (serverId, channelId, messageId) => `/channels/${serverId}/${channelId}/${messageId}`,
+    inServer: () => true,
+    serverPath: (serverId) => `/channels/${serverId}`,
+    settingsPath: (serverId) => `/servers/${serverId}/settings`
 }
 
 function WhereAmI() {
@@ -510,5 +557,128 @@ describe('Hộp thư thông báo (S-NOTI-01)', () => {
         await user.click(await screen.findByRole('button', { name: 'Thử lại' }))
 
         expect(await screen.findByText('Lan nhắc tới bạn')).toBeVisible()
+    })
+
+    describe('server items (M3 L8)', () => {
+        const SERVER_INBOX = () => page([HANDED, TIMED_OUT, KICKED, BANNED], 4)
+
+        it('says them as made, each with its square; a kick and a ban are no links (06 › Nội dung chữ, Luật hộp thư)', async () => {
+            notificationsApi.fetchNotifications.mockResolvedValue(SERVER_INBOX())
+            const { container } = renderInbox()
+
+            expect(
+                await screen.findByRole('link', {
+                    name: /^Chưa đọc\. Minh đã chuyển quyền chủ server Nhóm đồ án Mobile cho bạn\. Nhóm đồ án Mobile, 21:40$/
+                })
+            ).toBeVisible()
+            expect(
+                row(
+                    /^Chưa đọc\. Bạn bị tạm khóa ở CLB Guitar PTIT tới 22:30\. Chưa gửi tin hay vào phòng được\. Lý do: Gửi tin liên tục\. CLB Guitar PTIT, 21:30$/
+                )
+            ).toBeVisible()
+            const kicked = screen.getByRole('article', {
+                name: /Bạn đã bị mời ra khỏi CLB Guitar PTIT\. Lý do: Nhắn ngoài chủ đề nhiều lần\. Bạn có thể quay lại khi có lời mời mới\. 21:20$/
+            })
+            const banned = screen.getByRole('article', {
+                name: /Bạn đã bị cấm khỏi Toán rời rạc\. Bạn không thể tham gia lại server này\. 21:10$/
+            })
+            expect(screen.queryByRole('link', { name: /bị mời ra|bị cấm/ })).not.toBeInTheDocument()
+            // No hover and no hand: nothing to open (06 › Luật hộp thư).
+            expect(kicked).not.toHaveClass('hover:bg-surface-2')
+            expect(banned).toHaveAttribute('tabindex', '-1')
+            for (const one of within(screen.getByRole('feed')).getAllByRole('article'))
+                expect(one.querySelector('[data-type-square]')).not.toBeNull()
+            await expectNoA11yViolations(container)
+        })
+
+        it('the keyboard moves through a kick as through any row', async () => {
+            notificationsApi.fetchNotifications.mockResolvedValue(SERVER_INBOX())
+            const user = userEvent.setup()
+            renderInbox()
+
+            await waitFor(() => expect(row(/chuyển quyền/)).toHaveFocus())
+            await user.keyboard('{ArrowDown}{ArrowDown}')
+            expect(screen.getByRole('article', { name: /bị mời ra/ })).toHaveFocus()
+            await user.keyboard('{End}')
+            expect(screen.getByRole('article', { name: /bị cấm/ })).toHaveFocus()
+        })
+
+        it('opening the inbox marks its kicks and bans read, not the others (11 S-MOD-02 › H1)', async () => {
+            notificationsApi.fetchNotifications.mockResolvedValue(SERVER_INBOX())
+            renderInbox()
+
+            await waitFor(() =>
+                expect(notificationsApi.markNotificationsRead).toHaveBeenCalledWith({ ids: [KICKED.id, BANNED.id] })
+            )
+            expect(notificationsApi.markNotificationsRead).toHaveBeenCalledTimes(1)
+            expect(screen.getByRole('article', { name: /bị mời ra/ })).not.toHaveAccessibleName(/^Chưa đọc/)
+            expect(row(/tạm khóa/)).toHaveAccessibleName(/^Chưa đọc/)
+        })
+
+        it('sends them once while open, a failed mark not again and again', async () => {
+            notificationsApi.fetchNotifications.mockResolvedValue(SERVER_INBOX())
+            notificationsApi.markNotificationsRead.mockRejectedValue(new Error('down'))
+            renderInbox()
+
+            await waitFor(() => expect(notificationsApi.markNotificationsRead).toHaveBeenCalled())
+            // The failure reads the inbox again, the kick and the ban unread once more.
+            await waitFor(() => expect(notificationsApi.fetchNotifications).toHaveBeenCalledTimes(2))
+            await screen.findByRole('article', { name: /^Chưa đọc\. Bạn đã bị mời ra/ })
+            expect(notificationsApi.markNotificationsRead).toHaveBeenCalledTimes(1)
+        })
+
+        it('the arrow keys on a ✓ inside a row with nowhere to go stay on it', async () => {
+            notificationsApi.fetchNotifications.mockResolvedValue(page([TIMED_OUT, KICKED], 1))
+            const user = userEvent.setup()
+            renderInbox({ places: { ...PLACES, inServer: (serverId) => serverId !== CG } })
+
+            const timedOut = await screen.findByRole('article', { name: /^Chưa đọc\. Bạn bị tạm khóa/ })
+            await waitFor(() => expect(timedOut).toHaveFocus())
+            await user.tab()
+            const check = within(timedOut).getByRole('button', { name: 'Đánh dấu đã đọc' })
+            expect(check).toHaveFocus()
+            await user.keyboard('{ArrowDown}')
+            expect(check).toHaveFocus()
+        })
+
+        it('a kick shows no ✓ on hover, only on focus (06 › Luật hộp thư)', async () => {
+            notificationsApi.fetchNotifications.mockResolvedValue(SERVER_INBOX())
+            renderInbox({ connection: 'offline' })
+
+            const kicked = await screen.findByRole('article', { name: /^Chưa đọc\. Bạn đã bị mời ra/ })
+            expect(kicked.innerHTML).not.toContain('group-hover:')
+        })
+
+        it('offline, the inbox leaves them unread (D-24)', async () => {
+            notificationsApi.fetchNotifications.mockResolvedValue(SERVER_INBOX())
+            renderInbox({ connection: 'offline' })
+
+            expect(await screen.findByRole('article', { name: /^Chưa đọc\. Bạn đã bị mời ra/ })).toBeVisible()
+            expect(notificationsApi.markNotificationsRead).not.toHaveBeenCalled()
+        })
+
+        it('the handed server opens its settings, the timeout its first text channel, each marked read', async () => {
+            notificationsApi.fetchNotifications.mockResolvedValue(SERVER_INBOX())
+            const user = userEvent.setup()
+            const { onClose } = renderInbox()
+
+            await user.click(await screen.findByRole('link', { name: /chuyển quyền/ }))
+            expect(notificationsApi.markNotificationsRead).toHaveBeenCalledWith({ ids: [HANDED.id] })
+            expect(onClose).toHaveBeenCalled()
+            expect(where()).toBe(`/servers/${ND}/settings`)
+
+            await user.click(row(/tạm khóa/))
+            expect(notificationsApi.markNotificationsRead).toHaveBeenCalledWith({ ids: [TIMED_OUT.id] })
+            expect(where()).toBe(`/channels/${CG}`)
+        })
+
+        it('a timeout of a server one is no longer in is no link, its ✓ still there', async () => {
+            notificationsApi.fetchNotifications.mockResolvedValue(page([TIMED_OUT], 1))
+            renderInbox({ places: { ...PLACES, inServer: (serverId) => serverId !== CG } })
+
+            const timedOut = await screen.findByRole('article', { name: /^Chưa đọc\. Bạn bị tạm khóa/ })
+            expect(screen.queryByRole('link', { name: /tạm khóa/ })).not.toBeInTheDocument()
+            expect(within(timedOut).getByRole('button', { name: 'Đánh dấu đã đọc', hidden: true })).toBeInTheDocument()
+        })
     })
 })

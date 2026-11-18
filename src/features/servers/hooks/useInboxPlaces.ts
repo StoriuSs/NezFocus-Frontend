@@ -2,13 +2,14 @@ import { useMemo } from 'react'
 import type { InboxPlaces } from '@/features/notifications'
 import { useServers } from '../api/useServers'
 import { readChannelMention } from '../lib/app-links'
-import { messagePath } from '../lib/paths'
+import { channelPath, messagePath, serverSettingsPath } from '../lib/paths'
 
 /**
  * What the inbox (S-NOTI-01) takes from the servers list (D-197): an item's
  * channel and server by name (null when one is not in the server or no longer
  * views the channel, undefined while the list loads), a channel mentioned in
- * a message, and the path to a message (D-48).
+ * a message, the path to a message (D-48); whether one is in a server, and
+ * the paths to its first text channel and to its settings (a server item).
  */
 export function useInboxPlaces(): InboxPlaces {
     const servers = useServers().data
@@ -22,7 +23,11 @@ export function useInboxPlaces(): InboxPlaces {
             },
             mentionChannel: (channelId, serverId) =>
                 readChannelMention(channelId, { servers: servers ?? [], serverId }),
-            messagePath
+            messagePath,
+            inServer: (serverId) => servers && servers.some((server) => server.id === serverId),
+            // Without a channel, the server's page opens its first text channel.
+            serverPath: (serverId) => channelPath(serverId),
+            settingsPath: (serverId) => serverSettingsPath(serverId)
         }),
         [servers]
     )

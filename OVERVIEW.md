@@ -233,7 +233,7 @@ src/
 │   ├── realtime/   # The tab's socket, its connection Banner, signals (typing, presence): api/ · hooks/ · lib/ · realtime.store.ts
 │   ├── messaging/  # A text channel's chat (mentions included) and its pins, lazy; how far the reader has read (unread, mentions, marking read): api/ · components/ · hooks/ · lib/ · types.ts
 │   ├── tasks/      # A text channel's Task Board (S-TASK-01), its form (S-TASK-03), a task's detail (S-TASK-02, `?task=` on any page) and the To-do page `/tasks` (S-TASK-04, D-197), lazy, with its own stylesheet (D-193): api/ · components/ · hooks/ · lib/ · held-tasks.store.ts · types.ts
-│   ├── notifications/ # The inbox (S-NOTI-01), the Popover of the rail's "Thông báo" with its badge, lazy, with its own stylesheet (D-193): api/ · components/ · lib/ · types.ts
+│   ├── notifications/ # The inbox (S-NOTI-01), the Popover of the rail's "Thông báo" with its badge, lazy, with its own stylesheet (D-193): api/ · components/ · lib/ · types.ts · inbox.store.ts (open or not: the rail and the Toast of H1)
 │   └── users/      # api/ · components/ · hooks/ · lib/ · pages/ · routes.tsx · types.ts
 ├── hooks/          # Shared hooks
 ├── i18n/           # Translations

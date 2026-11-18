@@ -4,6 +4,7 @@ import {
     nextCursor,
     markedRead,
     unreadCountOf,
+    unreadRemovalsOf,
     withChannelHidden,
     withCreated,
     withDeleted,
@@ -23,6 +24,7 @@ const item = (n: number, more: Partial<Notification> = {}): Notification => ({
     roleId: null,
     taskId: null,
     task: null,
+    server: null,
     reason: 'user',
     actor: { id: 'minh', username: 'minh', displayName: 'Minh', avatarUrl: null },
     message: null,
@@ -195,5 +197,34 @@ describe('nextCursor', () => {
 describe('unreadCountOf', () => {
     it('is 0 before the inbox is read', () => {
         expect(unreadCountOf(undefined)).toBe(0)
+    })
+})
+
+describe('unreadRemovalsOf', () => {
+    const removal = (n: number, action: 'kick' | 'ban' | 'timeout', more: Partial<Notification> = {}) =>
+        item(n, {
+            type: 'moderation',
+            serverId: `s${n}`,
+            channelId: null,
+            messageId: null,
+            reason: null,
+            actor: null,
+            server: { name: `Server ${n}`, action, timeoutUntil: null, reason: null },
+            ...more
+        })
+
+    it('lists the kicks and bans not read yet, by server, of every page held (11 S-MOD-02 › H1)', () => {
+        const held = inbox(
+            page([removal(6, 'kick'), item(5), removal(4, 'timeout')], 3, true),
+            page([removal(3, 'ban'), removal(2, 'kick', { readAt: AT })], 0)
+        )
+        expect(unreadRemovalsOf(held)).toEqual([
+            { id: removal(6, 'kick').id, serverId: 's6', name: 'Server 6', createdAt: AT },
+            { id: removal(3, 'ban').id, serverId: 's3', name: 'Server 3', createdAt: AT }
+        ])
+    })
+
+    it('has none while the inbox is not read', () => {
+        expect(unreadRemovalsOf(undefined)).toBeUndefined()
     })
 })

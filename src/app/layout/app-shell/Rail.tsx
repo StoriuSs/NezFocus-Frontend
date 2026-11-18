@@ -1,4 +1,4 @@
-import { Suspense, useMemo, useRef, useState, type ReactNode } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Bell, GraduationCap, ListChecks, MessageCircle, Plus, type LucideIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -19,7 +19,7 @@ import {
     type Server
 } from '@/features/servers'
 import { useServerReadState } from '@/features/messaging'
-import { InboxPanel, useUnreadNotificationCount } from '@/features/notifications'
+import { InboxPanel, useInboxStore, useUnreadNotificationCount } from '@/features/notifications'
 import { useDueTaskCount } from '@/features/tasks'
 import { cn } from '@/lib/utils'
 import { MeMenu } from './MeMenu'
@@ -229,7 +229,11 @@ function NotificationsItem() {
     const { t } = useTranslation()
     const unread = useUnreadNotificationCount()
     const places = useInboxPlaces()
-    const [open, setOpen] = useState(false)
+    // A store, as the Toast of 11 S-MOD-02 › H1 opens it too ("Xem").
+    const open = useInboxStore((state) => state.open)
+    const setOpen = useInboxStore((state) => state.setOpen)
+    // Closed with the rail (signed out, the session ended): the next sign-in in this tab starts closed.
+    useEffect(() => () => setOpen(false), [setOpen])
     const name = t('shell.rail.notifications')
     return (
         <Popover open={open} onOpenChange={setOpen}>

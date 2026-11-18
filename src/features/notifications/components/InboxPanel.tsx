@@ -30,7 +30,7 @@ import { useToastEdge } from '@/hooks/useToastArea'
 import { hideChannelItems, useInbox, useMarkNotificationsRead } from '../api/useInbox'
 import { itemsOf, unreadCountOf } from '../lib/inbox-cache'
 import { groupsOf, momentOf, rowTime } from '../lib/inbox-time'
-import { isTaskItem, notificationText } from '../lib/notification-text'
+import { isRemoval, isServerItem, isTaskItem, notificationText } from '../lib/notification-text'
 import type { InboxPlaces, Notification } from '../types'
 import { NotificationRow } from './NotificationRow'
 
@@ -71,7 +71,10 @@ function RowSkeletons({ count }: { count: number }) {
  * opens the message lit up, or a task's detail on the page one is on (`?task=`,
  * which says itself when the task is gone, 05 Q6); a channel no longer viewed
  * says so and its items leave. ↑ ↓ Home End move between rows, Enter opens one, Tab reaches its ✓.
- * Opening it reads nothing on its own. `places`: the servers feature's names
+ * A server item opens the server's settings (handed over) or its first text
+ * channel (a timeout); a kick, a ban, a server one is no longer in opens
+ * nothing. Opening it reads nothing on its own but the kicks and bans it
+ * holds (not offline: 06 › Luật hộp thư, 11 › H1). `places`: the servers feature's names
  * and paths, handed by the app (D-197).
  */
 export default function InboxPanel({ places, onClose }: { places: InboxPlaces; onClose: () => void }) {
@@ -90,6 +93,21 @@ export default function InboxPanel({ places, onClose }: { places: InboxPlaces; o
     const positions = useMemo(() => new Map(items.map((item, index) => [item.id, index + 1])), [items])
     const unread = unreadCountOf(inbox.data)
     const { hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage } = inbox
+    const { mutate: markItemsRead } = markRead
+    /** Kicks and bans held, not read: shown here, they are read (06 › Luật hộp thư, 11 › H1). */
+    const removals = useMemo(
+        () => items.filter((item) => isRemoval(item) && !item.readAt).map((item) => item.id),
+        [items]
+    )
+    /** Those sent while open: once each, a failed mark (the inbox read again, unread) not sent again and again. */
+    const removalsSent = useRef(new Set<string>())
+
+    useEffect(() => {
+        const fresh = offline ? [] : removals.filter((id) => !removalsSent.current.has(id))
+        if (fresh.length === 0) return
+        for (const id of fresh) removalsSent.current.add(id)
+        markItemsRead({ ids: fresh })
+    }, [offline, removals, markItemsRead])
 
     const list = useRef<HTMLDivElement>(null)
     const panel = useRef<HTMLDivElement>(null)
@@ -149,7 +167,9 @@ export default function InboxPanel({ places, onClose }: { places: InboxPlaces; o
     }
 
     const rows = () => [...(list.current?.querySelectorAll<HTMLElement>('[data-notification-row]') ?? [])]
-    const onRowKeyDown = (event: KeyboardEvent<HTMLAnchorElement>) => {
+    const onRowKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+        // Keys from a row's ✓ (inside a row that is no link) stay with it.
+        if (event.target !== event.currentTarget) return
         const all = rows()
         const at = all.indexOf(event.currentTarget)
         const to =
@@ -184,7 +204,14 @@ export default function InboxPanel({ places, onClose }: { places: InboxPlaces; o
         onClose()
     }
 
-    const pathOf = (item: Notification) => {
+    const pathOf = (item: Notification): string | null => {
+        // A server's: its settings, a timeout its first text channel; a kick, a ban, a server left: nowhere.
+        if (isServerItem(item)) {
+            if (isRemoval(item) || !item.serverId || places.inServer(item.serverId) === false) return null
+            return item.type === 'owner_transferred'
+                ? places.settingsPath(item.serverId)
+                : places.serverPath(item.serverId)
+        }
         // A task item always has its task: deleting the task deletes its items (D-200).
         if (isTaskItem(item) && item.taskId) {
             const params = new URLSearchParams(location.search)

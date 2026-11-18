@@ -1,7 +1,7 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useInfiniteQuery, useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query'
-import { markedRead, nextCursor, unreadCountOf, withChannelHidden } from '../lib/inbox-cache'
-import type { InboxPages } from '../types'
+import { markedRead, nextCursor, unreadCountOf, unreadRemovalsOf, withChannelHidden } from '../lib/inbox-cache'
+import type { InboxPages, RemovalNotice } from '../types'
 import { notificationKeys } from './keys'
 import { listenForNotifications } from './liveNotifications'
 import { fetchNotifications, markNotificationsRead } from './notifications.api'
@@ -29,6 +29,16 @@ export function useInbox() {
 /** The rail's badge (C-05, 06 › Quy ước › Số): unread items of the channels one views; 0 until read. */
 export function useUnreadNotificationCount(): number {
     return unreadCountOf(useInbox().data)
+}
+
+/**
+ * The kicks and bans the inbox holds not read yet (11 S-MOD-02 › H1),
+ * undefined until it is read: the servers feature says those it no longer
+ * has in a Toast. Live as the badge is.
+ */
+export function useUnreadRemovals(): RemovalNotice[] | undefined {
+    const pages = useInbox().data
+    return useMemo(() => unreadRemovalsOf(pages), [pages])
 }
 
 /** Which items to mark: some, or every one up to the newest held ("Đọc hết", NOTIF-02). */
