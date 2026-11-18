@@ -1,11 +1,14 @@
-import type { CSSProperties } from 'react'
+import { useEffect, type CSSProperties } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Toaster as Sonner } from 'sonner'
+import { Toaster as Sonner, toast, useSonner } from 'sonner'
 import { useShallow } from 'zustand/react/shallow'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { toastPlace, useToastArea } from '@/hooks/useToastArea'
 
 type ToasterProps = React.ComponentProps<typeof Sonner>
+
+/** At most this many at a time (C-16 › Hàng đợi). */
+const SHOWN = 3
 
 /**
  * Toast (C-16): inverted like the tooltip so it stands out on every surface,
@@ -14,7 +17,10 @@ type ToasterProps = React.ComponentProps<typeof Sonner>
  * says what went wrong in words, with its icon in the text colour (`danger`
  * on the inverted background is below 3:1). At most 3 at a time; each hides
  * after 5 seconds, unless hovered or focused. The `x` shows on hover, and on
- * keyboard focus so it can be reached without a mouse.
+ * keyboard focus so it can be reached without a mouse. A fourth pushes the
+ * oldest out: it goes, as if closed, so whatever waits on it (a task row
+ * standing still for its "Hoàn tác") moves on at once. Sonner on its own
+ * only hides it behind the three and lets its time run.
  *
  * Placed at the bottom right of the content area, above the Composer (or 24
  * from the window's corner on a page with none); in the middle at the bottom
@@ -26,12 +32,17 @@ function Toaster(props: ToasterProps) {
     const edges = useToastArea(useShallow((state) => state))
     const wide = useMediaQuery('(min-width: 1024px)')
     const { position, offset } = toastPlace(edges, { width: window.innerWidth, height: window.innerHeight }, wide)
+    // Newest first (Sonner's order): everything past the third is pushed out.
+    const { toasts } = useSonner()
+    useEffect(() => {
+        for (const old of toasts.slice(SHOWN)) toast.dismiss(old.id)
+    }, [toasts])
     return (
         <Sonner
             position={position}
             offset={offset}
             mobileOffset={offset}
-            visibleToasts={3}
+            visibleToasts={SHOWN}
             duration={5000}
             closeButton
             style={

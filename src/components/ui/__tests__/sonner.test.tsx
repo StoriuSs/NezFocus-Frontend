@@ -28,6 +28,30 @@ describe('Toast (C-16)', () => {
         await waitFor(() => expect(screen.queryByText('Đã đổi mật khẩu')).not.toBeInTheDocument())
     })
 
+    it('lets a fourth one push the oldest out, which then counts as gone (C-16 › Hàng đợi)', async () => {
+        const gone = vi.fn()
+        render(<Toaster />)
+        act(() => {
+            toast('Đã xong “Một”', { id: 'one', duration: 60_000, onDismiss: gone })
+            toast('Đã xong “Hai”', { id: 'two', duration: 60_000 })
+            toast('Đã xong “Ba”', { id: 'three', duration: 60_000 })
+        })
+        await screen.findByText('Đã xong “Ba”')
+        expect(gone).not.toHaveBeenCalled()
+
+        act(() => {
+            toast('Đã xong “Bốn”', { id: 'four', duration: 60_000 })
+        })
+
+        // Not kept hidden behind the three (Sonner's own way): it goes, and whoever waits on it hears so.
+        await waitFor(() => expect(gone).toHaveBeenCalledTimes(1))
+        await waitFor(() => expect(screen.queryByText('Đã xong “Một”')).not.toBeInTheDocument())
+        expect(screen.getByText('Đã xong “Bốn”')).toBeInTheDocument()
+        act(() => {
+            toast.dismiss()
+        })
+    })
+
     describe('where it sits', () => {
         afterEach(() => {
             useToastArea.setState({ contentRight: null, barTop: null, liftTop: null })
