@@ -38,7 +38,9 @@
 // From M3 L6b (17/11/2026) the inbox's classes are one more (D-193), loaded
 // with its Popover's chunk: "Notifications CSS" below, 483 B when it began
 // (the panel's size, a row's layers and its ✓ on hover or focus, the "N new"
-// button, the loading rows), limit with the same 0.5% tolerance.
+// button, the loading rows), limit with the same 0.5% tolerance; 493 B from
+// M3 L7b (18/11/2026, the type's square of a reminder or a task no one is
+// on, a shade darker under the hovered row), limit 496 B.
 // Raise them
 // only as CONSTRAINTS.md says: the owner decides, in a commit of its own.
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
@@ -114,5 +116,5 @@ export default [
     { name: 'Initial CSS (gzip)', path: css, gzip: true, limit: '8.80 kB' },
     { name: 'Chat CSS (gzip)', path: chatCss, gzip: true, limit: '647 B' },
     { name: 'Tasks CSS (gzip)', path: tasksCss, gzip: true, limit: '880 B' },
-    { name: 'Notifications CSS (gzip)', path: notificationsCss, gzip: true, limit: '486 B' }
+    { name: 'Notifications CSS (gzip)', path: notificationsCss, gzip: true, limit: '496 B' }
 ]
