@@ -43,6 +43,13 @@
 // on, a shade darker under the hovered row), limit 496 B; 505 B from M3 L8b
 // (18/11/2026, a kick or a ban row is its own keyboard stop: its ✓ and dot
 // follow the row's own focus), limit 508 B.
+// From M4 L3a (18/11/2026) voice rooms are a stylesheet of their own too
+// (tailwind.voice.config.js), loaded with a room's page or the dock: "Voice
+// CSS" below, 284 B when it began; and their scripts, never in the first
+// download (CONSTRAINTS.md): the room's page, the dock and LiveKit's client,
+// "Voice JS" below (the chunks a room's page and the dock bring, found by their
+// imports, and LiveKit's client), 187.35 kB when it began; both limits with the same 0.5%
+// tolerance.
 // Raise them
 // only as CONSTRAINTS.md says: the owner decides, in a commit of its own.
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
@@ -81,6 +88,35 @@ const chunkCss = (chunk) => {
 const chatCss = chunkCss('ChannelChat')
 const tasksCss = chunkCss('TaskStyles')
 const notificationsCss = chunkCss('NotificationStyles')
+const voiceCss = chunkCss('VoiceStyles')
+
+// A lazy chunk's script, by the name Vite gives it (VoiceRoomView-<hash>.js).
+const chunkJs = (chunk) => {
+    const found = readdirSync('dist/assets')
+        .filter((file) => file.startsWith(`${chunk}-`) && file.endsWith('.js'))
+        .map((file) => `dist/assets/${file}`)
+    if (found.length !== 1) throw new Error(`size-limit: expected one ${chunk}-*.js, found ${found.length}`)
+    return found
+}
+// The scripts a lazy chunk brings with it: the chunk and every chunk it
+// imports, and those in turn (`from"./x.js"` in the built code), less the
+// first download's. A room's page and the dock share chunks Rollup names after
+// whatever module comes first in them, so they are found, not named.
+const lazyWithImports = (starts) => {
+    const first = new Set(js)
+    const seen = new Set()
+    const queue = [...starts]
+    while (queue.length) {
+        const path = queue.pop()
+        if (seen.has(path) || first.has(path)) continue
+        seen.add(path)
+        const code = readFileSync(path, 'utf8')
+        for (const [, file] of code.matchAll(/from\s*"\.\/([\w.-]+\.js)"/g)) queue.push(`dist/assets/${file}`)
+    }
+    return [...seen]
+}
+// LiveKit's client is read with import() when a room is joined, from the shell's chunk.
+const voiceJs = lazyWithImports(['VoiceRoomView', 'InRoomDock', 'livekit-client.esm'].flatMap(chunkJs))
 
 // A split stylesheet loads after the main one: a class written in both would
 // let the later copy beat the main file's own rules everywhere in the app
@@ -104,7 +140,8 @@ const mainClasses = classesIn(css)
 for (const [name, paths] of [
     ['chat', chatCss],
     ['tasks', tasksCss],
-    ['notifications', notificationsCss]
+    ['notifications', notificationsCss],
+    ['voice', voiceCss]
 ]) {
     const shared = [...classesIn(paths)].filter((one) => mainClasses.has(one))
     if (shared.length)
@@ -118,5 +155,7 @@ export default [
     { name: 'Initial CSS (gzip)', path: css, gzip: true, limit: '9.58 kB' },
     { name: 'Chat CSS (gzip)', path: chatCss, gzip: true, limit: '647 B' },
     { name: 'Tasks CSS (gzip)', path: tasksCss, gzip: true, limit: '880 B' },
-    { name: 'Notifications CSS (gzip)', path: notificationsCss, gzip: true, limit: '508 B' }
+    { name: 'Notifications CSS (gzip)', path: notificationsCss, gzip: true, limit: '508 B' },
+    { name: 'Voice CSS (gzip)', path: voiceCss, gzip: true, limit: '286 B' },
+    { name: 'Voice JS (gzip)', path: voiceJs, gzip: true, limit: '188.29 kB' }
 ]
