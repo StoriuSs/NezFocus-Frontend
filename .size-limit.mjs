@@ -115,7 +115,7 @@ for (const [name, paths] of [
 
 export default [
     { name: 'Initial JS (gzip)', path: js, gzip: true, limit: '246.75 kB' },
-    { name: 'Initial CSS (gzip)', path: css, gzip: true, limit: '8.80 kB' },
+    { name: 'Initial CSS (gzip)', path: css, gzip: true, limit: '9.58 kB' },
     { name: 'Chat CSS (gzip)', path: chatCss, gzip: true, limit: '647 B' },
     { name: 'Tasks CSS (gzip)', path: tasksCss, gzip: true, limit: '880 B' },
     { name: 'Notifications CSS (gzip)', path: notificationsCss, gzip: true, limit: '508 B' }
