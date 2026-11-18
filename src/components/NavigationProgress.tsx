@@ -13,8 +13,9 @@ NProgress.configure({
 
 /**
  * Shows a subtle loading bar at the top during route navigation.
- * This provides visual feedback when React 18's concurrent transitions
- * keep the old page visible (which hides Suspense fallbacks).
+ * A sign of each move; the router no longer keeps the old page on screen as
+ * a transition (src/app/AppRouter.tsx), so a page not loaded yet also shows
+ * its Suspense fallback.
  */
 export function NavigationProgress() {
     const location = useLocation()

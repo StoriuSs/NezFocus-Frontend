@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { RouterProvider } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
 import { queryClient } from '@/lib/query-client'
 import { useAuthStore } from '@/features/auth/auth.store'
 import { announceSignOut, isSessionEnded } from '@/features/auth/lib/sign-out-notice'
+import { AppRouter } from '@/app/AppRouter'
 import { router } from '@/app/router'
 import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
@@ -45,7 +45,7 @@ function App() {
     return (
         <QueryClientProvider client={queryClient}>
             <TooltipProvider>
-                <RouterProvider router={router} />
+                <AppRouter router={router} />
             </TooltipProvider>
             <Toaster />
         </QueryClientProvider>

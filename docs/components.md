@@ -126,9 +126,10 @@ function AppRoot() {
 }
 ```
 
-It exists because React Router's transitions keep the old page on screen
-during a fast navigation and skip the spinner; the bar shows something is
-happening.
+It was there because React Router's transitions kept the old page on screen
+during a navigation and skipped the spinner; the app no longer moves as a
+transition (`src/app/AppRouter.tsx`, docs/code-splitting.md), and the bar
+stays as a sign of each move.
 
 ### `Skeleton`
 

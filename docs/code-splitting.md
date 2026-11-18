@@ -218,18 +218,30 @@ export (`export type { ConfirmPasswordDialogProps }`) costs nothing.
 Check after adding to an index, or importing one from somewhere new: run
 `pnpm build` and look at the entry chunk (`index-*.js`) in the list it prints.
 
-## Why the spinner is often skipped
+## Moves are not transitions
 
-React Router runs navigations as **transitions**: while the next page's chunk
-loads, the current page stays on screen and usable, and the Suspense fallback
-is skipped. React considers a moment of the old page better than a spinner
-flashing for 50–200 ms. So:
+React Router would run navigations as **transitions** by default: while the
+next page's chunk loads, the current page stays on screen. The app turns that
+off (`useTransitions={false}` in `src/app/AppRouter.tsx`): each move is drawn
+at once, and a page not loaded yet shows its Suspense fallback.
+
+Why: as a transition, a page still loading when one moved on could still be
+drawn, late, for the address already left, and run its effects there. Its
+`<Navigate>` then took one back (M3 A3: the server settings, opened from the
+inbox, loading while a channel was opened from the inbox again; the settings
+page's `/settings` → `/settings/overview` replaced the channel's address).
+The test is `src/app/__tests__/AppRouter.test.tsx`.
 
 | You see the `PageLoader` spinner | You don't |
 | --- | --- |
-| On the first load of the app, while the first page's chunk arrives | When navigating on a fast connection |
-| On a slow connection, for a page not loaded before | In development (Vite serves modules quickly) |
-| | For a page whose chunk is already cached |
+| On the first load of the app, while the first page's chunk arrives | For a page whose chunk is already loaded |
+| On any move to a page not loaded before, until its chunk arrives | |
+
+In the AppShell the page's Suspense is inside an ErrorBoundary keyed by the
+address, new on each move, so even as a transition the content area showed
+its spinner; what changed is the rest: entering the AppShell, or the Study,
+legal and not-found pages, shows the whole-page spinner instead of keeping
+the page before.
 
 ## The two loading indicators
 
@@ -241,15 +253,14 @@ page while its chunk loads, when React shows a fallback at all (above).
 ### `NavigationProgress` — the bar at the top
 
 `src/components/NavigationProgress.tsx`: a thin bar (NProgress) that starts
-on every navigation (`PUSH`) and finishes when the new location renders. It
-gives feedback even when the transition hides the spinner. It is rendered
+on every navigation (`PUSH`) and finishes when the new location renders. It is rendered
 once, in `AppRoot` in `src/app/router.tsx`, outside any layout.
 
 | Situation | PageLoader | Progress bar |
 |----------|------------|-----------|
 | First load of the app | Shows | — |
-| Fast navigation | Hidden by the transition | Shows |
-| Slow navigation | May show | Shows |
+| Move to a page already loaded | — | Shows |
+| Move to a page not loaded yet | Shows | Shows |
 
 To change the bar's look, edit `src/components/nprogress-custom.css`:
 

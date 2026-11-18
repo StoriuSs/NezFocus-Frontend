@@ -595,9 +595,10 @@ Query marks `manual`: the watch moves on, the leaving having let go of its
 data already. The order there
 matters: the hook awaits the page's move first
 (`useMoveAwayFrom`, `navigate(..., { flushSync: true })`), then changes the
-cache. The router otherwise hands the move to React as a transition, still
-pending when its promise settles, and the cache change, drawn first, has the
-page of the server just gone send everyone to /study. Handing a server over
+cache. The move must be on screen before the cache change is drawn, or the
+page of the server just gone sends everyone to /study; `flushSync` says so
+whatever the router does with its moves (it no longer makes them transitions,
+`src/app/AppRouter.tsx`). Handing a server over
 does the same before the new list goes in, so a settings page no longer
 theirs moves without "You no longer have access".
 

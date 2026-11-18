@@ -38,6 +38,7 @@ react-starter/
 └── src/
     ├── app/                   # The shell: routing and layout
     │   ├── App.tsx            # Restores the session, then the query client, router and toaster
+    │   ├── AppRouter.tsx      # The RouterProvider, moves drawn at once (no transitions)
     │   ├── router.tsx         # The route tree
     │   └── layout/            # AuthShell + BrandPanel (sign-in pages);
     │                          #   app-shell/ — AppShell, Rail, ListColumn, MeMenu
@@ -193,7 +194,8 @@ react-starter/
 
 The shell. `src/main.tsx` sets up i18n and error tracking, then renders
 `App.tsx`, which restores the session (`initAuth`, showing a spinner until it
-knows) and then renders the `QueryClientProvider`, the `RouterProvider` and
+knows) and then renders the `QueryClientProvider`, the router (`AppRouter.tsx`:
+the `RouterProvider`, its moves not transitions, docs/code-splitting.md) and
 the `Toaster`, with a `TooltipProvider` around the router. There is no theme
 provider: the theme is a small Zustand store
 (`src/hooks/useTheme.ts`), applied before React loads by a script in
