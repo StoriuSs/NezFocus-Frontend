@@ -81,6 +81,12 @@ export function TaskDetail({
     const [deleting, setDeleting] = useState(false)
     const deletingHere = useRef(false)
     const closed = useRef(false)
+    // What had the focus when it opened (a task's row, an inbox row), read before any effect:
+    // the detail moves the focus onto its status control in its own effect, which runs before
+    // the dialog's, so the dialog would remember that control and drop the focus on close.
+    const [opener] = useState(() => document.activeElement)
+    // "Sửa" swaps this dialog for the form: the focus stays with the form.
+    const toEditing = useRef(false)
 
     const failure = query.isError ? taskFailure(query.error) : null
     const gone = place === null || failure?.kind === 'gone' || failure?.kind === 'board-off'
@@ -116,13 +122,30 @@ export function TaskDetail({
                     event.preventDefault()
                     ;(event.currentTarget as HTMLElement).focus()
                 }}
+                onCloseAutoFocus={(event) => {
+                    // Back where it was (S-TASK-02 › Focus): that element, or the task's row if
+                    // its row was drawn again meanwhile (moved to another group).
+                    event.preventDefault()
+                    if (toEditing.current) {
+                        toEditing.current = false
+                        return
+                    }
+                    const back =
+                        opener instanceof HTMLElement && opener.isConnected
+                            ? opener
+                            : document.querySelector<HTMLElement>(`[data-task-row="${taskId}"]`)
+                    back?.focus()
+                }}
             >
                 {task && place ? (
                     <Detail
                         task={task}
                         place={place}
                         onOpenChannel={() => onOpenChannel(task)}
-                        onEdit={() => setEditing(true)}
+                        onEdit={() => {
+                            toEditing.current = true
+                            setEditing(true)
+                        }}
                         onDelete={() => setDeleting(true)}
                     />
                 ) : query.isError && !gone ? (

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, useLocation, useSearchParams } from 'react-router-dom'
@@ -389,6 +389,30 @@ describe('The Task Board (S-TASK-01)', () => {
         expect(rowNamed('Nộp báo cáo giữa kỳ')).toHaveFocus()
         await userEvent.keyboard(' ')
         await waitFor(() => expect(tasksApi.updateTask).toHaveBeenCalledWith('t3', { status: 'done' }))
+    })
+})
+
+describe('The Task Board, after the hand test (A3)', () => {
+    it('opens a row’s menu where the pointer is on a right-click, like a message’s (C-12)', async () => {
+        renderBoard()
+        await screen.findByRole('heading', { name: 'ĐANG LÀM — 1' })
+        // jsdom lays nothing out: the row's box is at 0, 0, so the point is where it hangs.
+        const row = rowNamed('Nộp báo cáo giữa kỳ')
+        fireEvent.contextMenu(row, { clientX: 120, clientY: 30 })
+        await screen.findByRole('menu')
+        const anchor = row.closest('li')!.querySelector<HTMLElement>('[data-row-menu-anchor]')!
+        expect(anchor.style.left).toBe('120px')
+        expect(anchor.style.top).toBe('30px')
+    })
+
+    it('gives the focus back to the row when its menu opened by keys closes, ↓ going on from there', async () => {
+        renderBoard()
+        await screen.findByRole('heading', { name: 'ĐANG LÀM — 1' })
+        rowNamed('Nộp báo cáo giữa kỳ').focus()
+        await userEvent.keyboard('{Shift>}{F10}{/Shift}')
+        await screen.findByRole('menu')
+        await userEvent.keyboard('{Escape}')
+        await waitFor(() => expect(rowNamed('Nộp báo cáo giữa kỳ')).toHaveFocus())
     })
 })
 

@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent, type MouseEvent } from 'react'
+import { useRef, useState, type KeyboardEvent, type MouseEvent } from 'react'
 import { AlarmClockOff, Calendar, CalendarOff, Check, EyeOff, Link, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import '@/i18n/tasks'
@@ -21,6 +21,8 @@ import type { Task, TaskStatus } from '../types'
 import { AvatarStack } from './AvatarStack'
 
 const STATUSES: TaskStatus[] = ['todo', 'doing', 'done']
+/** The foot of ⋯ (right 4, top 6, 28 high): the menu opens under it, right edges in line. */
+const MORE_FOOT = { right: 4, top: 34, width: 0, height: 0 }
 
 /** What one row may do, worked out by the board from the viewer's rights (REQ-TASK-02). */
 export interface RowPowers {
@@ -34,7 +36,8 @@ export interface RowPowers {
  * is to the due line ("{hạn} · {server} › #{kênh}"). The box marks it done, or opens it again; a
  * viewer who may not change it sees a still box with the reason in a
  * Tooltip. ⋯ (on hover or keyboard focus, in place of the avatars; always
- * there on a touch screen), a right click or Shift+F10 open the row's menu:
+ * there on a touch screen), a right click (where the pointer is, like a
+ * message's, C-12) or Shift+F10 open the row's menu:
  * the status (one of three), "Sửa", "Sao chép link việc" (for everyone),
  * "Xóa việc", each only for who may (05 S-TASK-01 › Menu hàng việc).
  * Offline, nothing that saves works (05 Q10). People on it who no longer
@@ -84,6 +87,13 @@ export function TaskRow({
 }) {
     const { t } = useTranslation('tasks')
     const [menuOpen, setMenuOpen] = useState(false)
+    // Where the menu hangs in the row: at the pointer after a right click, else under ⋯ (null).
+    const [menuAt, setMenuAt] = useState<{ x: number; y: number } | null>(null)
+    const rowRef = useRef<HTMLButtonElement>(null)
+    const openMenu = (at: { x: number; y: number } | null) => {
+        setMenuAt(at)
+        setMenuOpen(true)
+    }
     const people = meFirst(task.assignees, me)
     const names = people.map((person) => nameOf(person, t('people.deleted'))).join(', ')
     const done = status === 'done'
@@ -100,14 +110,15 @@ export function TaskRow({
             onToggle()
         } else if (event.key === 'ContextMenu' || (event.key === 'F10' && event.shiftKey)) {
             event.preventDefault()
-            if (!offline) setMenuOpen(true)
+            if (!offline) openMenu(null)
         } else onKeyDown(event)
     }
     const contextMenu = (event: MouseEvent<HTMLElement>) => {
         // "Sao chép link việc" is for everyone: every row has its menu.
         if (offline) return
         event.preventDefault()
-        setMenuOpen(true)
+        const row = event.currentTarget.getBoundingClientRect()
+        openMenu({ x: event.clientX - row.left, y: event.clientY - row.top })
     }
 
     const DueIcon = { overdue: AlarmClockOff, none: CalendarOff, done: Check, due: Calendar }[due.kind]
@@ -128,6 +139,7 @@ export function TaskRow({
     return (
         <li className='group relative'>
             <button
+                ref={rowRef}
                 type='button'
                 data-task-row={task.id}
                 tabIndex={active ? 0 : -1}
@@ -143,14 +155,16 @@ export function TaskRow({
                 onKeyDown={keyDown}
                 onContextMenu={contextMenu}
                 className={cn(
-                    'flex w-full items-start gap-2 rounded-button py-2 pl-9 pr-2 text-left outline-none hover:bg-surface-2 focus-visible:ring-2 focus-visible:ring-primary',
+                    'flex w-full flex-col gap-0.5 rounded-button py-2 pl-9 pr-2 text-left outline-none hover:bg-surface-2 focus-visible:ring-2 focus-visible:ring-primary',
                     menuOpen && 'bg-surface-2'
                 )}
             >
-                <span className='flex min-w-0 flex-1 flex-col gap-0.5'>
+                {/* The avatars beside the title only: the lines under it take the row's whole width,
+                    so the due's time always shows (C-28, 05 R2), scrollbar or not. */}
+                <span className='flex w-full items-start gap-2'>
                     <span
                         className={cn(
-                            'line-clamp-2 break-words text-body-sm font-medium',
+                            'line-clamp-2 min-w-0 flex-1 break-words text-body-sm font-medium',
                             done ? 'text-text-tertiary line-through' : 'text-text-primary'
                         )}
                     >
@@ -158,40 +172,40 @@ export function TaskRow({
                     </span>
                     <span
                         className={cn(
-                            'flex min-w-0 items-center gap-1 text-label',
-                            due.kind === 'overdue'
-                                ? 'text-danger'
-                                : due.kind === 'due'
-                                  ? 'text-text-secondary'
-                                  : 'text-text-tertiary'
+                            'flex shrink-0 items-center gap-1 pt-0.5',
+                            !touch && 'group-focus-within:invisible group-hover:invisible',
+                            !touch && menuOpen && 'invisible',
+                            touch && 'pr-8'
                         )}
                     >
-                        <DueIcon className='size-3 shrink-0' aria-hidden='true' />
-                        <span className='truncate'>{line}</span>
+                        {people.length > 0 ? (
+                            <AvatarStack people={people} me={me} max={touch ? 1 : 3} />
+                        ) : (
+                            <span className='text-label text-text-tertiary'>{t('row.unassigned')}</span>
+                        )}
                     </span>
-                    {lost ? (
-                        <WithTooltip label={t('row.lostAccessHint', { names: lost })}>
-                            <span className='flex min-w-0 items-center gap-1 text-label text-danger'>
-                                <EyeOff className='size-3 shrink-0' aria-hidden='true' />
-                                <span className='truncate'>{t('row.lostAccess')}</span>
-                            </span>
-                        </WithTooltip>
-                    ) : null}
                 </span>
                 <span
                     className={cn(
-                        'flex shrink-0 items-center gap-1 pt-0.5',
-                        !touch && 'group-focus-within:invisible group-hover:invisible',
-                        !touch && menuOpen && 'invisible',
-                        touch && 'pr-8'
+                        'flex min-w-0 items-center gap-1 text-label',
+                        due.kind === 'overdue'
+                            ? 'text-danger'
+                            : due.kind === 'due'
+                              ? 'text-text-secondary'
+                              : 'text-text-tertiary'
                     )}
                 >
-                    {people.length > 0 ? (
-                        <AvatarStack people={people} me={me} max={touch ? 1 : 3} />
-                    ) : (
-                        <span className='text-label text-text-tertiary'>{t('row.unassigned')}</span>
-                    )}
+                    <DueIcon className='size-3 shrink-0' aria-hidden='true' />
+                    <span className='truncate'>{line}</span>
                 </span>
+                {lost ? (
+                    <WithTooltip label={t('row.lostAccessHint', { names: lost })}>
+                        <span className='flex min-w-0 items-center gap-1 text-label text-danger'>
+                            <EyeOff className='size-3 shrink-0' aria-hidden='true' />
+                            <span className='truncate'>{t('row.lostAccess')}</span>
+                        </span>
+                    </WithTooltip>
+                ) : null}
             </button>
             <span className='absolute left-0.5 top-0.5'>
                 {can ? (
@@ -226,21 +240,40 @@ export function TaskRow({
                 </WithTooltip>
             ) : (
                 <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
-                    <DropdownMenuTrigger asChild>
-                        <IconButton
-                            label={t('row.more', { title: task.title })}
-                            tabIndex={-1}
-                            className={cn(
-                                'absolute right-1 top-1.5 size-7 [&_svg]:size-4',
-                                menuOpen
-                                    ? 'bg-surface-3'
-                                    : !touch && 'opacity-0 group-focus-within:opacity-100 group-hover:opacity-100'
-                            )}
-                        >
-                            <MoreHorizontal aria-hidden='true' />
-                        </IconButton>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align='end' className='w-[220px]'>
+                    <IconButton
+                        label={t('row.more', { title: task.title })}
+                        tabIndex={-1}
+                        aria-haspopup='menu'
+                        aria-expanded={menuOpen}
+                        // As a message's ⋯ (MessageRow): while the menu is open the page takes no
+                        // pointer, so pressing ⋯ again is "outside" and only closes it.
+                        onClick={() => openMenu(null)}
+                        className={cn(
+                            'absolute right-1 top-1.5 size-7 [&_svg]:size-4',
+                            menuOpen
+                                ? 'bg-surface-3'
+                                : !touch && 'opacity-0 group-focus-within:opacity-100 group-hover:opacity-100'
+                        )}
+                    >
+                        <MoreHorizontal aria-hidden='true' />
+                    </IconButton>
+                    {/* What the menu hangs from: the pointer, or the foot of ⋯ (its right edge). */}
+                    <DropdownMenuTrigger
+                        tabIndex={-1}
+                        aria-hidden='true'
+                        data-row-menu-anchor=''
+                        className='pointer-events-none absolute'
+                        style={menuAt ? { left: menuAt.x, top: menuAt.y, width: 0, height: 0 } : MORE_FOOT}
+                    />
+                    <DropdownMenuContent
+                        align={menuAt ? 'start' : 'end'}
+                        className='w-[220px]'
+                        // Back to the row, whichever way it opened: ↑ ↓ go on from there.
+                        onCloseAutoFocus={(event) => {
+                            event.preventDefault()
+                            rowRef.current?.focus()
+                        }}
+                    >
                         {powers.status ? (
                             <>
                                 <DropdownMenuLabel className='text-label font-semibold uppercase text-text-tertiary'>

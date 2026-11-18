@@ -303,6 +303,8 @@ export function MyTasks({ servers, placeOf }: { servers: TaskServer[] | undefine
             </section>
         ) : null
 
+    const empty =
+        !open.isPending && !open.isError && search === '' && openCount === 0 && doneCount === 0 && urlQuery === ''
     let body: ReactNode
     if (open.isPending) {
         body = (
@@ -330,13 +332,16 @@ export function MyTasks({ servers, placeOf }: { servers: TaskServer[] | undefine
                 </Button>
             </div>
         )
-    } else if (search === '' && openCount === 0 && doneCount === 0 && urlQuery === '') {
-        // Nothing at all: the empty page, in the middle of the content area (C-17).
+    } else if (empty) {
+        // Nothing at all: across the content area, not in the 720 block, at about 40% of its
+        // height (C-17 › a page with nothing else on it). Inline: no class of its own for 2 : 3.
         body = (
-            <div className='flex min-h-full items-center justify-center pb-16'>
+            <div className='flex flex-1 flex-col items-center'>
+                <div style={{ flexGrow: 2 }} />
                 <EmptyState size='inline' title={t('page.empty.title')}>
                     {t('page.empty.body')}
                 </EmptyState>
+                <div style={{ flexGrow: 3 }} />
             </div>
         )
     } else {
@@ -371,7 +376,7 @@ export function MyTasks({ servers, placeOf }: { servers: TaskServer[] | undefine
     return (
         <ShellPage title={server ? t('page.titleIn', { server: server.name }) : t('page.title')}>
             <div className='flex min-h-full flex-col p-6 lg:p-8'>
-                <div className='flex w-full max-w-settings flex-1 flex-col'>{body}</div>
+                {empty ? body : <div className='flex w-full max-w-settings flex-1 flex-col'>{body}</div>}
             </div>
             {editing ? (
                 <TaskDialog

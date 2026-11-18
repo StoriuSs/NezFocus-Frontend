@@ -123,6 +123,28 @@ async function openAs(browser: Browser, email: string) {
 const board = (page: Page) => page.getByRole('complementary', { name: 'Task Board' })
 const row = (page: Page, title: string) => board(page).getByRole('button', { name: new RegExp(`^${title}`) })
 
+test('the To-do page of someone with no task has its words in the middle of the content, above its centre', async ({
+    browser
+}) => {
+    // Before any test makes one: An has no task at all.
+    const an = await openAs(browser, anEmail)
+    await an.page.goto('/tasks')
+    const words = an.page.getByRole('main').getByRole('heading', { name: 'No tasks yet' })
+    await expect(words).toBeVisible({ timeout: 15_000 })
+
+    // C-17 › a page with nothing else on it: centred across the content area, at about 40% of its height.
+    const content = (await an.page.getByRole('main').boundingBox())!
+    const box = (await words.boundingBox())!
+    expect(Math.abs(box.x + box.width / 2 - (content.x + content.width / 2))).toBeLessThan(8)
+    const at = (box.y + box.height / 2 - content.y) / content.height
+    expect(at).toBeGreaterThan(0.3)
+    expect(at).toBeLessThan(0.5)
+    await shoot(an.page, 'task04-empty')
+
+    expect(an.problems).toEqual([])
+    await an.context.close()
+})
+
 test('a task added for someone reaches them at once, and marking it done reaches the one who added it', async ({
     browser
 }) => {
@@ -157,6 +179,17 @@ test('a task added for someone reaches them at once, and marking it done reaches
     await expect(row(binh.page, 'Nộp báo cáo giữa kỳ')).toBeVisible({ timeout: 15_000 })
     await expect(board(binh.page).getByRole('heading', { name: 'TO DO — 1' })).toBeVisible()
     await shoot(an.page, 'task01-default')
+
+    // The time of a due always shows (C-28): its line runs the row's whole width, under the
+    // avatars, so a long one or the list's scrollbar does not cut it.
+    const [dueRight, avatarsRight] = await row(an.page, 'Nộp báo cáo giữa kỳ').evaluate((button) => {
+        const time = Array.from(button.querySelectorAll('span')).find(
+            (span) => span.children.length === 0 && / · 23:59$/.test(span.textContent ?? '')
+        )!
+        const avatars = button.querySelector('span[aria-hidden="true"]')!
+        return [time.parentElement!.getBoundingClientRect().right, avatars.getBoundingClientRect().right]
+    })
+    expect(dueRight).toBeGreaterThanOrEqual(avatarsRight - 1)
 
     // He may change its status, not edit it: only the status in its menu.
     await row(binh.page, 'Nộp báo cáo giữa kỳ').hover()
@@ -251,9 +284,17 @@ test('a task opens in its detail from its row and from its link on any page, liv
         await ok('POST', `channels/${boardId}/tasks`, { title: 'Viết tài liệu API' }, anToken, crypto.randomUUID())
     ).data
     const binh = await openAs(browser, binhEmail)
+    const detail = binh.page.getByRole('dialog', { name: 'Viết tài liệu API' })
+
+    // By keys: Enter opens it, Esc closes it and the focus is back on its row (S-TASK-02 › Focus).
+    await row(binh.page, 'Viết tài liệu API').focus()
+    await binh.page.keyboard.press('Enter')
+    await expect(detail).toBeVisible()
+    await binh.page.keyboard.press('Escape')
+    await expect(detail).toBeHidden()
+    await expect(row(binh.page, 'Viết tài liệu API')).toBeFocused()
 
     await row(binh.page, 'Viết tài liệu API').click()
-    const detail = binh.page.getByRole('dialog', { name: 'Viết tài liệu API' })
     await expect(detail).toBeVisible()
     await expect(binh.page).toHaveURL(new RegExp(`\\?task=${made.id}$`))
     // Not on it and not its maker: the status in words, "I'll do it".
