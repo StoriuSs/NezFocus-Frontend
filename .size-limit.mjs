@@ -52,7 +52,13 @@
 // tolerance. Voice JS raised to 190.61 kB after M4 L3b (18/11/2026, 189.66 kB: the
 // camera on the preview page and in the room, its blocked Banner and help, zooming a
 // tile, the keyboard between tiles; pictures attached to a <video> by hand rather
-// than with VideoTrack and useTracks, which cost 3 kB more).
+// than with VideoTrack and useTracks, which cost 3 kB more). Raised to 203.82 kB after
+// M4 L4b (19/11/2026, 202.81 kB): a moderator's menu on the tiles brings Radix's
+// dropdown chunk (10.77 kB, the one the channel list already loads for the server's
+// menu), and about 2.4 kB of the slice's own code (the menu, muted by a moderator).
+// Initial CSS raised to 9.64 kB after M4 L4b (9586 B): the ⋯ of a person's row in
+// the channel list shows on that row's hover or focus (a named group, as the room's
+// row is a group itself).
 // Raise them
 // only as CONSTRAINTS.md says: the owner decides, in a commit of its own.
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
@@ -155,10 +161,10 @@ for (const [name, paths] of [
 
 export default [
     { name: 'Initial JS (gzip)', path: js, gzip: true, limit: '246.75 kB' },
-    { name: 'Initial CSS (gzip)', path: css, gzip: true, limit: '9.58 kB' },
+    { name: 'Initial CSS (gzip)', path: css, gzip: true, limit: '9.64 kB' },
     { name: 'Chat CSS (gzip)', path: chatCss, gzip: true, limit: '647 B' },
     { name: 'Tasks CSS (gzip)', path: tasksCss, gzip: true, limit: '880 B' },
     { name: 'Notifications CSS (gzip)', path: notificationsCss, gzip: true, limit: '508 B' },
     { name: 'Voice CSS (gzip)', path: voiceCss, gzip: true, limit: '286 B' },
-    { name: 'Voice JS (gzip)', path: voiceJs, gzip: true, limit: '190.61 kB' }
+    { name: 'Voice JS (gzip)', path: voiceJs, gzip: true, limit: '203.82 kB' }
 ]
