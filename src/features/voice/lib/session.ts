@@ -1,7 +1,7 @@
 import { sendRealtimeSignal } from '@/features/realtime'
 import { getApiErrorType, timedOutUntil } from '@/lib/api-error'
 import { onBeforeSignOut } from '@/lib/before-sign-out'
-import type { DeviceState, LinkEnd, RoomLink } from '@/lib/livekit'
+import type { DeviceState, LinkEnd, RoomLink, ScreenEnd } from '@/lib/livekit'
 import { leaveVoiceRoom, requestVoiceToken } from '../api/voice.api'
 import { useVoiceStore } from '../voice.store'
 import { askMicrophone, closeCamera, openCamera, type Device } from './devices'
@@ -34,6 +34,10 @@ let attempt = 0
 let stopSignOut: (() => void) | null = null
 /** Each Camera press before joining: an answer from the browser after a later press is stale. */
 let cameraAsk = 0
+/** Each Share or Stop press, leave and join: the picker answered after a later one is stale. */
+let screenAsk = 0
+/** The browser's picker is open (Firefox's lets the page be pressed meanwhile): another Share press waits for it. */
+let picking = false
 
 const set = useVoiceStore.setState
 const get = useVoiceStore.getState
@@ -96,6 +100,7 @@ function ended(id: number, room: RoomToJoin) {
             call: null,
             room: null,
             ...devicesOut(state),
+            screen: 'off',
             modMuted: null,
             // The API's reason, when its word came before LiveKit's, is kept.
             removed:
@@ -125,7 +130,8 @@ export async function joinRoom(room: RoomToJoin, options: { devicesOff?: boolean
         dropPreview()
         set((state) => devicesOut(state))
     }
-    set({ call: { ...room, phase: 'joining' }, room: null, problem: null, modMuted: null })
+    screenAsk += 1
+    set({ call: { ...room, phase: 'joining' }, room: null, problem: null, modMuted: null, screen: 'off' })
     const deadline = Date.now() + JOIN_MS
     try {
         if (before) {
@@ -152,6 +158,9 @@ export async function joinRoom(room: RoomToJoin, options: { devicesOff?: boolean
                         if (id !== attempt) return
                         set((state) => ({ call: state.call && { ...state.call, phase: 'connected' } }))
                         tellOwnState()
+                    },
+                    onScreenEnded: (why) => {
+                        if (id === attempt) screenEnded(why)
                     }
                 }
             ),
@@ -214,12 +223,13 @@ async function settle(
  */
 export async function leaveRoom(): Promise<void> {
     attempt += 1
+    screenAsk += 1
     const before = link
     link = null
     stopSignOut?.()
     stopSignOut = null
     forgetRoom()
-    set((state) => ({ call: null, room: null, modMuted: null, ...devicesOut(state) }))
+    set((state) => ({ call: null, room: null, modMuted: null, screen: 'off', ...devicesOut(state) }))
     await before?.leave()
     await leaveVoiceRoom().catch(() => undefined)
 }
@@ -228,13 +238,14 @@ export async function leaveRoom(): Promise<void> {
 function signOutLeave(): void {
     attempt += 1
     cameraAsk += 1
+    screenAsk += 1
     const before = link
     link = null
     stopSignOut?.()
     stopSignOut = null
     forgetRoom()
     dropPreview()
-    set((state) => ({ call: null, room: null, modMuted: null, ...devicesOut(state) }))
+    set((state) => ({ call: null, room: null, modMuted: null, screen: 'off', ...devicesOut(state) }))
     void before?.leave()
     void leaveVoiceRoom(true).catch(() => undefined)
 }
@@ -305,6 +316,55 @@ export function stopPreviewCamera(): void {
     if (get().camera === 'on') set({ camera: 'off' })
 }
 
+/**
+ * The Share button (C-21, S-ROOM-07): on opens the browser's picker, and
+ * the screen chosen goes to the room; a cancel or a refusal leaves it off,
+ * without a word; Share pressed again while the picker is open does nothing.
+ * Off stops it. Only in a room.
+ */
+export async function switchScreen(on: boolean): Promise<void> {
+    if (!link || (on && picking)) return
+    screenAsk += 1
+    const ask = screenAsk
+    const now = link
+    if (on) picking = true
+    let state: 'on' | 'off'
+    try {
+        state = await now.setScreen(on)
+    } finally {
+        if (on) picking = false
+    }
+    // Left, in another room, stopped, or another screen came first while the picker was open: not wanted.
+    if (ask !== screenAsk || link !== now) {
+        if (state === 'on') await now.setScreen(false)
+        return
+    }
+    set({ screen: state })
+}
+
+/**
+ * Another screen in the room came first (`voice.share_rejected`, D-101): the
+ * server muted this one; it stops for good, as does a picker still open.
+ * Nothing when this tab is not in that room.
+ */
+export async function screenTakenAway(channelId: string): Promise<void> {
+    if (!link || get().call?.channelId !== channelId) return
+    screenAsk += 1
+    const now = link
+    if (get().screen === 'on') set({ screen: 'off' })
+    await now.setScreen(false)
+}
+
+/**
+ * The shared screen stopped by itself (`ScreenEnd`): the button back to
+ * Share; VIDEO lost is kept for `useVoiceSession` to say (07 ROOM-EDGE). A
+ * screen muted because another came first is said by `voice.share_rejected`.
+ */
+function screenEnded(why: ScreenEnd): void {
+    screenAsk += 1
+    set({ screen: 'off', ...(why === 'refused' ? { screenRefused: Date.now() } : {}) })
+}
+
 /** The page of a room that refused a join goes, or that room opens to one again: the refusal is no longer news. */
 export function forgetProblem(channelId: string): void {
     if (get().problem?.channelId === channelId) set({ problem: null })
@@ -319,6 +379,8 @@ export function deviceAllowedAgain(device: Device): void {
 export function resetSession(): void {
     attempt += 1
     cameraAsk += 1
+    screenAsk += 1
+    picking = false
     link = null
     stopSignOut?.()
     stopSignOut = null
@@ -329,6 +391,8 @@ export function resetSession(): void {
         mic: 'off',
         camera: 'off',
         cameraPreview: null,
+        screen: 'off',
+        screenRefused: null,
         problem: null,
         removed: null,
         modMuted: null

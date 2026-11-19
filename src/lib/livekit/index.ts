@@ -1,4 +1,13 @@
-import { DisconnectReason, MediaDeviceFailure, Room, RoomEvent, Track, type RemoteTrack } from 'livekit-client'
+import {
+    DisconnectReason,
+    MediaDeviceFailure,
+    Room,
+    RoomEvent,
+    Track,
+    type Participant,
+    type RemoteTrack,
+    type TrackPublication
+} from 'livekit-client'
 
 /**
  * The tab's link to a LiveKit room (ARCHITECTURE §4): media goes straight
@@ -33,13 +42,29 @@ export interface LinkEvents {
     /** LiveKit lost the link and tries again (C-09 `+reconnecting`). */
     onReconnecting: () => void
     onReconnected: () => void
+    /**
+     * This tab's shared screen stopped without `setScreen(false)`: the
+     * browser's own "sharing" bar, the window closed, the server taking it
+     * (`refused`: VIDEO lost, ROOM-EDGE), or the server muting it (`muted`:
+     * another screen came first, D-101).
+     */
+    onScreenEnded: (why: ScreenEnd) => void
 }
+
+/** Why a shared screen stopped by itself (`onScreenEnded`). */
+export type ScreenEnd = 'stopped' | 'refused' | 'muted'
 
 export interface RoomLink {
     /** The LiveKit room, for the room page's hooks (`@livekit/components-react`). */
     room: Room
     setMic: (on: boolean) => Promise<DeviceState>
     setCamera: (on: boolean) => Promise<DeviceState>
+    /**
+     * Shares a screen or stops: on asks the browser which (its own picker,
+     * with ARCHITECTURE §4's hints), `off` when the person cancels it or the
+     * system refuses (one `NotAllowedError`: no Toast, 07 S-ROOM-07).
+     */
+    setScreen: (on: boolean) => Promise<'on' | 'off'>
     /** Leaves the room; `onEnd` is not called. */
     leave: () => Promise<void>
 }
@@ -50,6 +75,36 @@ const ENDS: Partial<Record<DisconnectReason, LinkEnd>> = {
     [DisconnectReason.PARTICIPANT_REMOVED]: 'removed',
     [DisconnectReason.ROOM_DELETED]: 'removed'
 }
+
+/** LiveKit's numbers for the screen and its sound in a participant's permissions (`TrackSource` of its protocol, not exported). */
+const SCREEN_SHARE = 3
+const SCREEN_SHARE_AUDIO = 4
+
+/** Whether the server lets this participant send `source` (no list: every source). */
+function mayPublish(participant: Participant, source: number): boolean {
+    const permissions = participant.permissions
+    if (!permissions) return true
+    return (
+        permissions.canPublish &&
+        (permissions.canPublishSources.length === 0 || permissions.canPublishSources.includes(source))
+    )
+}
+
+/**
+ * The picker's hints (ARCHITECTURE §4): a window chosen first, this tab left
+ * out, the box to share sound shown. Chrome follows them; Firefox and Safari
+ * show their own picker. No sound when it may not be sent (muted by a
+ * moderator, D-207): LiveKit would refuse that track after sending the picture.
+ */
+const screenOptions = (sound: boolean) => ({
+    audio: sound,
+    video: { displaySurface: 'window' as const },
+    selfBrowserSurface: 'exclude' as const,
+    systemAudio: sound ? ('include' as const) : ('exclude' as const)
+})
+
+/** How long after the screen stopped by itself a lost VIDEO still says why. */
+const REFUSED_MS = 3_000
 
 /** What the browser answered when asked for the microphone or camera. */
 export function deviceStateOf(error: unknown): DeviceState {
@@ -105,6 +160,39 @@ export async function joinRoom(
         document.addEventListener('pointerdown', unlockSound)
         document.addEventListener('keydown', unlockSound)
     })
+    // This tab's screen: `sharing` while this tab means it to be shared.
+    let sharing = false
+    /** When the screen last stopped by itself, for VIDEO lost just after (the server's two words come in either order). */
+    let stoppedAt = 0
+    const screenEnded = (why: ScreenEnd) => {
+        sharing = false
+        events.onScreenEnded(why)
+    }
+    room.on(RoomEvent.LocalTrackUnpublished, (publication: TrackPublication) => {
+        if (publication.source !== Track.Source.ScreenShare || !sharing) return
+        // A full reconnect takes every track down and sends it again, still live: not a stop.
+        if (publication.track?.mediaStreamTrack.readyState === 'live') return
+        stoppedAt = Date.now()
+        screenEnded(mayPublish(room.localParticipant, SCREEN_SHARE) ? 'stopped' : 'refused')
+        // Its sound too, if the server left it (the browser's bar ends both).
+        void room.localParticipant.setScreenShareEnabled(false).catch(() => undefined)
+    })
+    room.on(RoomEvent.TrackMuted, (publication: TrackPublication, participant: Participant) => {
+        if (participant !== room.localParticipant || publication.source !== Track.Source.ScreenShare || !sharing) return
+        screenEnded('muted')
+        void room.localParticipant.setScreenShareEnabled(false).catch(() => undefined)
+    })
+    room.on(RoomEvent.ParticipantPermissionsChanged, (_before: unknown, participant?: Participant) => {
+        if (participant && participant !== room.localParticipant) return
+        if (mayPublish(room.localParticipant, SCREEN_SHARE)) return
+        if (sharing) {
+            screenEnded('refused')
+            void room.localParticipant.setScreenShareEnabled(false).catch(() => undefined)
+        } else if (Date.now() - stoppedAt < REFUSED_MS) {
+            stoppedAt = 0
+            events.onScreenEnded('refused')
+        }
+    })
     room.on(RoomEvent.Reconnecting, () => events.onReconnecting())
     room.on(RoomEvent.Reconnected, () => events.onReconnected())
     room.on(RoomEvent.Disconnected, (reason?: DisconnectReason) => {
@@ -124,6 +212,27 @@ export async function joinRoom(
     }
     const setMic = (on: boolean) => switched(on, (value) => room.localParticipant.setMicrophoneEnabled(value))
     const setCamera = (on: boolean) => switched(on, (value) => room.localParticipant.setCameraEnabled(value))
+    const setScreen = async (on: boolean): Promise<'on' | 'off'> => {
+        sharing = false
+        try {
+            if (on) {
+                const sound = mayPublish(room.localParticipant, SCREEN_SHARE_AUDIO)
+                await room.localParticipant.setScreenShareEnabled(true, screenOptions(sound))
+                // Muted by the server while it was being sent (another screen came first): not shared.
+                if (room.localParticipant.getTrackPublication(Track.Source.ScreenShare)?.isMuted) {
+                    await room.localParticipant.setScreenShareEnabled(false)
+                    return 'off'
+                }
+                sharing = true
+                return 'on'
+            }
+            await room.localParticipant.setScreenShareEnabled(false)
+        } catch {
+            // Cancelled, refused, or LiveKit refusing it: nothing shared.
+            await room.localParticipant.setScreenShareEnabled(false).catch(() => undefined)
+        }
+        return 'off'
+    }
 
     await room.connect(url, token)
     const micState = devices.mic ? await setMic(true) : 'off'
@@ -133,6 +242,7 @@ export async function joinRoom(
             room,
             setMic,
             setCamera,
+            setScreen,
             leave: async () => {
                 leaving = true
                 await room.disconnect()

@@ -14,6 +14,7 @@ const links: {
     leave: ReturnType<typeof vi.fn>
     setMic: ReturnType<typeof vi.fn>
     setCamera: ReturnType<typeof vi.fn>
+    setScreen: ReturnType<typeof vi.fn>
     events: LinkEvents
 }[] = []
 const livekit = {
@@ -22,7 +23,8 @@ const livekit = {
             room: { name: 'room' },
             leave: vi.fn(async () => undefined),
             setMic: vi.fn(async (on: boolean) => (on ? 'on' : 'off')),
-            setCamera: vi.fn(async (on: boolean) => (on ? 'on' : 'off'))
+            setCamera: vi.fn(async (on: boolean) => (on ? 'on' : 'off')),
+            setScreen: vi.fn(async (on: boolean) => (on ? 'on' : 'off'))
         }
         links.push({ ...link, events })
         const said = (on: boolean): DeviceState => (on ? 'on' : 'off')
@@ -44,6 +46,8 @@ const {
     resetSession,
     tellOwnState,
     micTakenAway,
+    switchScreen,
+    screenTakenAway,
     JOIN_MS
 } = await import('../lib/session')
 const { useVoiceStore } = await import('../voice.store')
@@ -215,7 +219,8 @@ describe("a tab's time in a voice room (REQ-VC-01 → VC-03)", () => {
                 room: { name: 'room' },
                 leave: vi.fn(async () => undefined),
                 setMic: vi.fn(async (on: boolean) => (on ? 'on' : 'off')),
-                setCamera: vi.fn(async (on: boolean) => (on ? 'on' : 'off'))
+                setCamera: vi.fn(async (on: boolean) => (on ? 'on' : 'off')),
+                setScreen: vi.fn(async (on: boolean) => (on ? 'on' : 'off'))
             }
             links.push({ ...link, events })
             // The mic pressed on while LiveKit was joining with it off.
@@ -417,5 +422,116 @@ describe("a tab's time in a voice room (REQ-VC-01 → VC-03)", () => {
         links[0]?.setMic.mockClear()
         await micTakenAway('thao-luan')
         expect(links[0]?.setMic).not.toHaveBeenCalled()
+    })
+
+    it('shares a screen in the room; a cancelled picker leaves it off, without a word (S-ROOM-07)', async () => {
+        await switchScreen(true)
+        expect(state().screen).toBe('off')
+
+        await joinRoom(LOUNGE)
+        const link = links[0]!
+        await switchScreen(true)
+        expect(link.setScreen).toHaveBeenLastCalledWith(true)
+        expect(state().screen).toBe('on')
+        await switchScreen(false)
+        expect(state().screen).toBe('off')
+
+        link.setScreen.mockResolvedValueOnce('off')
+        await switchScreen(true)
+        expect(state().screen).toBe('off')
+        expect(state().screenRefused).toBeNull()
+    })
+
+    it('a screen chosen after leaving, or after pressing again, is not shared', async () => {
+        await joinRoom(LOUNGE)
+        const link = links[0]!
+        let choose: (state: 'on' | 'off') => void = () => undefined
+        link.setScreen.mockImplementationOnce(() => new Promise((resolve) => (choose = resolve)))
+        const asking = switchScreen(true)
+        await leaveRoom()
+        choose('on')
+        await asking
+        expect(link.setScreen).toHaveBeenLastCalledWith(false)
+        expect(state().screen).toBe('off')
+
+        await joinRoom(LOUNGE)
+        const again = links[1]!
+        again.setScreen.mockImplementationOnce(() => new Promise((resolve) => (choose = resolve)))
+        const first = switchScreen(true)
+        await switchScreen(false)
+        choose('on')
+        await first
+        expect(again.setScreen).toHaveBeenLastCalledWith(false)
+        expect(state().screen).toBe('off')
+    })
+
+    it('stops sharing on leaving, being put out, or joining elsewhere (D-101: a reload shares nothing)', async () => {
+        await joinRoom(LOUNGE)
+        await switchScreen(true)
+        await leaveRoom()
+        expect(state().screen).toBe('off')
+
+        await joinRoom(LOUNGE)
+        await switchScreen(true)
+        links[1]!.events.onEnd('removed')
+        expect(state().screen).toBe('off')
+
+        await joinRoom(LOUNGE)
+        await switchScreen(true)
+        await joinRoom(QUIET)
+        expect(state().screen).toBe('off')
+    })
+
+    it('another screen came first: this one stops for good, only in that room (D-101)', async () => {
+        await joinRoom(LOUNGE)
+        const link = links[0]!
+        await switchScreen(true)
+        await screenTakenAway('quiet')
+        expect(state().screen).toBe('on')
+        await screenTakenAway('thao-luan')
+        expect(state().screen).toBe('off')
+        expect(link.setScreen).toHaveBeenLastCalledWith(false)
+    })
+
+    it('the screen stopping by itself turns Share off; VIDEO lost says so (07 ROOM-EDGE)', async () => {
+        await joinRoom(LOUNGE)
+        const link = links[0]!
+        await switchScreen(true)
+        link.events.onScreenEnded('stopped')
+        expect(state().screen).toBe('off')
+        link.events.onScreenEnded('muted')
+        expect(state().screenRefused).toBeNull()
+
+        await switchScreen(true)
+        link.events.onScreenEnded('refused')
+        expect(state().screen).toBe('off')
+        // Kept for useVoiceSession's Toast.
+        expect(state().screenRefused).toEqual(expect.any(Number))
+
+        // A link left behind says nothing.
+        useVoiceStore.setState({ screenRefused: null })
+        await joinRoom(QUIET)
+        await switchScreen(true)
+        link.events.onScreenEnded('refused')
+        expect(state().screen).toBe('on')
+        expect(state().screenRefused).toBeNull()
+    })
+
+    it('Share pressed again while the picker is open does nothing (Firefox lets the page be pressed)', async () => {
+        await joinRoom(LOUNGE)
+        const link = links[0]!
+        let choose: (state: 'on' | 'off') => void = () => undefined
+        link.setScreen.mockImplementationOnce(() => new Promise((resolve) => (choose = resolve)))
+        const first = switchScreen(true)
+        await switchScreen(true)
+        expect(link.setScreen).toHaveBeenCalledTimes(1)
+        choose('on')
+        await first
+        expect(state().screen).toBe('on')
+        expect(link.setScreen).toHaveBeenCalledTimes(1)
+        // The picker answered: Share works again.
+        await switchScreen(false)
+        await switchScreen(true)
+        expect(link.setScreen).toHaveBeenLastCalledWith(true)
     })
 })

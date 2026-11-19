@@ -1,11 +1,12 @@
-import { createElement, useEffect, useState } from 'react'
-import { LogOut, Mic, MicOff } from 'lucide-react'
+import { createElement, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { LogOut, Mic, MicOff, MonitorX } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { onRealtimeEvent } from '@/features/realtime'
 import { useProfile } from '@/features/users'
 import { accountTimeZone, endsAtText } from '@/lib/time-zones'
-import { joinRoom, micTakenAway, tellOwnState } from '../lib/session'
+import { personName } from '../lib/people'
+import { joinRoom, micTakenAway, screenTakenAway, tellOwnState } from '../lib/session'
 import { rejoinDone, roomToRejoin } from '../lib/rejoin'
 import type { PutOutReason, VoiceDirectory } from '../types'
 import { useVoiceStore } from '../voice.store'
@@ -50,6 +51,10 @@ function inRoom(channelId: string): boolean {
  *   `mod-muted`, câu L4b-a, ROOM-EDGE); muted, the mic goes off, also when
  *   only one's own row says it (the event missed). A timeout says until
  *   when once the servers held know it, else after a while the plain words.
+ * - Another screen in the room came first (`voice.share_rejected`, D-101):
+ *   the tab in that room stops its own and says who (ROOM-EDGE `share-race`),
+ *   by the room's list, else LiveKit's name. The server took one's screen
+ *   for VIDEO lost: said too (ROOM-EDGE).
  */
 export function useVoiceSession(directory: VoiceDirectory | undefined): void {
     const { t, i18n } = useTranslation()
@@ -108,6 +113,19 @@ export function useVoiceSession(directory: VoiceDirectory | undefined): void {
             useVoiceStore.setState({ modMuted: null })
     }, [said, ownRow])
 
+    const screenRefused = useVoiceStore((state) => state.screenRefused)
+    useEffect(() => {
+        if (screenRefused === null) return
+        useVoiceStore.setState({ screenRefused: null })
+        toast(t('shell.voice.shareNotAllowed'), { id: 'voice-share', icon: createElement(MonitorX, ICON) })
+    }, [screenRefused, t])
+
+    // The latest rooms, for the share race's name (the listeners below stay for the hook's life).
+    const rooms = useRef(directory)
+    useLayoutEffect(() => {
+        rooms.current = directory
+    })
+
     // A timeout's put-out waiting for the servers held to know until when.
     const [timedOut, setTimedOut] = useState<{ channelId: string; at: number } | null>(null)
     useEffect(() => {
@@ -135,6 +153,17 @@ export function useVoiceSession(directory: VoiceDirectory | undefined): void {
                     id,
                     ...(reason === 'moderator' ? { icon: createElement(LogOut, ICON) } : {})
                 })
+            }),
+            onRealtimeEvent('voice.share_rejected', (data) => {
+                const { channelId, userId } = data as { channelId: string; userId: string }
+                if (useVoiceStore.getState().call?.channelId !== channelId) return
+                void screenTakenAway(channelId)
+                const first = rooms.current?.room(channelId)?.people.find((one) => one.user.id === userId)
+                const name =
+                    (first && personName(first.user)) ??
+                    (useVoiceStore.getState().room?.getParticipantByIdentity(userId)?.name ||
+                        t('shell.voice.deletedAccount'))
+                toast(t('shell.voice.shareRace', { name }), { id: 'voice-share', icon: createElement(MonitorX, ICON) })
             })
         ]
         return () => off.forEach((stop) => stop())

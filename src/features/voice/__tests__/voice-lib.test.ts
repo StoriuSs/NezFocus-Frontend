@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { gridOf, orderPeople, personName } from '../lib/people'
 import { forgetRoom, keepRoom, takeRoomToRejoin, wasReloaded } from '../lib/rejoin'
 import { askMicrophone, closeCamera, openCamera, whenDeviceAllowed } from '../lib/devices'
+import { canShareScreen, fitted, hiddenEnds, sharerOf } from '../lib/share'
 import type { RoomPerson } from '../types'
 
 const person = (
@@ -181,5 +182,59 @@ describe("the browser's camera before joining (D-53, S-MOD-04)", () => {
         status.state = 'granted'
         status.dispatchEvent(new Event('change'))
         expect(allowed).toHaveBeenCalledTimes(1)
+    })
+})
+
+describe('screen sharing (REQ-VC-05, D-101, C-31)', () => {
+    afterEach(() => vi.unstubAllGlobals())
+
+    it("shows one screen: the API's sharer while two are sent, else LiveKit's first", () => {
+        expect(sharerOf([], undefined)).toBeUndefined()
+        expect(sharerOf(['an'], undefined)).toBe('an')
+        expect(sharerOf(['phong', 'an'], 'an')).toBe('an')
+        expect(sharerOf(['phong', 'an'], undefined)).toBe('phong')
+        // The API's sharer no longer sending (its stop on the way): LiveKit's.
+        expect(sharerOf(['phong'], 'an')).toBe('phong')
+        expect(sharerOf([], 'an')).toBeUndefined()
+    })
+
+    it('fits a screen whole in the stage, its shape kept (portrait-share, 21:9)', () => {
+        expect(fitted({ width: 1048, height: 540 }, { width: 1920, height: 1080 })).toEqual({ width: 960, height: 540 })
+        expect(fitted({ width: 1048, height: 540 }, { width: 600, height: 800 })).toEqual({ width: 405, height: 540 })
+        expect(fitted({ width: 1048, height: 540 }, { width: 2560, height: 1080 })).toEqual({
+            width: 1048,
+            height: 442
+        })
+        expect(fitted({ width: 0, height: 540 }, { width: 16, height: 9 })).toEqual({ width: 0, height: 0 })
+        expect(fitted({ width: 100, height: 100 }, { width: 0, height: 0 })).toEqual({ width: 0, height: 0 })
+    })
+
+    it('says which ends of the strip hide someone', () => {
+        expect(hiddenEnds({ scrollLeft: 0, clientWidth: 800, scrollWidth: 800 })).toEqual({
+            before: false,
+            after: false
+        })
+        expect(hiddenEnds({ scrollLeft: 0, clientWidth: 800, scrollWidth: 1378 })).toEqual({
+            before: false,
+            after: true
+        })
+        expect(hiddenEnds({ scrollLeft: 300, clientWidth: 800, scrollWidth: 1378 })).toEqual({
+            before: true,
+            after: true
+        })
+        expect(hiddenEnds({ scrollLeft: 577.5, clientWidth: 800, scrollWidth: 1378 })).toEqual({
+            before: true,
+            after: false
+        })
+        expect(hiddenEnds({ scrollLeft: 1, clientWidth: 800, scrollWidth: 1378 }).before).toBe(false)
+    })
+
+    it('can share a screen only where the browser has getDisplayMedia', () => {
+        vi.stubGlobal('navigator', { mediaDevices: { getDisplayMedia: vi.fn() } })
+        expect(canShareScreen()).toBe(true)
+        vi.stubGlobal('navigator', { mediaDevices: {} })
+        expect(canShareScreen()).toBe(false)
+        vi.stubGlobal('navigator', {})
+        expect(canShareScreen()).toBe(false)
     })
 })

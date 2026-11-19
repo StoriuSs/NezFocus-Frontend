@@ -26,7 +26,11 @@
         "noVideo": "You don't have permission to turn on your camera in this room",
         "leave": "Leave room",
         "modMuted": "Muted",
-        "modMutedHint": "A moderator muted your mic"
+        "modMutedHint": "A moderator muted your mic",
+        "share": "Share",
+        "shareOn": "Share your screen",
+        "stopShare": "Stop sharing",
+        "shareBusy": "{{name}} is sharing their screen"
     },
     "micBlocked": {
         "banner": "Your browser is blocking the mic · you can still listen",
@@ -67,6 +71,18 @@
         "cameraOn": "camera on",
         "speaking": "speaking",
         "zoomHint": "press to zoom in",
-        "modMuted": "muted by a moderator"
+        "modMuted": "muted by a moderator",
+        "sharing": "sharing their screen"
+    },
+    "stage": {
+        "screenOf": "{{name}}'s screen",
+        "loading": "Loading {{name}}'s screen…",
+        "fullscreen": "Full screen",
+        "exitFullscreen": "Exit full screen",
+        "selfTitle": "You're sharing your screen",
+        "selfBody": "Everyone in the room sees the window you chose.",
+        "started": "{{name}} is sharing their screen",
+        "stopped": "{{name}} stopped sharing",
+        "more": "See more people"
     }
 }

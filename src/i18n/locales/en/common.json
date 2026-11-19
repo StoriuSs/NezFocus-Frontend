@@ -140,7 +140,9 @@
       "disconnected": "You were disconnected from the room",
       "timedOut": "You're timed out until {{time}} · you left the room",
       "noLongerAllowed": "You no longer have access to this room · you left it",
-      "roomGone": "This room is no longer available"
+      "roomGone": "This room is no longer available",
+      "shareRace": "{{name}} started sharing their screen before you",
+      "shareNotAllowed": "You can no longer share your screen"
     },
     "serverMenu": {
       "createChannel": "Create channel",

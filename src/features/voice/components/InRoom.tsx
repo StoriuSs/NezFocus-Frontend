@@ -12,6 +12,8 @@ import { useRoomMenu } from '../hooks/useRoomMenu'
 import type { Device } from '../lib/devices'
 import { gridOf } from '../lib/people'
 import { roomActionsOn } from '../lib/room-actions'
+import { switchScreen } from '../lib/session'
+import { sharerOf } from '../lib/share'
 import type { RoomPerson, VoiceRoom } from '../types'
 import { BlockedBanner } from './BlockedBanner'
 import { DeviceControl } from './DeviceControl'
@@ -27,13 +29,23 @@ import {
     useTileName
 } from './PersonTile'
 import { RoomControl } from './RoomControl'
+import { ShareControl } from './ShareControl'
+import { StageView } from './StageView'
+import { TileStrip } from './TileStrip'
+import { useVoiceStore } from '../voice.store'
 
 /**
  * The room once joined (S-ROOM-06 `voice`): every person a tile in the grid
  * (C-20 › Lưới, 07 P2: always the grid in a voice room), oneself first, then
- * as C-18 orders them; the controls at the bottom (Mic · Camera · Leave, 24
- * apart; Share comes with L5). Toasts sit 16 above the controls (C-16). The
- * browser blocking the mic or camera: a Banner under the Header (S-MOD-04).
+ * as C-18 orders them; the controls at the bottom (Mic · Camera · Share ···
+ * Leave). Toasts sit 16 above the controls (C-16). The browser blocking the
+ * mic or camera: a Banner under the Header (S-MOD-04).
+ *
+ * A screen shared (S-ROOM-07, D-102): the tiles go to a strip above (`video ·
+ * strip`) and the screen takes the stage (C-31), for oneself the card
+ * "You're sharing your screen"; it stopping, back to the grid (not to a
+ * tile zoomed in before). Whose screen is LiveKit's (a screen track sent,
+ * not muted by the server); its start and stop are read out politely.
  *
  * Who is there is LiveKit's: a person not yet on the API's list (its webhook
  * behind) still has a tile, with LiveKit's name; whether a mic is on is the
@@ -57,9 +69,13 @@ function Stage({ room, me }: { room: VoiceRoom; me: string }) {
     const participants = useParticipants()
     // A camera sending a picture: published, not muted (`useParticipants` draws again as that changes).
     const pictures = new Map<string, Track>()
+    // A screen sent: published, not muted (the server mutes a second one, D-101); its picture may still be on its way.
+    const screens = new Map<string, Track | undefined>()
     for (const participant of participants) {
         const camera = participant.getTrackPublication(Track.Source.Camera)
         if (camera?.track && !camera.isMuted) pictures.set(participant.identity, camera.track)
+        const screen = participant.getTrackPublication(Track.Source.ScreenShare)
+        if (screen && !screen.isMuted) screens.set(participant.identity, screen.track)
     }
     const listed = new Map(room.people.map((person) => [person.user.id, person]))
     const people: RoomPerson[] = participants.map(
@@ -81,6 +97,11 @@ function Stage({ room, me }: { room: VoiceRoom; me: string }) {
             }
     )
     const ordered = useOrderedPeople(people, me)
+    const sharer = useHeldSharer(sharerOf([...screens.keys()], room.people.find((one) => one.screenSharing)?.user.id))
+    const sharerPerson = sharer ? (people.find((one) => one.user.id === sharer) ?? listed.get(sharer)) : undefined
+    const sharerName = useTileName(sharerPerson?.user ?? EMPTY_USER, false)
+    const said = useShareNews(sharer === me ? undefined : sharer, sharerName)
+    const shareButton = useRef<HTMLButtonElement>(null)
     const byId = new Map(participants.map((participant) => [participant.identity, participant]))
     const { columns, maxWidth } = gridOf(ordered.length)
     const [help, setHelp] = useState<Device | null>(null)
@@ -106,6 +127,8 @@ function Stage({ room, me }: { room: VoiceRoom; me: string }) {
     }
 
     const [zoomed, setZoomed] = useState<string | null>(null)
+    // A screen shared takes the place of a tile zoomed in; it stopping goes back to the grid (07 ROOM-EDGE).
+    if (sharer && zoomed) setZoomed(null)
     const zoomedPicture = zoomed ? pictures.get(zoomed) : undefined
     const backTo = useRef<string | null>(null)
     const zoomOut = () => {
@@ -126,6 +149,25 @@ function Stage({ room, me }: { room: VoiceRoom; me: string }) {
         backTo.current = null
         if (!away) tiles.current[index === -1 ? at : index]?.focus()
     })
+    // The grid and the strip are different lists: the keyboard on a tile (or the stage) as the layout
+    // changes, and so lost, goes to the tile holding the stop; not when it is elsewhere already.
+    const area = useRef<HTMLDivElement>(null)
+    const keyboardHere = useRef(false)
+    useEffect(() => {
+        const onFocus = (event: FocusEvent) => {
+            keyboardHere.current = area.current?.contains(event.target as Node) ?? false
+        }
+        document.addEventListener('focusin', onFocus)
+        return () => document.removeEventListener('focusin', onFocus)
+    }, [])
+    const shared = sharer !== undefined
+    const layout = useRef(shared)
+    useEffect(() => {
+        if (layout.current === shared) return
+        layout.current = shared
+        const lost = !document.activeElement || document.activeElement === document.body
+        if (lost && keyboardHere.current) tiles.current[at]?.focus()
+    })
     // Esc zooms out, unless it closes the help over the stage (that layer goes first).
     const escape = useRef({ zoomed, help })
     useLayoutEffect(() => {
@@ -144,53 +186,86 @@ function Stage({ room, me }: { room: VoiceRoom; me: string }) {
     }, [])
 
     const person = zoomedPicture ? ordered.find((one) => one.user.id === zoomed) : undefined
+    // Everyone's tile: in the grid, or `small` in the strip above a screen (no zooming in there).
+    const tilesOf = (small: boolean) =>
+        ordered.map((one, index) => {
+            const picture = pictures.get(one.user.id)
+            return (
+                <Tile
+                    key={one.user.id}
+                    ref={(node) => {
+                        tiles.current[index] = node
+                    }}
+                    room={room}
+                    person={one}
+                    participant={byId.get(one.user.id)}
+                    self={one.user.id === me}
+                    picture={picture}
+                    sharing={one.user.id === sharer}
+                    small={small}
+                    tabIndex={index === at ? 0 : -1}
+                    onFocus={() => setCurrent(one.user.id)}
+                    onKeyDown={move(index)}
+                    onZoom={picture && !small ? () => setZoomed(one.user.id) : undefined}
+                />
+            )
+        })
     // Muted by a moderator (07 mod-muted): their word, or one's own row in the API's list (D-205).
     const modMuted = useModMuted(room.people.some((one) => one.user.id === me && one.modMuted))
     return (
         <div className='flex min-h-full flex-col'>
             <BlockedBanner onHowTo={setHelp} />
-            <div className='flex min-h-0 flex-1 items-center justify-center overflow-y-auto px-6 py-4'>
-                {zoomedPicture && person ? (
-                    <Zoomed
-                        room={room}
-                        person={person}
-                        self={person.user.id === me}
-                        participant={byId.get(person.user.id)}
-                        picture={zoomedPicture}
-                        onZoomOut={zoomOut}
-                    />
+            <p className='sr-only' aria-live='polite'>
+                {said}
+            </p>
+            <div ref={area} className='flex min-h-0 flex-1 flex-col'>
+                {sharer ? (
+                    <>
+                        <div className='flex shrink-0 px-6 pt-4'>
+                            <TileStrip label={t('room.people')}>{tilesOf(true)}</TileStrip>
+                        </div>
+                        <StageView
+                            key={sharer}
+                            track={screens.get(sharer)}
+                            name={sharerName}
+                            self={sharer === me}
+                            onStop={() => {
+                                void switchScreen(false)
+                                shareButton.current?.focus()
+                            }}
+                        />
+                    </>
                 ) : (
-                    <ul
-                        aria-label={t('room.people')}
-                        className='grid w-full justify-center gap-4'
-                        style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, ${maxWidth}px))` }}
-                    >
-                        {ordered.map((one, index) => {
-                            const picture = pictures.get(one.user.id)
-                            return (
-                                <Tile
-                                    key={one.user.id}
-                                    ref={(node) => {
-                                        tiles.current[index] = node
-                                    }}
-                                    room={room}
-                                    person={one}
-                                    participant={byId.get(one.user.id)}
-                                    self={one.user.id === me}
-                                    picture={picture}
-                                    tabIndex={index === at ? 0 : -1}
-                                    onFocus={() => setCurrent(one.user.id)}
-                                    onKeyDown={move(index)}
-                                    onZoom={picture ? () => setZoomed(one.user.id) : undefined}
-                                />
-                            )
-                        })}
-                    </ul>
+                    <div className='flex min-h-0 flex-1 items-center justify-center overflow-y-auto px-6 py-4'>
+                        {zoomedPicture && person ? (
+                            <Zoomed
+                                room={room}
+                                person={person}
+                                self={person.user.id === me}
+                                participant={byId.get(person.user.id)}
+                                picture={zoomedPicture}
+                                onZoomOut={zoomOut}
+                            />
+                        ) : (
+                            <ul
+                                aria-label={t('room.people')}
+                                className='grid w-full justify-center gap-4'
+                                style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, ${maxWidth}px))` }}
+                            >
+                                {tilesOf(false)}
+                            </ul>
+                        )}
+                    </div>
                 )}
             </div>
             <div ref={bar} className='flex shrink-0 items-start justify-center gap-4 px-6 pb-6 pt-2'>
                 <DeviceControl device='mic' allowed={room.canSpeak} modMuted={modMuted} help={help} onHelp={setHelp} />
                 <DeviceControl device='camera' allowed={room.canVideo} help={help} onHelp={setHelp} />
+                <ShareControl
+                    ref={shareButton}
+                    allowed={room.canVideo}
+                    other={sharer && sharer !== me ? sharerName : undefined}
+                />
                 <span className='w-6' aria-hidden='true' />
                 <RoomControl
                     icon={<PhoneOff />}
@@ -201,6 +276,44 @@ function Stage({ room, me }: { room: VoiceRoom; me: string }) {
             </div>
         </div>
     )
+}
+
+/**
+ * Whose screen the stage shows: LiveKit's sharer, and while the link is
+ * coming back (C-09 `+reconnecting`: LiveKit lets every participant go
+ * meanwhile) still the last one, so the stage says `connecting` rather than
+ * going back to the grid (07 ROOM-EDGE: a short drop).
+ */
+function useHeldSharer(sharer: string | undefined): string | undefined {
+    const reconnecting = useVoiceStore((state) => state.call?.phase === 'reconnecting')
+    const [held, setHeld] = useState(sharer)
+    if (held !== sharer && (sharer !== undefined || !reconnecting)) setHeld(sharer)
+    return sharer ?? (reconnecting ? held : undefined)
+}
+
+/** No one: the name hook's input while no screen is shared. */
+const EMPTY_USER: RoomPerson['user'] = { id: '', username: null, displayName: null, avatarUrl: null }
+
+/**
+ * What to read out as someone else's screen starts or stops (S-ROOM-07 ›
+ * Tương tác: `aria-live` polite, "An is sharing their screen" / "An stopped
+ * sharing"); nothing for one's own.
+ */
+function useShareNews(sharer: string | undefined, name: string): string {
+    const { t } = useTranslation('voice')
+    const [said, setSaid] = useState('')
+    const last = useRef<{ id?: string; name: string }>({ name: '' })
+    useEffect(() => {
+        const before = last.current
+        if (sharer === before.id) {
+            before.name = name
+            return
+        }
+        if (sharer) setSaid(t('stage.started', { name }))
+        else if (before.id) setSaid(t('stage.stopped', { name: before.name }))
+        last.current = { id: sharer, name }
+    }, [sharer, name, t])
+    return said
 }
 
 /**

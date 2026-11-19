@@ -26,7 +26,11 @@
         "noVideo": "Bạn không có quyền bật camera trong phòng này",
         "leave": "Rời phòng",
         "modMuted": "Bị tắt mic",
-        "modMutedHint": "Người quản lý đã tắt mic của bạn"
+        "modMutedHint": "Người quản lý đã tắt mic của bạn",
+        "share": "Chia sẻ",
+        "shareOn": "Chia sẻ màn hình",
+        "stopShare": "Dừng chia sẻ",
+        "shareBusy": "{{name}} đang chia sẻ màn hình"
     },
     "micBlocked": {
         "banner": "Trình duyệt đang chặn mic · vẫn nghe được",
@@ -67,6 +71,18 @@
         "cameraOn": "đang bật camera",
         "speaking": "đang nói",
         "zoomHint": "bấm để phóng to",
-        "modMuted": "bị người quản lý tắt mic"
+        "modMuted": "bị người quản lý tắt mic",
+        "sharing": "đang chia sẻ màn hình"
+    },
+    "stage": {
+        "screenOf": "Màn hình của {{name}}",
+        "loading": "Đang tải màn hình của {{name}}…",
+        "fullscreen": "Toàn màn hình",
+        "exitFullscreen": "Thoát toàn màn hình",
+        "selfTitle": "Bạn đang chia sẻ màn hình",
+        "selfBody": "Mọi người trong phòng đang thấy cửa sổ bạn đã chọn.",
+        "started": "{{name}} đang chia sẻ màn hình",
+        "stopped": "{{name}} đã dừng chia sẻ",
+        "more": "Xem thêm người"
     }
 }

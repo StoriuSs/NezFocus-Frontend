@@ -12,7 +12,10 @@ class FakeRoom {
     startAudio = vi.fn(async () => undefined)
     localParticipant = {
         setMicrophoneEnabled: vi.fn(async (_on: boolean) => undefined),
-        setCameraEnabled: vi.fn(async (_on: boolean) => undefined)
+        setCameraEnabled: vi.fn(async (_on: boolean) => undefined),
+        setScreenShareEnabled: vi.fn(async (_on: boolean, _options?: unknown) => undefined),
+        getTrackPublication: vi.fn((_source: string): { isMuted: boolean } | undefined => undefined),
+        permissions: undefined as { canPublish: boolean; canPublishSources: number[] } | undefined
     }
     constructor(public options: unknown) {
         FakeRoom.last = this
@@ -34,9 +37,12 @@ vi.mock('livekit-client', () => ({
         AudioPlaybackStatusChanged: 'audioPlaybackChanged',
         Reconnecting: 'reconnecting',
         Reconnected: 'reconnected',
-        Disconnected: 'disconnected'
+        Disconnected: 'disconnected',
+        LocalTrackUnpublished: 'localTrackUnpublished',
+        TrackMuted: 'trackMuted',
+        ParticipantPermissionsChanged: 'participantPermissionsChanged'
     },
-    Track: { Kind: { Audio: 'audio', Video: 'video' } },
+    Track: { Kind: { Audio: 'audio', Video: 'video' }, Source: { ScreenShare: 'screen_share' } },
     DisconnectReason: { CLIENT_INITIATED: 1, DUPLICATE_IDENTITY: 2, PARTICIPANT_REMOVED: 4, ROOM_DELETED: 5 },
     MediaDeviceFailure: {
         PermissionDenied: 'PermissionDenied',
@@ -49,7 +55,10 @@ const { joinRoom, deviceStateOf } = await import('../livekit')
 
 const OFF = { mic: false, camera: false }
 const MIC = { mic: true, camera: false }
-const events = () => ({ onEnd: vi.fn(), onReconnecting: vi.fn(), onReconnected: vi.fn() })
+const events = () => ({ onEnd: vi.fn(), onReconnecting: vi.fn(), onReconnected: vi.fn(), onScreenEnded: vi.fn() })
+/** LiveKit's permission numbers: camera 1, mic 2, screen 3, screen sound 4. */
+const may = (...sources: number[]) => ({ canPublish: true, canPublishSources: sources })
+const SCREEN = { source: 'screen_share' }
 const refused = () => new DOMException('no', 'NotAllowedError')
 
 /** A remote sound track: `attach` makes its <audio>. */
@@ -141,6 +150,138 @@ describe('the link to a LiveKit room (ARCHITECTURE §4)', () => {
         FakeRoom.last.fire('audioPlaybackChanged')
         document.dispatchEvent(new Event('keydown'))
         expect(FakeRoom.last.startAudio).toHaveBeenCalledTimes(1)
+    })
+
+    it("shares a screen with the picker's hints, off when the person cancels (ARCHITECTURE §4, S-ROOM-07)", async () => {
+        const { link } = await joinRoom('ws://lk', 'token', OFF, events())
+        const share = FakeRoom.last.localParticipant.setScreenShareEnabled
+        expect(await link.setScreen(true)).toBe('on')
+        expect(share).toHaveBeenLastCalledWith(true, {
+            audio: true,
+            video: { displaySurface: 'window' },
+            selfBrowserSurface: 'exclude',
+            systemAudio: 'include'
+        })
+        expect(await link.setScreen(false)).toBe('off')
+        expect(share).toHaveBeenLastCalledWith(false)
+
+        share.mockRejectedValueOnce(refused())
+        expect(await link.setScreen(true)).toBe('off')
+        // Whatever LiveKit sent before failing is taken back.
+        expect(share).toHaveBeenLastCalledWith(false)
+    })
+
+    it('shares no sound when it may not send any (muted by a moderator, D-207)', async () => {
+        const { link } = await joinRoom('ws://lk', 'token', OFF, events())
+        FakeRoom.last.localParticipant.permissions = may(1, 3)
+        await link.setScreen(true)
+        expect(FakeRoom.last.localParticipant.setScreenShareEnabled).toHaveBeenLastCalledWith(
+            true,
+            expect.objectContaining({ audio: false, systemAudio: 'exclude' })
+        )
+    })
+
+    it("says when the screen stopped by itself: the browser's bar, VIDEO lost, the server muting it", async () => {
+        const told = events()
+        const { link } = await joinRoom('ws://lk', 'token', OFF, told)
+        const room = FakeRoom.last
+        const local = room.localParticipant
+        // Not sharing: nothing to say.
+        room.fire('localTrackUnpublished', SCREEN)
+        expect(told.onScreenEnded).not.toHaveBeenCalled()
+
+        await link.setScreen(true)
+        room.fire('localTrackUnpublished', { source: 'camera' })
+        expect(told.onScreenEnded).not.toHaveBeenCalled()
+        room.fire('localTrackUnpublished', SCREEN)
+        expect(told.onScreenEnded).toHaveBeenLastCalledWith('stopped')
+        room.fire('localTrackUnpublished', SCREEN)
+        expect(told.onScreenEnded).toHaveBeenCalledTimes(1)
+
+        // VIDEO lost: the server takes the track first, or says the new permissions first.
+        await link.setScreen(true)
+        local.permissions = may(2)
+        room.fire('localTrackUnpublished', SCREEN)
+        expect(told.onScreenEnded).toHaveBeenLastCalledWith('refused')
+
+        local.permissions = may(1, 2, 3, 4)
+        await link.setScreen(true)
+        room.fire('localTrackUnpublished', SCREEN)
+        expect(told.onScreenEnded).toHaveBeenLastCalledWith('stopped')
+        local.permissions = may(2)
+        room.fire('participantPermissionsChanged', undefined, local)
+        expect(told.onScreenEnded).toHaveBeenLastCalledWith('refused')
+        // Said once.
+        room.fire('participantPermissionsChanged', undefined, local)
+        expect(told.onScreenEnded).toHaveBeenCalledTimes(4)
+
+        local.permissions = may(1, 2, 3, 4)
+        await link.setScreen(true)
+        local.permissions = may(2)
+        room.fire('participantPermissionsChanged', undefined, { identity: 'someone else' })
+        expect(told.onScreenEnded).toHaveBeenCalledTimes(4)
+        room.fire('participantPermissionsChanged', undefined, local)
+        expect(told.onScreenEnded).toHaveBeenLastCalledWith('refused')
+        expect(local.setScreenShareEnabled).toHaveBeenLastCalledWith(false)
+
+        // Muted by the server: another screen came first (D-101).
+        local.permissions = undefined
+        await link.setScreen(true)
+        room.fire('trackMuted', { source: 'camera' }, local)
+        room.fire('trackMuted', SCREEN, { identity: 'someone else' })
+        expect(told.onScreenEnded).toHaveBeenCalledTimes(5)
+        room.fire('trackMuted', SCREEN, local)
+        expect(told.onScreenEnded).toHaveBeenLastCalledWith('muted')
+        expect(local.setScreenShareEnabled).toHaveBeenLastCalledWith(false)
+
+        // Stopped by this tab: no word.
+        await link.setScreen(true)
+        await link.setScreen(false)
+        room.fire('localTrackUnpublished', SCREEN)
+        expect(told.onScreenEnded).toHaveBeenCalledTimes(6)
+    })
+
+    it('a full reconnect sending the screen again is no stop; a real stop takes its sound too', async () => {
+        const told = events()
+        const { link } = await joinRoom('ws://lk', 'token', OFF, told)
+        const local = FakeRoom.last.localParticipant
+        await link.setScreen(true)
+        local.setScreenShareEnabled.mockClear()
+        const sent = (readyState: string) => ({ ...SCREEN, track: { mediaStreamTrack: { readyState } } })
+        FakeRoom.last.fire('localTrackUnpublished', sent('live'))
+        expect(told.onScreenEnded).not.toHaveBeenCalled()
+        expect(local.setScreenShareEnabled).not.toHaveBeenCalled()
+
+        FakeRoom.last.fire('localTrackUnpublished', sent('ended'))
+        expect(told.onScreenEnded).toHaveBeenLastCalledWith('stopped')
+        expect(local.setScreenShareEnabled).toHaveBeenLastCalledWith(false)
+    })
+
+    it('a screen the server muted while it was being sent is not shared (D-101)', async () => {
+        const told = events()
+        const { link } = await joinRoom('ws://lk', 'token', OFF, told)
+        const local = FakeRoom.last.localParticipant
+        local.getTrackPublication.mockReturnValueOnce({ isMuted: true })
+        expect(await link.setScreen(true)).toBe('off')
+        expect(local.getTrackPublication).toHaveBeenCalledWith('screen_share')
+        expect(local.setScreenShareEnabled).toHaveBeenLastCalledWith(false)
+        // Not this tab's share any more: its later events say nothing.
+        FakeRoom.last.fire('trackMuted', SCREEN, local)
+        expect(told.onScreenEnded).not.toHaveBeenCalled()
+    })
+
+    it('says a lost VIDEO only just after the screen stopped by itself', async () => {
+        const now = vi.spyOn(Date, 'now').mockReturnValue(1_000)
+        const told = events()
+        const { link } = await joinRoom('ws://lk', 'token', OFF, told)
+        const local = FakeRoom.last.localParticipant
+        await link.setScreen(true)
+        FakeRoom.last.fire('localTrackUnpublished', SCREEN)
+        now.mockReturnValue(4_001)
+        local.permissions = may(2)
+        FakeRoom.last.fire('participantPermissionsChanged', undefined, local)
+        expect(told.onScreenEnded).toHaveBeenCalledTimes(1)
+        expect(told.onScreenEnded).toHaveBeenLastCalledWith('stopped')
     })
 
     it('says how the link ended, in the app words; not after leaving here', async () => {

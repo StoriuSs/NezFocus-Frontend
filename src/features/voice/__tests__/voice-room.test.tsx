@@ -10,6 +10,7 @@ import { userKeys } from '@/features/users'
 import { expectNoA11yViolations } from '@/test/a11y'
 import { apiError } from '@/test/helpers'
 import type { JoinDevices, LinkEvents } from '@/lib/livekit'
+import type { Room } from 'livekit-client'
 import type { RoomPerson, VoiceDirectory, VoiceRoom, VoiceToken } from '../types'
 
 const voiceApi = {
@@ -24,6 +25,7 @@ vi.mock('../api/voice.api', () => voiceApi)
 const linkEvents: LinkEvents[] = []
 const setMic = vi.fn(async (on: boolean) => (on ? 'on' : 'off'))
 const setCamera = vi.fn(async (on: boolean) => (on ? 'on' : 'off'))
+const setScreen = vi.fn(async (on: boolean) => (on ? 'on' : 'off'))
 const livekit = {
     joinRoom: vi.fn(async (_url: string, _token: string, devices: JoinDevices, events: LinkEvents) => {
         linkEvents.push(events)
@@ -32,7 +34,8 @@ const livekit = {
                 room: { name: 'live' },
                 leave: vi.fn(async () => undefined),
                 setMic,
-                setCamera
+                setCamera,
+                setScreen
             },
             micState: 'off',
             cameraState: devices.camera ? 'on' : 'off'
@@ -49,22 +52,32 @@ vi.mock('@/lib/livekit', () => livekit)
 const live = vi.hoisted(() => ({
     participants: [] as { identity: string; name: string; isMicrophoneEnabled: boolean; speaking?: boolean }[],
     cameras: [] as string[],
+    /** Screens sent: muted by the server (another came first), or not yet received. */
+    screens: [] as { identity: string; muted?: boolean; arriving?: boolean }[],
     tracks: new Map<string, { attach: (element: HTMLVideoElement) => void; detach: () => void }>()
 }))
 const cameraTrack = (identity: string) => {
     if (!live.tracks.has(identity)) live.tracks.set(identity, { attach: vi.fn(), detach: vi.fn() })
     return live.tracks.get(identity)
 }
-vi.mock('livekit-client', () => ({ Track: { Source: { Camera: 'camera' } } }))
+const screenTrack = (identity: string) => cameraTrack(`screen:${identity}`)
+vi.mock('livekit-client', () => ({ Track: { Source: { Camera: 'camera', ScreenShare: 'screen_share' } } }))
 vi.mock('@livekit/components-react', () => ({
     RoomContext: createContext(undefined),
     useParticipants: () =>
         live.participants.map((participant) => ({
             ...participant,
-            getTrackPublication: (source: string) =>
-                source === 'camera' && live.cameras.includes(participant.identity)
-                    ? { isMuted: false, track: cameraTrack(participant.identity) }
-                    : undefined
+            getTrackPublication: (source: string) => {
+                if (source === 'camera' && live.cameras.includes(participant.identity))
+                    return { isMuted: false, track: cameraTrack(participant.identity) }
+                const sent = live.screens.find((one) => one.identity === participant.identity)
+                if (source === 'screen_share' && sent)
+                    return {
+                        isMuted: sent.muted ?? false,
+                        track: sent.arriving ? undefined : screenTrack(participant.identity)
+                    }
+                return undefined
+            }
         })),
     useIsSpeaking: (participant?: { speaking?: boolean }) => participant?.speaking ?? false
 }))
@@ -146,8 +159,10 @@ beforeEach(() => {
     linkEvents.length = 0
     live.participants = []
     live.cameras = []
+    live.screens = []
     live.tracks.clear()
     setCamera.mockClear()
+    setScreen.mockClear()
     setMic.mockClear()
     voiceApi.muteParticipant.mockClear()
     voiceApi.unmuteParticipant.mockClear()
@@ -710,6 +725,249 @@ describe('the room once joined (S-ROOM-06 voice)', () => {
     })
 })
 
+describe('a screen shared in the room (S-ROOM-07, C-31, D-101, D-102)', () => {
+    const TUAN_SHARING = person('tuan', 'Tuấn', { micOn: true, screenSharing: true })
+    const people = [
+        { identity: 'tuan', name: 'Tuấn', isMicrophoneEnabled: true },
+        { identity: AN, name: 'An', isMicrophoneEnabled: false },
+        { identity: 'minh', name: 'Minh', isMicrophoneEnabled: false }
+    ]
+    const sharingRoom = (more: Partial<VoiceRoom> = {}) =>
+        room({ people: [TUAN_SHARING, person(AN, 'An'), MINH], ...more })
+    const canShare = () =>
+        Object.defineProperty(navigator, 'mediaDevices', {
+            value: { getDisplayMedia: vi.fn() },
+            configurable: true
+        })
+    const inRoom = async (shown: VoiceRoom) => {
+        canShare()
+        await joinRoom({ serverId: 'ot', channelId: 'thao-luan', name: 'Phòng thảo luận nhóm' })
+        live.participants = people
+        return show(shown)
+    }
+    const strip = () => screen.getByRole('list', { name: 'People in the room' })
+
+    it("shows someone else's screen on the stage, everyone in the strip above, Share disabled saying who (viewing-voice)", async () => {
+        live.screens = [{ identity: 'tuan' }]
+        await inRoom(sharingRoom())
+        const shared = screen.getByRole('group', { name: "Tuấn's screen" })
+        const video = shared.querySelector('video')
+        expect(screenTrack('tuan')?.attach).toHaveBeenCalledWith(video)
+        // C-31 connecting until the picture plays.
+        expect(within(shared).getByText("Loading Tuấn's screen…")).toBeVisible()
+        expect(shared).toHaveAttribute('aria-busy', 'true')
+        fireEvent.playing(video as HTMLVideoElement)
+        expect(within(shared).queryByText("Loading Tuấn's screen…")).toBeNull()
+        expect(within(shared).getByRole('button', { name: 'Full screen' })).toBeVisible()
+
+        expect(strip().style.gridTemplateColumns).toBe('')
+        expect(
+            within(strip())
+                .getAllByRole('button')
+                .map((tile) => tile.getAttribute('aria-label'))
+        ).toEqual(['You, mic off', 'Tuấn, mic on, sharing their screen', 'Minh, mic off'])
+        expect(strip().querySelector('li')?.style.width).toBe('146px')
+
+        const share = screen.getByRole('button', { name: 'Tuấn is sharing their screen' })
+        expect(share).toHaveAttribute('aria-disabled', 'true')
+        await userEvent.click(share)
+        expect(setScreen).not.toHaveBeenCalled()
+        expect(screen.getByText('Tuấn is sharing their screen', { selector: '[aria-live]' })).toBeInTheDocument()
+        await expectNoA11yViolations()
+    })
+
+    it('goes back to the grid when the screen stops, and says so politely', async () => {
+        live.screens = [{ identity: 'tuan' }]
+        const { rerender } = await inRoom(sharingRoom())
+        live.screens = []
+        rerender(<VoiceRoomView room={room({ people: [TUAN, person(AN, 'An'), MINH] })} />)
+        expect(screen.queryByRole('group', { name: "Tuấn's screen" })).toBeNull()
+        expect(strip().style.gridTemplateColumns).toBe('repeat(2, minmax(0, 480px))')
+        expect(screen.getByText('Tuấn stopped sharing', { selector: '[aria-live]' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Share your screen' })).not.toHaveAttribute('aria-disabled')
+    })
+
+    it('shows the picture still on its way as connecting', async () => {
+        live.screens = [{ identity: 'tuan', arriving: true }]
+        await inRoom(sharingRoom())
+        expect(screen.getByText("Loading Tuấn's screen…")).toBeVisible()
+    })
+
+    it('says connecting again when the picture goes, and keeps the stage while the link comes back (ROOM-EDGE)', async () => {
+        live.screens = [{ identity: 'tuan' }]
+        const { rerender } = await inRoom(sharingRoom())
+        const video = screen.getByRole('group', { name: "Tuấn's screen" }).querySelector('video')
+        fireEvent.playing(video as HTMLVideoElement)
+        expect(screen.queryByText("Loading Tuấn's screen…")).toBeNull()
+        live.screens = [{ identity: 'tuan', arriving: true }]
+        rerender(<VoiceRoomView room={sharingRoom()} />)
+        expect(screen.getByText("Loading Tuấn's screen…")).toBeVisible()
+
+        // LiveKit lets everyone go while it comes back: the stage stays, connecting, nothing read out.
+        act(() => useVoiceStore.setState((state) => ({ call: state.call && { ...state.call, phase: 'reconnecting' } })))
+        live.participants = []
+        live.screens = []
+        rerender(<VoiceRoomView room={sharingRoom()} />)
+        expect(screen.getByRole('group', { name: "Tuấn's screen" })).toBeVisible()
+        expect(screen.getByText("Loading Tuấn's screen…")).toBeVisible()
+        expect(screen.queryByText('Tuấn stopped sharing')).toBeNull()
+
+        // Back, still no screen: the grid.
+        act(() => useVoiceStore.setState((state) => ({ call: state.call && { ...state.call, phase: 'connected' } })))
+        live.participants = people
+        rerender(<VoiceRoomView room={room({ people: [TUAN, person(AN, 'An'), MINH] })} />)
+        expect(screen.queryByRole('group', { name: "Tuấn's screen" })).toBeNull()
+    })
+
+    it('keeps the keyboard on the same tile as the grid becomes the strip and back', async () => {
+        const { rerender } = await inRoom(room({ people: [TUAN, person(AN, 'An'), MINH] }))
+        within(strip())
+            .getByRole('button', { name: /^Minh,/ })
+            .focus()
+        live.screens = [{ identity: 'tuan' }]
+        rerender(<VoiceRoomView room={sharingRoom()} />)
+        expect(within(strip()).getByRole('button', { name: /^Minh,/ })).toHaveFocus()
+        live.screens = []
+        rerender(<VoiceRoomView room={room({ people: [TUAN, person(AN, 'An'), MINH] })} />)
+        expect(within(strip()).getByRole('button', { name: /^Minh,/ })).toHaveFocus()
+
+        // Elsewhere already (the controls): left there.
+        screen.getByRole('button', { name: 'Leave room' }).focus()
+        live.screens = [{ identity: 'tuan' }]
+        rerender(<VoiceRoomView room={sharingRoom()} />)
+        expect(screen.getByRole('button', { name: 'Leave room' })).toHaveFocus()
+        // Nowhere, but last outside the stage: not pulled back either.
+        screen.getByRole('button', { name: 'Leave room' }).blur()
+        live.screens = []
+        rerender(<VoiceRoomView room={room({ people: [TUAN, person(AN, 'An'), MINH] })} />)
+        expect(document.body).toHaveFocus()
+    })
+
+    it('ignores a screen the server muted; of two sent at once, shows the one the API marks (D-101)', async () => {
+        live.screens = [{ identity: 'minh', muted: true }]
+        const { rerender } = await inRoom(room({ people: [TUAN, person(AN, 'An'), MINH] }))
+        expect(screen.queryByRole('group', { name: "Minh's screen" })).toBeNull()
+
+        live.screens = [{ identity: 'minh' }, { identity: 'tuan' }]
+        rerender(<VoiceRoomView room={sharingRoom()} />)
+        expect(screen.getByRole('group', { name: "Tuấn's screen" })).toBeVisible()
+        const minhSharing = person('minh', 'Minh', { cameraOn: true, screenSharing: true })
+        rerender(<VoiceRoomView room={room({ people: [TUAN, person(AN, 'An'), minhSharing] })} />)
+        expect(screen.getByRole('group', { name: "Minh's screen" })).toBeVisible()
+        // No mark yet: LiveKit's first.
+        rerender(<VoiceRoomView room={room({ people: [TUAN, person(AN, 'An'), MINH] })} />)
+        expect(screen.getByRole('group', { name: "Tuấn's screen" })).toBeVisible()
+    })
+
+    it("shares one's own screen: the card instead of one's own picture, stopped from it (C-31 self, P7)", async () => {
+        const { rerender } = await inRoom(room({ people: [TUAN, person(AN, 'An'), MINH] }))
+        await userEvent.click(screen.getByRole('button', { name: 'Share your screen' }))
+        expect(setScreen).toHaveBeenCalledWith(true)
+        await waitFor(() => expect(useVoiceStore.getState().screen).toBe('on'))
+        live.screens = [{ identity: AN }]
+        rerender(<VoiceRoomView room={room({ people: [TUAN, person(AN, 'An', { screenSharing: true }), MINH] })} />)
+
+        expect(screen.getByText("You're sharing your screen")).toBeVisible()
+        expect(screen.getByText('Everyone in the room sees the window you chose.')).toBeVisible()
+        expect(screen.queryByRole('group', { name: "An's screen" })).toBeNull()
+        expect(document.querySelector('video')).toBeNull()
+        // The card's button, then the control's.
+        const control = screen.getAllByRole('button', { name: 'Stop sharing' }).at(-1)
+        expect(screen.getByText('Stop sharing', { selector: 'span' })).toBeVisible()
+        // Not read out: one's own.
+        expect(document.querySelector('[aria-live]')?.textContent).toBe('')
+        await expectNoA11yViolations()
+
+        const card = screen.getByText("You're sharing your screen").parentElement as HTMLElement
+        await userEvent.click(within(card).getByRole('button', { name: 'Stop sharing' }))
+        expect(setScreen).toHaveBeenLastCalledWith(false)
+        await waitFor(() => expect(useVoiceStore.getState().screen).toBe('off'))
+        expect(control).toHaveFocus()
+    })
+
+    it('no Share without VIDEO, or where the browser cannot share a screen (C-21, 07 ROOM-EDGE)', async () => {
+        const { rerender } = await inRoom(room({ canVideo: false }))
+        expect(screen.queryByRole('button', { name: 'Share your screen' })).toBeNull()
+        rerender(<VoiceRoomView room={room()} />)
+        expect(screen.getByRole('button', { name: 'Share your screen' })).toBeVisible()
+        Object.defineProperty(navigator, 'mediaDevices', { value: {}, configurable: true })
+        rerender(<VoiceRoomView room={room({ name: 'again' })} />)
+        expect(screen.queryByRole('button', { name: 'Share your screen' })).toBeNull()
+    })
+
+    it('a shared screen takes the place of a tile zoomed in; it stopping goes back to the grid, not the zoom', async () => {
+        live.cameras = ['minh']
+        const { rerender } = await inRoom(room({ people: [TUAN, person(AN, 'An'), MINH] }))
+        await userEvent.click(screen.getByRole('button', { name: /^Minh,/ }))
+        expect(screen.getByRole('group', { name: 'Minh, zoomed in' })).toBeVisible()
+        live.screens = [{ identity: 'tuan' }]
+        rerender(<VoiceRoomView room={sharingRoom()} />)
+        expect(screen.queryByRole('group', { name: 'Minh, zoomed in' })).toBeNull()
+        // Strip tiles do not zoom, nor say they would.
+        expect(within(strip()).getByRole('button', { name: /^Minh,/ })).not.toHaveAccessibleName(/zoom/)
+        await userEvent.click(within(strip()).getByRole('button', { name: /^Minh,/ }))
+        expect(screen.queryByRole('group', { name: 'Minh, zoomed in' })).toBeNull()
+        live.screens = []
+        rerender(<VoiceRoomView room={room({ people: [TUAN, person(AN, 'An'), MINH] })} />)
+        expect(screen.queryByRole('group', { name: 'Minh, zoomed in' })).toBeNull()
+        expect(strip().style.gridTemplateColumns).toBe('repeat(2, minmax(0, 480px))')
+    })
+
+    it('moves along the strip with the arrow keys, one stop for all of it', async () => {
+        live.screens = [{ identity: 'tuan' }]
+        await inRoom(sharingRoom())
+        const tiles = within(strip()).getAllByRole('button')
+        expect(tiles.map((tile) => tile.tabIndex)).toEqual([0, -1, -1])
+        tiles[0]!.focus()
+        await userEvent.keyboard('{ArrowRight}')
+        expect(tiles[1]).toHaveFocus()
+    })
+
+    it('shows ‹ / › only at an end that hides someone, and pages the strip (C-31)', async () => {
+        live.screens = [{ identity: 'tuan' }]
+        await inRoom(sharingRoom())
+        const row = strip()
+        const scrollBy = vi.fn()
+        Object.assign(row, { scrollBy })
+        Object.defineProperties(row, {
+            clientWidth: { value: 300, configurable: true },
+            scrollWidth: { value: 454, configurable: true },
+            scrollLeft: { value: 0, configurable: true, writable: true }
+        })
+        fireEvent.scroll(row)
+        const more = screen.getAllByRole('button', { name: 'See more people' })
+        expect(more).toHaveLength(1)
+        await userEvent.click(more[0]!)
+        expect(scrollBy).toHaveBeenCalledWith({ left: 240, behavior: 'smooth' })
+
+        Object.defineProperty(row, 'scrollLeft', { value: 154, configurable: true })
+        fireEvent.scroll(row)
+        expect(screen.getAllByRole('button', { name: 'See more people' })).toHaveLength(1)
+        await userEvent.click(screen.getByRole('button', { name: 'See more people' }))
+        expect(scrollBy).toHaveBeenLastCalledWith({ left: -240, behavior: 'smooth' })
+    })
+
+    it('goes full screen and back from the button on the screen (C-31 fullscreen)', async () => {
+        live.screens = [{ identity: 'tuan' }]
+        await inRoom(sharingRoom())
+        const requestFullscreen = vi.fn(async () => undefined)
+        const exitFullscreen = vi.fn(async () => undefined)
+        Object.assign(HTMLElement.prototype, { requestFullscreen })
+        Object.assign(document, { exitFullscreen })
+        const shared = screen.getByRole('group', { name: "Tuấn's screen" })
+        await userEvent.click(within(shared).getByRole('button', { name: 'Full screen' }))
+        expect(requestFullscreen).toHaveBeenCalled()
+        const frame = requestFullscreen.mock.contexts[0] as HTMLElement
+        expect(frame.contains(shared)).toBe(true)
+
+        Object.defineProperty(document, 'fullscreenElement', { value: frame, configurable: true })
+        fireEvent(document, new Event('fullscreenchange'))
+        await userEvent.click(within(shared).getByRole('button', { name: 'Exit full screen' }))
+        expect(exitFullscreen).toHaveBeenCalled()
+        Object.defineProperty(document, 'fullscreenElement', { value: null, configurable: true })
+    })
+})
+
 describe('the dock away from the room (InRoomDock voice, C-09)', () => {
     const dock = (shape: 'column' | 'strip', canSpeak = true, modMuted = false) =>
         render(
@@ -784,6 +1042,43 @@ describe('voice in every tab (useVoiceSession)', () => {
         renderHook(({ rooms }) => useVoiceSession(rooms), { wrapper: Strict, initialProps: { rooms: initial } })
     const reload = () =>
         vi.spyOn(performance, 'getEntriesByType').mockReturnValue([{ type: 'reload' } as unknown as PerformanceEntry])
+
+    it('another screen came first: the tab in that room stops its own and says who (share-race, D-101)', async () => {
+        const rooms = directory([room({ people: [person('tuan', 'Tuấn', { screenSharing: true }), person(AN, 'An')] })])
+        session(rooms)
+        realtime.listeners.get('voice.share_rejected')?.({ channelId: 'thao-luan', userId: 'tuan' })
+        expect(setScreen).not.toHaveBeenCalled()
+
+        await joinRoom({ serverId: 'ot', channelId: 'thao-luan', name: 'Phòng thảo luận nhóm' })
+        useVoiceStore.setState({ screen: 'on' })
+        act(() => realtime.listeners.get('voice.share_rejected')?.({ channelId: 'quiet', userId: 'tuan' }))
+        expect(setScreen).not.toHaveBeenCalled()
+        // A Toast after it shows, so one about the other room would have too.
+        act(() => void toast('after'))
+        expect(await screen.findByText('after')).toBeVisible()
+        expect(screen.queryByText(/started sharing their screen before you$/)).toBeNull()
+        act(() => realtime.listeners.get('voice.share_rejected')?.({ channelId: 'thao-luan', userId: 'tuan' }))
+        expect(setScreen).toHaveBeenCalledWith(false)
+        expect(useVoiceStore.getState().screen).toBe('off')
+        expect(await screen.findByText('Tuấn started sharing their screen before you')).toBeVisible()
+    })
+
+    it("names who came first by LiveKit's name while the room's list has not got them yet", async () => {
+        session(directory([room({ people: [person(AN, 'An')] })]))
+        await joinRoom({ serverId: 'ot', channelId: 'thao-luan', name: 'Phòng thảo luận nhóm' })
+        const getParticipantByIdentity = vi.fn(() => ({ name: 'Phong' }))
+        act(() => useVoiceStore.setState({ room: { getParticipantByIdentity } as unknown as Room }))
+        act(() => realtime.listeners.get('voice.share_rejected')?.({ channelId: 'thao-luan', userId: 'phong' }))
+        expect(await screen.findByText('Phong started sharing their screen before you')).toBeVisible()
+        expect(getParticipantByIdentity).toHaveBeenCalledWith('phong')
+    })
+
+    it('says so when the server took the screen for VIDEO lost (ROOM-EDGE)', async () => {
+        session(directory([room()]))
+        act(() => useVoiceStore.setState({ screenRefused: Date.now() }))
+        expect(await screen.findByText('You can no longer share your screen')).toBeVisible()
+        expect(useVoiceStore.getState().screenRefused).toBeNull()
+    })
 
     it('joins again after a reload, mic off, once the rooms are known, and says so (reload-rejoin)', async () => {
         reload()

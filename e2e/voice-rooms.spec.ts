@@ -251,3 +251,83 @@ test('a reload joins the room again with the mic and camera off; a second tab of
     expect(binh.problems).toEqual([])
     await binh.context.close()
 })
+
+test('a shared screen takes the stage for the others; of two pressed at once, LiveKit stops the later (D-101, S-ROOM-07)', async ({
+    browser
+}) => {
+    const an = await openAs(browser, anEmail, roomPath)
+    const binh = await openAs(browser, binhEmail, roomPath)
+    await an.page.getByRole('button', { name: 'Join room' }).click({ timeout: 20_000 })
+    await expect(grid(an.page).getByRole('button', { name: 'You, mic off' })).toBeVisible({ timeout: 15_000 })
+    await binh.page.getByRole('button', { name: 'Join room' }).click({ timeout: 20_000 })
+    await expect(grid(an.page).getByRole('button', { name: /^Bình, mic off/ })).toBeVisible({ timeout: 15_000 })
+
+    // An shares: An has the card, Bình the screen with its label, Share disabled saying who (sharing-self, viewing-voice).
+    await an.page.getByRole('button', { name: 'Share your screen' }).click()
+    await expect(an.page.getByText("You're sharing your screen")).toBeVisible({ timeout: 15_000 })
+    const shown = binh.page.getByRole('group', { name: "An's screen" })
+    await expect(shown).toBeVisible({ timeout: 15_000 })
+    await expect.poll(() => pictureWidth(shown.locator('video')), { timeout: 15_000 }).toBeGreaterThan(0)
+    await expect(shown.getByText("Loading An's screen…")).toBeHidden()
+    await expect(binh.page.getByRole('button', { name: 'An is sharing their screen' })).toHaveAttribute(
+        'aria-disabled',
+        'true'
+    )
+    const strip = grid(binh.page)
+    await expect(strip.getByRole('button', { name: /^An, .*sharing their screen/ })).toBeVisible()
+    expect((await strip.getByRole('listitem').first().boundingBox())?.width).toBe(146)
+    await expect(channelList(binh.page).getByRole('listitem', { name: /^An, sharing their screen/ })).toBeVisible({
+        timeout: 15_000
+    })
+
+    // Bình watches full screen; the share stopping takes Bình out of it (07 ROOM-EDGE).
+    await shown.hover()
+    await shown.getByRole('button', { name: 'Full screen' }).click()
+    await expect.poll(() => binh.page.evaluate(() => document.fullscreenElement !== null)).toBe(true)
+    await expect(shown.getByRole('button', { name: 'Exit full screen' })).toBeVisible()
+
+    // Stopped from the card: everyone back to the grid.
+    await an.page.getByRole('button', { name: 'Stop sharing' }).first().click()
+    await expect(shown).toBeHidden({ timeout: 15_000 })
+    await expect.poll(() => binh.page.evaluate(() => document.fullscreenElement)).toBeNull()
+    await expect(binh.page.getByRole('button', { name: 'Share your screen' })).not.toHaveAttribute('aria-disabled')
+    await expect(channelList(binh.page).getByRole('listitem', { name: /sharing their screen/ })).toHaveCount(0, {
+        timeout: 15_000
+    })
+
+    // Both press at once: one screen stays, the other is stopped and told who came first (share-race).
+    await Promise.all([
+        an.page.getByRole('button', { name: 'Share your screen' }).click(),
+        binh.page.getByRole('button', { name: 'Share your screen' }).click()
+    ])
+    const race = /started sharing their screen before you$/
+    await expect
+        .poll(async () => (await an.page.getByText(race).count()) + (await binh.page.getByText(race).count()), {
+            timeout: 20_000
+        })
+        .toBe(1)
+    const anLost = (await an.page.getByText(race).count()) === 1
+    const [winner, loser, winnerName] = anLost ? [binh, an, 'Bình'] : [an, binh, 'An']
+    await expect(loser.page.getByText(`${winnerName} started sharing their screen before you`)).toBeVisible()
+    await expect(winner.page.getByText("You're sharing your screen")).toBeVisible()
+    await expect(loser.page.getByRole('group', { name: `${winnerName}'s screen` })).toBeVisible({ timeout: 15_000 })
+    await expect(loser.page.getByRole('button', { name: `${winnerName} is sharing their screen` })).toHaveAttribute(
+        'aria-disabled',
+        'true'
+    )
+    // The later screen is gone from LiveKit for real: the one who came first sees no screen but their own card.
+    await expect(winner.page.getByRole('group', { name: /'s screen$/ })).toHaveCount(0)
+    await expect(grid(winner.page).getByRole('button', { name: /sharing their screen/ })).toHaveCount(1)
+
+    await winner.page.getByRole('button', { name: 'Stop sharing' }).first().click()
+    await expect(loser.page.getByRole('button', { name: 'Share your screen' })).not.toHaveAttribute('aria-disabled', {
+        timeout: 15_000
+    })
+    await an.page.getByRole('button', { name: 'Leave room' }).click()
+    await binh.page.getByRole('button', { name: 'Leave room' }).click()
+
+    expect(an.problems).toEqual([])
+    expect(binh.problems).toEqual([])
+    await an.context.close()
+    await binh.context.close()
+})

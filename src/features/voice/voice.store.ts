@@ -25,6 +25,14 @@ interface VoiceState {
     /** The camera's picture on the preview page, before joining (one's own tile, mirrored). */
     cameraPreview: MediaStream | null
     /**
+     * This tab sharing a screen in its room (C-21 Chia sẻ, S-ROOM-07): off
+     * again when it stops, the room is left, or the page reloads (D-101: a
+     * reload does not share again).
+     */
+    screen: 'on' | 'off'
+    /** When the server took this tab's screen for VIDEO lost, until `useVoiceSession` says so (07 ROOM-EDGE). */
+    screenRefused: number | null
+    /**
      * The last join that failed: why, for that room's page (`join-error`,
      * `forbidden`); a timeout says until when (ISO), from the API's answer.
      * Forgotten when that page goes, or the room opens to one again.
@@ -57,6 +65,8 @@ export const useVoiceStore = create<VoiceState>(() => ({
     mic: 'off',
     camera: 'off',
     cameraPreview: null,
+    screen: 'off',
+    screenRefused: null,
     problem: null,
     removed: null,
     modMuted: null
