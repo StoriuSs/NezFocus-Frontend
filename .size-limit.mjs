@@ -56,6 +56,10 @@
 // M4 L4b (19/11/2026, 202.81 kB): a moderator's menu on the tiles brings Radix's
 // dropdown chunk (10.77 kB, the one the channel list already loads for the server's
 // menu), and about 2.4 kB of the slice's own code (the menu, muted by a moderator).
+// Raised to 206.97 kB after M4 L5b (19/11/2026, 205.94 kB): sharing a screen, its
+// stage (fit, connecting, full screen), the strip of tiles with its arrows and the
+// Share control, about 3.1 kB of the slice's own code; their one-off sizes are
+// inline styles so Voice CSS stays at 284 B.
 // Initial CSS raised to 9.64 kB after M4 L4b (9586 B): the ⋯ of a person's row in
 // the channel list shows on that row's hover or focus (a named group, as the room's
 // row is a group itself).
@@ -166,5 +170,5 @@ export default [
     { name: 'Tasks CSS (gzip)', path: tasksCss, gzip: true, limit: '880 B' },
     { name: 'Notifications CSS (gzip)', path: notificationsCss, gzip: true, limit: '508 B' },
     { name: 'Voice CSS (gzip)', path: voiceCss, gzip: true, limit: '286 B' },
-    { name: 'Voice JS (gzip)', path: voiceJs, gzip: true, limit: '203.82 kB' }
+    { name: 'Voice JS (gzip)', path: voiceJs, gzip: true, limit: '206.97 kB' }
 ]
