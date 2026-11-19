@@ -22,6 +22,7 @@ import { cn } from '@/lib/utils'
 import { categoryDropId, channelDropId } from '../../lib/drop-target'
 import { channelPath } from '../../lib/paths'
 import { can } from '../../lib/permissions'
+import { voiceRoomOf } from '../../lib/voice-room'
 import type { Server, ServerCategory, ServerChannel } from '../../types'
 import { RoomPeople } from './RoomPeople'
 
@@ -190,7 +191,7 @@ export function ChannelRow({
                     />
                 </span>
             ) : null}
-            {channel.voiceStates?.length ? <RoomPeople people={channel.voiceStates} to={path} /> : null}
+            {channel.voiceStates?.length ? <RoomPeople room={voiceRoomOf(server, channel)} to={path} /> : null}
         </li>
     )
 }

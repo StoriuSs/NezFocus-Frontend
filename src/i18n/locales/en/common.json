@@ -129,7 +129,18 @@
       "micOn": "mic on",
       "cameraOn": "camera on",
       "sharing": "sharing their screen",
-      "deletedAccount": "Deleted account"
+      "deletedAccount": "Deleted account",
+      "manage": "Manage {{name}}",
+      "mute": "Mute",
+      "unmute": "Unmute",
+      "disconnect": "Disconnect from room",
+      "modMuted": "muted by a moderator",
+      "mutedByModerator": "A moderator muted your mic",
+      "unmutedByModerator": "You can turn your mic on again",
+      "disconnected": "You were disconnected from the room",
+      "timedOut": "You're timed out until {{time}} · you left the room",
+      "noLongerAllowed": "You no longer have access to this room · you left it",
+      "roomGone": "This room is no longer available"
     },
     "serverMenu": {
       "createChannel": "Create channel",

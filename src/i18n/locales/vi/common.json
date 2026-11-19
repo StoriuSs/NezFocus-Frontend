@@ -129,7 +129,18 @@
       "micOn": "đang bật mic",
       "cameraOn": "đang bật camera",
       "sharing": "đang chia sẻ màn hình",
-      "deletedAccount": "Tài khoản đã bị xóa"
+      "deletedAccount": "Tài khoản đã bị xóa",
+      "manage": "Quản lý {{name}}",
+      "mute": "Tắt mic",
+      "unmute": "Bật lại mic",
+      "disconnect": "Ngắt khỏi phòng",
+      "modMuted": "bị người quản lý tắt mic",
+      "mutedByModerator": "Bạn đã bị người quản lý tắt mic",
+      "unmutedByModerator": "Bạn có thể bật mic lại",
+      "disconnected": "Bạn đã bị ngắt khỏi phòng",
+      "timedOut": "Bạn đang bị tạm khóa tới {{time}} · đã rời phòng",
+      "noLongerAllowed": "Bạn không còn quyền vào phòng này · đã rời phòng",
+      "roomGone": "Phòng này không còn khả dụng"
     },
     "serverMenu": {
       "createChannel": "Tạo kênh",

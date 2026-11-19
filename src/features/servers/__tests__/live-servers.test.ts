@@ -365,6 +365,8 @@ describe('Keeping the servers live from events (D-178)', () => {
     describe('who is in each voice room (D-205)', () => {
         const person = (id: string, micOn = false): RoomPerson => ({
             user: { id, username: id, displayName: id, avatarUrl: null },
+            roleIds: [],
+            isOwner: false,
             joinedAt: '2026-11-18T14:40:00.000Z',
             micOn,
             cameraOn: false,

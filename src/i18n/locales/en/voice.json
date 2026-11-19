@@ -24,7 +24,9 @@
         "cameraOff": "Turn off camera",
         "cameraBlocked": "Your browser is blocking the camera",
         "noVideo": "You don't have permission to turn on your camera in this room",
-        "leave": "Leave room"
+        "leave": "Leave room",
+        "modMuted": "Muted",
+        "modMutedHint": "A moderator muted your mic"
     },
     "micBlocked": {
         "banner": "Your browser is blocking the mic · you can still listen",
@@ -64,6 +66,7 @@
         "micOff": "mic off",
         "cameraOn": "camera on",
         "speaking": "speaking",
-        "zoomHint": "press to zoom in"
+        "zoomHint": "press to zoom in",
+        "modMuted": "muted by a moderator"
     }
 }

@@ -168,6 +168,63 @@ test('joining, the mic, the dock and leaving show live to everyone who views the
     await binh.context.close()
 })
 
+test("a moderator mutes, unmutes and disconnects someone, LiveKit taking the mic's sound for real (D-207, D-208)", async ({
+    browser
+}) => {
+    const an = await openAs(browser, anEmail, roomPath)
+    const binh = await openAs(browser, binhEmail, roomPath)
+    await an.page.getByRole('button', { name: 'Join room' }).click({ timeout: 20_000 })
+    await expect(grid(an.page).getByRole('button', { name: 'You, mic off' })).toBeVisible({ timeout: 15_000 })
+    await binh.page.getByRole('button', { name: 'Join room' }).click({ timeout: 20_000 })
+    await binh.page.getByRole('button', { name: 'Unmute (Ctrl Shift M)' }).click()
+    await expect(grid(an.page).getByRole('button', { name: /^Bình, mic on/ })).toBeVisible({ timeout: 15_000 })
+    // Each sound An hears plays in an <audio> of its own: Bình's mic is one.
+    const sounds = an.page.locator('body > audio')
+    await expect(sounds).toHaveCount(1, { timeout: 15_000 })
+
+    // An (the owner) mutes Bình from the tile's ⋯ (ROOM-EDGE mod-menu-tile).
+    await grid(an.page)
+        .getByRole('button', { name: /^Bình,/ })
+        .hover()
+    await grid(an.page).getByRole('button', { name: 'Manage Bình' }).click()
+    await an.page.getByRole('menuitem', { name: 'Mute' }).click()
+    await expect(binh.page.locator('[data-sonner-toast]').getByText('A moderator muted your mic')).toBeVisible({
+        timeout: 15_000
+    })
+    await expect(binh.page.getByRole('button', { name: 'A moderator muted your mic' })).toBeDisabled()
+    await expect(binh.page.getByText('Muted', { exact: true })).toBeVisible()
+    // LiveKit took the track: An no longer gets any sound from Bình, and no one sees Bình speaking.
+    await expect(sounds).toHaveCount(0, { timeout: 15_000 })
+    await expect(grid(an.page).getByRole('button', { name: /^Bình,.*speaking/ })).toHaveCount(0, { timeout: 5_000 })
+    await expect(grid(binh.page).getByRole('button', { name: /^You,.*speaking/ })).toHaveCount(0, { timeout: 5_000 })
+    await expect(channelList(an.page).getByRole('listitem', { name: 'Bình, muted by a moderator' })).toBeVisible({
+        timeout: 15_000
+    })
+
+    // Unmuted from the channel list's row (mod-menu-row): Bình may speak again, the mic still off until pressed.
+    await channelList(an.page).getByRole('button', { name: 'Manage Bình' }).click()
+    await an.page.getByRole('menuitem', { name: 'Unmute' }).click()
+    await expect(binh.page.getByText('You can turn your mic on again')).toBeVisible({ timeout: 15_000 })
+    await binh.page.getByRole('button', { name: 'Unmute (Ctrl Shift M)' }).click()
+    await expect(sounds).toHaveCount(1, { timeout: 15_000 })
+
+    // Disconnected: back on the preview page, told so, free to join again (ROOM-EDGE disconnected-by-mod).
+    await grid(an.page)
+        .getByRole('button', { name: /^Bình,/ })
+        .hover()
+    await grid(an.page).getByRole('button', { name: 'Manage Bình' }).click()
+    await an.page.getByRole('menuitem', { name: 'Disconnect from room' }).click()
+    await expect(binh.page.getByText('You were disconnected from the room')).toBeVisible({ timeout: 15_000 })
+    await expect(binh.page.getByRole('button', { name: 'Join room' })).toBeEnabled()
+    await expect(grid(an.page).getByRole('listitem')).toHaveCount(1, { timeout: 15_000 })
+    await an.page.getByRole('button', { name: 'Leave room' }).click()
+
+    expect(an.problems).toEqual([])
+    expect(binh.problems).toEqual([])
+    await an.context.close()
+    await binh.context.close()
+})
+
 test('a reload joins the room again with the mic and camera off; a second tab offers to join there instead', async ({
     browser
 }) => {

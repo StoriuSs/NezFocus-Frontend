@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider, useParams } from 'react-router-dom'
 import { Toaster } from 'sonner'
@@ -19,6 +19,12 @@ vi.mock('@/features/servers/api/servers.api', () => serversApi)
 const layoutApi = { moveInLayout: vi.fn() }
 vi.mock('@/features/servers/api/layout.api', () => layoutApi)
 vi.mock('@/features/users/api/useProfile', () => ({ useProfile: () => ({ data: { id: 'an' } }) }))
+const voiceApi = vi.hoisted(() => ({
+    muteParticipant: vi.fn(async (_channelId: string, _userId: string) => undefined),
+    unmuteParticipant: vi.fn(async (_channelId: string, _userId: string) => undefined),
+    disconnectParticipant: vi.fn(async (_channelId: string, _userId: string) => undefined)
+}))
+vi.mock('@/features/voice/api/voice.api', () => voiceApi)
 
 const { ServerChannelColumn } = await import('../components/channel-list/ServerChannelColumn')
 const { useChannelDialogs } = await import('../channel-dialogs.store')
@@ -484,6 +490,8 @@ describe('The channel list for a member', () => {
     describe('who is in each voice room (C-06 occupied, D-205)', () => {
         const person = (id: string, on: Partial<RoomPerson> = {}): RoomPerson => ({
             user: { id, username: id, displayName: id.toUpperCase(), avatarUrl: null },
+            roleIds: [],
+            isOwner: false,
             joinedAt: '2026-11-18T14:40:00.000Z',
             micOn: false,
             cameraOn: false,
@@ -525,6 +533,55 @@ describe('The channel list for a member', () => {
             const more = await screen.findByRole('link', { name: '+3 more' })
             expect(more).toHaveAttribute('href', '/channels/ot/phong')
             expect(screen.getAllByRole('listitem').filter((item) => item.hasAttribute('aria-label'))).toHaveLength(10)
+        })
+
+        it('offers a moderator Mute and Disconnect on people ranked below, Unmute on someone muted (D-208, mod-menu-row)', async () => {
+            const MODERATOR = String(BigInt(MEMBER) | (1n << 18n) | (1n << 19n))
+            const data = withPeople([
+                person('an'),
+                person('tuan', { micOn: true }),
+                person('nam', { modMuted: true }),
+                person('chu', { isOwner: true })
+            ])
+            renderColumn({
+                ...data,
+                channels: data.channels.map((c) => (c.type === 'voice' ? { ...c, permissions: MODERATOR } : c))
+            })
+            await screen.findByRole('link', { name: /Phòng học im lặng/ })
+            const rows = screen.getAllByRole('listitem').filter((item) => item.hasAttribute('aria-label'))
+            expect(rows.map((item) => item.getAttribute('aria-label'))).toEqual([
+                'AN',
+                'TUAN, mic on',
+                'NAM, muted by a moderator',
+                'CHU'
+            ])
+            expect(screen.queryByRole('button', { name: 'Manage AN' })).toBeNull()
+            expect(screen.queryByRole('button', { name: 'Manage CHU' })).toBeNull()
+
+            await userEvent.click(screen.getByRole('button', { name: 'Manage TUAN' }))
+            const menu = await screen.findByRole('menu')
+            expect(
+                within(menu)
+                    .getAllByRole('menuitem')
+                    .map((item) => item.textContent)
+            ).toEqual(['Mute', 'Disconnect from room'])
+            await expectNoA11yViolations()
+            await userEvent.click(within(menu).getByRole('menuitem', { name: 'Mute' }))
+            await waitFor(() => expect(voiceApi.muteParticipant).toHaveBeenCalledWith('phong', 'tuan'))
+
+            fireEvent.contextMenu(rows[2]!, { clientX: 40, clientY: 10 })
+            await userEvent.click(await screen.findByRole('menuitem', { name: 'Unmute' }))
+            await waitFor(() => expect(voiceApi.unmuteParticipant).toHaveBeenCalledWith('phong', 'nam'))
+        })
+
+        it('has no menu on people for someone without MUTE_MEMBERS or MOVE_MEMBERS', async () => {
+            renderColumn(withPeople([person('an'), person('tuan')]))
+            await screen.findByRole('link', { name: /Phòng học im lặng/ })
+            expect(screen.queryByRole('button', { name: /^Manage/ })).toBeNull()
+            const tuan = screen.getAllByRole('listitem').find((item) => item.getAttribute('aria-label') === 'TUAN')
+            // Not prevented: the browser's own menu still opens.
+            expect(fireEvent.contextMenu(tuan!)).toBe(true)
+            expect(screen.queryByRole('menu')).toBeNull()
         })
 
         it('marks the room this tab is in as connected', async () => {

@@ -12,7 +12,7 @@ import { IconButton } from '@/components/ui/icon-button'
 import { WithTooltip } from '@/components/ui/tooltip'
 import { ChannelChat, ChatDropZone, PinsPanel } from '@/features/messaging'
 import { TaskBoard } from '@/features/tasks'
-import { VoiceRoomView } from '@/features/voice'
+import { useVoiceStore, VoiceRoomView } from '@/features/voice'
 import { useMentionSource } from '../api/useMentionSource'
 import { MemberPanel } from '../components/member-panel/MemberPanel'
 import { useServers } from '../api/useServers'
@@ -58,6 +58,11 @@ export default function ChannelPage() {
     const here = `${serverId}/${channelId}`
     const [shown, setShown] = useState<string | null>(null)
     if (channel && shown !== here) setShown(here)
+    // This tab is in that room, or was just put out of it: gone, it is a room that is gone (07 ROOM-EDGE).
+    const wasIn = useVoiceStore(
+        (state) =>
+            channelId !== undefined && (state.call?.channelId === channelId || state.removed?.channelId === channelId)
+    )
 
     if (servers.isPending) return <PageLoader className='min-h-0 flex-1' />
     // The page's error boundary offers to try again, only with nothing to
@@ -68,7 +73,7 @@ export default function ChannelPage() {
     if (goneTo) return <Navigate to={goneTo} replace />
     if (server && !channel && shown === here) {
         const first = firstTextChannel(server)
-        return <Removed to={channelPath(server.id, first?.id)} />
+        return <Removed to={channelPath(server.id, first?.id)} room={wasIn} />
     }
     if (messageId !== undefined && (channel?.type !== 'text' || !isId(messageId))) return <ShellNotFound />
     if (!server) return <Navigate to='/study' replace />
@@ -93,10 +98,15 @@ export default function ChannelPage() {
     return <TextChannel key={channel.id} server={server} channel={channel} messageId={messageId} />
 }
 
-/** The channel open here was deleted, or is no longer seen: said once, then elsewhere (02 `channel-removed`). */
-function Removed({ to }: { to: string }) {
+/**
+ * The channel open here was deleted, or is no longer seen: said once, then
+ * elsewhere (02 `channel-removed`). A voice room this tab was in says the
+ * room is gone, the words voice says when the server puts one out of it
+ * for that (D-212), under the same Toast id: one Toast whichever comes first.
+ */
+function Removed({ to, room }: { to: string; room: boolean }) {
     const { t } = useTranslation()
-    const notice = t('shell.channelGone')
+    const notice = t(room ? 'shell.voice.roomGone' : 'shell.channelGone')
     useEffect(() => void toast(notice, { id: 'channel-removed' }), [notice])
     return <Navigate to={to} replace />
 }

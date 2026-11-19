@@ -200,7 +200,13 @@ about 155 kB gzipped) is read with `import()` only when a room is joined, as
 `voice.css`, `VoiceStyles-<hash>.css`) come with them: "Voice CSS" and "Voice
 JS" in `.size-limit.mjs`. What the shell needs at once is light and not lazy:
 the store of the room this tab is in, `useVoiceSession` (joining again after
-a reload) and the order people show in under a room in the channel list.
+a reload, what a moderator or the server did to one's room) and the order
+people show in under a room in the channel list, with a moderator's menu on
+them (`ModeratorMenu`, M4 L4b). That menu brings Radix's dropdown (about
+11 kB gzipped) into the room's page too; the channel list's chunk already
+has it (the server's menu), so a room opened from the list fetches nothing
+more, but "Voice JS" counts it, as it counts every chunk a room's page
+imports.
 
 The pins panel (S-CHAT-02) is in the same chunk: `index.ts` exports
 `PinsPanel` as `lazy(() => import('./components/ChannelChat').then((chat) =>

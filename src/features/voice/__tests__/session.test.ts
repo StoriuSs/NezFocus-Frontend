@@ -43,6 +43,7 @@ const {
     deviceAllowedAgain,
     resetSession,
     tellOwnState,
+    micTakenAway,
     JOIN_MS
 } = await import('../lib/session')
 const { useVoiceStore } = await import('../voice.store')
@@ -398,5 +399,23 @@ describe("a tab's time in a voice room (REQ-VC-01 → VC-03)", () => {
         voiceApi.leaveVoiceRoom.mockClear()
         flushBeforeSignOut()
         expect(voiceApi.leaveVoiceRoom).not.toHaveBeenCalled()
+    })
+
+    it("a moderator's mute takes the mic: off in LiveKit and on the page, only in that room (D-207)", async () => {
+        await joinRoom(LOUNGE)
+        await switchMic(true)
+        expect(state().mic).toBe('on')
+
+        await micTakenAway('quiet')
+        expect(state().mic).toBe('on')
+
+        await micTakenAway('thao-luan')
+        expect(links[0]?.setMic).toHaveBeenLastCalledWith(false)
+        expect(state().mic).toBe('off')
+        expect(sendRealtimeSignal).toHaveBeenLastCalledWith('voice.self_state', { mic: false, camera: false })
+
+        links[0]?.setMic.mockClear()
+        await micTakenAway('thao-luan')
+        expect(links[0]?.setMic).not.toHaveBeenCalled()
     })
 })

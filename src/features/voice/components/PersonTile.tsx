@@ -11,6 +11,8 @@ interface Shown {
     person: RoomPerson['user']
     self: boolean
     micOn: boolean
+    /** Muted by a moderator (D-207): said in the tile's name, the mic shown off. */
+    modMuted?: boolean
     speaking: boolean
     /** The camera's picture (a <video> the room page attaches the track to), when it sends one. */
     picture?: ReactNode
@@ -68,54 +70,77 @@ export function TileFace({ person, self, micOn, speaking, picture }: Shown) {
  * reaches it. One with a picture zooms in when pressed (a click, Enter,
  * Space; 07 câu L3b-b) and shows the zoom mark at its top right on hover or
  * focus (`maximize-2` in a 28 `scrim` square, 8 from the corner); one
- * without does nothing yet (the moderator's menu comes with L4). The grid is
- * one keyboard stop, ← → going between tiles (S-ROOM-06 › Tương tác): the
- * page sets `tabIndex`.
+ * without does nothing when pressed. The grid is one keyboard stop, ← →
+ * going between tiles (S-ROOM-06 › Tương tác): the page sets `tabIndex`.
+ *
+ * `menu`: a moderator's ⋯ on this person (D-208, ROOM-EDGE `mod-menu-tile`),
+ * beside the button (no button in a button), in the corner; the zoom mark
+ * then moves to its left, 4 apart.
  */
 export const PersonTile = forwardRef<
     HTMLButtonElement,
-    Shown & { onZoom?: () => void } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onClick'>
->(({ person, self, micOn, speaking, picture, onZoom, ...props }, ref) => {
+    Shown & { onZoom?: () => void; menu?: ReactNode } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onClick'>
+>(({ person, self, micOn, modMuted, speaking, picture, onZoom, menu, ...props }, ref) => {
     const { t } = useTranslation('voice')
     const name = useTileName(person, self)
     const states = [
-        micOn ? t('person.micOn') : t('person.micOff'),
+        modMuted ? t('person.modMuted') : micOn ? t('person.micOn') : t('person.micOff'),
         picture && t('person.cameraOn'),
         speaking && t('person.speaking'),
         picture && onZoom && t('person.zoomHint')
     ].filter(Boolean)
     return (
-        <li className='flex min-w-0'>
+        <li className='group relative flex min-w-0'>
             <button
                 ref={ref}
                 type='button'
                 aria-label={[name, ...states].join(', ')}
                 onClick={onZoom}
                 className={cn(
-                    'group relative flex aspect-video w-full min-w-0 flex-col overflow-hidden rounded-button bg-surface-2 text-left',
+                    'relative flex aspect-video w-full min-w-0 flex-col overflow-hidden rounded-button bg-surface-2 text-left',
                     !onZoom && 'cursor-default'
                 )}
                 {...props}
             >
-                <TileFace person={person} self={self} micOn={micOn} speaking={speaking} picture={picture} />
-                {onZoom ? <Corner icon={<Maximize2 />} hidden /> : null}
+                <TileFace
+                    person={person}
+                    self={self}
+                    micOn={micOn && !modMuted}
+                    speaking={speaking}
+                    picture={picture}
+                />
+                {onZoom ? <Corner icon={<Maximize2 />} hidden beside={menu != null} /> : null}
             </button>
+            {menu}
         </li>
     )
 })
 
-/** The zoom mark at a tile's top right (C-20 `hover`): 28 `scrim`, `rounded.input`, icon 14, 8 from the corner. */
-export function Corner({ icon, hidden }: { icon: ReactNode; hidden?: boolean }) {
+/**
+ * The zoom mark at a tile's top right (C-20 `hover`): 28 `scrim`, `rounded.input`, icon 14, 8 from the corner;
+ * `beside` a moderator's ⋯, which takes the corner: 4 to its left.
+ */
+export function Corner({ icon, hidden, beside }: { icon: ReactNode; hidden?: boolean; beside?: boolean }) {
     return (
         <span
             aria-hidden='true'
             className={cn(
                 'absolute right-2 top-2 flex aspect-square h-7 items-center justify-center rounded-input bg-scrim text-text-primary [&_svg]:size-3.5',
-                hidden && 'opacity-0 transition-opacity duration-micro group-hover:opacity-100 group-focus:opacity-100'
+                hidden &&
+                    'opacity-0 transition-opacity duration-micro group-focus-within:opacity-100 group-hover:opacity-100'
             )}
+            style={beside ? { right: 40 } : undefined}
         >
             {icon}
         </span>
     )
 }
 PersonTile.displayName = 'PersonTile'
+
+/** A moderator's ⋯ in a tile's corner (ROOM-EDGE `mod-menu-tile`): as the zoom mark, shown on hover or focus. */
+export const TILE_MORE =
+    'absolute right-2 top-2 rounded-input bg-scrim text-text-primary opacity-0 hover:bg-surface-3 hover:text-text-primary group-focus-within:opacity-100 group-hover:opacity-100 [&_svg]:size-3.5'
+/** That ⋯ is 28 square, as the zoom mark; inline, as no class of the main stylesheet says it (CONSTRAINTS.md). */
+export const TILE_MORE_SIZE = 28
+/** Where the menu hangs from by default: the foot of that ⋯ (8 from the right, 8 + 28 + 4 down). */
+export const TILE_MORE_FOOT = { right: 8, top: 40 }

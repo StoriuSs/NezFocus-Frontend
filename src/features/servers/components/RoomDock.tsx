@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import { useMatch } from 'react-router-dom'
 import { InRoomDock, useVoiceStore } from '@/features/voice'
+import { useProfile } from '@/features/users'
 import { LIST_SHOWS, useMediaQuery } from '@/hooks/useMediaQuery'
 import { useServers } from '../api/useServers'
 import { channelPath, SERVERS_PATHS } from '../lib/paths'
@@ -21,6 +22,7 @@ export function RoomDock({ shape }: { shape: 'column' | 'strip' }) {
     const server = useServers().data?.find((one) => one.id === call?.serverId)
     const channel = server?.channels.find((one) => one.id === call?.channelId)
     const room = server && channel ? voiceRoomOf(server, channel) : undefined
+    const me = useProfile().data?.id
     if (!call || call.phase === 'joining' || here === call.channelId || wide !== (shape === 'column')) return null
     return (
         <Suspense fallback={null}>
@@ -34,6 +36,7 @@ export function RoomDock({ shape }: { shape: 'column' | 'strip' }) {
                     // The room gone from the list meanwhile: the dock goes with the link in a moment.
                     canSpeak: room?.canSpeak ?? false,
                     canVideo: room?.canVideo ?? false,
+                    modMuted: room?.people.some((one) => one.user.id === me && one.modMuted) ?? false,
                     // Oneself at least, while the list waits for LiveKit's word.
                     count: Math.max(room?.people.length ?? 0, 1)
                 }}

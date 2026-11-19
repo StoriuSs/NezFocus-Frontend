@@ -24,7 +24,9 @@
         "cameraOff": "Tắt camera",
         "cameraBlocked": "Trình duyệt đang chặn camera",
         "noVideo": "Bạn không có quyền bật camera trong phòng này",
-        "leave": "Rời phòng"
+        "leave": "Rời phòng",
+        "modMuted": "Bị tắt mic",
+        "modMutedHint": "Người quản lý đã tắt mic của bạn"
     },
     "micBlocked": {
         "banner": "Trình duyệt đang chặn mic · vẫn nghe được",
@@ -64,6 +66,7 @@
         "micOff": "mic tắt",
         "cameraOn": "đang bật camera",
         "speaking": "đang nói",
-        "zoomHint": "bấm để phóng to"
+        "zoomHint": "bấm để phóng to",
+        "modMuted": "bị người quản lý tắt mic"
     }
 }

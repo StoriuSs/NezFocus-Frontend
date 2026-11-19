@@ -90,8 +90,9 @@ export type Blocked = 'outranked' | 'admin' | null
 /**
  * Whether the member ranks below them: their own rank is never above itself
  * and the owner's is infinite, so no one acts on themselves or the owner.
+ * Also who a moderator's menu shows on in a voice room (D-208).
  */
-function isBelow(
+export function isBelow(
     server: Pick<Server, 'isOwner' | 'topRolePosition' | 'roles'>,
     member: Pick<ServerMember, 'isOwner' | 'roleIds'>
 ): boolean {

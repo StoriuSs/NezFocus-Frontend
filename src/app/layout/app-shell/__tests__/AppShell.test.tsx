@@ -108,6 +108,7 @@ const { emitRealtimeEvent } = await import('@/features/realtime/lib/realtime-eve
 const { useRealtimeStore } = await import('@/features/realtime/realtime.store')
 const { default: ChannelPage } = await import('@/features/servers/pages/ChannelPage')
 const { default: Study } = await import('@/pages/Study')
+const { useVoiceStore } = await import('@/features/voice')
 const { default: ServerSettingsPage } = await import('@/features/servers/pages/ServerSettingsPage')
 const { default: MyTasksRoute } = await import('@/features/servers/components/MyTasksRoute')
 const { useCreateServerDialog } = await import('@/features/servers')
@@ -573,6 +574,24 @@ describe('AppShell (S-SHELL-01)', () => {
                 timeout: 2000
             })
             expect(await screen.findByText('This channel is no longer available')).toBeInTheDocument()
+        })
+
+        it('says the room is gone when the one this tab was in is deleted on its page (07 ROOM-EDGE, D-212)', async () => {
+            render(<Toaster />)
+            // LiveKit put this tab out of it a moment ago, the server's word on why still to come.
+            useVoiceStore.setState({ removed: { channelId: 'quiet', at: Date.now() } })
+            serversApi.fetchServer.mockResolvedValue(without('quiet'))
+            const router = renderAt('/channels/ot/quiet')
+            expect(await screen.findByRole('heading', { level: 1, name: 'Phòng học im lặng' })).toBeInTheDocument()
+
+            act(() => emitRealtimeEvent('channel.deleted', { serverId: 'ot' }))
+
+            await waitFor(() => expect(router.state.location.pathname).toBe('/channels/ot/ban-can-su'), {
+                timeout: 2000
+            })
+            expect(await screen.findByText('This room is no longer available')).toBeInTheDocument()
+            expect(screen.queryByText('This channel is no longer available')).toBeNull()
+            useVoiceStore.setState({ removed: null })
         })
 
         it('says it once when the open channel, held for a move, is deleted (S-SRV-06, 02 channel-removed)', async () => {

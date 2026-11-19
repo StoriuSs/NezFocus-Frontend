@@ -155,10 +155,12 @@ react-starter/
     │   │                      #   a row's words), notifications.css (its classes, D-193)
     │   ├── voice/             # Voice rooms (07, M4): index.ts (VoiceRoomView: the preview page and the
     │   │                      #   room, InRoomDock C-09, both lazy with LiveKit; useVoiceSession,
-    │   │                      #   useOrderedPeople, useVoiceStore, not lazy), voice.store.ts (the room
-    │   │                      #   this tab is in, its mic and camera, the last join's problem), api/ (token,
-    │   │                      #   leave), lib/ (session.ts: join, leave, mic, camera, outliving every page;
-    │   │                      #   people order and grid, reload, the browser's mic and camera), components/,
+    │   │                      #   useOrderedPeople, useVoiceStore, ModeratorMenu + useRoomMenu, not lazy),
+    │   │                      #   voice.store.ts (the room this tab is in, its mic and camera, the last
+    │   │                      #   join's problem), api/ (token, leave, a moderator's mute / unmute /
+    │   │                      #   disconnect), lib/ (session.ts: join, leave, mic, camera, outliving every
+    │   │                      #   page; people order and grid, reload, the browser's mic and camera, a
+    │   │                      #   moderator's items on someone), components/,
     │   │                      #   hooks/, voice.css (its classes). The rooms' people are the servers'
     │   │                      #   data (D-205), handed in as VoiceRoom
     │   └── users/             # The profile and the account's settings
@@ -407,7 +409,7 @@ Habits worth keeping:
   `users, realtime ← voice ← servers`: the channel page shows a room's page
   and the channel list the people in each room, the servers feature handing
   voice each room as a `VoiceRoom` (`servers/lib/voice-room.ts`), what one
-  may do there read from the bits, and keeping who is in it in its own list
+  may do there read from the bits and whom one outranks there (D-208), and keeping who is in it in its own list
   (`voice_state.updated` in `liveServers.ts`, D-205)). When the one imported
   needs the other, it declares a port and is handed it: deleting the account
   (auth) asks the servers it owns through `ServerOwnership`

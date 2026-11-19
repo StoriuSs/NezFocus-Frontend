@@ -9,6 +9,7 @@ import { WithTooltip } from '@/components/ui/tooltip'
 import { useToastEdge } from '@/hooks/useToastArea'
 import { cn } from '@/lib/utils'
 import { useLeaveRoom } from '../hooks/useLeaveRoom'
+import { useModMuted } from '../hooks/useModMuted'
 import { switchCamera, switchMic } from '../lib/session'
 import type { VoiceRoom } from '../types'
 import { useVoiceStore } from '../voice.store'
@@ -22,8 +23,8 @@ const BUTTON =
  * C-09, S-ROOM-06 `voice-only`): "In a room" (`+reconnecting`: "Reconnecting…"),
  * the room's name · how many people; Mic, Camera, then Leave apart at the
  * right (C-09; the frame `voice-only` lacks the Camera). Without SPEAK /
- * VIDEO, or blocked by the browser, a button says why and does nothing (its
- * help is on the room's page). The words open the room's page, with a
+ * VIDEO, muted by a moderator (D-207), or blocked by the browser, a button
+ * says why and does nothing (its help is on the room's page). The words open the room's page, with a
  * Tooltip "Open {room}". `column`:
  * the bottom of the channel list, 240 wide (≥ 1024); `strip`: a 52-high band
  * at the bottom of the window (below 1024), toasts kept above it (C-16).
@@ -35,7 +36,11 @@ export default function InRoomDock({
     to,
     shape
 }: {
-    room: Pick<VoiceRoom, 'serverId' | 'channelId' | 'name' | 'canSpeak' | 'canVideo'> & { count: number }
+    room: Pick<VoiceRoom, 'serverId' | 'channelId' | 'name' | 'canSpeak' | 'canVideo'> & {
+        count: number
+        /** One's own row in the room's list says a moderator muted the mic (D-207). */
+        modMuted: boolean
+    }
     /** The room's page. */
     to: string
     shape: 'column' | 'strip'
@@ -45,14 +50,17 @@ export default function InRoomDock({
     const mic = useVoiceStore((state) => state.mic)
     const camera = useVoiceStore((state) => state.camera)
     const leave = useLeaveRoom(room)
+    const modMuted = useModMuted(room.modMuted)
     const strip = useRef<HTMLDivElement>(null)
     useToastEdge('barTop', strip, shape === 'strip')
     const micHint = !room.canSpeak
         ? t('controls.noSpeak')
-        : mic === 'blocked'
-          ? t('controls.micBlocked')
-          : t(mic === 'on' ? 'controls.micOff' : 'controls.micOn')
-    const micUsable = room.canSpeak && mic !== 'blocked'
+        : modMuted
+          ? t('controls.modMutedHint')
+          : mic === 'blocked'
+            ? t('controls.micBlocked')
+            : t(mic === 'on' ? 'controls.micOff' : 'controls.micOn')
+    const micUsable = room.canSpeak && !modMuted && mic !== 'blocked'
     const cameraHint = !room.canVideo
         ? t('controls.noVideo')
         : camera === 'blocked'

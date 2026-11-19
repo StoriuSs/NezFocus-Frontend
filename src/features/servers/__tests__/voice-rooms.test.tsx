@@ -19,6 +19,8 @@ const SPEAK = 1n << 16n
 const VIDEO = 1n << 17n
 const person = (id: string): RoomPerson => ({
     user: { id, username: id, displayName: null, avatarUrl: null },
+    roleIds: [],
+    isOwner: false,
     joinedAt: '2026-11-18T14:40:00.000Z',
     micOn: false,
     cameraOn: false,
@@ -83,8 +85,37 @@ describe('a voice room as the voice feature takes it', () => {
             canConnect: true,
             canSpeak: false,
             canVideo: true,
-            timeoutUntil: null
+            timeoutUntil: null,
+            canMute: false,
+            canMove: false,
+            outranked: new Set()
         })
+    })
+
+    it('says whom one may mute or put out there: the bits of the room, and only people ranked below (D-207, D-208)', () => {
+        const MUTE = 1n << 18n
+        const MOVE = 1n << 19n
+        const roles = [
+            { id: 'mod', name: 'Mod', position: 3, administrator: false },
+            { id: 'helper', name: 'Helper', position: 2, administrator: false }
+        ]
+        const people = [
+            { ...person('an'), roleIds: ['mod'] },
+            { ...person('tuan'), roleIds: ['helper'] },
+            { ...person('minh'), roleIds: ['mod'] },
+            person('nam'),
+            { ...person('chu'), isOwner: true }
+        ]
+        const room = channel('thao-luan', { permissions: String(CONNECT | MUTE | MOVE), voiceStates: people })
+        const mine = { ...server('ot', [room]), topRolePosition: 3, roleIds: ['mod'], roles }
+        expect(voiceRoomOf(mine, room)).toMatchObject({ canMute: true, canMove: true })
+        expect([...voiceRoomOf(mine, room).outranked].sort()).toEqual(['nam', 'tuan'])
+
+        const owner = { ...mine, isOwner: true }
+        expect([...voiceRoomOf(owner, room).outranked].sort()).toEqual(['an', 'minh', 'nam', 'tuan'])
+
+        const muteOnly = channel('thao-luan', { permissions: String(CONNECT | MUTE), voiceStates: people })
+        expect(voiceRoomOf(mine, muteOnly)).toMatchObject({ canMute: true, canMove: false })
     })
 
     it('finds a room, and the room someone is in, among every server held', () => {
@@ -116,12 +147,12 @@ describe('the dock while in a room (C-09)', () => {
                     ({ matches: true, media: query, addEventListener: vi.fn(), removeEventListener: vi.fn() }) as never
             )
 
-    const show = (at: string, shape: 'column' | 'strip' = 'column') => {
+    const show = (at: string, shape: 'column' | 'strip' = 'column', me: RoomPerson = person('an')) => {
         const client = new QueryClient()
         client.setQueryData(serverKeys.list(), [
             server('ot', [
                 channel('chung', { type: 'text', voiceStates: null }),
-                channel('thao-luan', { voiceStates: [person('an'), person('tuan')] })
+                channel('thao-luan', { voiceStates: [me, person('tuan')] })
             ])
         ])
         const router = createMemoryRouter(
@@ -147,6 +178,15 @@ describe('the dock while in a room (C-09)', () => {
             'href',
             '/channels/ot/thao-luan'
         )
+    })
+
+    it("keeps the dock's Mic off while one's own row says a moderator muted it (D-207)", async () => {
+        wide()
+        useVoiceStore.setState({
+            call: { serverId: 'ot', channelId: 'thao-luan', name: 'thao-luan', phase: 'connected' }
+        })
+        show('/channels/ot/chung', 'column', { ...person('an'), modMuted: true })
+        expect(await screen.findByRole('button', { name: 'A moderator muted your mic' })).toBeVisible()
     })
 
     it('counts oneself while the room list has not caught up yet (never "0 people")', async () => {

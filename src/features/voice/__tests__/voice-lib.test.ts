@@ -9,6 +9,8 @@ const person = (
     on: Partial<Pick<RoomPerson, 'micOn' | 'cameraOn' | 'screenSharing'>> = {}
 ): RoomPerson => ({
     user: { id, username: id, displayName: null, avatarUrl: null },
+    roleIds: [],
+    isOwner: false,
     joinedAt: '2026-11-18T14:40:00.000Z',
     micOn: false,
     cameraOn: false,

@@ -23,3 +23,24 @@ export async function requestVoiceToken(channelId: string): Promise<VoiceToken> 
 export async function leaveVoiceRoom(onLeave = false): Promise<void> {
     await api.post('/voice/leave', undefined, onLeave ? leavingRequest() : undefined)
 }
+
+/*
+ * A moderator on someone in a room (REQ-VC-04, D-207): the API checks the
+ * room's MUTE_MEMBERS / MOVE_MEMBERS and rank, then has LiveKit do it. The
+ * room's list follows by `voice_state.updated`; nothing to change here.
+ */
+
+/** POST: their mic off until they leave or are unmuted; already muted, nothing changes. */
+export async function muteParticipant(channelId: string, userId: string): Promise<void> {
+    await api.post(`/voice/rooms/${channelId}/participants/${userId}/mute`)
+}
+
+/** DELETE: they may turn their mic on again (it stays off). */
+export async function unmuteParticipant(channelId: string, userId: string): Promise<void> {
+    await api.delete(`/voice/rooms/${channelId}/participants/${userId}/mute`)
+}
+
+/** DELETE: out of the room; they may join again at once. */
+export async function disconnectParticipant(channelId: string, userId: string): Promise<void> {
+    await api.delete(`/voice/rooms/${channelId}/participants/${userId}`)
+}

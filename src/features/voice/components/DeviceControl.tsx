@@ -38,9 +38,11 @@ const LOOKS = {
  * The Mic or Camera control (C-21), on the preview page (icon only, D-53),
  * in the room: `off` / `on`; `blocked` when the browser refuses it (S-MOD-04:
  * a press opens "Turn the mic / camera back on", as the Banner's "How to fix"
- * does); disabled without SPEAK / VIDEO (07 câu L3-c). Ctrl+Shift+M switches
- * the mic while its button shows (`useMicShortcut`): not on a page one may
- * not join.
+ * does); disabled without SPEAK / VIDEO (07 câu L3-c). The mic muted by a
+ * moderator (`modMuted`, 07 `mod-muted`, D-207): "Muted", disabled, the
+ * Tooltip saying a moderator did it. Ctrl+Shift+M switches the mic while
+ * its button shows and works (`useMicShortcut`): not on a page one may not
+ * join.
  *
  * Which help is open is held by the page (`help`), which the Banner shares;
  * the browser allowing the device again closes it and puts the button back
@@ -49,6 +51,7 @@ const LOOKS = {
 export function DeviceControl({
     device,
     allowed,
+    modMuted = false,
     iconOnly,
     help,
     onHelp
@@ -56,6 +59,8 @@ export function DeviceControl({
     device: Device
     /** SPEAK for the mic, VIDEO for the camera. */
     allowed: boolean
+    /** The mic muted by a moderator (D-207): until they unmute it or one leaves. */
+    modMuted?: boolean
     iconOnly?: boolean
     help: Device | null
     onHelp: (help: Device | null) => void
@@ -64,8 +69,9 @@ export function DeviceControl({
     const looks = LOOKS[device]
     const state = useVoiceStore((store) => store[device])
     const blocked = state === 'blocked'
-    const on = allowed && state === 'on'
-    useMicShortcut(device === 'mic' && allowed)
+    const usable = allowed && !modMuted
+    const on = usable && state === 'on'
+    useMicShortcut(device === 'mic' && usable)
     useEffect(() => {
         if (!blocked) return
         return whenDeviceAllowed(device, () => {
@@ -74,7 +80,17 @@ export function DeviceControl({
         })
     }, [blocked, device, onHelp])
 
-    const hint = t(!allowed ? looks.notAllowed : blocked ? looks.blocked : on ? looks.turnOff : looks.turnOn)
+    const hint = t(
+        !allowed
+            ? looks.notAllowed
+            : modMuted
+              ? 'controls.modMutedHint'
+              : blocked
+                ? looks.blocked
+                : on
+                  ? looks.turnOff
+                  : looks.turnOn
+    )
     const Icon = on ? looks.on : looks.off
     const open = help === device
     return (
@@ -83,11 +99,11 @@ export function DeviceControl({
                 <span>
                     <RoomControl
                         icon={<Icon />}
-                        label={t(looks.label)}
+                        label={t(allowed && modMuted ? 'controls.modMuted' : looks.label)}
                         hint={hint}
                         on={on}
                         iconOnly={iconOnly}
-                        disabled={!allowed}
+                        disabled={!usable}
                         onClick={() => (blocked ? onHelp(open ? null : device) : void looks.press(state !== 'on'))}
                     />
                 </span>

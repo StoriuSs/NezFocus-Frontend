@@ -7,12 +7,25 @@ import { Track, type Participant, type Room } from 'livekit-client'
 import { useToastEdge } from '@/hooks/useToastArea'
 import { useOrderedPeople } from '../hooks/useOrderedPeople'
 import { useLeaveRoom } from '../hooks/useLeaveRoom'
+import { useModMuted } from '../hooks/useModMuted'
+import { useRoomMenu } from '../hooks/useRoomMenu'
 import type { Device } from '../lib/devices'
 import { gridOf } from '../lib/people'
+import { roomActionsOn } from '../lib/room-actions'
 import type { RoomPerson, VoiceRoom } from '../types'
 import { BlockedBanner } from './BlockedBanner'
 import { DeviceControl } from './DeviceControl'
-import { Corner, PersonTile, pictureFit, TileFace, useTileName } from './PersonTile'
+import { ModeratorMenu } from './ModeratorMenu'
+import {
+    Corner,
+    PersonTile,
+    pictureFit,
+    TILE_MORE,
+    TILE_MORE_FOOT,
+    TILE_MORE_SIZE,
+    TileFace,
+    useTileName
+} from './PersonTile'
 import { RoomControl } from './RoomControl'
 
 /**
@@ -58,6 +71,8 @@ function Stage({ room, me }: { room: VoiceRoom; me: string }) {
                     displayName: participant.name || null,
                     avatarUrl: null
                 },
+                roleIds: [],
+                isOwner: false,
                 joinedAt: new Date().toISOString(),
                 micOn: participant.isMicrophoneEnabled,
                 cameraOn: false,
@@ -118,7 +133,9 @@ function Stage({ room, me }: { room: VoiceRoom; me: string }) {
     })
     useEffect(() => {
         const onKey = (event: globalThis.KeyboardEvent) => {
-            if (event.key !== 'Escape' || !escape.current.zoomed || escape.current.help) return
+            // Taken by a layer on top already (a moderator's menu closing): only that one goes.
+            if (event.key !== 'Escape' || event.defaultPrevented || !escape.current.zoomed || escape.current.help)
+                return
             backTo.current = escape.current.zoomed
             setZoomed(null)
         }
@@ -127,12 +144,15 @@ function Stage({ room, me }: { room: VoiceRoom; me: string }) {
     }, [])
 
     const person = zoomedPicture ? ordered.find((one) => one.user.id === zoomed) : undefined
+    // Muted by a moderator (07 mod-muted): their word, or one's own row in the API's list (D-205).
+    const modMuted = useModMuted(room.people.some((one) => one.user.id === me && one.modMuted))
     return (
         <div className='flex min-h-full flex-col'>
             <BlockedBanner onHowTo={setHelp} />
             <div className='flex min-h-0 flex-1 items-center justify-center overflow-y-auto px-6 py-4'>
                 {zoomedPicture && person ? (
                     <Zoomed
+                        room={room}
                         person={person}
                         self={person.user.id === me}
                         participant={byId.get(person.user.id)}
@@ -153,6 +173,7 @@ function Stage({ room, me }: { room: VoiceRoom; me: string }) {
                                     ref={(node) => {
                                         tiles.current[index] = node
                                     }}
+                                    room={room}
                                     person={one}
                                     participant={byId.get(one.user.id)}
                                     self={one.user.id === me}
@@ -168,7 +189,7 @@ function Stage({ room, me }: { room: VoiceRoom; me: string }) {
                 )}
             </div>
             <div ref={bar} className='flex shrink-0 items-start justify-center gap-4 px-6 pb-6 pt-2'>
-                <DeviceControl device='mic' allowed={room.canSpeak} help={help} onHelp={setHelp} />
+                <DeviceControl device='mic' allowed={room.canSpeak} modMuted={modMuted} help={help} onHelp={setHelp} />
                 <DeviceControl device='camera' allowed={room.canVideo} help={help} onHelp={setHelp} />
                 <span className='w-6' aria-hidden='true' />
                 <RoomControl
@@ -211,30 +232,64 @@ function Picture({ track, self, whole }: { track: Track; self: boolean; whole?: 
     )
 }
 
-type TileProps = Omit<Parameters<typeof PersonTile>[0], 'person' | 'micOn' | 'speaking' | 'picture'> & {
+type TileProps = Omit<Parameters<typeof PersonTile>[0], 'person' | 'micOn' | 'speaking' | 'picture' | 'menu'> & {
+    room: VoiceRoom
     person: RoomPerson
     participant?: Participant
     picture?: Track
 }
 
+/**
+ * A person's tile, LiveKit's mic and speaking, and a moderator's menu on it
+ * (D-208): ⋯ in the corner, a right click, or Shift+F10 on the tile.
+ */
 const Tile = ({
     ref,
+    room,
     person,
     participant,
     self,
     picture,
+    onKeyDown,
     ...props
 }: TileProps & { ref: (node: HTMLButtonElement | null) => void }) => {
     const speaking = useIsSpeaking(participant)
     const micOn = participant ? participant.isMicrophoneEnabled : person.micOn
+    const actions = roomActionsOn(room, person, self ? person.user.id : undefined)
+    const menu = useRoomMenu(actions.length > 0)
+    const own = useRef<HTMLButtonElement | null>(null)
+    const name = useTileName(person.user, self)
     return (
         <PersonTile
-            ref={ref}
+            ref={(node) => {
+                own.current = node
+                ref(node)
+            }}
             person={person.user}
             self={self}
             micOn={micOn}
+            modMuted={person.modMuted}
             speaking={speaking}
             picture={picture ? <Picture track={picture} self={self} /> : undefined}
+            onContextMenu={menu.onContextMenu}
+            onKeyDown={(event) => {
+                if (!menu.onKeyDown(event)) onKeyDown?.(event)
+            }}
+            menu={
+                actions.length > 0 ? (
+                    <ModeratorMenu
+                        menu={menu}
+                        channelId={room.channelId}
+                        userId={person.user.id}
+                        name={name}
+                        actions={actions}
+                        className={TILE_MORE}
+                        size={TILE_MORE_SIZE}
+                        foot={TILE_MORE_FOOT}
+                        returnTo={own}
+                    />
+                ) : undefined
+            }
             {...props}
         />
     )
@@ -246,12 +301,14 @@ const Tile = ({
  * is the "Zoom out" button, which the keyboard lands on (Esc: the stage).
  */
 function Zoomed({
+    room,
     person,
     self,
     participant,
     picture,
     onZoomOut
 }: {
+    room: VoiceRoom
     person: RoomPerson
     self: boolean
     participant?: Participant
@@ -264,11 +321,13 @@ function Zoomed({
     const micOn = participant ? participant.isMicrophoneEnabled : person.micOn
     const button = useRef<HTMLButtonElement>(null)
     useEffect(() => button.current?.focus(), [])
+    const actions = roomActionsOn(room, person, self ? person.user.id : undefined)
+    const menu = useRoomMenu(actions.length > 0)
     return (
         <div
             role='group'
             aria-label={t('room.zoomed', { name })}
-            className='flex min-h-0 flex-1'
+            className='group relative flex min-h-0 flex-1'
             style={{ alignSelf: 'stretch' }}
         >
             <button
@@ -276,6 +335,8 @@ function Zoomed({
                 type='button'
                 aria-label={t('room.zoomOut')}
                 onClick={onZoomOut}
+                onContextMenu={menu.onContextMenu}
+                onKeyDown={menu.onKeyDown}
                 className='relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-button bg-surface-2 text-left'
             >
                 <TileFace
@@ -285,8 +346,19 @@ function Zoomed({
                     speaking={speaking}
                     picture={<Picture track={picture} self={self} whole />}
                 />
-                <Corner icon={<Minimize2 />} />
+                <Corner icon={<Minimize2 />} beside={actions.length > 0} />
             </button>
+            <ModeratorMenu
+                menu={menu}
+                channelId={room.channelId}
+                userId={person.user.id}
+                name={name}
+                actions={actions}
+                className={TILE_MORE}
+                size={TILE_MORE_SIZE}
+                foot={TILE_MORE_FOOT}
+                returnTo={button}
+            />
         </div>
     )
 }

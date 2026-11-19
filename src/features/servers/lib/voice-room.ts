@@ -1,4 +1,5 @@
 import type { VoiceDirectory, VoiceRoom } from '@/features/voice'
+import { isBelow } from './moderation'
 import { can } from './permissions'
 import type { Server, ServerChannel } from '../types'
 
@@ -6,19 +7,26 @@ import type { Server, ServerChannel } from '../types'
  * A voice room as the voice feature takes it (voice reads no permission
  * bits, nor the servers' data): who is in it (D-205), and what one may do
  * there. A timeout leaves no CONNECT (appendix B, step 6); it is given apart
- * so the page says until when (D-54).
+ * so the page says until when (D-54). A moderator's menu (D-207, D-208)
+ * goes by the room's MUTE_MEMBERS / MOVE_MEMBERS and by rank, worked out
+ * here as plain values: who in the room ranks below one, the owner above
+ * all and no one above themselves.
  */
 export function voiceRoomOf(server: Server, channel: ServerChannel): VoiceRoom {
+    const people = channel.voiceStates ?? []
     return {
         serverId: server.id,
         channelId: channel.id,
         name: channel.name,
         isStudyRoom: channel.isStudyRoom,
-        people: channel.voiceStates ?? [],
+        people,
         canConnect: can(channel.permissions, 'CONNECT'),
         canSpeak: can(channel.permissions, 'SPEAK'),
         canVideo: can(channel.permissions, 'VIDEO'),
-        timeoutUntil: server.timeoutUntil
+        timeoutUntil: server.timeoutUntil,
+        canMute: can(channel.permissions, 'MUTE_MEMBERS'),
+        canMove: can(channel.permissions, 'MOVE_MEMBERS'),
+        outranked: new Set(people.filter((person) => isBelow(server, person)).map((person) => person.user.id))
     }
 }
 

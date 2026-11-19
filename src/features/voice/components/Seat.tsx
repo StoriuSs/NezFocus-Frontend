@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Mic, Video } from 'lucide-react'
+import { Mic, MicOff, Video } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import '@/i18n/voice'
 import { WithTooltip } from '@/components/ui/tooltip'
@@ -10,13 +10,17 @@ import { PersonAvatar } from './PersonAvatar'
 /**
  * A seat (ParticipantTile `seat`, C-20) on the preview page: avatar 48 in a
  * 56 frame; bottom right a mic for someone with theirs on (everyone joins
- * muted, D-43), bottom left a camera. Hover: a Tooltip with the name (a screen reader reads
+ * muted, D-43), or `mic-off` for someone a moderator muted (C-20: that one
+ * first, 07 mod-muted), bottom left a camera. Hover: a Tooltip with the name (a screen reader reads
  * it, with the icons, from the seat's own label).
  */
 export function Seat({ person }: { person: RoomPerson }) {
     const { t } = useTranslation('voice')
     const name = personName(person.user) ?? t('person.deletedAccount')
-    const states = [person.micOn && t('person.micOn'), person.cameraOn && t('person.cameraOn')].filter(Boolean)
+    const states = [
+        person.modMuted ? t('person.modMuted') : person.micOn && t('person.micOn'),
+        person.cameraOn && t('person.cameraOn')
+    ].filter(Boolean)
     return (
         <WithTooltip label={name}>
             <li
@@ -24,10 +28,8 @@ export function Seat({ person }: { person: RoomPerson }) {
                 className='relative flex size-14 items-center justify-center rounded-full'
             >
                 <PersonAvatar person={person.user} className='size-12 text-body' />
-                {person.micOn ? (
-                    <Indicator className='bottom-0 right-0'>
-                        <Mic />
-                    </Indicator>
+                {person.modMuted || person.micOn ? (
+                    <Indicator className='bottom-0 right-0'>{person.modMuted ? <MicOff /> : <Mic />}</Indicator>
                 ) : null}
                 {person.cameraOn ? (
                     <Indicator className='bottom-0 left-0'>

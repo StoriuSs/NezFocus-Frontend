@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { Room } from 'livekit-client'
 import type { DeviceState } from '@/lib/livekit'
+import type { PutOutReason } from './types'
 
 /** Joining (the button `loading`), in the room, or LiveKit trying again (C-09 `+reconnecting`). */
 export type CallPhase = 'joining' | 'connected' | 'reconnecting'
@@ -29,8 +30,19 @@ interface VoiceState {
      * Forgotten when that page goes, or the room opens to one again.
      */
     problem: { channelId: string; kind: 'network' | 'refused'; until?: string } | null
-    /** Put out of a room by the server just now, for the Toast saying where one went (07 câu L3-b). */
-    removed: { channelId: string; at: number } | null
+    /**
+     * Put out of a room by the server just now: LiveKit's end or the API's
+     * `voice.disconnected`, whichever came first, and why once the API said
+     * (D-212). Without a reason, it may be another room joined elsewhere,
+     * the Toast saying where (07 câu L3-b).
+     */
+    removed: { channelId: string; at: number; reason?: PutOutReason } | null
+    /**
+     * A moderator's last word on this tab's mic in its room (`voice.muted`,
+     * D-207), until the room's list says the same: the list comes a moment
+     * later. Null: the list's own `modMuted` holds. Forgotten on leaving.
+     */
+    modMuted: boolean | null
 }
 
 /**
@@ -46,5 +58,6 @@ export const useVoiceStore = create<VoiceState>(() => ({
     camera: 'off',
     cameraPreview: null,
     problem: null,
-    removed: null
+    removed: null,
+    modMuted: null
 }))

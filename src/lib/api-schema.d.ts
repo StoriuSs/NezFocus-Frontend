@@ -1330,6 +1330,52 @@ export interface paths {
         patch?: never
         trace?: never
     }
+    '/api/v1/voice/rooms/{channelId}/participants/{userId}/mute': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        /**
+         * Turn someone's microphone off until they leave or are unmuted
+         *     (MUTE_MEMBERS, D-207); they are told `voice.muted`. A room one cannot
+         *     view, or someone not in it, NOT_FOUND; no MUTE_MEMBERS FORBIDDEN_ERROR;
+         *     timed out MEMBER_TIMED_OUT; someone ranked level or above, or oneself,
+         *     ROLE_HIERARCHY_VIOLATION; LiveKit unreachable SERVICE_UNAVAILABLE_ERROR.
+         *     Muted already: answered the same (D-212).
+         */
+        post: operations['VoiceController_mute_v1']
+        /** Let someone muted turn their microphone on again (MUTE_MEMBERS, D-207); the same answers as muting. */
+        delete: operations['VoiceController_unmute_v1']
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/voice/rooms/{channelId}/participants/{userId}': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        post?: never
+        /**
+         * Put someone out of the room (MOVE_MEMBERS, REQ-VC-04); they are told
+         *     `voice.disconnected` with reason `moderator` and may join again at
+         *     once. The same answers as muting.
+         */
+        delete: operations['VoiceController_disconnect_v1']
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
     '/api/v1/voice/livekit-webhook': {
         parameters: {
             query?: never
@@ -1672,6 +1718,10 @@ export interface components {
         }
         RoomPersonResponseDto: {
             user: components['schemas']['RoomPersonUserResponseDto']
+            /** @description Their roles in the server, not @everyone; none once they left it. With is_owner, what a moderator's menu needs (D-208). */
+            role_ids: string[]
+            /** @description Whether they own the server: no one mutes or puts out the owner (REQ-ROLE-02). */
+            is_owner: boolean
             /** Format: date-time */
             joined_at: string
             /** @description What their own browser says (D-206): icons only. */
@@ -5211,6 +5261,81 @@ export interface operations {
             query?: never
             header?: never
             path?: never
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: null
+                    }
+                }
+            }
+        }
+    }
+    VoiceController_mute_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                channelId: string
+                userId: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: null
+                    }
+                }
+            }
+        }
+    }
+    VoiceController_unmute_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                channelId: string
+                userId: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: null
+                    }
+                }
+            }
+        }
+    }
+    VoiceController_disconnect_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                channelId: string
+                userId: string
+            }
             cookie?: never
         }
         requestBody?: never

@@ -1,6 +1,6 @@
 import { createContext, StrictMode, type ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, render, renderHook, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, renderHook, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
@@ -14,11 +14,15 @@ import type { RoomPerson, VoiceDirectory, VoiceRoom, VoiceToken } from '../types
 
 const voiceApi = {
     requestVoiceToken: vi.fn<(channelId: string) => Promise<VoiceToken>>(),
-    leaveVoiceRoom: vi.fn(async () => undefined)
+    leaveVoiceRoom: vi.fn(async () => undefined),
+    muteParticipant: vi.fn(async (_channelId: string, _userId: string) => undefined),
+    unmuteParticipant: vi.fn(async (_channelId: string, _userId: string) => undefined),
+    disconnectParticipant: vi.fn(async (_channelId: string, _userId: string) => undefined)
 }
 vi.mock('../api/voice.api', () => voiceApi)
 
 const linkEvents: LinkEvents[] = []
+const setMic = vi.fn(async (on: boolean) => (on ? 'on' : 'off'))
 const setCamera = vi.fn(async (on: boolean) => (on ? 'on' : 'off'))
 const livekit = {
     joinRoom: vi.fn(async (_url: string, _token: string, devices: JoinDevices, events: LinkEvents) => {
@@ -27,7 +31,7 @@ const livekit = {
             link: {
                 room: { name: 'live' },
                 leave: vi.fn(async () => undefined),
-                setMic: vi.fn(async () => 'on'),
+                setMic,
                 setCamera
             },
             micState: 'off',
@@ -75,10 +79,10 @@ function aCamera() {
 }
 
 const sendRealtimeSignal = vi.fn()
-const realtime = vi.hoisted(() => ({ listeners: new Map<string, () => void>() }))
+const realtime = vi.hoisted(() => ({ listeners: new Map<string, (data?: unknown) => void>() }))
 vi.mock('@/features/realtime', () => ({
     sendRealtimeSignal,
-    onRealtimeEvent: (event: string, listener: () => void) => {
+    onRealtimeEvent: (event: string, listener: (data?: unknown) => void) => {
         realtime.listeners.set(event, listener)
         return () => realtime.listeners.delete(event)
     }
@@ -94,6 +98,8 @@ const { useVoiceStore } = await import('../voice.store')
 const AN = 'an'
 const person = (id: string, name: string, on: Partial<RoomPerson> = {}): RoomPerson => ({
     user: { id, username: id, displayName: name, avatarUrl: null },
+    roleIds: [],
+    isOwner: false,
     joinedAt: '2026-11-18T14:40:00.000Z',
     micOn: false,
     cameraOn: false,
@@ -114,6 +120,9 @@ const room = (more: Partial<VoiceRoom> = {}): VoiceRoom => ({
     canSpeak: true,
     canVideo: true,
     timeoutUntil: null,
+    canMute: false,
+    canMove: false,
+    outranked: new Set(),
     ...more
 })
 
@@ -139,6 +148,10 @@ beforeEach(() => {
     live.cameras = []
     live.tracks.clear()
     setCamera.mockClear()
+    setMic.mockClear()
+    voiceApi.muteParticipant.mockClear()
+    voiceApi.unmuteParticipant.mockClear()
+    voiceApi.disconnectParticipant.mockClear()
     voiceApi.requestVoiceToken.mockReset()
     voiceApi.requestVoiceToken.mockResolvedValue({ token: 'token', url: 'ws://lk' })
     sendRealtimeSignal.mockClear()
@@ -167,6 +180,12 @@ describe("a voice room's preview page (S-ROOM-01 voice-preview)", () => {
         expect(screen.getByRole('button', { name: 'Turn on camera' })).toBeVisible()
         expect(screen.getByRole('button', { name: 'Join room' })).toBeEnabled()
         await expectNoA11yViolations()
+    })
+
+    it('marks a seat muted by a moderator, whatever their own mic says (C-20: mod-muted first)', async () => {
+        show(room({ people: [person('nam', 'Nam', { modMuted: true, micOn: true })] }))
+        const seats = screen.getByRole('list', { name: 'People in the room' })
+        expect(within(seats).getByRole('listitem')).toHaveAccessibleName('Nam, muted by a moderator')
     })
 
     it("turns the camera on for one's own mirrored tile, and off when the page goes without joining (D-53, 07 câu L3b-c)", async () => {
@@ -439,6 +458,118 @@ describe('the room once joined (S-ROOM-06 voice)', () => {
         expect(screen.getByRole('button', { name: 'Turn off camera' })).toBeVisible()
     })
 
+    describe("a moderator's menu on the tiles (D-207, D-208, ROOM-EDGE mod-menu-tile)", () => {
+        const moderating = async (more: Partial<VoiceRoom> = {}) => {
+            await joinRoom({ serverId: 'ot', channelId: 'thao-luan', name: 'Phòng thảo luận nhóm' })
+            live.participants = [
+                { identity: 'tuan', name: 'Tuấn', isMicrophoneEnabled: true },
+                { identity: AN, name: 'An', isMicrophoneEnabled: false },
+                { identity: 'nam', name: 'Nam', isMicrophoneEnabled: false },
+                { identity: 'chu', name: 'Chủ', isMicrophoneEnabled: false },
+                { identity: 'lan', name: 'Lan', isMicrophoneEnabled: false }
+            ]
+            return show(
+                room({
+                    people: [
+                        TUAN,
+                        person(AN, 'An'),
+                        person('nam', 'Nam', { modMuted: true }),
+                        person('chu', 'Chủ', { isOwner: true })
+                    ],
+                    canMute: true,
+                    canMove: true,
+                    outranked: new Set(['tuan', 'nam']),
+                    ...more
+                })
+            )
+        }
+
+        it('offers Mute and Disconnect on people ranked below, none on oneself, the owner or someone not listed yet', async () => {
+            await moderating()
+            // The menu is fetched when needed: once Tuấn's ⋯ shows, any other would have too.
+            const tuan = await screen.findByRole('button', { name: 'Manage Tuấn' })
+            expect(screen.getByRole('button', { name: 'Manage Nam' })).toBeInTheDocument()
+            expect(screen.queryByRole('button', { name: 'Manage You' })).toBeNull()
+            expect(screen.queryByRole('button', { name: 'Manage Chủ' })).toBeNull()
+            expect(screen.queryByRole('button', { name: 'Manage Lan' })).toBeNull()
+            await userEvent.click(tuan)
+            const menu = await screen.findByRole('menu')
+            expect(
+                within(menu)
+                    .getAllByRole('menuitem')
+                    .map((item) => item.textContent)
+            ).toEqual(['Mute', 'Disconnect from room'])
+            await expectNoA11yViolations()
+            await userEvent.click(within(menu).getByRole('menuitem', { name: 'Mute' }))
+            await waitFor(() => expect(voiceApi.muteParticipant).toHaveBeenCalledWith('thao-luan', 'tuan'))
+        })
+
+        it('offers Unmute on someone muted, and opens at a right click', async () => {
+            await moderating()
+            const nam = screen.getByRole('button', { name: /^Nam, muted by a moderator/ })
+            fireEvent.contextMenu(nam, { clientX: 20, clientY: 20 })
+            const menu = await screen.findByRole('menu')
+            await userEvent.click(within(menu).getByRole('menuitem', { name: 'Unmute' }))
+            await waitFor(() => expect(voiceApi.unmuteParticipant).toHaveBeenCalledWith('thao-luan', 'nam'))
+
+            fireEvent.contextMenu(nam, { clientX: 20, clientY: 20 })
+            await userEvent.click(await screen.findByRole('menuitem', { name: 'Disconnect from room' }))
+            await waitFor(() => expect(voiceApi.disconnectParticipant).toHaveBeenCalledWith('thao-luan', 'nam'))
+        })
+
+        it('offers only what the bits allow, and nothing without them', async () => {
+            const { rerender } = await moderating({ canMove: false })
+            await userEvent.click(await screen.findByRole('button', { name: 'Manage Tuấn' }))
+            expect((await screen.findAllByRole('menuitem')).map((item) => item.textContent)).toEqual(['Mute'])
+            await userEvent.keyboard('{Escape}')
+            rerender(<VoiceRoomView room={room({ people: [TUAN, person(AN, 'An')], outranked: new Set(['tuan']) })} />)
+            expect(screen.queryByRole('button', { name: 'Manage Tuấn' })).toBeNull()
+            fireEvent.contextMenu(screen.getByRole('button', { name: /^Tuấn/ }))
+            expect(screen.queryByRole('menu')).toBeNull()
+        })
+
+        it('opens with Shift+F10 on a tile, and goes back to it when closed', async () => {
+            await moderating()
+            const tuan = screen.getByRole('button', { name: /^Tuấn/ })
+            tuan.focus()
+            await userEvent.keyboard('{Shift>}{F10}{/Shift}')
+            expect(await screen.findByRole('menu')).toBeVisible()
+            await userEvent.keyboard('{Escape}')
+            await waitFor(() => expect(tuan).toHaveFocus())
+        })
+    })
+
+    it('shows the Mic muted by a moderator: disabled, saying why, deaf to Ctrl+Shift+M (07 mod-muted)', async () => {
+        await joinRoom({ serverId: 'ot', channelId: 'thao-luan', name: 'Phòng thảo luận nhóm' })
+        live.participants = [{ identity: AN, name: 'An', isMicrophoneEnabled: false }]
+        show(room({ people: [person(AN, 'An', { modMuted: true })] }))
+        const mic = screen.getByRole('button', { name: 'A moderator muted your mic' })
+        expect(screen.getByText('Muted')).toBeVisible()
+        await userEvent.click(mic)
+        await userEvent.keyboard('{Control>}{Shift>}m{/Shift}{/Control}')
+        expect(setMic).not.toHaveBeenCalled()
+        expect(useVoiceStore.getState().mic).toBe('off')
+    })
+
+    it('says no SPEAK first when one also is muted by a moderator: one rule for the label and the hint', async () => {
+        await joinRoom({ serverId: 'ot', channelId: 'thao-luan', name: 'Phòng thảo luận nhóm' })
+        live.participants = [{ identity: AN, name: 'An', isMicrophoneEnabled: false }]
+        show(room({ canSpeak: false, people: [person(AN, 'An', { modMuted: true })] }))
+        expect(screen.getByRole('button', { name: "You don't have permission to speak in this room" })).toBeVisible()
+        expect(screen.queryByText('Muted')).toBeNull()
+    })
+
+    it("follows a moderator's word before the room's list catches up, both ways (D-207)", async () => {
+        await joinRoom({ serverId: 'ot', channelId: 'thao-luan', name: 'Phòng thảo luận nhóm' })
+        live.participants = [{ identity: AN, name: 'An', isMicrophoneEnabled: false }]
+        const { rerender } = show(room({ people: [person(AN, 'An')] }))
+        act(() => useVoiceStore.setState({ modMuted: true }))
+        expect(screen.getByRole('button', { name: 'A moderator muted your mic' })).toBeVisible()
+        rerender(<VoiceRoomView room={room({ people: [person(AN, 'An', { modMuted: true })] })} />)
+        act(() => useVoiceStore.setState({ modMuted: false }))
+        expect(screen.getByRole('button', { name: 'Unmute (Ctrl Shift M)' })).toBeVisible()
+    })
+
     describe('pictures and zooming in (C-20, 07 câu L3b-a, L3b-b)', () => {
         const filmed = async () => {
             await joinRoom({ serverId: 'ot', channelId: 'thao-luan', name: 'Phòng thảo luận nhóm' })
@@ -453,6 +584,23 @@ describe('the room once joined (S-ROOM-06 voice)', () => {
                 within(screen.getByRole('list', { name: 'People in the room' })).getByRole('button', { name })
             return { ...view, tile }
         }
+
+        it('closes only the menu with Esc on a zoomed picture, the picture staying (00 Bàn phím: the nearest layer)', async () => {
+            await joinRoom({ serverId: 'ot', channelId: 'thao-luan', name: 'Phòng thảo luận nhóm' })
+            live.participants = [
+                { identity: AN, name: 'An', isMicrophoneEnabled: false },
+                { identity: 'minh', name: 'Minh', isMicrophoneEnabled: false }
+            ]
+            live.cameras = ['minh']
+            show(room({ people: [person(AN, 'An'), MINH], canMute: true, outranked: new Set(['minh']) }))
+            await userEvent.click(screen.getByRole('button', { name: /^Minh/ }))
+            const zoomed = screen.getByRole('group', { name: 'Minh, zoomed in' })
+            await userEvent.click(await within(zoomed).findByRole('button', { name: 'Manage Minh' }))
+            expect(await screen.findByRole('menu')).toBeVisible()
+            await userEvent.keyboard('{Escape}')
+            await waitFor(() => expect(screen.queryByRole('menu')).toBeNull())
+            expect(screen.getByRole('group', { name: 'Minh, zoomed in' })).toBeVisible()
+        })
 
         it("shows the pictures of those with their camera on, one's own mirrored", async () => {
             const { tile } = await filmed()
@@ -563,7 +711,7 @@ describe('the room once joined (S-ROOM-06 voice)', () => {
 })
 
 describe('the dock away from the room (InRoomDock voice, C-09)', () => {
-    const dock = (shape: 'column' | 'strip', canSpeak = true) =>
+    const dock = (shape: 'column' | 'strip', canSpeak = true, modMuted = false) =>
         render(
             <InRoomDock
                 shape={shape}
@@ -574,6 +722,7 @@ describe('the dock away from the room (InRoomDock voice, C-09)', () => {
                     name: 'Phòng thảo luận nhóm',
                     canSpeak,
                     canVideo: canSpeak,
+                    modMuted,
                     count: 4
                 }}
             />,
@@ -609,6 +758,14 @@ describe('the dock away from the room (InRoomDock voice, C-09)', () => {
             screen.getByRole('button', { name: "You don't have permission to turn on your camera in this room" })
         )
         expect(setCamera).not.toHaveBeenCalled()
+    })
+
+    it('keeps the Mic off while a moderator has it muted', async () => {
+        await joinRoom({ serverId: 'ot', channelId: 'thao-luan', name: 'Phòng thảo luận nhóm' })
+        dock('column', true, true)
+        await userEvent.click(screen.getByRole('button', { name: 'A moderator muted your mic' }))
+        expect(setMic).not.toHaveBeenCalled()
+        expect(useVoiceStore.getState().mic).toBe('off')
     })
 })
 
@@ -699,5 +856,143 @@ describe('voice in every tab (useVoiceSession)', () => {
         act(() => useVoiceStore.setState({ camera: 'on' }))
         rerender({ rooms: directory([room({ people: [person(AN, 'An')] })]) })
         expect(sendRealtimeSignal).toHaveBeenCalledWith('voice.self_state', { mic: false, camera: true })
+    })
+
+    describe("what a moderator or the server did to one's room (D-207, D-212)", () => {
+        const inLounge = async () => {
+            await joinRoom({ serverId: 'ot', channelId: 'thao-luan', name: 'Phòng thảo luận nhóm' })
+            await act(async () => useVoiceStore.setState({ mic: 'on' }))
+        }
+        const hear = (event: string, data: unknown) => act(() => realtime.listeners.get(event)?.(data))
+
+        it('says the mic was muted, and turns it off, only in the tab in that room', async () => {
+            await inLounge()
+            session(directory([room()]))
+            hear('voice.muted', { channelId: 'quiet', muted: true })
+            expect(screen.queryByText('A moderator muted your mic')).toBeNull()
+            hear('voice.muted', { channelId: 'thao-luan', muted: true })
+            expect(await screen.findByText('A moderator muted your mic')).toBeVisible()
+            await waitFor(() => expect(useVoiceStore.getState().mic).toBe('off'))
+            expect(setMic).toHaveBeenLastCalledWith(false)
+        })
+
+        it('says the mic may be turned on again when unmuted, the mic still off (07 câu L4b-a)', async () => {
+            await inLounge()
+            session(directory([room()]))
+            hear('voice.muted', { channelId: 'thao-luan', muted: false })
+            expect(await screen.findByText('You can turn your mic on again')).toBeVisible()
+            expect(setMic).not.toHaveBeenCalled()
+        })
+
+        it("turns the mic off when one's own row says muted, the event missed", async () => {
+            await inLounge()
+            session(directory([room({ people: [person(AN, 'An', { modMuted: true })] })]))
+            await waitFor(() => expect(useVoiceStore.getState().mic).toBe('off'))
+        })
+
+        it.each([
+            ['moderator', 'You were disconnected from the room'],
+            ['permission', 'You no longer have access to this room · you left it'],
+            ['channel_deleted', 'This room is no longer available']
+        ])('says why one was put out: %s', async (reason, words) => {
+            await inLounge()
+            session(directory([room()]))
+            hear('voice.disconnected', { channelId: 'thao-luan', reason })
+            expect(await screen.findByText(words)).toBeVisible()
+        })
+
+        it('says nothing for a kick, a ban, a server left, or a room this tab is not in', async () => {
+            await inLounge()
+            session(directory([room()]))
+            for (const reason of ['kick', 'ban', 'server_left'])
+                hear('voice.disconnected', { channelId: 'thao-luan', reason })
+            hear('voice.disconnected', { channelId: 'quiet', reason: 'moderator' })
+            hear('voice.muted', { channelId: 'quiet', muted: true })
+            // A Toast shows a moment after it is asked for: one that does show proves the others never came.
+            hear('voice.disconnected', { channelId: 'thao-luan', reason: 'permission' })
+            expect(await screen.findByText('You no longer have access to this room · you left it')).toBeVisible()
+            expect(document.querySelectorAll('[data-sonner-toast]')).toHaveLength(1)
+            expect(useVoiceStore.getState().mic).toBe('on')
+        })
+
+        it('keeps the last word on the mute until the list says the same, and forgets it on leaving', async () => {
+            await inLounge()
+            const { rerender } = session(directory([room()]))
+            hear('voice.muted', { channelId: 'thao-luan', muted: true })
+            expect(useVoiceStore.getState().modMuted).toBe(true)
+            rerender({ rooms: directory([room({ people: [person(AN, 'An', { modMuted: true })] })]) })
+            await waitFor(() => expect(useVoiceStore.getState().modMuted).toBeNull())
+            hear('voice.muted', { channelId: 'thao-luan', muted: false })
+            expect(useVoiceStore.getState().modMuted).toBe(false)
+            act(() => linkEvents[0]?.onEnd('removed'))
+            expect(useVoiceStore.getState().modMuted).toBeNull()
+        })
+
+        const elsewhere = /in another tab or on another device/
+        const inQuiet = () =>
+            directory([room(), room({ channelId: 'quiet', name: 'Phòng học im lặng', people: [person(AN, 'An')] })])
+
+        it('never says "joined elsewhere" when the API said why one was put out, its word kept past LiveKit\'s', async () => {
+            await inLounge()
+            const { rerender } = session(directory([room()]))
+            hear('voice.disconnected', { channelId: 'thao-luan', reason: 'moderator' })
+            act(() => linkEvents[0]?.onEnd('removed'))
+            expect(useVoiceStore.getState().removed?.reason).toBe('moderator')
+            // The account then shows in another room (joined in another tab within the window).
+            rerender({ rooms: inQuiet() })
+            expect(await screen.findByText('You were disconnected from the room')).toBeInTheDocument()
+            await act(() => new Promise((resolve) => setTimeout(resolve, 200)))
+            expect(screen.queryByText(elsewhere)).toBeNull()
+        })
+
+        it('never says "joined elsewhere" for the room this very tab joined since', async () => {
+            await inLounge()
+            const { rerender } = session(directory([room()]))
+            act(() => linkEvents[0]?.onEnd('removed'))
+            await joinRoom({ serverId: 'ot', channelId: 'quiet', name: 'Phòng học im lặng' })
+            rerender({ rooms: inQuiet() })
+            await act(() => new Promise((resolve) => setTimeout(resolve, 200)))
+            expect(screen.queryByText(elsewhere)).toBeNull()
+        })
+
+        it('says one Toast when the room this tab was in closes to one and leaves the list (lost access, page gone)', async () => {
+            await inLounge()
+            session(directory([room()]))
+            hear('voice.disconnected', { channelId: 'thao-luan', reason: 'permission' })
+            expect(await screen.findByText('You no longer have access to this room · you left it')).toBeVisible()
+            // The channel page's own Toast for a room gone from the list (ChannelPage › Removed).
+            act(() => void toast('This room is no longer available', { id: 'channel-removed' }))
+            expect(await screen.findByText('This room is no longer available')).toBeVisible()
+            expect(document.querySelectorAll('[data-sonner-toast]')).toHaveLength(1)
+        })
+
+        it('still says it when LiveKit put the tab out first', async () => {
+            await inLounge()
+            session(directory([room()]))
+            act(() => linkEvents[0]?.onEnd('removed'))
+            hear('voice.disconnected', { channelId: 'thao-luan', reason: 'moderator' })
+            expect(await screen.findByText('You were disconnected from the room')).toBeVisible()
+        })
+
+        it('says until when a timeout runs, once the servers know it (D-54)', async () => {
+            await inLounge()
+            const { rerender } = session(directory([room()]))
+            hear('voice.disconnected', { channelId: 'thao-luan', reason: 'timeout' })
+            await act(async () => undefined)
+            expect(screen.queryByText(/timed out/)).toBeNull()
+            rerender({ rooms: directory([room({ timeoutUntil: new Date(Date.now() + 3_600_000).toISOString() })]) })
+            expect(await screen.findByText(/^You're timed out until .+ · you left the room$/)).toBeVisible()
+        })
+
+        it("says the plain words when the servers held still don't know until when after a while", async () => {
+            vi.useFakeTimers({ shouldAdvanceTime: true })
+            await inLounge()
+            session(directory([room()]))
+            hear('voice.disconnected', { channelId: 'thao-luan', reason: 'timeout' })
+            await act(async () => vi.advanceTimersByTimeAsync(MOVED_WINDOW_MS - 1000))
+            expect(screen.queryByText('You were disconnected from the room')).toBeNull()
+            await act(async () => vi.advanceTimersByTimeAsync(1000))
+            expect(await screen.findByText('You were disconnected from the room')).toBeVisible()
+        })
     })
 })

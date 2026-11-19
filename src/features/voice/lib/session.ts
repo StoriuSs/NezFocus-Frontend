@@ -96,7 +96,16 @@ function ended(id: number, room: RoomToJoin) {
             call: null,
             room: null,
             ...devicesOut(state),
-            removed: end === 'removed' ? { channelId: room.channelId, at: Date.now() } : state.removed
+            modMuted: null,
+            // The API's reason, when its word came before LiveKit's, is kept.
+            removed:
+                end === 'removed'
+                    ? {
+                          channelId: room.channelId,
+                          at: Date.now(),
+                          reason: state.removed?.channelId === room.channelId ? state.removed.reason : undefined
+                      }
+                    : state.removed
         }))
     }
 }
@@ -116,7 +125,7 @@ export async function joinRoom(room: RoomToJoin, options: { devicesOff?: boolean
         dropPreview()
         set((state) => devicesOut(state))
     }
-    set({ call: { ...room, phase: 'joining' }, room: null, problem: null })
+    set({ call: { ...room, phase: 'joining' }, room: null, problem: null, modMuted: null })
     const deadline = Date.now() + JOIN_MS
     try {
         if (before) {
@@ -210,7 +219,7 @@ export async function leaveRoom(): Promise<void> {
     stopSignOut?.()
     stopSignOut = null
     forgetRoom()
-    set((state) => ({ call: null, room: null, ...devicesOut(state) }))
+    set((state) => ({ call: null, room: null, modMuted: null, ...devicesOut(state) }))
     await before?.leave()
     await leaveVoiceRoom().catch(() => undefined)
 }
@@ -225,7 +234,7 @@ function signOutLeave(): void {
     stopSignOut = null
     forgetRoom()
     dropPreview()
-    set((state) => ({ call: null, room: null, ...devicesOut(state) }))
+    set((state) => ({ call: null, room: null, modMuted: null, ...devicesOut(state) }))
     void before?.leave()
     void leaveVoiceRoom(true).catch(() => undefined)
 }
@@ -238,6 +247,19 @@ function signOutLeave(): void {
 export async function switchMic(on: boolean): Promise<void> {
     const state = link ? await link.setMic(on) : on ? await askMicrophone() : 'off'
     set({ mic: state })
+    tellOwnState()
+}
+
+/**
+ * A moderator muted this account in `channelId` (D-207): LiveKit no longer
+ * lets the mic send and drops its track; this lets the device go too, and
+ * the page and the room's list say off. Nothing when this tab is not in
+ * that room, or its mic is already off.
+ */
+export async function micTakenAway(channelId: string): Promise<void> {
+    if (!link || get().call?.channelId !== channelId || get().mic !== 'on') return
+    await link.setMic(false)
+    set({ mic: 'off' })
     tellOwnState()
 }
 
@@ -308,6 +330,7 @@ export function resetSession(): void {
         camera: 'off',
         cameraPreview: null,
         problem: null,
-        removed: null
+        removed: null,
+        modMuted: null
     })
 }

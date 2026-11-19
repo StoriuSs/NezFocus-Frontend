@@ -142,7 +142,10 @@ LiveKit follows the person to every page, so joining, leaving, the mic and
 the camera (with its picture before joining, a `MediaStream`) live in `src/features/voice/lib/session.ts`, which calls `voice.api.ts` and
 writes the voice store; components call it directly, with no hook in
 `api/` around it. It changes no query cache: who is in each room comes from
-the servers' list (D-205).
+the servers' list (D-205). A moderator's mute, unmute and disconnect (M4
+L4b, D-207) are plain mutations, so they follow the rule: `useModerateParticipant`
+in `api/`, no cache to change either (the room's list comes back by
+`voice_state.updated`), a refusal the query client's Toast.
 
 The auth store writes the profile into this same entry at sign-in
 (`queryClient.setQueryData(userKeys.profile(), profile)`), so your menu, the
