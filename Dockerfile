@@ -93,8 +93,20 @@ FROM nginxinc/nginx-unprivileged:1.30.6-alpine AS prod
 # them: without this, a CVE Alpine has already fixed (libexpat's
 # CVE-2026-93990, 2026-09) fails the Trivy scan until upstream catches up.
 # Root only for the upgrade; the image's own non-root user (101) after.
+#
+# nginx itself comes from nginx.org's own Alpine repository, pinned in
+# /etc/apk/world, so `apk upgrade` leaves it. nginx 1.30.7 (18/11/2026) fixes
+# CVE-2026-113425, -121810, -123007, -123633, -123634 and -125283 (try_files
+# with alias, which nginx.conf uses) before the 1.30.7 image exists: taken
+# from that same repository, signed with the key the image already holds
+# (/etc/apk/keys/nginx_signing.rsa.pub), its modules with it. Drop this RUN
+# once the FROM line reads 1.30.7 or later.
 USER root
-RUN apk upgrade --no-cache
+RUN apk upgrade --no-cache \
+    && apk add --no-cache -X "https://nginx.org/packages/alpine/v$(cut -d. -f1,2 /etc/alpine-release)/main" \
+        nginx=1.30.7-r1 nginx-module-geoip=1.30.7-r1 nginx-module-image-filter=1.30.7-r1 \
+        nginx-module-xslt=1.30.7-r1 nginx-module-njs \
+    && nginx -v
 USER 101
 
 # Custom nginx config and the header snippet each location includes.
