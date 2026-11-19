@@ -14,6 +14,8 @@ const { serverKeys } = await import('../api/keys')
 const { useVoiceStore } = await import('@/features/voice')
 const { useToastArea } = await import('@/hooks/useToastArea')
 
+/** The dock is a lazy chunk: its first load can outlast the default second on a busy machine. */
+const LAZY = 5000
 const CONNECT = 1n << 15n
 const SPEAK = 1n << 16n
 const VIDEO = 1n << 17n
@@ -174,7 +176,7 @@ describe('the dock while in a room (C-09)', () => {
             call: { serverId: 'ot', channelId: 'thao-luan', name: 'thao-luan', phase: 'connected' }
         })
         show('/channels/ot/chung')
-        expect(await screen.findByRole('link', { name: /thao-luan.*2 people/ })).toHaveAttribute(
+        expect(await screen.findByRole('link', { name: /thao-luan.*2 people/ }, { timeout: LAZY })).toHaveAttribute(
             'href',
             '/channels/ot/thao-luan'
         )
@@ -186,7 +188,9 @@ describe('the dock while in a room (C-09)', () => {
             call: { serverId: 'ot', channelId: 'thao-luan', name: 'thao-luan', phase: 'connected' }
         })
         show('/channels/ot/chung', 'column', { ...person('an'), modMuted: true })
-        expect(await screen.findByRole('button', { name: 'A moderator muted your mic' })).toBeVisible()
+        expect(
+            await screen.findByRole('button', { name: 'A moderator muted your mic' }, { timeout: LAZY })
+        ).toBeVisible()
     })
 
     it('counts oneself while the room list has not caught up yet (never "0 people")', async () => {
@@ -209,7 +213,7 @@ describe('the dock while in a room (C-09)', () => {
                 </TooltipProvider>
             </QueryClientProvider>
         )
-        expect(await screen.findByRole('link', { name: /1 person/ })).toBeVisible()
+        expect(await screen.findByRole('link', { name: /1 person/ }, { timeout: LAZY })).toBeVisible()
     })
 
     it('is one dock at a time: in the column from 1024 up, a strip across the window below (C-09)', async () => {
