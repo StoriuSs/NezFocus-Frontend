@@ -11,6 +11,7 @@ import { ShellPage } from '@/components/shell/ShellPage'
 import { CountBadge } from '@/components/ui/count-badge'
 import { IconButton } from '@/components/ui/icon-button'
 import { WithTooltip } from '@/components/ui/tooltip'
+import { useRefuseFileDrops } from '@/hooks/useRefuseFileDrops'
 import { ChannelChat, ChatDropZone, PinsPanel, useChannelReadState } from '@/features/messaging'
 import { TaskBoard } from '@/features/tasks'
 import { useVoiceStore, VoiceRoomView } from '@/features/voice'
@@ -111,7 +112,9 @@ function Removed({ to, room }: { to: string; room: boolean }) {
  * dot when only plain messages are (C-07, C-03 `dot`). A message link or an
  * inbox item opens the panel at the message, once per visit. The chat is the
  * text channel's (`useChannelChat`), named with the room's icon in place of
- * "#", with no pins (D-213); files dragged onto the panel go to its tray.
+ * "#", with no pins (D-213); files dragged onto the panel go to its tray,
+ * and anywhere else on the page they do nothing, the chat open or not, rather
+ * than the browser opening the file and leaving the room (L6b-a).
  */
 function VoiceChannel({ server, channel, messageId }: { server: Server; channel: ServerChannel; messageId?: string }) {
     const { t } = useTranslation('servers')
@@ -119,6 +122,7 @@ function VoiceChannel({ server, channel, messageId }: { server: Server; channel:
     const [chat, chatButton] = usePanel('room-chat', { startClosed: true })
     const { permissions, linkTo, readLink, mentions, target } = useChannelChat(server, channel, messageId)
     const icon = channelIcon(channel)
+    useRefuseFileDrops()
     // A message link or an inbox item: the chat open at it, once per visit.
     const [openedAt, setOpenedAt] = useState<string | null>(null)
     useEffect(() => {

@@ -1,6 +1,6 @@
 import { afterEach, describe, it, expect, vi, beforeEach } from 'vitest'
 import { Toaster } from 'sonner'
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, createEvent, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { Users } from 'lucide-react'
@@ -1143,6 +1143,24 @@ describe('AppShell (S-SHELL-01)', () => {
             renderAt('/channels/ot/quiet')
             const plain = await screen.findByRole('button', { name: 'Room chat, unread messages' })
             expect(within(plain).getByTestId('room-chat-dot')).toBeInTheDocument()
+        })
+
+        it('does nothing with a file dropped on the room page, the chat closed: the browser never opens it (L6b-a)', async () => {
+            renderAt('/channels/ot/quiet')
+            await screen.findByRole('button', { name: 'Room chat' })
+            const heading = screen.getByRole('heading', { level: 1, name: 'Phòng học im lặng' })
+            const files = { types: ['Files'], files: [], dropEffect: 'copy' }
+            const over = createEvent.dragOver(heading, { dataTransfer: files })
+            fireEvent(heading, over)
+            expect(over.defaultPrevented).toBe(true)
+            expect((over as DragEvent).dataTransfer!.dropEffect).toBe('none')
+            const drop = createEvent.drop(heading, { dataTransfer: files })
+            fireEvent(heading, drop)
+            expect(drop.defaultPrevented).toBe(true)
+            // Text dragged from the page is not a file: left to the browser.
+            const text = createEvent.dragOver(heading, { dataTransfer: { types: ['text/plain'] } })
+            fireEvent(heading, text)
+            expect(text.defaultPrevented).toBe(false)
         })
 
         it('offers no Pin on a message there, even with MANAGE_MESSAGES (D-213)', async () => {

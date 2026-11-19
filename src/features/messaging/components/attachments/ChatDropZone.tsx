@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Lock, Timer, Upload } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import '@/i18n/messaging'
+import { useRefuseFileDrops } from '@/hooks/useRefuseFileDrops'
 import { endsAtText } from '@/lib/time-zones'
 import { settingsCache } from '@/features/users'
 import { addToTray } from '../../api/attachmentUploads'
@@ -59,6 +60,8 @@ export function ChatDropZone({
     useEffect(() => {
         chosen.current = choose
     }, [choose])
+    // Outside the column: nothing happens, rather than the browser opening the file.
+    useRefuseFileDrops()
 
     useEffect(() => {
         const zone = self.current?.parentElement
@@ -88,13 +91,6 @@ export function ChatDropZone({
             setDragging(false)
             if (allowed) chosen.current([...event.dataTransfer!.files])
         }
-        // Outside the column: nothing happens, rather than the browser opening the file;
-        // another place that takes files (a new server's picture) has said so already.
-        const elsewhere = (event: DragEvent) => {
-            if (!carriesFiles(event) || event.defaultPrevented || zone.contains(event.target as Node)) return
-            event.preventDefault()
-            event.dataTransfer!.dropEffect = 'none'
-        }
         const listeners = [
             ['dragenter', enter],
             ['dragover', over],
@@ -102,12 +98,8 @@ export function ChatDropZone({
             ['drop', drop]
         ] as const
         for (const [type, listener] of listeners) zone.addEventListener(type, listener)
-        window.addEventListener('dragover', elsewhere)
-        window.addEventListener('drop', elsewhere)
         return () => {
             for (const [type, listener] of listeners) zone.removeEventListener(type, listener)
-            window.removeEventListener('dragover', elsewhere)
-            window.removeEventListener('drop', elsewhere)
         }
     }, [allowed])
 
