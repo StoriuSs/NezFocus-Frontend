@@ -108,6 +108,7 @@ function renderChat({ target, client = newClient() }: { target?: ChatTarget; cli
                                             send: true,
                                             sendBlocked: null,
                                             manage: false,
+                                            pins: false,
                                             deleteOwn: true,
                                             react: true,
                                             addReactions: true,

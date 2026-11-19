@@ -17,12 +17,12 @@ import { useMoveInLayout } from '../../api/useChannelLayout'
 import { useChannelDialogs } from '../../channel-dialogs.store'
 import { useFoldedCategories } from '../../hooks/useFoldedCategories'
 import { channelSlots, dropClash, groupChannels, sameSlot, slotOf, type ChannelSlot } from '../../lib/channel-layout'
-import { channelGroups } from '../../lib/channel-list'
+import { channelGroups, channelIcon } from '../../lib/channel-list'
 import { categoryDropAfter, categorySlots, channelDropSlot, TOP_DROP_ID } from '../../lib/drop-target'
 import { channelPath } from '../../lib/paths'
 import { can } from '../../lib/permissions'
 import type { LayoutMove, Server, ServerCategory } from '../../types'
-import { CategoryHeading, ChannelRow, channelIcon, DragPreview, DropLine } from './rows'
+import { CategoryHeading, ChannelRow, DragPreview, DropLine } from './rows'
 
 type Dragged = { kind: 'channel'; id: string } | { kind: 'category'; id: string }
 /** Where it would go: a channel slot, or the category it would follow. */

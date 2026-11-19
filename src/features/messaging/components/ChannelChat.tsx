@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import type { LucideIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import '@/i18n/messaging'
@@ -95,10 +96,15 @@ const quote = (message: Message): RepliedMessage => ({
  * An image or a PDF opens in the viewer (C-42), focus going back to it once
  * closed; its message deleted meanwhile, the viewer closes with a Toast
  * "Tin nhắn này đã bị xóa" (S-CHAT-04 › Edge case).
+ *
+ * A voice room's chat (S-ROOM-08) is the same chat in the room page's right
+ * panel: `roomIcon` puts the room's icon and name where a channel has "#",
+ * and the page gives no pins (`permissions.pins`, D-213).
  */
 export default function ChannelChat({
     channelId,
     channelName,
+    roomIcon,
     permissions,
     linkTo,
     readLink,
@@ -108,6 +114,8 @@ export default function ChannelChat({
 }: {
     channelId: string
     channelName: string
+    /** A voice room's chat (S-ROOM-08): the room's icon, where a channel has "#". */
+    roomIcon?: LucideIcon
     /** Read from the channel's permission bits by the page (the servers feature). */
     permissions: ChatPermissions
     /** The whole link to one of the channel's messages (the servers feature's paths). */
@@ -333,6 +341,7 @@ export default function ChannelChat({
             ) : null}
             <MessageList
                 channelName={channelName}
+                roomIcon={roomIcon}
                 rows={rows}
                 status={pages ? 'ready' : history.isError ? 'error' : 'loading'}
                 older={older}
@@ -356,13 +365,14 @@ export default function ChannelChat({
             />
             <TypingLine names={typing} />
             {permissions.sendBlocked ? (
-                <ComposerDisabled blocked={permissions.sendBlocked} now={now} timeZone={timeZone} />
+                <ComposerDisabled blocked={permissions.sendBlocked} now={now} timeZone={timeZone} room={!!roomIcon} />
             ) : (
                 <Composer
                     box={composer}
                     userId={me}
                     channelId={channelId}
                     channelName={channelName}
+                    room={!!roomIcon}
                     replyingTo={replyQuote}
                     onCancelReply={() => setReplyingTo(null)}
                     onEditLast={editLast}

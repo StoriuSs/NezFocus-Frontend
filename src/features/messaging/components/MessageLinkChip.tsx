@@ -15,7 +15,8 @@ export const CHIP =
  * "#hoi-dap › Message" in `primary` on `surface-2`, the server named first
  * when it is another one; at most 320 wide, the server's name giving way
  * first (down to 80), then the channel's, the whole name in a Tooltip. It
- * opens the message in this tab. A message they cannot see: "Can't view"
+ * opens the message in this tab. A voice room's chat names the room with
+ * no "#" (S-ROOM-08). A message they cannot see: "Can't view"
  * with no name, and a click says so without leaving the page.
  */
 export function MessageLinkChip({ link }: { link: Exclude<AppLink, { kind: 'page' }> }) {
@@ -34,7 +35,8 @@ export function MessageLinkChip({ link }: { link: Exclude<AppLink, { kind: 'page
         )
     }
 
-    const name = `${link.server ? `${link.server} › ` : ''}#${link.channel} › ${t('link.message')}`
+    const channel = link.room ? link.channel : `#${link.channel}`
+    const name = `${link.server ? `${link.server} › ` : ''}${channel} › ${t('link.message')}`
     return (
         <WithTooltip label={name}>
             <Link
@@ -48,7 +50,7 @@ export function MessageLinkChip({ link }: { link: Exclude<AppLink, { kind: 'page
                         {' › '}
                     </>
                 ) : null}
-                <span className='min-w-0 truncate'>#{link.channel}</span>
+                <span className='min-w-0 truncate'>{channel}</span>
                 {' › '}
                 <span className='shrink-0'>{t('link.message')}</span>
             </Link>

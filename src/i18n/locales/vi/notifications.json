@@ -51,6 +51,7 @@
         "files_one": "Đã gửi {{count}} tệp",
         "files_other": "Đã gửi {{count}} tệp",
         "source": "#{{channel}} · {{server}}",
+        "roomSource": "{{channel}} · {{server}}",
         "unread": "Chưa đọc.",
         "markRead": "Đánh dấu đã đọc",
         "full": "{{weekday}}, {{date}} · {{time}}",

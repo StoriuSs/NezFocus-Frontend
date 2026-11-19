@@ -114,6 +114,7 @@ function renderChat({ attachFiles = true, history = [] as Message[] } = {}) {
                             send: true,
                             sendBlocked: null,
                             manage: false,
+                            pins: false,
                             deleteOwn: true,
                             react: true,
                             addReactions: true,

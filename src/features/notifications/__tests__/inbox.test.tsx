@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { Volume2 } from 'lucide-react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, useLocation, useNavigationType } from 'react-router-dom'
 import { toast, Toaster } from 'sonner'
@@ -29,6 +30,7 @@ const ND = 'nd'
 const OT = 'ot'
 const HOI_DAP_ND = 'hoi-dap-nd'
 const HOI_DAP_OT = 'hoi-dap-ot'
+const PHONG_HOC = 'phong-hoc-nd'
 const AN = '0193a000-0000-7000-8000-0000000000a1'
 
 /** Today in Hồ Chí Minh at that clock; `days` back for an earlier day. */
@@ -169,11 +171,13 @@ const PLACES: InboxPlaces = {
     placeOf: (serverId, channelId) =>
         channelId === HOI_DAP_ND
             ? { serverName: 'Nhóm đồ án Mobile', channelName: 'hoi-dap' }
-            : channelId === HOI_DAP_OT
-              ? { serverName: 'Ôn thi Giải tích 2', channelName: 'hoi-dap' }
-              : serverId === ND
-                ? null
-                : undefined,
+            : channelId === PHONG_HOC
+              ? { serverName: 'Nhóm đồ án Mobile', channelName: 'Phòng học im lặng', icon: Volume2 }
+              : channelId === HOI_DAP_OT
+                ? { serverName: 'Ôn thi Giải tích 2', channelName: 'hoi-dap' }
+                : serverId === ND
+                  ? null
+                  : undefined,
     mentionChannel: () => ({ kind: 'hidden' }),
     messagePath: (serverId, channelId, messageId) => `/channels/${serverId}/${channelId}/${messageId}`,
     inServer: () => true,
@@ -287,6 +291,27 @@ describe('Hộp thư thông báo (S-NOTI-01)', () => {
         expect(notificationsApi.markNotificationsRead).toHaveBeenCalledWith({ ids: [MINH.id] })
         expect(onClose).toHaveBeenCalled()
         expect(where()).toBe(`/channels/${ND}/${HOI_DAP_ND}/m4`)
+    })
+
+    it('says a voice room’s chat by the room’s icon and name, no "#", and opens its message there (S-ROOM-08)', async () => {
+        const user = userEvent.setup()
+        const inRoom = mention(6, 'Tuấn', `<@${AN}> vào phòng nghe mình giảng nhé`, {
+            channelId: PHONG_HOC,
+            createdAt: today('21:40')
+        })
+        notificationsApi.fetchNotifications.mockResolvedValue(page([inRoom], 1))
+        const { container } = renderInbox()
+
+        const link = await screen.findByRole('link', {
+            name: /^Chưa đọc. Tuấn nhắc tới bạn: .*. Phòng học im lặng, Nhóm đồ án Mobile, 21:40$/
+        })
+        const source = within(panel()).getByText('Phòng học im lặng')
+        expect(source.textContent).toBe('Phòng học im lặng')
+        expect(source.parentElement?.querySelector('svg')).not.toBeNull()
+        await expectNoA11yViolations(container)
+
+        await user.click(link)
+        expect(where()).toBe(`/channels/${ND}/${PHONG_HOC}/m6`)
     })
 
     it('says the task items as made: who gave it and its due date, the time left, no one on it (06 › Nội dung chữ)', async () => {

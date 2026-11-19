@@ -13,7 +13,7 @@ export interface NotificationText {
     /** The message now, plain and on one line (2 lines shown); null when it has nothing to say. */
     content: string | null
     /**
-     * "#{kênh} · {Server}"; a server item's server, as named then; null while
+     * "#{kênh} · {Server}" ("{Phòng} · {Server}" for a voice room's chat); a server item's server, as named then; null while
      * the servers load, for a channel no longer viewed, for a kick or a ban.
      */
     source: string | null
@@ -160,7 +160,12 @@ export function notificationText(item: Notification, sources: TextSources): Noti
     return {
         title,
         content,
-        source: place ? t('row.source', { channel: place.channelName, server: place.serverName }) : null,
+        source: place
+            ? t(place.icon ? 'row.roomSource' : 'row.source', {
+                  channel: place.channelName,
+                  server: place.serverName
+              })
+            : null,
         place: place ?? null
     }
 }

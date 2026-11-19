@@ -206,7 +206,8 @@ after sign-in, behind `ProtectedRoute`:
   (`src/components/shell/ShellPage.tsx`): the 48-high header with the
   title and the page's actions, a scrolling body, and an optional right
   panel (`RightPanel` + `usePanel`; `usePanel(kind, { startClosed: true })`
-  for a panel that starts closed as a column, the pins). A menu opened from
+  for a panel that starts closed as a column, the pins; `bodyClassName` for a
+  body that does not scroll or pad, a voice room's chat). A menu opened from
   a panel shown as a sheet counts as inside it. Under the header, the connection
   Banner when the AppShell has one (`ConnectionBanner`, C-16 `reconnecting`
   / `offline`); a page with a message box passes `composer`, so offline adds

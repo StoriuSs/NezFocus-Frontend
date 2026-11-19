@@ -25,7 +25,8 @@ export const linkedServers = (servers: LinkedServer[]): string =>
 /**
  * A link in a message, as the chat shows it (REQ-MSG-05, D-48, D-117):
  * - a message of a text channel they see: a chip "#channel › Message", with
- *   the server's name when it is another server than the one open;
+ *   the server's name when it is another server than the one open; of a
+ *   voice room's chat, the room's name with no "#" (S-ROOM-08);
  * - a message they cannot see (a channel not theirs, a server they are not
  *   in): "Can't view", with no name, so nothing private shows;
  * - any other page of the app: opened in the app (chips for channels and
@@ -50,12 +51,13 @@ export function readAppLink(
 
     const server = servers.find((candidate) => candidate.id === match.params.serverId)
     const channel = server?.channels.find((candidate) => candidate.id === match.params.channelId)
-    if (!server || channel?.type !== 'text' || !isId(match.params.messageId)) return { kind: 'hidden' }
+    if (!server || !channel || !isId(match.params.messageId)) return { kind: 'hidden' }
     return {
         kind: 'message',
         to: url.pathname,
         ...(server.id === serverId ? {} : { server: server.name }),
-        channel: channel.name
+        channel: channel.name,
+        ...(channel.type === 'voice' ? { room: true } : {})
     }
 }
 

@@ -7,7 +7,10 @@ import { apiUrl, asOwnClient, codeFromEmail, watchForProblems } from './helpers'
  * with the camera on, who is in the room live in the channel list and the
  * room (D-205), the mic and camera (D-206), a picture zoomed in, the dock
  * away from the room, leaving, a reload joining again with both off (D-51)
- * and the same account in a second tab (`other-tab`).
+ * and the same account in a second tab (`other-tab`). The room's chat (M4
+ * L6b, S-ROOM-08): read and written without joining, no pins (D-213), a
+ * mention there opening the chat from the inbox. With E2E_SHOTS naming a
+ * folder, pictures of the pages for the frame compare.
  *
  * Needs the API with LiveKit (the backend's `pnpm test:services:up` starts
  * it, its webhook to the API) and Mailpit, like messaging.spec.ts.
@@ -18,6 +21,14 @@ const PASSWORD = 'Harbour-Lantern-42'
 const stamp = Date.now().toString(36)
 const ip = `198.51.100.${Math.floor(Math.random() * 254) + 1}`
 const ROOM = 'Phòng học im lặng'
+const SHOTS = process.env.E2E_SHOTS
+
+/** A picture of the page for the frame compare, when E2E_SHOTS names a folder. */
+const shoot = async (page: Page, name: string) => {
+    if (!SHOTS) return
+    await page.waitForTimeout(300)
+    await page.screenshot({ path: `${SHOTS}/${name}.png` })
+}
 
 let anEmail: string
 let binhEmail: string
@@ -325,6 +336,63 @@ test('a shared screen takes the stage for the others; of two pressed at once, Li
     })
     await an.page.getByRole('button', { name: 'Leave room' }).click()
     await binh.page.getByRole('button', { name: 'Leave room' }).click()
+
+    expect(an.problems).toEqual([])
+    expect(binh.problems).toEqual([])
+    await an.context.close()
+    await binh.context.close()
+})
+
+test("a room's chat is read and written without joining; a mention there reaches the inbox, which opens the chat at it (S-ROOM-08, D-213)", async ({
+    browser
+}) => {
+    test.setTimeout(120_000)
+    const an = await openAs(browser, anEmail, roomPath)
+    const binh = await openAs(browser, binhEmail, firstPath)
+
+    // An, not in the room, opens its chat from [💬] at the end of the Header: the room named, no "#".
+    await an.page.getByRole('button', { name: 'Room chat' }).click()
+    const chat = an.page.getByRole('complementary', { name: 'Room chat' })
+    await expect(chat.getByRole('heading', { name: `Welcome to ${ROOM}` })).toBeVisible({ timeout: 15_000 })
+    const box = chat.getByRole('combobox', { name: `Message ${ROOM}` })
+    await box.pressSequentially('Tối nay ôn chương 3 nhé @bì')
+    const suggestions = an.page.getByRole('listbox', { name: 'Mention suggestions' })
+    await expect(suggestions.getByRole('option', { name: /^Bình, / })).toBeVisible({ timeout: 15_000 })
+    await an.page.keyboard.press('Enter')
+    await an.page.keyboard.press('Enter')
+    const sent = (page: Page) =>
+        page
+            .getByRole('complementary', { name: 'Room chat' })
+            .getByRole('article', { name: /Tối nay ôn chương 3 nhé @Bình$/ })
+    await expect(sent(an.page)).toBeVisible({ timeout: 15_000 })
+    // Written from outside: the way in is still there.
+    await expect(an.page.getByRole('button', { name: 'Join room' })).toBeVisible()
+    await shoot(an.page, 'room08-not-in-room')
+
+    // No pins in a room's chat, even for the owner (D-213).
+    await sent(an.page).hover()
+    await sent(an.page).getByRole('button', { name: 'More' }).click()
+    const menu = an.page.getByRole('menu')
+    await expect(menu.getByRole('menuitem', { name: 'Delete message' })).toBeVisible()
+    await expect(menu.getByRole('menuitem', { name: 'Pin' })).toHaveCount(0)
+    await an.page.keyboard.press('Escape')
+
+    // Bình, in another channel: the room's row counts the mention, and the inbox names the room with no "#".
+    await expect(channelList(binh.page).getByRole('link', { name: `${ROOM}, 1 unread mention of you` })).toBeVisible({
+        timeout: 15_000
+    })
+    await binh.page.getByRole('button', { name: 'Notifications, 1 unread' }).click()
+    const row = binh.page.getByRole('dialog', { name: 'Notifications' }).getByRole('link', {
+        name: new RegExp(
+            `^Unread\\. An mentioned you: Tối nay ôn chương 3 nhé @Bình\\. ${ROOM}, Ôn thi Giải tích 2, \\d\\d:\\d\\d$`
+        )
+    })
+    await row.click()
+    // The room's page, its chat open at the message.
+    await binh.page.waitForURL(new RegExp(`${roomPath}/`))
+    await expect(sent(binh.page)).toBeVisible({ timeout: 15_000 })
+    await expect(binh.page.getByRole('button', { name: 'Room chat' })).toHaveAttribute('aria-pressed', 'true')
+    await expect(channelList(binh.page).getByRole('link', { name: ROOM, exact: true })).toBeVisible({ timeout: 15_000 })
 
     expect(an.problems).toEqual([])
     expect(binh.problems).toEqual([])

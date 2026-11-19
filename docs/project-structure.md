@@ -85,6 +85,7 @@ react-starter/
     │   │   │                  #   useServerGoneWatch (D-143, D-178: starts liveServers, run by the AppShell),
     │   │   │                  #   useGoneServerPath (where a page of a server gone goes),
     │   │   │                  #   useInboxPlaces (the names and paths the inbox is handed),
+    │   │   │                  #   useChannelChat (what the chat of a text channel or a voice room is handed),
     │   │   │                  #   useRemovedWhileAway (kicked / banned while away: the Toast of H1, run by the AppShell)
     │   │   ├── lib/           # paths (SERVERS_PATHS and channelPath, messagePath, messageLink, invitePath,
     │   │   │                  #   serverSettingsPath, roleEditPath, isId), app-links (how a link in a message
@@ -421,7 +422,9 @@ Habits worth keeping:
   A port can also be handed down as a prop by the page that shows the
   other feature: the chat's mentions need the server's members, roles and
   channels (`MentionSource` in `messaging/types.ts`), and the channel page
-  hands the servers feature's answer (`servers/api/useMentionSource.ts`). Its
+  hands the servers feature's answer (`servers/api/useMentionSource.ts`),
+  with the rest the chat takes (`servers/hooks/useChannelChat.ts`), for a
+  text channel's chat and a voice room's alike (S-ROOM-08: no pins, D-213). Its
   queries go as query options (`queryKey`, `queryFn`), so the key and the
   cache stay the servers feature's, as `settingsCache` does for the users
   feature. The Task Board's `TaskBoardPlace` (`tasks/types.ts`) is the same:

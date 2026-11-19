@@ -522,9 +522,64 @@ describe('AppShell (S-SHELL-01)', () => {
             expect(messagesApi.fetchMessages).not.toHaveBeenCalledWith('hoi-dap', { around: 'm1' })
         })
 
-        it('and for a link to a message of a voice room', async () => {
-            renderAt('/channels/ot/quiet/0195a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b')
-            expect(await screen.findByRole('heading', { name: "We can't find this page" })).toBeInTheDocument()
+        it('opens a link to a message of a voice room on the room, its chat open at it, once (S-ROOM-08)', async () => {
+            const id = '0195a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b'
+            messagesApi.fetchMessages.mockImplementation(async (..._: unknown[]) => ({
+                items: [
+                    {
+                        id,
+                        channelId: 'quiet',
+                        type: 'regular',
+                        author: { id: 'tuan', username: 'tuan.le', displayName: 'Tuấn', avatarUrl: null },
+                        content: 'Mình vào phòng lúc 21:00',
+                        mentionUsers: [],
+                        mentionRoles: [],
+                        mentionEveryone: false,
+                        mentionHereUserIds: [],
+                        attachments: [],
+                        systemEvent: null,
+                        systemData: null,
+                        systemUser: null,
+                        replyTo: null,
+                        editedAt: null,
+                        pinned: false,
+                        reactions: [],
+                        createdAt: '2026-10-16T13:30:00.000Z'
+                    }
+                ] as never[],
+                hasMoreBefore: false,
+                hasMoreAfter: false
+            }))
+            try {
+                renderAt(`/channels/ot/quiet/${id}`)
+                expect(await screen.findByRole('heading', { level: 1, name: 'Phòng học im lặng' })).toBeInTheDocument()
+                const chat = await screen.findByRole('complementary', { name: 'Room chat' })
+                const article = () =>
+                    within(screen.getByRole('complementary', { name: 'Room chat' })).getByRole('article', {
+                        name: /Mình vào phòng lúc 21:00/
+                    })
+                await within(chat).findByRole('article', { name: /Mình vào phòng lúc 21:00/ }, { timeout: 5000 })
+                await waitFor(() => expect(messagesApi.fetchMessages).toHaveBeenCalledWith('quiet', { around: id }))
+                await waitFor(() => expect(article()).toHaveAttribute('data-highlight'))
+                const button = screen.getByRole('button', { name: 'Room chat' })
+                expect(button).toHaveAttribute('aria-pressed', 'true')
+
+                // Closed and opened again, the address still the link's: the message is not gone to and lit up again.
+                await userEvent.click(button)
+                await userEvent.click(button)
+                await within(await screen.findByRole('complementary', { name: 'Room chat' })).findByRole(
+                    'article',
+                    { name: /Mình vào phòng lúc 21:00/ },
+                    { timeout: 5000 }
+                )
+                expect(article()).not.toHaveAttribute('data-highlight')
+            } finally {
+                messagesApi.fetchMessages.mockImplementation(async (..._: unknown[]) => ({
+                    items: [],
+                    hasMoreBefore: false,
+                    hasMoreAfter: false
+                }))
+            }
         })
 
         it('has no critical or serious accessibility problem', async () => {
@@ -1027,6 +1082,114 @@ describe('AppShell (S-SHELL-01)', () => {
             await waitFor(() => expect(router.state.location.search).toBe('?task=t1'))
             expect(router.state.location.pathname).toBe('/channels/ot/hoi-dap')
             expect(router.state.historyAction).toBe('REPLACE')
+        })
+    })
+
+    describe("a voice room's chat (S-ROOM-08)", () => {
+        const QUIET_READ = (unreadCount: number, mentionCount: number) => ({
+            serverId: 'ot',
+            channelId: 'quiet',
+            lastReadId: '0190a000-0000-7000-8000-000000000010',
+            unreadCount,
+            mentionCount
+        })
+        afterEach(() => {
+            messagesApi.fetchMessages.mockImplementation(async (..._: unknown[]) => ({
+                items: [],
+                hasMoreBefore: false,
+                hasMoreAfter: false
+            }))
+        })
+
+        it('opens from [💬] at the end of the Header, closed at first, named with the room and no "#"', async () => {
+            renderAt('/channels/ot/quiet')
+            await screen.findByRole('heading', { level: 1, name: 'Phòng học im lặng' })
+            const button = await screen.findByRole('button', { name: 'Room chat' })
+            expect(button).toHaveAttribute('aria-pressed', 'false')
+            expect(screen.queryByRole('complementary', { name: 'Room chat' })).not.toBeInTheDocument()
+
+            await userEvent.click(button)
+
+            const chat = await screen.findByRole('complementary', { name: 'Room chat' })
+            expect(
+                await within(chat).findByRole('log', { name: 'Messages in Phòng học im lặng' }, { timeout: 5000 })
+            ).toBeInTheDocument()
+            expect(
+                await within(chat).findByRole('heading', { name: 'Welcome to Phòng học im lặng' })
+            ).toBeInTheDocument()
+            expect(within(chat).getByLabelText('Message Phòng học im lặng')).toBeInTheDocument()
+            expect(button).toHaveAttribute('aria-pressed', 'true')
+            expect(messagesApi.fetchMessages).toHaveBeenCalledWith('quiet', null)
+            // Read and sent without being in the room (P10): the preview page stays beside it.
+            expect(screen.getByRole('button', { name: 'Join room' })).toBeInTheDocument()
+            await expectNoA11yViolations()
+
+            await userEvent.click(button)
+            expect(screen.queryByRole('complementary', { name: 'Room chat' })).not.toBeInTheDocument()
+        })
+
+        it('has the mentions unread as a Badge on [💬] while closed, a dot for plain messages (C-07)', async () => {
+            readStatesApi.fetchReadStates.mockResolvedValue([QUIET_READ(3, 2)])
+            renderAt('/channels/ot/quiet')
+            const button = await screen.findByRole('button', { name: 'Room chat, 2 unread mentions of you' })
+            expect(within(button).getByText('2')).toBeInTheDocument()
+
+            await userEvent.click(button)
+            expect(await screen.findByRole('button', { name: 'Room chat' })).toHaveAttribute('aria-pressed', 'true')
+            expect(within(screen.getByRole('button', { name: 'Room chat' })).queryByText('2')).not.toBeInTheDocument()
+
+            cleanup()
+            readStatesApi.fetchReadStates.mockResolvedValue([QUIET_READ(3, 0)])
+            renderAt('/channels/ot/quiet')
+            const plain = await screen.findByRole('button', { name: 'Room chat, unread messages' })
+            expect(within(plain).getByTestId('room-chat-dot')).toBeInTheDocument()
+        })
+
+        it('offers no Pin on a message there, even with MANAGE_MESSAGES (D-213)', async () => {
+            const moderator = String(BigInt(MEMBER) | (1n << 14n))
+            serversApi.fetchServers.mockResolvedValue([
+                {
+                    ...OT,
+                    channels: OT.channels.map((one) => (one.id === 'quiet' ? { ...one, permissions: moderator } : one))
+                },
+                ND
+            ])
+            messagesApi.fetchMessages.mockImplementation(async (..._: unknown[]) => ({
+                items: [
+                    {
+                        id: '0190a0b0-0000-7000-8000-000000000001',
+                        channelId: 'quiet',
+                        type: 'regular',
+                        author: { id: 'tuan', username: 'tuan.le', displayName: 'Tuấn', avatarUrl: null },
+                        content: 'Mình vào phòng lúc 21:00',
+                        mentionUsers: [],
+                        mentionRoles: [],
+                        mentionEveryone: false,
+                        mentionHereUserIds: [],
+                        attachments: [],
+                        systemEvent: null,
+                        systemData: null,
+                        systemUser: null,
+                        replyTo: null,
+                        editedAt: null,
+                        pinned: false,
+                        reactions: [],
+                        createdAt: '2026-10-16T13:30:00.000Z'
+                    }
+                ] as never[],
+                hasMoreBefore: false,
+                hasMoreAfter: false
+            }))
+            renderAt('/channels/ot/quiet')
+            await userEvent.click(await screen.findByRole('button', { name: 'Room chat' }))
+
+            const message = (await screen.findByText('Mình vào phòng lúc 21:00', {}, { timeout: 5000 })).closest(
+                'article'
+            ) as HTMLElement
+            await userEvent.click(within(message).getByRole('button', { name: 'More' }))
+            const menu = await screen.findByRole('menu')
+            expect(within(menu).getByRole('menuitem', { name: 'Delete message' })).toBeInTheDocument()
+            expect(within(menu).queryByRole('menuitem', { name: 'Pin' })).not.toBeInTheDocument()
         })
     })
 

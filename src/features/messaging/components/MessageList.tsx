@@ -1,5 +1,5 @@
 import { useRef, useState, type FocusEvent } from 'react'
-import { ArrowDown, CloudOff } from 'lucide-react'
+import { ArrowDown, CloudOff, type LucideIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import '@/i18n/messaging'
 import { Button } from '@/components/ui/button'
@@ -18,6 +18,8 @@ import { MessageSkeletons } from './MessageSkeletons'
 
 interface MessageListProps {
     channelName: string
+    /** A voice room's chat (S-ROOM-08): the room's icon, in place of "#". */
+    roomIcon?: LucideIcon
     rows: ChatRow[]
     /** Nothing to show yet: first load (`loading`), or it failed (`error`). */
     status: 'ready' | 'loading' | 'error'
@@ -69,6 +71,7 @@ interface MessageListProps {
  */
 export function MessageList({
     channelName,
+    roomIcon,
     rows,
     status,
     older,
@@ -136,7 +139,7 @@ export function MessageList({
                 onScroll={onScroll}
                 onFocus={focusIn}
                 role='log'
-                aria-label={t('list.label', { channel: channelName })}
+                aria-label={t(roomIcon ? 'list.roomLabel' : 'list.label', { channel: channelName })}
                 aria-busy={status === 'loading' || older.loading || newer.loading || undefined}
                 // Positioned: a message's offsetTop is measured from the list's top (useChatScroll).
                 className='relative h-full overflow-y-auto'
@@ -155,7 +158,7 @@ export function MessageList({
                     ) : (
                         <>
                             {older.loading ? <MessageSkeletons count={2} /> : null}
-                            {older.has ? null : <ChannelIntro channelName={channelName} />}
+                            {older.has ? null : <ChannelIntro channelName={channelName} roomIcon={roomIcon} />}
                             {rows.flatMap((row, index) => {
                                 if (row.kind === 'date') {
                                     const day = dayLabel(row.at, now, timeZone, t)

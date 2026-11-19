@@ -48,12 +48,17 @@ import { ReplyBar } from './ReplyBar'
  * keeping the names; one typed by hand is words (owner, 14/11/2026). The
  * counter counts the text as it is sent, tokens and all: the 2000 the
  * backend holds it to.
+ *
+ * In a voice room's chat (`room`, S-ROOM-08) it reads "Message {room}",
+ * with no "#", 12 from the edges of the 280 panel and 12 inside its box
+ * (frame S-ROOM-08): the room's name keeps to one line there.
  */
 export function Composer({
     box,
     userId,
     channelId,
     channelName,
+    room = false,
     replyingTo,
     onCancelReply,
     onEditLast,
@@ -68,6 +73,8 @@ export function Composer({
     userId: string | undefined
     channelId: string
     channelName: string
+    /** A voice room's chat: "Message {room}", and the panel's narrower edges. */
+    room?: boolean
     /** The message the next one answers (S-CHAT-01 `reply-mode`). */
     replyingTo: RepliedMessage | null
     onCancelReply: () => void
@@ -88,6 +95,7 @@ export function Composer({
     attachFiles: boolean
 }) {
     const { t } = useTranslation('messaging')
+    const placeholder = t(room ? 'composer.roomPlaceholder' : 'composer.placeholder', { channel: channelName })
     const [draft, setDraft] = useDraft(userId, channelId)
     const { text, names } = draft
     const reportTyping = useReportTyping(channelId, useQuery(settingsCache).data?.presence === 'invisible')
@@ -199,13 +207,14 @@ export function Composer({
     }
 
     return (
-        <div ref={bar} className='shrink-0 px-4 pb-4'>
+        <div ref={bar} className={cn('shrink-0', room ? 'px-3 pb-3' : 'px-4 pb-4')}>
             {replyingTo ? <ReplyBar id={replyId} quoted={replyingTo} onCancel={onCancelReply} /> : null}
             <MentionSuggest state={mention.suggest}>
                 <PopoverAnchor asChild>
                     <div
                         className={cn(
-                            'rounded-input border bg-surface-1 px-4',
+                            'rounded-input border bg-surface-1',
+                            room ? 'px-3' : 'px-4',
                             focused
                                 ? 'border-primary shadow-[inset_0_0_0_1px_rgb(var(--primary))]'
                                 : 'border-border-input',
@@ -264,8 +273,8 @@ export function Composer({
                                     mention.leave()
                                 }}
                                 {...mention.aria}
-                                placeholder={t('composer.placeholder', { channel: channelName })}
-                                aria-label={t('composer.placeholder', { channel: channelName })}
+                                placeholder={placeholder}
+                                aria-label={placeholder}
                                 aria-invalid={tooLong || undefined}
                                 aria-describedby={
                                     [replyingTo && replyId, tooLong && tooLongId, holding && `tray-held-${channelId}`]

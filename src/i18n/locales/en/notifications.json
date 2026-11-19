@@ -51,6 +51,7 @@
         "files_one": "Sent {{count}} file",
         "files_other": "Sent {{count}} files",
         "source": "#{{channel}} · {{server}}",
+        "roomSource": "{{channel}} · {{server}}",
         "unread": "Unread.",
         "markRead": "Mark as read",
         "full": "{{weekday}}, {{date}} · {{time}}",

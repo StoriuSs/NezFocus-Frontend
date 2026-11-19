@@ -9,6 +9,8 @@ import { can } from './permissions'
  * VIEW_CHANNEL (appendix B, step 6), so it already takes SEND_MESSAGES,
  * ADD_REACTIONS and MANAGE_MESSAGES away; deleting one's own message and
  * clicking an emoji already on a message (SRS 1.71) also need to know of it.
+ * MANAGE_MESSAGES also pins and unpins, in a text channel only: a voice
+ * room’s chat has no pins (D-213).
  * MENTION_EVERYONE: @everyone and any role in the suggestions (REQ-MSG-03).
  * ATTACH_FILES with SEND_MESSAGES: files in the composer (REQ-MSG-04).
  * Without SEND_MESSAGES, why, as the composer says it (C-12 `disabled`): a
@@ -19,7 +21,7 @@ import { can } from './permissions'
  */
 export function chatPermissions(
     server: Pick<Server, 'timeoutUntil'>,
-    channel: Pick<ServerChannel, 'permissions' | 'sendMode'>,
+    channel: Pick<ServerChannel, 'permissions' | 'sendMode' | 'type'>,
     now: Date
 ): ChatPermissions {
     const manage = can(channel.permissions, 'MANAGE_MESSAGES')
@@ -30,6 +32,7 @@ export function chatPermissions(
         send,
         sendBlocked: send ? null : whyNot(server, channel),
         manage,
+        pins: manage && channel.type === 'text',
         deleteOwn: free,
         react: free,
         addReactions: can(channel.permissions, 'ADD_REACTIONS'),

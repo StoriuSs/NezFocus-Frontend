@@ -14,6 +14,7 @@
   },
   "list": {
     "label": "Tin nhắn trong #{{channel}}",
+    "roomLabel": "Tin nhắn trong {{channel}}",
     "loading": "Đang tải tin nhắn",
     "loadError": "Không tải được tin nhắn",
     "retry": "Thử lại",
@@ -23,7 +24,9 @@
   },
   "intro": {
     "title": "Chào mừng tới #{{channel}}",
-    "body": "Đây là đầu kênh. Hãy gửi tin nhắn đầu tiên."
+    "body": "Đây là đầu kênh. Hãy gửi tin nhắn đầu tiên.",
+    "roomTitle": "Chào mừng tới {{channel}}",
+    "roomBody": "Đây là đầu chat của phòng. Hãy gửi tin nhắn đầu tiên."
   },
   "message": {
     "deletedAccount": "Tài khoản đã bị xóa",
@@ -48,6 +51,7 @@
   },
   "composer": {
     "placeholder": "Nhắn #{{channel}}",
+    "roomPlaceholder": "Nhắn {{channel}}",
     "left": "còn {{count}}",
     "tooLong": "Tin nhắn dài quá 2000 ký tự",
     "disabled": {
@@ -225,6 +229,7 @@
     "failed": "Tải lên lỗi",
     "offline": "Chờ có mạng",
     "dropTitle": "Thả tệp để gửi vào #{{channel}}",
+    "roomDropTitle": "Thả tệp để gửi vào {{channel}}",
     "dropLimits": "Tối đa 10 tệp, mỗi tệp 25 MB",
     "view": "Xem",
     "unplayable": "Trình duyệt không phát được video này",

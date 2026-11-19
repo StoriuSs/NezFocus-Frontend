@@ -101,7 +101,8 @@
     "typeToConfirm": "Type {{name}} to confirm",
     "deleted": "Deleted #{{name}}",
     "roomDeleted": "Deleted {{name}}",
-    "pins": "Pinned messages"
+    "pins": "Pinned messages",
+    "roomChat": "Room chat"
   },
   "category": {
     "createTitle": "Create a category",

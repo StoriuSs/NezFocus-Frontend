@@ -29,6 +29,7 @@ const MEMBER: ChatPermissions = {
     send: true,
     sendBlocked: null,
     manage: false,
+    pins: false,
     deleteOwn: true,
     react: true,
     addReactions: true,
@@ -39,6 +40,7 @@ const MANAGERS_ONLY: ChatPermissions = {
     send: false,
     sendBlocked: { reason: 'managers-only' },
     manage: false,
+    pins: false,
     deleteOwn: true,
     react: true,
     addReactions: true,
@@ -49,6 +51,7 @@ const TIMED_OUT: ChatPermissions = {
     send: false,
     sendBlocked: { reason: 'timed-out', until: '2026-10-18T15:30:00Z' },
     manage: false,
+    pins: false,
     deleteOwn: false,
     react: false,
     addReactions: false,
@@ -59,6 +62,7 @@ const MODERATOR: ChatPermissions = {
     send: true,
     sendBlocked: null,
     manage: true,
+    pins: true,
     deleteOwn: true,
     react: true,
     addReactions: true,
@@ -123,5 +127,12 @@ describe('What one may do to a message (REQ-MSG-05, SRS 1.70)', () => {
             unpin: true
         })
         expect(allowedActions('an', MEMBER, { ...message('tuan'), pinned: true }).unpin).toBe(false)
+    })
+
+    it('offers neither "Pin" nor "Unpin" where the chat has no pins, MANAGE_MESSAGES or not (D-213)', () => {
+        const roomModerator = { ...MODERATOR, pins: false }
+        expect(allowedActions('an', roomModerator, message('tuan'))).toMatchObject({ pin: false, unpin: false })
+        expect(allowedActions('an', roomModerator, { ...message('tuan'), pinned: true }).unpin).toBe(false)
+        expect(allowedActions('an', roomModerator, message('tuan')).delete).toBe(true)
     })
 })

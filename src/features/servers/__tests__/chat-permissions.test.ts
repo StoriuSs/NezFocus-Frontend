@@ -12,13 +12,18 @@ describe('What the chat may offer, from the channel’s bits (REQ-MSG-05, SRS 1.
         expect(
             chatPermissions(
                 free,
-                { permissions: bits('VIEW_CHANNEL', 'SEND_MESSAGES'), sendMode: 'everyone' as const },
+                {
+                    permissions: bits('VIEW_CHANNEL', 'SEND_MESSAGES'),
+                    type: 'text' as const,
+                    sendMode: 'everyone' as const
+                },
                 NOW
             )
         ).toEqual({
             send: true,
             sendBlocked: null,
             manage: false,
+            pins: false,
             deleteOwn: true,
             react: true,
             addReactions: false,
@@ -28,10 +33,17 @@ describe('What the chat may offer, from the channel’s bits (REQ-MSG-05, SRS 1.
     })
 
     it('keeps deleting one’s own in a channel only managers may post in', () => {
-        expect(chatPermissions(free, { permissions: bits('VIEW_CHANNEL'), sendMode: 'managers' }, NOW)).toEqual({
+        expect(
+            chatPermissions(
+                free,
+                { permissions: bits('VIEW_CHANNEL'), type: 'text' as const, sendMode: 'managers' },
+                NOW
+            )
+        ).toEqual({
             send: false,
             sendBlocked: { reason: 'managers-only' },
             manage: false,
+            pins: false,
             deleteOwn: true,
             react: true,
             addReactions: false,
@@ -41,11 +53,12 @@ describe('What the chat may offer, from the channel’s bits (REQ-MSG-05, SRS 1.
     })
 
     it('leaves someone timed out nothing, until the timeout ends', () => {
-        const viewOnly = { permissions: bits('VIEW_CHANNEL'), sendMode: 'everyone' as const }
+        const viewOnly = { permissions: bits('VIEW_CHANNEL'), type: 'text' as const, sendMode: 'everyone' as const }
         expect(chatPermissions(timedOut, viewOnly, NOW)).toEqual({
             send: false,
             sendBlocked: { reason: 'timed-out', until: '2026-10-18T15:30:00Z' },
             manage: false,
+            pins: false,
             deleteOwn: false,
             react: false,
             addReactions: false,
@@ -62,17 +75,34 @@ describe('What the chat may offer, from the channel’s bits (REQ-MSG-05, SRS 1.
         expect(
             chatPermissions(
                 free,
-                { permissions: bits('VIEW_CHANNEL', 'MANAGE_MESSAGES'), sendMode: 'everyone' as const },
+                {
+                    permissions: bits('VIEW_CHANNEL', 'MANAGE_MESSAGES'),
+                    type: 'text' as const,
+                    sendMode: 'everyone' as const
+                },
                 NOW
             ).manage
         ).toBe(true)
+    })
+
+    it('gives MANAGE_MESSAGES pins in a text channel only: a voice room’s chat has none (D-213)', () => {
+        const moderator = { permissions: bits('VIEW_CHANNEL', 'MANAGE_MESSAGES'), sendMode: 'everyone' as const }
+        expect(chatPermissions(free, { ...moderator, type: 'text' }, NOW).pins).toBe(true)
+        expect(chatPermissions(free, { ...moderator, type: 'voice' }, NOW)).toMatchObject({ manage: true, pins: false })
+        expect(
+            chatPermissions(free, { permissions: bits('VIEW_CHANNEL'), type: 'text', sendMode: 'everyone' }, NOW).pins
+        ).toBe(false)
     })
 
     it('gives ADD_REACTIONS new emoji; without it, only those already on a message (SRS 1.71)', () => {
         expect(
             chatPermissions(
                 free,
-                { permissions: bits('VIEW_CHANNEL', 'ADD_REACTIONS'), sendMode: 'everyone' as const },
+                {
+                    permissions: bits('VIEW_CHANNEL', 'ADD_REACTIONS'),
+                    type: 'text' as const,
+                    sendMode: 'everyone' as const
+                },
                 NOW
             )
         ).toMatchObject({
@@ -84,6 +114,7 @@ describe('What the chat may offer, from the channel’s bits (REQ-MSG-05, SRS 1.
     it('lets a timed out moderator keep reacting, as the server does (appendix B, step 1)', () => {
         const moderator = {
             permissions: bits('VIEW_CHANNEL', 'MANAGE_MESSAGES', 'ADD_REACTIONS'),
+            type: 'text' as const,
             sendMode: 'everyone' as const
         }
         expect(chatPermissions(timedOut, moderator, NOW)).toMatchObject({ react: true, addReactions: true })
@@ -93,47 +124,67 @@ describe('What the chat may offer, from the channel’s bits (REQ-MSG-05, SRS 1.
         expect(
             chatPermissions(
                 free,
-                { permissions: bits('VIEW_CHANNEL', 'MENTION_EVERYONE'), sendMode: 'everyone' as const },
+                {
+                    permissions: bits('VIEW_CHANNEL', 'MENTION_EVERYONE'),
+                    type: 'text' as const,
+                    sendMode: 'everyone' as const
+                },
                 NOW
             ).mentionEveryone
         ).toBe(true)
         expect(
-            chatPermissions(free, { permissions: bits('VIEW_CHANNEL'), sendMode: 'everyone' as const }, NOW)
-                .mentionEveryone
+            chatPermissions(
+                free,
+                { permissions: bits('VIEW_CHANNEL'), type: 'text' as const, sendMode: 'everyone' as const },
+                NOW
+            ).mentionEveryone
         ).toBe(false)
     })
 
     it('offers files with SEND_MESSAGES and ATTACH_FILES only, and none while timed out (REQ-ROLE-03)', () => {
         const both = {
             permissions: bits('VIEW_CHANNEL', 'SEND_MESSAGES', 'ATTACH_FILES'),
+            type: 'text' as const,
             sendMode: 'everyone' as const
         }
         expect(chatPermissions(free, both, NOW).attachFiles).toBe(true)
         expect(
             chatPermissions(
                 free,
-                { permissions: bits('VIEW_CHANNEL', 'ATTACH_FILES'), sendMode: 'everyone' as const },
+                {
+                    permissions: bits('VIEW_CHANNEL', 'ATTACH_FILES'),
+                    type: 'text' as const,
+                    sendMode: 'everyone' as const
+                },
                 NOW
             ).attachFiles
         ).toBe(false)
         expect(
             chatPermissions(
                 free,
-                { permissions: bits('VIEW_CHANNEL', 'SEND_MESSAGES'), sendMode: 'everyone' as const },
+                {
+                    permissions: bits('VIEW_CHANNEL', 'SEND_MESSAGES'),
+                    type: 'text' as const,
+                    sendMode: 'everyone' as const
+                },
                 NOW
             ).attachFiles
         ).toBe(false)
     })
 
     it('says why the composer is shut: a timeout first, then a channel only managers post in, else the server (C-12 disabled)', () => {
-        const managersOnly = { permissions: bits('VIEW_CHANNEL'), sendMode: 'managers' as const }
+        const managersOnly = { permissions: bits('VIEW_CHANNEL'), type: 'text' as const, sendMode: 'managers' as const }
         expect(chatPermissions(timedOut, managersOnly, NOW).sendBlocked).toEqual({
             reason: 'timed-out',
             until: '2026-10-18T15:30:00Z'
         })
         expect(chatPermissions(free, managersOnly, NOW).sendBlocked).toEqual({ reason: 'managers-only' })
         expect(
-            chatPermissions(free, { permissions: bits('VIEW_CHANNEL'), sendMode: 'everyone' }, NOW).sendBlocked
+            chatPermissions(
+                free,
+                { permissions: bits('VIEW_CHANNEL'), type: 'text' as const, sendMode: 'everyone' },
+                NOW
+            ).sendBlocked
         ).toEqual({ reason: 'no-permission' })
         // Past its end by this clock, the server not read again yet (or the API's clock behind): still the timeout.
         expect(chatPermissions(timedOut, managersOnly, new Date('2026-10-18T15:31:00Z')).sendBlocked).toEqual({
@@ -147,6 +198,7 @@ describe('What the chat may offer, from the channel’s bits (REQ-MSG-05, SRS 1.
         // The owner or an ADMINISTRATOR timed out still posts: nothing to say.
         const owner = {
             permissions: bits('VIEW_CHANNEL', 'SEND_MESSAGES', 'MANAGE_MESSAGES'),
+            type: 'text' as const,
             sendMode: 'managers' as const
         }
         expect(chatPermissions(timedOut, owner, NOW).sendBlocked).toBeNull()

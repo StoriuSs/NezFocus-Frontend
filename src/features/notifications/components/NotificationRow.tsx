@@ -86,7 +86,8 @@ export function NotificationRow({
         : text.content
           ? `${text.title}: ${text.content}`
           : text.title
-    const tail = [text.place ? `#${text.place.channelName}, ${text.place.serverName}` : text.source, time]
+    const where = text.place && `${text.place.icon ? '' : '#'}${text.place.channelName}`
+    const tail = [text.place ? `${where}, ${text.place.serverName}` : text.source, time]
     const label = `${unread ? `${t('row.unread')} ` : ''}${sentences(head, tail.filter(Boolean).join(', '))}`
     // A kick or a ban has no hover at all (06 › Luật hộp thư): its ✓ shows on focus only.
     const hovers = !isRemoval(item)
@@ -158,8 +159,11 @@ export function NotificationRow({
                     <span className='line-clamp-2 break-words text-body-sm text-text-secondary'>{text.content}</span>
                 ) : null}
                 {text.place ? (
-                    <span className='flex min-w-0 text-label text-text-tertiary'>
-                        <span className='min-w-0 shrink-0 truncate'>#{text.place.channelName}</span>
+                    <span className='flex min-w-0 items-center text-label text-text-tertiary'>
+                        {text.place.icon ? (
+                            <text.place.icon className='mr-1 size-3 shrink-0' aria-hidden='true' />
+                        ) : null}
+                        <span className='min-w-0 shrink-0 truncate'>{where}</span>
                         <span className='min-w-0 truncate'>&nbsp;· {text.place.serverName}</span>
                     </span>
                 ) : text.source ? (

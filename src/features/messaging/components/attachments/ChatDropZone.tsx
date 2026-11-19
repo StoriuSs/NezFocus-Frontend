@@ -29,14 +29,20 @@ const carriesFiles = (event: DragEvent) => event.dataTransfer?.types.includes('F
  * until 22:30" · "You can't send messages yet, files included"; `lock` for a
  * channel only moderators post in, a server that gives no SEND_MESSAGES, or
  * no ATTACH_FILES.
+ *
+ * A voice room's chat (`room`, S-ROOM-08) draws it over its panel, and
+ * names the room with no "#".
  */
 export function ChatDropZone({
     channelId,
     channelName,
+    room = false,
     permissions
 }: {
     channelId: string
     channelName: string
+    /** A voice room's chat: the room named with no "#". */
+    room?: boolean
     permissions: Pick<ChatPermissions, 'sendBlocked' | 'attachFiles'>
 }) {
     const { t, i18n } = useTranslation('messaging')
@@ -121,7 +127,7 @@ export function ChatDropZone({
                     <>
                         <Upload className='text-primary' style={ICON} aria-hidden='true' />
                         <p className='text-title-2 font-semibold text-text-primary'>
-                            {t('attach.dropTitle', { channel: channelName })}
+                            {t(room ? 'attach.roomDropTitle' : 'attach.dropTitle', { channel: channelName })}
                         </p>
                         <p className='text-body-sm text-text-secondary'>{t('attach.dropLimits')}</p>
                     </>

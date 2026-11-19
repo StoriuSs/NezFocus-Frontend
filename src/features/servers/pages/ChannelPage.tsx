@@ -1,6 +1,6 @@
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { Hash, LampDesk, ListChecks, Pin, Users, Volume2 } from 'lucide-react'
+import { Hash, ListChecks, MessageSquare, Pin, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import '@/i18n/servers'
@@ -8,23 +8,21 @@ import { PageLoader } from '@/components/PageLoader'
 import { RightPanel, usePanel } from '@/components/shell/RightPanel'
 import { ShellNotFound } from '@/components/shell/ShellNotFound'
 import { ShellPage } from '@/components/shell/ShellPage'
+import { CountBadge } from '@/components/ui/count-badge'
 import { IconButton } from '@/components/ui/icon-button'
 import { WithTooltip } from '@/components/ui/tooltip'
-import { ChannelChat, ChatDropZone, PinsPanel } from '@/features/messaging'
+import { ChannelChat, ChatDropZone, PinsPanel, useChannelReadState } from '@/features/messaging'
 import { TaskBoard } from '@/features/tasks'
 import { useVoiceStore, VoiceRoomView } from '@/features/voice'
-import { useMentionSource } from '../api/useMentionSource'
 import { MemberPanel } from '../components/member-panel/MemberPanel'
 import { useServers } from '../api/useServers'
 import { useTaskBoardPlace } from '../api/useTaskBoardPlace'
-import { useVisitKey } from '../hooks/useVisitKey'
+import { useChannelChat } from '../hooks/useChannelChat'
 import { useChannelDialogs } from '../channel-dialogs.store'
 import { useGoneServerPath } from '../hooks/useGoneServerPath'
-import { linkedServers, readAppLink, type LinkedServer } from '../lib/app-links'
-import { chatPermissions } from '../lib/chat-permissions'
-import { firstTextChannel } from '../lib/channel-list'
+import { channelIcon, firstTextChannel } from '../lib/channel-list'
 import { voiceRoomOf } from '../lib/voice-room'
-import { channelPath, isId, messageLink, messagePath } from '../lib/paths'
+import { channelPath, isId, messagePath } from '../lib/paths'
 import type { Server, ServerChannel } from '../types'
 
 /**
@@ -39,14 +37,15 @@ import type { Server, ServerChannel } from '../types'
  * the rail (`useGoneServerPath`).
  *
  * A link to a message (`/channels/{s}/{c}/{m}`, D-48) opens its channel at
- * that message. One to a text channel they cannot see, in a server they are
- * not in, to anything but a text channel, or with an id that is not one, is
- * "We can't find this page"
+ * that message, or its room with the room's chat open at it (S-ROOM-08). One
+ * to a channel they cannot see, in a server they are not in, or with an id
+ * that is not one, is "We can't find this page"
  * (11 S-MOD-06), the URL kept, saying nothing of what is there (REQ-MSG-05).
  *
  * A text channel holds its chat (S-CHAT-01, the messaging feature's), a
  * chunk of its own; a voice room its preview page or, once joined, the room
- * (07, the voice feature's), a chunk of its own too.
+ * (07, the voice feature's), a chunk of its own too, with the room's chat
+ * beside it (S-ROOM-08).
  */
 export default function ChannelPage() {
     const { serverId, channelId, messageId } = useParams()
@@ -75,7 +74,7 @@ export default function ChannelPage() {
         const first = firstTextChannel(server)
         return <Removed to={channelPath(server.id, first?.id)} room={wasIn} />
     }
-    if (messageId !== undefined && (channel?.type !== 'text' || !isId(messageId))) return <ShellNotFound />
+    if (messageId !== undefined && (!channel || !isId(messageId))) return <ShellNotFound />
     if (!server) return <Navigate to='/study' replace />
 
     if (!channel) {
@@ -85,15 +84,7 @@ export default function ChannelPage() {
         return <ShellPage title={server.name} />
     }
 
-    if (channel.type === 'voice') {
-        return (
-            <ShellPage title={channel.name} icon={channel.isStudyRoom ? LampDesk : Volume2}>
-                <Suspense fallback={<PageLoader className='min-h-0 flex-1' />}>
-                    <VoiceRoomView room={voiceRoomOf(server, channel)} />
-                </Suspense>
-            </ShellPage>
-        )
-    }
+    if (channel.type === 'voice') return <VoiceChannel server={server} channel={channel} messageId={messageId} />
 
     return <TextChannel key={channel.id} server={server} channel={channel} messageId={messageId} />
 }
@@ -112,16 +103,117 @@ function Removed({ to, room }: { to: string; room: boolean }) {
 }
 
 /**
- * A text channel's page: its chat, with what one may do with messages there
- * (read from the permission bits here, as the chat reads none), how to link
- * to one of them, and how links in messages show (this feature's paths and
- * the servers one is in). All kept from one render to the next while they
- * stay the same, so the chat's rows do not draw again. Opened at a message,
- * the chat goes to it, again each time a link to it is opened.
- *
- * Mentions (REQ-MSG-03): the chat's MentionSource port answered here
- * (`useMentionSource`): whom to suggest, how a channel token shows, the
- * roles one holds.
+ * A voice room's page (07): its preview or, once joined, the room (the voice
+ * feature's), and the room's chat (S-ROOM-08) in the right panel, opened by
+ * [💬] at the end of the Header (C-07 `room`): closed at first and
+ * remembered as a column, kept as it is on joining or leaving the room (P10).
+ * Closed, [💬] has the mentions of the reader still unread as a Badge, or a
+ * dot when only plain messages are (C-07, C-03 `dot`). A message link or an
+ * inbox item opens the panel at the message, once per visit. The chat is the
+ * text channel's (`useChannelChat`), named with the room's icon in place of
+ * "#", with no pins (D-213); files dragged onto the panel go to its tray.
+ */
+function VoiceChannel({ server, channel, messageId }: { server: Server; channel: ServerChannel; messageId?: string }) {
+    const { t } = useTranslation('servers')
+    const { t: common } = useTranslation()
+    const [chat, chatButton] = usePanel('room-chat', { startClosed: true })
+    const { permissions, linkTo, readLink, mentions, target } = useChannelChat(server, channel, messageId)
+    const icon = channelIcon(channel)
+    // A message link or an inbox item: the chat open at it, once per visit.
+    const [openedAt, setOpenedAt] = useState<string | null>(null)
+    useEffect(() => {
+        if (!target || openedAt === target.key) return
+        setOpenedAt(target.key)
+        if (!chat.open) chat.toggle()
+    }, [target, openedAt, chat])
+    // Closed after that, the chat opens again where it would without the link: the URL keeps the message.
+    const [spent, setSpent] = useState<string | null>(null)
+    if (target && openedAt === target.key && !chat.open && spent !== target.key) setSpent(target.key)
+    const chatTarget = target && target.key !== spent ? target : undefined
+    const read = useChannelReadState(channel.id)
+    const mentioned = chat.open ? 0 : (read?.mentionCount ?? 0)
+    const unread = !chat.open && (mentioned > 0 || (read?.unreadCount ?? 0) > 0)
+    const title = t('channel.roomChat')
+    const label = unread
+        ? common('shell.unread.label', {
+              name: title,
+              state:
+                  mentioned > 0
+                      ? common('shell.unread.mentions', { count: mentioned })
+                      : common('shell.unread.messages')
+          })
+        : title
+
+    return (
+        <ShellPage
+            title={channel.name}
+            icon={icon}
+            composer={chat.open}
+            actions={
+                <WithTooltip label={title} side='bottom'>
+                    <IconButton
+                        ref={chatButton}
+                        label={label}
+                        on={chat.open}
+                        onClick={chat.toggle}
+                        className='relative'
+                    >
+                        <MessageSquare />
+                        {mentioned > 0 ? (
+                            <CountBadge
+                                count={mentioned}
+                                cutout='ring-bg'
+                                className='pointer-events-none absolute -right-1 -top-1'
+                            />
+                        ) : unread ? (
+                            <span
+                                aria-hidden='true'
+                                data-testid='room-chat-dot'
+                                className='pointer-events-none absolute right-0.5 top-0.5 size-2 rounded-full bg-danger ring-2 ring-bg'
+                            />
+                        ) : null}
+                    </IconButton>
+                </WithTooltip>
+            }
+            panel={
+                <RightPanel
+                    state={chat}
+                    buttonRef={chatButton}
+                    title={title}
+                    bodyClassName='relative flex flex-col overflow-y-hidden p-0'
+                >
+                    <Suspense fallback={<PageLoader className='min-h-0 flex-1' />}>
+                        <ChatDropZone
+                            channelId={channel.id}
+                            channelName={channel.name}
+                            room
+                            permissions={permissions}
+                        />
+                        <ChannelChat
+                            key={channel.id}
+                            channelId={channel.id}
+                            channelName={channel.name}
+                            roomIcon={icon}
+                            permissions={permissions}
+                            linkTo={linkTo}
+                            readLink={readLink}
+                            mentions={mentions}
+                            target={chatTarget}
+                        />
+                    </Suspense>
+                </RightPanel>
+            }
+        >
+            <Suspense fallback={<PageLoader className='min-h-0 flex-1' />}>
+                <VoiceRoomView room={voiceRoomOf(server, channel)} />
+            </Suspense>
+        </ShellPage>
+    )
+}
+
+/**
+ * A text channel's page: its chat (`useChannelChat`: what one may do there,
+ * links, mentions, the message it was opened at).
  *
  * Files dragged onto the page go to the chat's tray (`ChatDropZone`, C-12
  * `drop-target`), over the whole content column.
@@ -170,14 +262,9 @@ function TextChannel({ server, channel, messageId }: { server: Server; channel: 
         [showDialog, server.id, channel.id]
     )
     const place = useTaskBoardPlace(server, channel, openSettings)
-    const { id: serverId, timeoutUntil } = server
-    const { id: channelId, permissions: bits, sendMode } = channel
-    // Again when the server is read again: at the end of a timeout too (liveServers).
-    const permissions = useMemo(
-        () => chatPermissions({ timeoutUntil }, { permissions: bits, sendMode }, new Date()),
-        [timeoutUntil, bits, sendMode]
-    )
-    const linkTo = useCallback((id: string) => messageLink(serverId, channelId, id), [serverId, channelId])
+    const { id: serverId } = server
+    const { id: channelId } = channel
+    const { permissions, linkTo, readLink, mentions, target } = useChannelChat(server, channel, messageId)
     // "Xem việc" on a due-date reminder: the task's detail over this page, no step in the history (05 Q6).
     const [, setParams] = useSearchParams()
     const showTask = useCallback(
@@ -192,12 +279,6 @@ function TextChannel({ server, channel, messageId }: { server: Server; channel: 
             ),
         [setParams]
     )
-    const linked = linkedServers(useServers().data ?? [])
-    const readLink = useMemo(() => {
-        const servers = JSON.parse(linked) as LinkedServer[]
-        return (href: string) => readAppLink(href, { origin: window.location.origin, servers, serverId })
-    }, [linked, serverId])
-    const mentions = useMentionSource(server, linked)
     const { key, state } = useLocation()
     // From a task's channel line (S-TASK-02): the board open, once per visit.
     const wantsTasks = (state as { openTasks?: boolean } | null)?.openTasks === true
@@ -207,11 +288,6 @@ function TextChannel({ server, channel, messageId }: { server: Server; channel: 
         tasksAsked.current = key
         if (!showTasks) toggleTasks()
     })
-    // From the pins sheet, which closes with the focus in it: focus goes to the message.
-    const focus = (state as { focusMessage?: boolean } | null)?.focusMessage === true
-    // A link followed again jumps again; a task's detail opened over the page (`?task=`) does not.
-    const visit = useVisitKey()
-    const target = useMemo(() => (messageId ? { messageId, key: visit, focus } : undefined), [messageId, visit, focus])
     const openPinned = (pinnedId: string) => {
         // As a column the panel stays, focus on its card; as a sheet it closes, focus to the message.
         void navigate(messagePath(serverId, channelId, pinnedId), { state: { focusMessage: !pins.docked } })
@@ -290,7 +366,7 @@ function TextChannel({ server, channel, messageId }: { server: Server; channel: 
                         <Suspense fallback={<PageLoader className='min-h-0 py-6' />}>
                             <PinsPanel
                                 channelId={channelId}
-                                manage={permissions.manage}
+                                manage={permissions.pins}
                                 onOpen={openPinned}
                                 channel={mentions.channel}
                             />

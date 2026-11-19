@@ -2,12 +2,14 @@ import { useMemo } from 'react'
 import type { InboxPlaces } from '@/features/notifications'
 import { useServers } from '../api/useServers'
 import { readChannelMention } from '../lib/app-links'
+import { channelIcon } from '../lib/channel-list'
 import { channelPath, messagePath, serverSettingsPath } from '../lib/paths'
 
 /**
  * What the inbox (S-NOTI-01) takes from the servers list (D-197): an item's
  * channel and server by name (null when one is not in the server or no longer
- * views the channel, undefined while the list loads), a channel mentioned in
+ * views the channel, undefined while the list loads), with a voice room's icon
+ * (its chat has no "#", S-ROOM-08), a channel mentioned in
  * a message, the path to a message (D-48); whether one is in a server, and
  * the paths to its first text channel and to its settings (a server item).
  */
@@ -19,7 +21,9 @@ export function useInboxPlaces(): InboxPlaces {
                 if (!servers) return undefined
                 const server = servers.find((candidate) => candidate.id === serverId)
                 const channel = server?.channels.find((candidate) => candidate.id === channelId)
-                return server && channel ? { serverName: server.name, channelName: channel.name } : null
+                if (!server || !channel) return null
+                const place = { serverName: server.name, channelName: channel.name }
+                return channel.type === 'voice' ? { ...place, icon: channelIcon(channel) } : place
             },
             mentionChannel: (channelId, serverId) =>
                 readChannelMention(channelId, { servers: servers ?? [], serverId }),

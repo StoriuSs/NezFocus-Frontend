@@ -1,18 +1,7 @@
 import { createElement, type KeyboardEvent, type ReactNode } from 'react'
 import { NavLink, useMatch } from 'react-router-dom'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
-import {
-    Ban,
-    ChevronDown,
-    ChevronRight,
-    Hash,
-    LampDesk,
-    Lock,
-    Plus,
-    Settings,
-    Volume2,
-    type LucideIcon
-} from 'lucide-react'
+import { Ban, ChevronDown, ChevronRight, Lock, Plus, Settings, type LucideIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { CountBadge } from '@/components/ui/count-badge'
 import { WithTooltip } from '@/components/ui/tooltip'
@@ -22,15 +11,13 @@ import { cn } from '@/lib/utils'
 import { categoryDropId, channelDropId } from '../../lib/drop-target'
 import { channelPath } from '../../lib/paths'
 import { can } from '../../lib/permissions'
+import { channelIcon } from '../../lib/channel-list'
 import { voiceRoomOf } from '../../lib/voice-room'
 import type { Server, ServerCategory, ServerChannel } from '../../types'
 import { RoomPeople } from './RoomPeople'
 
 const ROW =
     'flex h-8 items-center gap-2 rounded-input px-2 text-body-sm transition-colors duration-micro [&_svg]:size-4 [&_svg]:shrink-0'
-
-export const channelIcon = (channel: Pick<ServerChannel, 'type' | 'isStudyRoom'>): LucideIcon =>
-    channel.type === 'text' ? Hash : channel.isStudyRoom ? LampDesk : Volume2
 
 /** A 12 lock after the name (C-06): a private channel, or a room one may not join. */
 const SmallLock = ({ label }: { label: string }) => (

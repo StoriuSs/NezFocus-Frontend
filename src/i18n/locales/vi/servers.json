@@ -101,7 +101,8 @@
     "typeToConfirm": "Gõ {{name}} để xác nhận",
     "deleted": "Đã xóa #{{name}}",
     "roomDeleted": "Đã xóa {{name}}",
-    "pins": "Tin đã ghim"
+    "pins": "Tin đã ghim",
+    "roomChat": "Chat của phòng"
   },
   "category": {
     "createTitle": "Tạo danh mục",

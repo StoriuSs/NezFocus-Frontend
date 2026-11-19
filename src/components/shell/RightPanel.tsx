@@ -73,7 +73,9 @@ export function usePanel(
  * Esc closes that first.
  * `heading` takes the title's place in the header (the Task Board's search
  * field, 05 S-TASK-01 `search`; the title still names the panel), `actions`
- * go at its end, before the sheet's close button.
+ * go at its end, before the sheet's close button. `bodyClassName` changes
+ * the body under the header, which scrolls with an 8 inset by default (a
+ * voice room's chat, S-ROOM-08: its own list scrolls, edge to edge).
  */
 export function RightPanel({
     state,
@@ -81,6 +83,7 @@ export function RightPanel({
     title,
     heading,
     actions,
+    bodyClassName,
     children
 }: {
     state: PanelState
@@ -88,6 +91,7 @@ export function RightPanel({
     title: string
     heading?: ReactNode
     actions?: ReactNode
+    bodyClassName?: string
     children: ReactNode
 }) {
     const { t } = useTranslation()
@@ -145,7 +149,7 @@ export function RightPanel({
                     </WithTooltip>
                 ) : null}
             </header>
-            <div className='min-h-0 flex-1 overflow-y-auto p-2'>{children}</div>
+            <div className={cn('min-h-0 flex-1 overflow-y-auto p-2', bodyClassName)}>{children}</div>
         </aside>
     )
 }

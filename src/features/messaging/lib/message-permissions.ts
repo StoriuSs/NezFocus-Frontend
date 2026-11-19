@@ -11,7 +11,7 @@ export interface AllowedActions {
     delete: boolean
     /** "Add reaction" (a new emoji): ADD_REACTIONS (C-11). */
     react: boolean
-    /** MANAGE_MESSAGES, while it is not pinned (REQ-MSG-07). */
+    /** MANAGE_MESSAGES where the chat has pins, while it is not pinned (REQ-MSG-07, D-213). */
     pin: boolean
     /** MANAGE_MESSAGES, once it is pinned. */
     unpin: boolean
@@ -25,7 +25,7 @@ export function allowedActions(me: string | undefined, permissions: ChatPermissi
         reply: permissions.send,
         delete: permissions.manage || (own && permissions.deleteOwn),
         react: permissions.addReactions,
-        pin: permissions.manage && !message.pinned,
-        unpin: permissions.manage && message.pinned
+        pin: permissions.pins && !message.pinned,
+        unpin: permissions.pins && message.pinned
     }
 }

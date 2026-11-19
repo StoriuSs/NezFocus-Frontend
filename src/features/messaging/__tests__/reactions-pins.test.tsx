@@ -123,18 +123,20 @@ const MEMBER: ChatPermissions = {
     send: true,
     sendBlocked: null,
     manage: false,
+    pins: false,
     deleteOwn: true,
     react: true,
     addReactions: true,
     mentionEveryone: false
 }
-const MODERATOR: ChatPermissions = { ...MEMBER, manage: true }
+const MODERATOR: ChatPermissions = { ...MEMBER, manage: true, pins: true }
 const NO_NEW: ChatPermissions = { ...MEMBER, addReactions: false }
 const TIMED_OUT: ChatPermissions = {
     attachFiles: true,
     send: false,
     sendBlocked: { reason: 'timed-out', until: '2026-10-18T15:30:00Z' },
     manage: false,
+    pins: false,
     deleteOwn: false,
     react: false,
     addReactions: false,

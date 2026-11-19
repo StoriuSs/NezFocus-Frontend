@@ -36,10 +36,18 @@ describe('A link in a message, as the chat shows it (REQ-MSG-05, D-48, D-117)', 
         })
     })
 
-    it('hides what they cannot see: a channel not theirs, a server they are not in, a room', () => {
+    it('makes a link to a message of a voice room’s chat a chip with the room’s name, no "#" (S-ROOM-08)', () => {
+        expect(read(`https://nezfocus.app/channels/ot/phong-hoc/${M1}`)).toEqual({
+            kind: 'message',
+            to: `/channels/ot/phong-hoc/${M1}`,
+            channel: 'Phòng học im lặng',
+            room: true
+        })
+    })
+
+    it('hides what they cannot see: a channel not theirs, a server they are not in', () => {
         expect(read(`https://nezfocus.app/channels/ot/rieng-tu/${M1}`)).toEqual({ kind: 'hidden' })
         expect(read(`https://nezfocus.app/channels/cu/chung/${M1}`)).toEqual({ kind: 'hidden' })
-        expect(read(`https://nezfocus.app/channels/ot/phong-hoc/${M1}`)).toEqual({ kind: 'hidden' })
     })
 
     it('opens any other page of the app in the app', () => {

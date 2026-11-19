@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import '@/i18n/messaging'
 import { useToastEdge } from '@/hooks/useToastArea'
 import { endsAtText } from '@/lib/time-zones'
+import { cn } from '@/lib/utils'
 import type { SendBlock } from '../types'
 
 /**
@@ -16,9 +17,20 @@ import type { SendBlock } from '../types'
  *
  * A status, which takes the focus the box had when it shut under someone
  * typing (the box gone, focus would fall to the page): a screen reader says
- * why. Focus anywhere else stays.
+ * why. Focus anywhere else stays. In a voice room's chat (`room`, S-ROOM-08),
+ * 12 from the panel's edges, as the Composer there.
  */
-export function ComposerDisabled({ blocked, now, timeZone }: { blocked: SendBlock; now: Date; timeZone?: string }) {
+export function ComposerDisabled({
+    blocked,
+    now,
+    timeZone,
+    room = false
+}: {
+    blocked: SendBlock
+    now: Date
+    timeZone?: string
+    room?: boolean
+}) {
     const { t, i18n } = useTranslation('messaging')
     const Icon = blocked.reason === 'timed-out' ? Timer : Lock
     const line = useRef<HTMLParagraphElement>(null)
@@ -30,7 +42,7 @@ export function ComposerDisabled({ blocked, now, timeZone }: { blocked: SendBloc
         if (!focused || focused === document.body) line.current?.focus()
     }, [])
     return (
-        <div ref={bar} className='shrink-0 px-4 pb-4'>
+        <div ref={bar} className={cn('shrink-0', room ? 'px-3 pb-3' : 'px-4 pb-4')}>
             <p
                 ref={line}
                 role='status'

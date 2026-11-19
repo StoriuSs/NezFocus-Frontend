@@ -1,4 +1,13 @@
+import { Hash, LampDesk, Volume2, type LucideIcon } from 'lucide-react'
 import type { Server, ServerCategory, ServerChannel } from '../types'
+
+/**
+ * A channel's icon (C-06): `hash` for a text channel, `lamp-desk` for a study
+ * room, `volume-2` for any other voice room. Here rather than with the rows:
+ * the room page and the inbox use it too, without the channel list's drag code.
+ */
+export const channelIcon = (channel: Pick<ServerChannel, 'type' | 'isStudyRoom'>): LucideIcon =>
+    channel.type === 'text' ? Hash : channel.isStudyRoom ? LampDesk : Volume2
 
 export interface ChannelGroup {
     /** Null: the channels above the first category, with no heading. */

@@ -1,5 +1,6 @@
 import type { InfiniteData } from '@tanstack/react-query'
 import type { MentionChannel } from '@/features/messaging'
+import type { LucideIcon } from 'lucide-react'
 import type { ApiModel } from '@/lib/api-types'
 
 /** One inbox item (REQ-NOTIF-01): a mention or a reply in M3 L6, the message as it is now (D-184). */
@@ -55,10 +56,15 @@ export interface RemovalNotice {
     createdAt: string
 }
 
-/** The names of a channel and its server, as the servers list has them. */
+/**
+ * The names of a channel and its server, as the servers list has them; a
+ * voice room's chat also has the room's icon, shown in place of "#" (06,
+ * S-ROOM-08).
+ */
 export interface InboxPlace {
     serverName: string
     channelName: string
+    icon?: LucideIcon
 }
 
 /**

@@ -1,3 +1,4 @@
+import { Volume2 } from 'lucide-react'
 import { beforeAll, describe, expect, it } from 'vitest'
 import i18n from '@/i18n'
 import '@/i18n/notifications'
@@ -224,6 +225,18 @@ describe('notificationText', () => {
             title: 'Bạn đã bị cấm khỏi CLB Guitar PTIT',
             content: 'Bạn không thể tham gia lại server này.'
         })
+    })
+
+    it('names a voice room’s chat with no "#" (S-ROOM-08)', () => {
+        const room = { serverName: 'Nhóm đồ án Mobile', channelName: 'Phòng học im lặng', icon: Volume2 }
+        const said = notificationText(item({ channelId: 'phong-hoc' }), {
+            t: i18n.getFixedT('vi', 'notifications'),
+            words: WORDS,
+            places: { ...PLACES, placeOf: () => room },
+            now: NOW,
+            timeZone: 'Asia/Ho_Chi_Minh'
+        })
+        expect(said).toMatchObject({ source: 'Phòng học im lặng · Nhóm đồ án Mobile', place: room })
     })
 
     it('has no source while the servers load, or for a channel no longer viewed', () => {

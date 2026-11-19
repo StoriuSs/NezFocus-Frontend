@@ -97,6 +97,7 @@ const PERMISSIONS: ChatPermissions = {
     send: true,
     sendBlocked: null,
     manage: false,
+    pins: false,
     deleteOwn: true,
     react: true,
     addReactions: true,

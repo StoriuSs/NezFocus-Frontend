@@ -114,6 +114,8 @@ export interface ChatPermissions {
     sendBlocked: SendBlock | null
     /** MANAGE_MESSAGES: delete anyone's message. */
     manage: boolean
+    /** MANAGE_MESSAGES where the chat has pins: a text channel, not a voice room (REQ-MSG-07, D-213). */
+    pins: boolean
     /** Not timed out: delete one's own messages. */
     deleteOwn: boolean
     /** Not timed out: click an emoji already on a message, giving or taking back one's own (SRS 1.71). */
@@ -130,13 +132,14 @@ export interface ChatPermissions {
  * A link to a page of the app in a message, as the page that shows the chat
  * reads it (the servers feature knows its paths and what one sees; D-117):
  * - `message`: a message of a channel they see, a chip "#channel › Message"
- *   (`server` named when it is another server than the one open);
+ *   (`server` named when it is another server than the one open; `room`: a
+ *   voice room's chat, named with no "#", S-ROOM-08);
  * - `hidden`: a message they cannot see, a chip "Can't view" with no name;
  * - `page`: any other page of the app, a plain link opened in the app.
  * Another site is not one (null): it opens in a new tab.
  */
 export type AppLink =
-    | { kind: 'message'; to: string; server?: string; channel: string }
+    | { kind: 'message'; to: string; server?: string; channel: string; room?: boolean }
     | { kind: 'hidden' }
     | { kind: 'page'; to: string }
 

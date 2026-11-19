@@ -96,6 +96,7 @@ function renderChat(state: ReadState, client = new QueryClient({ defaultOptions:
                             send: true,
                             sendBlocked: null,
                             manage: false,
+                            pins: false,
                             deleteOwn: true,
                             react: true,
                             addReactions: true,
