@@ -153,13 +153,14 @@ export default function AppShell() {
     return (
         <ShellContext.Provider value={shell}>
             <div className='flex h-dvh flex-col overflow-hidden bg-bg'>
-                <div className='flex min-h-0 flex-1'>
+                {/* The sheets below 1024 (☰, a right panel) fill this, not the window: they stop above the dock strip (M4 A3). */}
+                <div className='relative flex min-h-0 flex-1'>
                     <Rail
                         id={SHELL_RAIL_ID}
                         className={cn(
                             'hidden md:flex',
                             navOpen &&
-                                'max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-40 max-md:flex max-md:animate-in max-md:slide-in-from-left max-md:duration-medium max-md:ease-out'
+                                'max-md:absolute max-md:inset-y-0 max-md:left-0 max-md:z-40 max-md:flex max-md:animate-in max-md:slide-in-from-left max-md:duration-medium max-md:ease-out'
                         )}
                     />
                     <ListColumn
@@ -167,7 +168,7 @@ export default function AppShell() {
                         className={cn(
                             'hidden lg:flex',
                             navOpen &&
-                                'max-lg:fixed max-lg:inset-y-0 max-lg:left-rail max-lg:z-40 max-lg:flex max-lg:shadow-sheet-left max-lg:animate-in max-lg:slide-in-from-left max-lg:duration-medium max-lg:ease-out'
+                                'max-lg:absolute max-lg:inset-y-0 max-lg:left-rail max-lg:z-40 max-lg:flex max-lg:shadow-sheet-left max-lg:animate-in max-lg:slide-in-from-left max-lg:duration-medium max-lg:ease-out'
                         )}
                     />
                     <main className='flex min-w-0 flex-1'>

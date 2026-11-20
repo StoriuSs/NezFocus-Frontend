@@ -67,7 +67,9 @@ export function usePanel(
 
 /**
  * RightPanel (C-08): 280 wide, `surface-1`, a 48-high header with the title.
- * As a sheet it also has a close button, and Esc or a click outside closes
+ * As a sheet it covers the AppShell's area from the top down to the dock
+ * strip, if any (the strip's buttons stay in reach, M4 A3); it also has a
+ * close button, and Esc or a click outside closes
  * it, giving focus back to the button that opened it; a menu, a dialog or a
  * Toast opened from it (drawn elsewhere in the page) counts as inside, and
  * Esc closes that first.
@@ -135,7 +137,7 @@ export function RightPanel({
             className={cn(
                 'flex w-panel shrink-0 flex-col border-l bg-surface-1',
                 sheet &&
-                    'fixed inset-y-0 right-0 z-40 shadow-sheet-right animate-in slide-in-from-right duration-medium ease-out'
+                    'absolute inset-y-0 right-0 z-40 shadow-sheet-right animate-in slide-in-from-right duration-medium ease-out'
             )}
         >
             <header className='flex h-12 shrink-0 items-center gap-2 border-b pl-4 pr-2'>

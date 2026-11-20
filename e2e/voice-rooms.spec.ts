@@ -1,4 +1,4 @@
-import { expect, test, type Browser, type Page } from '@playwright/test'
+import { expect, test, type Browser, type Locator, type Page } from '@playwright/test'
 import { apiUrl, asOwnClient, codeFromEmail, watchForProblems } from './helpers'
 
 /**
@@ -200,6 +200,29 @@ test('joining, the mic, the dock and leaving show live to everyone who views the
     await channelList(an.page).getByRole('link', { name: 'hoi-dap' }).click()
     const dock = an.page.getByRole('region', { name: 'In a room' })
     await expect(dock.getByText(ROOM)).toBeVisible()
+
+    // Below 1024 the dock is a strip across the window: the sheets stop above it, its buttons in reach (M4 A3).
+    await an.page.setViewportSize({ width: 900, height: 900 })
+    await expect(dock.getByRole('button', { name: 'Leave room' })).toBeVisible()
+    const stripTop = (await dock.boundingBox())?.y ?? 0
+    const bottomOf = async (sheet: Locator) => {
+        const box = await sheet.boundingBox()
+        return (box?.y ?? 0) + (box?.height ?? Infinity)
+    }
+    // Open at 1440 (a text channel's default), the Members panel stays open as a sheet (M3 A3).
+    const members = an.page.getByRole('complementary', { name: 'Members' })
+    await expect(members).toBeVisible()
+    expect(await bottomOf(members)).toBeLessThanOrEqual(stripTop)
+    await an.page.keyboard.press('Escape')
+    await expect(members).toBeHidden()
+    await an.page.getByRole('button', { name: 'Open navigation' }).click()
+    const sheet = an.page.locator('#shell-list')
+    await expect(sheet).toBeVisible()
+    expect(await bottomOf(sheet)).toBeLessThanOrEqual(stripTop)
+    await an.page.keyboard.press('Escape')
+    await expect(sheet).toBeHidden()
+    await an.page.setViewportSize({ width: 1440, height: 900 })
+
     await dock.getByRole('button', { name: 'Leave room' }).click()
     await expect(an.page.getByText(`Left ${ROOM}`)).toBeVisible()
     await expect(dock).toBeHidden()
