@@ -3,6 +3,7 @@ import type { TFunction } from 'i18next'
 import { getApiErrorType, NETWORK_ERROR } from '@/lib/api-error'
 import { clashingChannel, nameProblem, storedName, type ChannelType } from './channel-layout'
 import { layoutRule } from './layout-error'
+import { cycleFieldOfProblem, type CycleField } from './study-cycle'
 import type { Server } from '../types'
 
 /** What the name is of: a text channel, a room, or a category. */
@@ -61,6 +62,8 @@ export function nameError(
 export interface LayoutFailure {
     /** Under the name field. */
     field?: string
+    /** Under a number field of a study room's cycle (`study_cycle`): the dialog puts it into words. */
+    cycleField?: CycleField
     /** Above the buttons: `neutral` for the limit, `danger` otherwise. */
     form?: { tone: 'neutral' | 'danger'; text: string; icon?: 'wifi-off' }
     /** The server, channel or category is no longer there: close and say so. */
@@ -91,6 +94,8 @@ export function describeFailure(
 
     const broken = layoutRule(error)
     if (broken?.rule === 'limit') return { form: { tone: 'neutral', text: t('layoutError.limit') } }
+    const cycleField = broken?.rule === 'study_cycle' ? cycleFieldOfProblem(broken.problem) : null
+    if (cycleField) return { cycleField }
     if (broken?.rule === 'name_taken') {
         const name = storedName(context.kind, context.typed)
         return { field: takenMessage(t, context.server, context.kind, context.categoryId, name) }

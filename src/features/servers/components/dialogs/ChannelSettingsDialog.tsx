@@ -2,8 +2,6 @@ import '@/i18n/servers'
 import { useMemo, useState } from 'react'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import * as z from 'zod'
-import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { DoorOpen, Loader2, Trash2 } from 'lucide-react'
@@ -19,47 +17,23 @@ import {
     DialogHeader,
     DialogTitle
 } from '@/components/ui/dialog'
+import { cn } from '@/lib/utils'
 import { useUpdateChannel } from '../../api/useChannelLayout'
-import { storedName } from '../../lib/channel-layout'
-import { describeFailure, nameError, type LayoutFailure } from '../../lib/layout-messages'
-import type { Server, ServerChannel, UpdateChannelRequest } from '../../types'
+import {
+    changesOf,
+    createChannelSettingsSchema,
+    settingsOf,
+    type ChannelSettingsValues
+} from '../../lib/channel-settings'
+import { describeFailure, type LayoutFailure } from '../../lib/layout-messages'
+import { can } from '../../lib/permissions'
+import { badCycleFields, shownCycleFields } from '../../lib/study-cycle'
+import type { Server, ServerChannel } from '../../types'
 import { ChannelNameField } from './ChannelNameField'
 import { DeleteChannelDialog } from './DeleteChannelDialog'
+import { RadioChoices } from './RadioChoices'
+import { StudyRoomFields } from './StudyRoomFields'
 import { ViewRolesPicker } from './ViewRolesPicker'
-
-type SendMode = ServerChannel['sendMode']
-
-const sameSet = (a: string[], b: string[]) => a.length === b.length && a.every((id) => b.includes(id))
-
-/** A new name is checked against the server as it is now; the name kept is not checked again. */
-const createSchema = (t: TFunction<'servers'>, server: Server, channel: ServerChannel) =>
-    z
-        .object({
-            name: z.string(),
-            sendMode: z.custom<SendMode>(),
-            isPrivate: z.boolean(),
-            viewRoleIds: z.array(z.string()),
-            taskBoardEnabled: z.boolean()
-        })
-        .superRefine((values, ctx) => {
-            if (storedName(channel.type, values.name) === channel.name) return
-            const message = nameError(t, server, channel.type, values.name, channel.categoryId ?? null, channel.id)
-            if (message) ctx.addIssue({ code: 'custom', path: ['name'], message })
-        })
-
-type Values = z.infer<ReturnType<typeof createSchema>>
-
-/** Only what differs from the channel goes out. */
-function changesOf(server: Server, channel: ServerChannel, values: Values): UpdateChannelRequest {
-    const changes: UpdateChannelRequest = {}
-    if (storedName(channel.type, values.name) !== channel.name) changes.name = values.name
-    if (values.sendMode !== channel.sendMode) changes.sendMode = values.sendMode
-    if (values.isPrivate !== channel.isPrivate) changes.isPrivate = values.isPrivate
-    if (values.taskBoardEnabled !== channel.taskBoardEnabled) changes.taskBoardEnabled = values.taskBoardEnabled
-    const rolesToSend = values.viewRoleIds.filter((id) => server.roles.some((r) => r.id === id && !r.administrator))
-    if (values.isPrivate && !sameSet(rolesToSend, channel.viewRoleIds ?? [])) changes.viewRoleIds = rolesToSend
-    return changes
-}
 
 /**
  * "Channel settings" (S-SET-05): name, who may post and the Task Board
@@ -67,8 +41,13 @@ function changesOf(server: Server, channel: ServerChannel, values: Values): Upda
  * of what changed; and "Delete channel", over it. Turning the board off
  * while tasks are not done says what happens to them, under the switch
  * (`taskboard-off`, D-88): no dialog. Type and category do not change here
- * (the category by dragging, S-SRV-06). A room's study settings come with
- * rooms (S-SET-06, M4), D-144.
+ * (the category by dragging, S-SRV-06).
+ *
+ * A room's ("Room settings", S-SET-06) has its study part in place of who may
+ * post and the board (`StudyRoomFields`). Someone who manages study rooms but
+ * not channels (D-210) sees why the rest is locked, and changes that part
+ * only (`study-only`): the name read-only, the private switch off limits, no
+ * delete. Ending a running session by turning it off comes with sessions (M5).
  */
 export function ChannelSettingsDialog({
     server,
@@ -81,19 +60,10 @@ export function ChannelSettingsDialog({
 }) {
     const { t } = useTranslation('servers')
     const update = useUpdateChannel(server.id)
-    const schema = useMemo(() => createSchema(t, server, channel), [t, server, channel])
+    const schema = useMemo(() => createChannelSettingsSchema(t, server, channel), [t, server, channel])
     // The channel as it is now: saved meanwhile in another tab or by someone
     // else, the fields left alone follow it; what was changed here stays (04 SET-EDGE).
-    const current = useMemo<Values>(
-        () => ({
-            name: channel.name,
-            sendMode: channel.sendMode,
-            isPrivate: channel.isPrivate,
-            viewRoleIds: channel.viewRoleIds ?? [],
-            taskBoardEnabled: channel.taskBoardEnabled
-        }),
-        [channel.name, channel.sendMode, channel.isPrivate, channel.viewRoleIds, channel.taskBoardEnabled]
-    )
+    const current = useMemo(() => settingsOf(channel), [channel])
     const {
         control,
         handleSubmit,
@@ -101,17 +71,36 @@ export function ChannelSettingsDialog({
         clearErrors,
         setFocus,
         formState: { errors, isSubmitting: saving }
-    } = useForm<Values>({
+    } = useForm<ChannelSettingsValues>({
         resolver: zodResolver(schema),
         // The error goes as they type and is checked again on the next click only.
         reValidateMode: 'onSubmit',
         values: current,
         resetOptions: { keepDirtyValues: true }
     })
-    const [name, sendMode, isPrivate, viewRoleIds, taskBoardEnabled] = useWatch({
+    const [name, sendMode, isPrivate, viewRoleIds, taskBoardEnabled, isStudyRoom, studyStarter, cycle] = useWatch({
         control,
-        name: ['name', 'sendMode', 'isPrivate', 'viewRoleIds', 'taskBoardEnabled']
+        name: [
+            'name',
+            'sendMode',
+            'isPrivate',
+            'viewRoleIds',
+            'taskBoardEnabled',
+            'isStudyRoom',
+            'studyStarter',
+            'cycle'
+        ]
     })
+    const values: ChannelSettingsValues = {
+        name,
+        sendMode,
+        isPrivate,
+        viewRoleIds,
+        taskBoardEnabled,
+        isStudyRoom,
+        studyStarter,
+        cycle
+    }
     const [failure, setFailure] = useState<LayoutFailure['form'] | null>(null)
     const [deleting, setDeleting] = useState(false)
 
@@ -119,14 +108,17 @@ export function ChannelSettingsDialog({
     const category = server.categories.find((c) => c.id === categoryId)
     const room = channel.type === 'voice'
     const prefix = room ? '' : '#'
+    const manages = can(channel.permissions, 'MANAGE_CHANNELS')
 
+    // A number typed out of range changes nothing yet, but is an edit all the same.
     const dirty =
-        Object.keys(changesOf(server, channel, { name, sendMode, isPrivate, viewRoleIds, taskBoardEnabled })).length > 0
+        Object.keys(changesOf(server, channel, values)).length > 0 ||
+        (room && values.isStudyRoom && badCycleFields(values.cycle).length > 0)
     // How many tasks turning the board off hides (04 S-SET-05 `taskboard-off`).
     const openTasks = useOpenTaskCount(channel.id, !room && channel.taskBoardEnabled)
 
-    const send = handleSubmit(async (values) => {
-        const changes = changesOf(server, channel, values)
+    const send = handleSubmit(async (sending) => {
+        const changes = changesOf(server, channel, sending)
         if (Object.keys(changes).length === 0) return onClose()
         setFailure(null)
         try {
@@ -137,14 +129,18 @@ export function ChannelSettingsDialog({
                 server,
                 kind: channel.type,
                 categoryId,
-                typed: values.name,
+                typed: sending.name,
                 creating: false
             })
+            const cycleField = described.cycleField
+            // Under its field while that is shown; above the buttons otherwise.
+            const shown = cycleField !== undefined && shownCycleFields(sending.cycle).includes(cycleField)
             if (described.gone) {
                 onClose()
                 toast.error(t('layoutError.gone'))
             } else if (described.field) setError('name', { message: described.field }, { shouldFocus: true })
-            else setFailure(described.form ?? null)
+            else if (shown) setError(`cycle.${cycleField}`, { message: cycleField }, { shouldFocus: true })
+            else setFailure(described.form ?? { tone: 'danger', text: t('layoutError.saveFailed') })
         }
     })
 
@@ -171,6 +167,11 @@ export function ChannelSettingsDialog({
                     </DialogHeader>
 
                     <div className='-mx-6 min-h-0 flex-1 space-y-5 overflow-y-auto px-6'>
+                        {manages ? null : (
+                            <FormMessage tone='neutral' icon='lock'>
+                                {t('channel.studyRoom.onlyStudyPart')}
+                            </FormMessage>
+                        )}
                         {server.welcomeChannelId === channel.id ? (
                             <p className='flex items-center gap-1.5 text-body-sm text-text-secondary'>
                                 <DoorOpen className='size-4 shrink-0' aria-hidden='true' />
@@ -184,122 +185,123 @@ export function ChannelSettingsDialog({
                             render={({ field }) => (
                                 <ChannelNameField
                                     kind={channel.type}
+                                    studyRoom={values.isStudyRoom}
                                     value={field.value}
                                     onChange={(next) => {
                                         field.onChange(next)
                                         clearErrors('name')
                                     }}
                                     error={errors.name?.message}
-                                    readOnly={saving}
+                                    readOnly={saving || !manages}
                                     inputRef={field.ref}
                                 />
                             )}
                         />
 
-                        {!room ? (
-                            <Controller
-                                control={control}
-                                name='sendMode'
-                                render={({ field }) => (
-                                    <fieldset className='grid gap-2'>
-                                        <legend className='mb-2 text-label text-text-secondary'>
-                                            {t('channel.sendMode.label')}
-                                        </legend>
-                                        {(['everyone', 'managers'] as const).map((mode) => (
-                                            <label key={mode} className='flex cursor-pointer items-start gap-3'>
-                                                <input
-                                                    type='radio'
-                                                    name='send-mode'
-                                                    value={mode}
-                                                    checked={field.value === mode}
-                                                    disabled={saving}
-                                                    onChange={() => field.onChange(mode)}
-                                                    className='mt-0.5 size-[18px] shrink-0 cursor-pointer appearance-none rounded-full border-2 border-border-input bg-bg transition-colors duration-micro checked:border-[6px] checked:border-primary'
-                                                />
-                                                <span className='grid'>
-                                                    <span className='text-body-sm text-text-primary'>
-                                                        {t(`channel.sendMode.${mode}`)}
-                                                    </span>
-                                                    {mode === 'managers' ? (
-                                                        <span className='text-label text-text-tertiary'>
-                                                            {t('channel.sendMode.managersDescription')}
-                                                        </span>
-                                                    ) : null}
-                                                </span>
-                                            </label>
-                                        ))}
-                                    </fieldset>
-                                )}
-                            />
-                        ) : null}
-
-                        {!room ? (
-                            <div className='grid gap-2'>
+                        {room ? (
+                            <div className='border-t pt-5'>
+                                <StudyRoomFields
+                                    control={control}
+                                    errors={errors}
+                                    clearErrors={clearErrors}
+                                    disabled={saving}
+                                />
+                            </div>
+                        ) : (
+                            <>
                                 <Controller
                                     control={control}
-                                    name='taskBoardEnabled'
+                                    name='sendMode'
                                     render={({ field }) => (
-                                        <SwitchRow
-                                            className='items-start p-0'
-                                            label={t('channel.taskBoard.label')}
-                                            description={t('channel.taskBoard.description')}
-                                            checked={field.value}
-                                            onCheckedChange={field.onChange}
+                                        <RadioChoices
+                                            legend={t('channel.sendMode.label')}
+                                            name='send-mode'
+                                            value={field.value}
+                                            onChange={field.onChange}
+                                            disabled={saving}
+                                            choices={[
+                                                { value: 'everyone', label: t('channel.sendMode.everyone') },
+                                                {
+                                                    value: 'managers',
+                                                    label: t('channel.sendMode.managers'),
+                                                    description: t('channel.sendMode.managersDescription')
+                                                }
+                                            ]}
+                                        />
+                                    )}
+                                />
+                                <div className='grid gap-2'>
+                                    <Controller
+                                        control={control}
+                                        name='taskBoardEnabled'
+                                        render={({ field }) => (
+                                            <SwitchRow
+                                                className='items-start p-0'
+                                                label={t('channel.taskBoard.label')}
+                                                description={t('channel.taskBoard.description')}
+                                                checked={field.value}
+                                                onCheckedChange={field.onChange}
+                                                disabled={saving}
+                                            />
+                                        )}
+                                    />
+                                    {channel.taskBoardEnabled && !values.taskBoardEnabled && openTasks ? (
+                                        <FormMessage tone='neutral'>
+                                            {t('channel.taskBoard.offWarning', { count: openTasks })}
+                                        </FormMessage>
+                                    ) : null}
+                                </div>
+                            </>
+                        )}
+
+                        <div className={cn('space-y-5', room && 'border-t pt-5')}>
+                            <Controller
+                                control={control}
+                                name='isPrivate'
+                                render={({ field }) => (
+                                    <SwitchRow
+                                        className='items-start p-0'
+                                        label={t('channel.private.label')}
+                                        description={t('channel.private.description')}
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                        disabled={saving || !manages}
+                                    />
+                                )}
+                            />
+                            {/* Its roles are not sent to someone who does not manage channels. */}
+                            {values.isPrivate && manages ? (
+                                <Controller
+                                    control={control}
+                                    name='viewRoleIds'
+                                    render={({ field }) => (
+                                        <ViewRolesPicker
+                                            server={server}
+                                            selected={field.value}
+                                            onChange={field.onChange}
+                                            editing
                                             disabled={saving}
                                         />
                                     )}
                                 />
-                                {channel.taskBoardEnabled && !taskBoardEnabled && openTasks ? (
-                                    <FormMessage tone='neutral'>
-                                        {t('channel.taskBoard.offWarning', { count: openTasks })}
-                                    </FormMessage>
-                                ) : null}
+                            ) : null}
+                        </div>
+
+                        {manages ? (
+                            <div className='border-t pt-4'>
+                                <Button
+                                    type='button'
+                                    variant='text'
+                                    size='sm'
+                                    className='text-danger'
+                                    disabled={saving}
+                                    onClick={() => setDeleting(true)}
+                                >
+                                    <Trash2 aria-hidden='true' />
+                                    {t(room ? 'channel.deleteRoom' : 'channel.delete')}
+                                </Button>
                             </div>
                         ) : null}
-
-                        <Controller
-                            control={control}
-                            name='isPrivate'
-                            render={({ field }) => (
-                                <SwitchRow
-                                    className='items-start p-0'
-                                    label={t('channel.private.label')}
-                                    description={t('channel.private.description')}
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                    disabled={saving}
-                                />
-                            )}
-                        />
-                        {isPrivate ? (
-                            <Controller
-                                control={control}
-                                name='viewRoleIds'
-                                render={({ field }) => (
-                                    <ViewRolesPicker
-                                        server={server}
-                                        selected={field.value}
-                                        onChange={field.onChange}
-                                        editing
-                                        disabled={saving}
-                                    />
-                                )}
-                            />
-                        ) : null}
-
-                        <div className='border-t pt-4'>
-                            <Button
-                                type='button'
-                                variant='text'
-                                size='sm'
-                                className='text-danger'
-                                disabled={saving}
-                                onClick={() => setDeleting(true)}
-                            >
-                                <Trash2 aria-hidden='true' />
-                                {t(room ? 'channel.deleteRoom' : 'channel.delete')}
-                            </Button>
-                        </div>
                     </div>
 
                     {failure ? (

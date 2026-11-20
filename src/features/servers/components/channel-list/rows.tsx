@@ -67,7 +67,8 @@ export function DropLine({ blocked }: { blocked?: boolean }) {
  * One channel or room (ChannelRow, C-06). For whoever manages channels in it,
  * the whole row is the handle to drag it (S-SRV-06: press and move 4 px; a
  * plain click still opens it), Space lifts it from the keyboard, and ⚙ on
- * hover opens its settings (S-SET-05).
+ * hover opens its settings (S-SET-05). ⚙ on a room shows for whoever manages
+ * study rooms too, who may change its study part only (S-SET-06, D-210).
  *
  * A text channel with unread messages has its name in 600 `text-primary`,
  * and the mentions of the reader still unread as a badge at the end, open or
@@ -96,6 +97,8 @@ export function ChannelRow({
 }) {
     const { t } = useTranslation()
     const manages = can(channel.permissions, 'MANAGE_CHANNELS')
+    // A room's study part is also theirs who manage study rooms (S-SET-06, D-210); moving it is not.
+    const edits = manages || (channel.type === 'voice' && can(channel.permissions, 'MANAGE_STUDY_ROOMS'))
     const id = channelDropId(channel.id)
     const { setNodeRef: dragRef, listeners } = useDraggable({ id, disabled: !manages })
     const { setNodeRef: dropRef } = useDroppable({ id, disabled: !acceptsDrops })
@@ -127,7 +130,7 @@ export function ChannelRow({
             onKeyDown={onKeyDown}
             className={cn(
                 ROW,
-                manages && 'pr-8',
+                edits && 'pr-8',
                 lifted && 'opacity-40',
                 active
                     ? 'bg-surface-3 font-semibold text-text-primary'
@@ -165,7 +168,7 @@ export function ChannelRow({
             ) : (
                 row
             )}
-            {manages ? (
+            {edits ? (
                 <span className='absolute right-1 top-1'>
                     <HoverButton
                         label={t(

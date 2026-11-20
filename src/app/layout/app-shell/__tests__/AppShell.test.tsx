@@ -127,6 +127,11 @@ const channel = (id: string, extra: Partial<ServerChannel> = {}): ServerChannel 
     isPrivate: false,
     sendMode: 'everyone',
     isStudyRoom: false,
+    studyStarter: 'anyone',
+    studyFocusMinutes: 25,
+    studyShortBreakMinutes: 5,
+    studyLongBreakMinutes: null,
+    studyLongBreakEvery: null,
     taskBoardEnabled: false,
     permissions: MEMBER,
     viewRoleIds: null,
@@ -243,6 +248,25 @@ describe('AppShell (S-SHELL-01)', () => {
         useCreateServerDialog.getState().hide()
         // The inbox closed, as a test that opened it may have left it.
         useInboxStore.getState().setOpen(false)
+    })
+
+    it('does nothing with a file dropped on a page that takes none: the browser never opens it, leaving a room (M4 L6b-a)', async () => {
+        for (const path of ['/study', '/settings/account']) {
+            cleanup()
+            renderAt(path)
+            const heading = await screen.findByRole('heading', { level: 1 })
+            const files = { types: ['Files'], files: [], dropEffect: 'copy' }
+            const over = createEvent.dragOver(heading, { dataTransfer: files })
+            fireEvent(heading, over)
+            expect(over.defaultPrevented).toBe(true)
+            const drop = createEvent.drop(heading, { dataTransfer: files })
+            fireEvent(heading, drop)
+            expect(drop.defaultPrevented).toBe(true)
+            // Text dragged from the page is not a file: left to the browser.
+            const text = createEvent.dragOver(heading, { dataTransfer: { types: ['text/plain'] } })
+            fireEvent(heading, text)
+            expect(text.defaultPrevented).toBe(false)
+        }
     })
 
     describe('on the Study page', () => {

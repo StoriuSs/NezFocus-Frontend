@@ -160,6 +160,49 @@ test('creates, opens, makes private, renames and deletes a channel; creates a ca
     expect(problems).toEqual([])
 })
 
+test('saves a study room cycle of its own, refusing a number out of range (S-SET-06)', async ({ page }) => {
+    const problems = await watchForProblems(page)
+    await openServer(page)
+
+    const row = rowOf(page, 'Phòng thảo luận nhóm')
+    await row.hover()
+    await row.getByRole('button', { name: 'Room settings' }).click()
+    const settings = page.getByRole('dialog', { name: 'Room settings' })
+    await expect(settings.getByRole('switch', { name: 'Study room' })).toHaveAttribute('aria-checked', 'true')
+    await shoot(page, 'room-settings-study-room')
+
+    await settings.getByRole('radio', { name: 'Custom' }).click()
+    const focus = settings.getByRole('textbox', { name: 'Focus (5–120)' })
+    await focus.fill('150')
+    await settings.getByRole('textbox', { name: 'Short break (1–30)' }).fill('10')
+    await settings.getByRole('button', { name: 'Save' }).click()
+    await expect(settings.getByText('Focus must be from 5 to 120 minutes')).toBeVisible()
+    await shoot(page, 'room-settings-cycle-invalid')
+
+    await focus.fill('45')
+    await expect(settings.getByText('45 min focus · 10 min break · no long break')).toBeVisible()
+    await shoot(page, 'room-settings-cycle-custom')
+    await settings.getByRole('switch', { name: 'Long break' }).click()
+    await settings.getByRole('textbox', { name: 'Long break (5–60)' }).fill('20')
+    await settings.getByRole('button', { name: 'Save' }).click()
+    await expect(settings).toBeHidden()
+
+    // Opened again, from what the API sent back.
+    await page.reload()
+    await row.hover()
+    await row.getByRole('button', { name: 'Room settings' }).click()
+    await expect(settings.getByRole('radio', { name: 'Custom' })).toHaveAttribute('aria-checked', 'true')
+    await expect(settings.getByText('45 min focus · 10 min break · 20 min long break every 4 rounds')).toBeVisible()
+
+    // Off, it becomes a plain room: its icon in the list changes.
+    await settings.getByRole('switch', { name: 'Study room' }).click()
+    await shoot(page, 'room-settings-voice')
+    await settings.getByRole('button', { name: 'Save' }).click()
+    await expect(settings).toBeHidden()
+    await expect(row.locator('.lucide-volume-2')).toBeVisible()
+    expect(problems).toEqual([])
+})
+
 /** Press on a row, move past the 4 px start, and drop on the upper or lower half of another. */
 async function drag(page: Page, from: Locator, onto: Locator, half: 'upper' | 'lower', shot?: string) {
     const start = (await from.boundingBox())!

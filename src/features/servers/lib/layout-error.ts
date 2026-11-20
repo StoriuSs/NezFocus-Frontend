@@ -3,16 +3,26 @@ import axios from 'axios'
 /**
  * The channel list rule a refused change broke (VALIDATION_ERROR with
  * `data.rule`, backend domain/errors/channel-layout.errors.ts › LayoutRule), and for a
- * category that cannot be deleted, the channels whose names clash.
+ * category that cannot be deleted, the channels whose names clash; for a study
+ * room's cycle, which part (`problem`, backend StudyCycleProblem).
  */
-export type LayoutRule = 'name_invalid' | 'name_taken' | 'limit' | 'view_roles' | 'not_for_type' | 'stale_move'
+export type LayoutRule =
+    | 'name_invalid'
+    | 'name_taken'
+    | 'limit'
+    | 'view_roles'
+    | 'not_for_type'
+    | 'study_cycle'
+    | 'stale_move'
 
-export function layoutRule(error: unknown): { rule: LayoutRule; names: string[] } | null {
+export function layoutRule(error: unknown): { rule: LayoutRule; names: string[]; problem?: string } | null {
     if (!axios.isAxiosError(error)) return null
-    const data = (error.response?.data as { data?: { rule?: unknown; names?: unknown } } | undefined)?.data
+    const data = (error.response?.data as { data?: { rule?: unknown; names?: unknown; problem?: unknown } } | undefined)
+        ?.data
     if (typeof data?.rule !== 'string') return null
     const names = Array.isArray(data.names) ? data.names.filter((name): name is string => typeof name === 'string') : []
-    return { rule: data.rule as LayoutRule, names }
+    const problem = typeof data.problem === 'string' ? data.problem : undefined
+    return { rule: data.rule as LayoutRule, names, problem }
 }
 
 /** The `data.rule` of any refused change (VALIDATION_ERROR), as sent: a kick, ban or timeout too. */

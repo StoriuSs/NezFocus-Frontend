@@ -77,7 +77,9 @@ react-starter/
     │   │   │                  #   (auth's port), useMentionSource (the chat's MentionSource port),
     │   │   │                  #   liveServers (socket events: each server read again, D-178)
     │   │   ├── components/    # CreateServerDialog, NoServers, ServerIcon, ServerMenuItems; channel-list/,
-    │   │   │                  #   dialogs/ (channels, categories), invites/, membership/ (leave, hand over, delete;
+    │   │   │                  #   dialogs/ (channels, categories; RadioChoices, the radio rows of who may post / start;
+    │   │   │                  #   a room's study part and its number fields, C-22, until a second feature needs them),
+    │   │   │                  #   invites/, membership/ (leave, hand over, delete;
     │   │   │                  #   RemovedDialog: kicked or banned, 11 S-MOD-02),
     │   │   │                  #   settings/ (ServerNameForm, ServerIconSetting, WelcomeChannelSetting, OwnerSettings,
     │   │   │                  #   InvitesSettings, Pagination; members/, roles/)
@@ -93,7 +95,9 @@ react-starter/
     │   │   │                  #   mention, readChannelMention), chat-permissions,
     │   │   │                  #   layout-messages (the words for a refused name or move), invite-problem,
     │   │   │                  #   channel-layout, channel-list, drop-target, layout-error, invites, moderation,
-    │   │   │                  #   membership, permissions, roles, server-name, settings-sections, typed-name
+    │   │   │                  #   membership, permissions, roles, server-name, settings-sections, typed-name,
+    │   │   │                  #   channel-settings (the form of channel / room settings: schema, what is sent),
+    │   │   │                  #   study-cycle (a study room's cycle: ranges, presets, the fields out of range)
     │   │   ├── pages/         # ChannelPage (/channels/:serverId/:channelId?, and /…/:messageId: the channel
     │   │   │                  #   at a message, D-48), ServerSettingsPage
     │   │   │                  #   (/servers/:serverId/settings/…), InvitePage (/invite/:code)
@@ -183,7 +187,7 @@ react-starter/
     │       └── index.ts       # What other features may import
     ├── hooks/                 # Shared hooks: useTheme, useMediaQuery, useDebouncedValue, useCountdown, useMinuteClock,
     │                          #   useDocumentTitle, useIdempotentMutation, useToastArea (where toasts sit), useBrowserOnline,
-    │                          #   useRefuseFileDrops (files dropped where nothing takes them do nothing)
+    │                          #   useRefuseFileDrops (files dropped where nothing takes them do nothing; run by the AppShell)
     ├── i18n/                  # i18next setup and the translation catalogues (settings.ts, deletion.ts, servers.ts: words loaded with their pages)
     ├── lib/                   # Shared, feature-free: the API client, and friends
     ├── pages/                 # Pages that belong to no feature: Study, Legal, NotFound

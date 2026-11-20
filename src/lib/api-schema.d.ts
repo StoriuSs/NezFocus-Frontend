@@ -1003,7 +1003,8 @@ export interface paths {
          * Pin a regular message of the channel: told as `pins.updated`, with the
          *     system message "<who> pinned a message" as `message.created`
          *     (REQ-MSG-08). Pinning it again changes nothing; a 51st pin is
-         *     MAX_PINS_REACHED.
+         *     MAX_PINS_REACHED; a voice room's chat has no pins (VALIDATION_ERROR,
+         *     rule room_chat, D-213).
          */
         put: operations['PinController_pin_v1']
         post?: never
@@ -1021,7 +1022,7 @@ export interface paths {
             path?: never
             cookie?: never
         }
-        /** Every text channel the reader may view, with its unread and mentions counted up to 100. */
+        /** Every channel the reader may view (text, and voice rooms' chat), with its unread and mentions counted up to 100. */
         get: operations['ReadStateController_list_v1']
         put?: never
         post?: never
@@ -1733,6 +1734,16 @@ export interface components {
         }
         ServerChannelResponseDto: {
             /**
+             * @description Who may start a session in it, and the cycle a session starts with
+             *     (REQ-STUDY-01). Kept while the room is not a study room; a text channel
+             *     has the defaults, meaningless there.
+             * @enum {string}
+             */
+            study_starter: 'anyone' | 'managers'
+            /** @description Both null: no long break. */
+            study_long_break_minutes: number | null
+            study_long_break_every: number | null
+            /**
              * @description What they may do in this channel (appendix B, steps 1–6).
              * @example 3657472
              */
@@ -1759,6 +1770,8 @@ export interface components {
              */
             send_mode: 'everyone' | 'managers'
             is_study_room: boolean
+            study_focus_minutes: number
+            study_short_break_minutes: number
             task_board_enabled: boolean
         }
         ServerResponseDto: {
@@ -1887,6 +1900,20 @@ export interface components {
             view_role_ids?: string[]
             /** @description Text channels: off hides its tasks and stops their reminders; on shows them again (REQ-TASK-01). */
             task_board_enabled?: boolean
+            /** @description Rooms: a shared Pomodoro (REQ-STUDY-01). Off keeps the settings below for when it is on again. */
+            is_study_room?: boolean
+            /**
+             * @description Rooms: who may start a session, anyone in the room or only MANAGE_STUDY_ROOMS.
+             * @enum {string}
+             */
+            study_starter?: 'anyone' | 'managers'
+            /** @description Rooms: the cycle a new session starts with. */
+            study_focus_minutes?: number
+            study_short_break_minutes?: number
+            /** @description Null, with `study_long_break_every` null: no long break. One without the other is refused (`study_cycle`). */
+            study_long_break_minutes?: number | null
+            /** @description A long break after every this many focus phases. */
+            study_long_break_every?: number | null
         }
         InviteResponseDto: {
             /** @description The link is /invite/{code}. */

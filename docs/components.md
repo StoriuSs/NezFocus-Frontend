@@ -468,8 +468,9 @@ side, one of them on (`value`, `onValueChange`, `segments`,
 lifted to `surface-1`. A radio group for assistive tech: Tab reaches the
 chosen segment, and the arrow keys move **and choose** at once. A segment
 can carry `lang` when its label is in another language ("English" on a
-Vietnamese page). Used for the theme and the language on Appearance &
-language.
+Vietnamese page), and `numeric` when its label is numbers ("25/5", drawn in
+Unbounded as C-26a writes numbers). Used for the theme and the language on
+Appearance & language, and a study room's cycle in its settings (S-SET-06).
 
 ### `Select`
 

@@ -6,6 +6,8 @@ export interface Segment<T extends string> {
     label: string
     /** The language of the label, when it differs from the page's: "English" on a Vietnamese page. */
     lang?: string
+    /** A label of numbers ("25/5"): in Unbounded, as C-26a draws numbers. */
+    numeric?: boolean
 }
 
 interface SegmentedControlProps<T extends string> {
@@ -71,6 +73,7 @@ export function SegmentedControl<T extends string>({
                         onKeyDown={(event) => keyDown(event, index)}
                         className={cn(
                             'min-w-[72px] rounded-badge border px-3 text-body-sm transition-colors duration-micro',
+                            segment.numeric && 'font-numeric tabular-nums',
                             'disabled:cursor-not-allowed disabled:text-text-tertiary',
                             chosen
                                 ? 'border-border bg-surface-1 font-semibold text-text-primary disabled:bg-surface-3'

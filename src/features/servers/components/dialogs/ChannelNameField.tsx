@@ -1,11 +1,11 @@
 import '@/i18n/servers'
 import type { Ref } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Hash, Volume2 } from 'lucide-react'
 import { FormField } from '@/components/form/FormField'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { CHANNEL_NAME_MAX_LENGTH, nameLength, storedName } from '../../lib/channel-layout'
+import { channelIcon } from '../../lib/channel-list'
 import type { NameKind } from '../../lib/layout-messages'
 
 /**
@@ -17,6 +17,7 @@ import type { NameKind } from '../../lib/layout-messages'
  */
 export function ChannelNameField({
     kind,
+    studyRoom = false,
     value,
     onChange,
     error,
@@ -24,6 +25,8 @@ export function ChannelNameField({
     inputRef
 }: {
     kind: NameKind
+    /** A room that is a study room: its icon in the field, as the switch says (S-SET-06). */
+    studyRoom?: boolean
     value: string
     onChange: (value: string) => void
     error?: string | null
@@ -37,7 +40,7 @@ export function ChannelNameField({
         kind === 'text' && stored !== '' && stored !== value.trim()
             ? t('channel.storedAs', { name: stored })
             : undefined
-    const Icon = kind === 'text' ? Hash : kind === 'voice' ? Volume2 : null
+    const Icon = kind === 'category' ? null : channelIcon({ type: kind, isStudyRoom: studyRoom })
     const label = kind === 'category' ? t('category.name') : t(`channel.name.${kind}`)
 
     return (

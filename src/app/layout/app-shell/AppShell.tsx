@@ -20,6 +20,7 @@ import { useConnectionBanner, useRealtimeConnection } from '@/features/realtime'
 import { useMentionTotal } from '@/features/messaging'
 import { RoomDock, useServers, useVoiceRooms } from '@/features/servers'
 import { useTitleCount } from '@/hooks/useDocumentTitle'
+import { useRefuseFileDrops } from '@/hooks/useRefuseFileDrops'
 import { cn } from '@/lib/utils'
 import { ListColumn } from './ListColumn'
 import { Rail } from './Rail'
@@ -99,6 +100,9 @@ export default function AppShell() {
     useRealtimeConnection()
     // The voice room this tab is in: joined again on a reload, its state told again (07, D-206).
     useVoiceRooms()
+    // A file dropped where nothing takes it does nothing, on every page: the browser
+    // would open it in place of the app, and leave the room with it (M4 L6b-a).
+    useRefuseFileDrops()
     const connection = useConnectionBanner()
     // The tab title starts with every mention still unread, whatever the page (REQ-MSG-09, X-01):
     // in the channels the server list shows (a server left, a channel deleted, no longer counts).

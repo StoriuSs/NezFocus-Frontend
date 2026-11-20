@@ -43,6 +43,11 @@ const channel = (id: string, extra: Partial<ServerChannel> = {}): ServerChannel 
     isPrivate: false,
     sendMode: 'everyone',
     isStudyRoom: false,
+    studyStarter: 'anyone',
+    studyFocusMinutes: 25,
+    studyShortBreakMinutes: 5,
+    studyLongBreakMinutes: null,
+    studyLongBreakEvery: null,
     taskBoardEnabled: false,
     permissions: MANAGER,
     viewRoleIds: [],
@@ -483,6 +488,19 @@ describe('The channel list for a member', () => {
         expect(screen.queryByRole('button', { name: 'Channel settings' })).not.toBeInTheDocument()
         expect(screen.queryByRole('button', { name: /Create a channel in/ })).not.toBeInTheDocument()
         screen.getByRole('link', { name: 'hoi-dap' }).focus()
+        await userEvent.keyboard(' ')
+        expect(screen.queryByText(/Picked up/)).not.toBeInTheDocument()
+    })
+
+    it('shows ⚙ on a room to someone who manages study rooms, who still cannot move it (S-SET-06, D-210)', async () => {
+        const studyRooms = String(BigInt(MEMBER) | (1n << 20n))
+        const data = server(MEMBER)
+        renderColumn({ ...data, channels: data.channels.map((c) => ({ ...c, permissions: studyRooms })) })
+        await userEvent.click(await screen.findByRole('button', { name: 'Room settings' }))
+        expect(useChannelDialogs.getState().open).toMatchObject({ kind: 'channelSettings', channelId: 'phong' })
+        // A text channel has no study part: no ⚙ there.
+        expect(screen.queryByRole('button', { name: 'Channel settings' })).not.toBeInTheDocument()
+        screen.getByRole('link', { name: 'Phòng học im lặng' }).focus()
         await userEvent.keyboard(' ')
         expect(screen.queryByText(/Picked up/)).not.toBeInTheDocument()
     })

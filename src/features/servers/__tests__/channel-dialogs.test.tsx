@@ -43,6 +43,11 @@ const channel = (id: string, extra: Partial<ServerChannel> = {}): ServerChannel 
     isPrivate: false,
     sendMode: 'everyone',
     isStudyRoom: false,
+    studyStarter: 'anyone',
+    studyFocusMinutes: 25,
+    studyShortBreakMinutes: 5,
+    studyLongBreakMinutes: null,
+    studyLongBreakEvery: null,
     taskBoardEnabled: false,
     permissions: CHI_BITS,
     viewRoleIds: [],
@@ -180,10 +185,10 @@ describe('Create a channel (S-SRV-05)', () => {
         expect(screen.getByRole('alert')).toHaveTextContent('A channel name needs at least one letter or digit')
     })
 
-    it('makes a study room, keeping what was typed when the type changes', async () => {
+    it('makes a study room, keeping what was typed when the type changes, and opens its preview page', async () => {
         layoutApi.createChannel.mockResolvedValue({ id: 'room', server: OT })
         useChannelDialogs.getState().show({ kind: 'createChannel', serverId: 'ot', categoryId: 'rooms', type: 'voice' })
-        renderDialogs()
+        const router = renderDialogs()
         const name = await screen.findByRole('textbox', { name: 'Room name' })
         await userEvent.type(name, 'Phòng ôn chương 3')
         await userEvent.click(screen.getByRole('radio', { name: /Text channel/ }))
@@ -198,6 +203,8 @@ describe('Create a channel (S-SRV-05)', () => {
             categoryId: 'rooms',
             isStudyRoom: true
         })
+        // The room's own page: its preview, not a call (L7, 07 S-ROOM-01).
+        await waitFor(() => expect(router.state.location.pathname).toBe('/channels/ot/room'))
     })
 
     it('locks the switches while the room is being created', async () => {
@@ -536,6 +543,214 @@ describe('Channel settings (S-SET-05)', () => {
         await userEvent.click(screen.getAllByRole('button', { name: 'Delete channel' }).at(-1)!)
         expect(await screen.findByText('Deleted #hoi-dap')).toBeInTheDocument()
         expect(whereWhenGone[0]).toBe('/channels/ot/chao-mung')
+    })
+})
+
+describe('Room settings (S-SET-06, D-210)', () => {
+    beforeEach(async () => {
+        await i18n.changeLanguage('en')
+        vi.clearAllMocks()
+        layoutApi.updateChannel.mockResolvedValue(OT)
+    })
+    afterEach(() => useChannelDialogs.getState().hide())
+
+    const withRoom = (extra: Partial<ServerChannel>, server: Partial<Server> = {}): Server => ({
+        ...OT,
+        ...server,
+        channels: OT.channels.map((one) => (one.id === 'phong' ? { ...one, ...extra } : one))
+    })
+    const openRoom = async (server: Server = OT) => {
+        useChannelDialogs.getState().show({ kind: 'channelSettings', serverId: 'ot', channelId: 'phong' })
+        renderDialogs(server)
+        return screen.findByRole('dialog', { name: 'Room settings' })
+    }
+    const save = () => userEvent.click(screen.getByRole('button', { name: 'Save' }))
+    const sent = async () => {
+        await waitFor(() => expect(layoutApi.updateChannel).toHaveBeenCalled())
+        return layoutApi.updateChannel.mock.calls[0]![2] as object
+    }
+
+    it('shows who may start and the cycle of a study room, and saves only what changed (`study-room`)', async () => {
+        await openRoom()
+        expect(screen.getByRole('switch', { name: 'Study room' })).toHaveAttribute('aria-checked', 'true')
+        expect(screen.getByRole('radio', { name: 'Everyone in the room' })).toBeChecked()
+        expect(screen.getByRole('radio', { name: '25/5' })).toHaveAttribute('aria-checked', 'true')
+        expect(screen.getByText('Filled in when a study session starts. Long break: off.')).toBeInTheDocument()
+        await expectNoA11yViolations()
+
+        await userEvent.click(screen.getByRole('radio', { name: /Only study room managers/ }))
+        await userEvent.click(screen.getByRole('radio', { name: '50/10' }))
+        await save()
+        expect(await sent()).toEqual({ studyStarter: 'managers', studyFocusMinutes: 50, studyShortBreakMinutes: 10 })
+    })
+
+    it('hides the study part while the switch is off, and makes a plain room a study room (`voice`)', async () => {
+        await openRoom(withRoom({ isStudyRoom: false }))
+        expect(screen.getByRole('switch', { name: 'Study room' })).toHaveAttribute('aria-checked', 'false')
+        expect(screen.queryByRole('radiogroup', { name: 'Default cycle' })).not.toBeInTheDocument()
+        expect(screen.queryByText('Who can start a study session')).not.toBeInTheDocument()
+
+        await userEvent.click(screen.getByRole('switch', { name: 'Study room' }))
+        expect(screen.getByRole('radiogroup', { name: 'Default cycle' })).toBeInTheDocument()
+        await save()
+        expect(await sent()).toEqual({ isStudyRoom: true })
+    })
+
+    it('turning the study room off sends that alone, not what was changed under it before', async () => {
+        await openRoom()
+        await userEvent.click(screen.getByRole('radio', { name: /Only study room managers/ }))
+        await userEvent.click(screen.getByRole('radio', { name: 'Custom' }))
+        // Hidden once the switch is off: not checked either.
+        await userEvent.clear(screen.getByRole('textbox', { name: 'Focus (5–120)' }))
+        await userEvent.click(screen.getByRole('switch', { name: 'Study room' }))
+        await save()
+        expect(await sent()).toEqual({ isStudyRoom: false })
+    })
+
+    it('opens Custom on the saved lengths, sums it up, and saves a long break (`cycle-custom`)', async () => {
+        await openRoom()
+        await userEvent.click(screen.getByRole('radio', { name: 'Custom' }))
+        const focus = screen.getByRole('textbox', { name: 'Focus (5–120)' })
+        const shortBreak = screen.getByRole('textbox', { name: 'Short break (1–30)' })
+        expect(focus).toHaveValue('25')
+        expect(shortBreak).toHaveValue('5')
+        await userEvent.clear(focus)
+        await userEvent.type(focus, '4x5')
+        expect(focus).toHaveValue('45')
+        await userEvent.clear(shortBreak)
+        await userEvent.type(shortBreak, '10')
+        expect(screen.getByText('45 min focus · 10 min break · no long break')).toBeInTheDocument()
+        await expectNoA11yViolations()
+
+        await userEvent.click(screen.getByRole('switch', { name: 'Long break' }))
+        expect(screen.getByRole('textbox', { name: 'Long break (5–60)' })).toHaveValue('15')
+        expect(screen.getByRole('textbox', { name: 'After every (2–8) rounds' })).toHaveValue('4')
+        expect(screen.getByText('45 min focus · 10 min break · 15 min long break every 4 rounds')).toBeInTheDocument()
+        await save()
+        expect(await sent()).toEqual({
+            studyFocusMinutes: 45,
+            studyShortBreakMinutes: 10,
+            studyLongBreakMinutes: 15,
+            studyLongBreakEvery: 4
+        })
+    })
+
+    it('opens a saved long break on Custom, and turning it off sends both halves empty', async () => {
+        await openRoom(withRoom({ studyLongBreakMinutes: 20, studyLongBreakEvery: 3 }))
+        expect(screen.getByRole('radio', { name: 'Custom' })).toHaveAttribute('aria-checked', 'true')
+        expect(screen.getByRole('switch', { name: 'Long break' })).toHaveAttribute('aria-checked', 'true')
+        expect(screen.getByRole('textbox', { name: 'Long break (5–60)' })).toHaveValue('20')
+        await userEvent.click(screen.getByRole('switch', { name: 'Long break' }))
+        await save()
+        expect(await sent()).toEqual({ studyLongBreakMinutes: null, studyLongBreakEvery: null })
+    })
+
+    it('steps a number with ↑ ↓ inside its range (C-22)', async () => {
+        await openRoom()
+        await userEvent.click(screen.getByRole('radio', { name: 'Custom' }))
+        const shortBreak = screen.getByRole('textbox', { name: 'Short break (1–30)' })
+        await userEvent.click(shortBreak)
+        await userEvent.keyboard('{ArrowUp}{ArrowUp}')
+        expect(shortBreak).toHaveValue('7')
+        await userEvent.clear(shortBreak)
+        await userEvent.type(shortBreak, '30{ArrowUp}')
+        expect(shortBreak).toHaveValue('30')
+    })
+
+    it('checks the numbers when Save is pressed, under each field, and sends nothing (`cycle-invalid`)', async () => {
+        await openRoom()
+        await userEvent.click(screen.getByRole('radio', { name: 'Custom' }))
+        const focus = screen.getByRole('textbox', { name: 'Focus (5–120)' })
+        await userEvent.clear(focus)
+        await userEvent.type(focus, '150')
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+        expect(screen.queryByText(/min focus/)).not.toBeInTheDocument()
+        await save()
+        expect(await screen.findByText('Focus must be from 5 to 120 minutes')).toBeInTheDocument()
+        expect(focus).toHaveAttribute('aria-invalid', 'true')
+        expect(focus).toHaveFocus()
+        expect(layoutApi.updateChannel).not.toHaveBeenCalled()
+
+        await userEvent.type(focus, '{Backspace}')
+        expect(screen.queryByText('Focus must be from 5 to 120 minutes')).not.toBeInTheDocument()
+    })
+
+    it('takes a number error away when the cycle or the switch changes: checked again on the next Save only', async () => {
+        await openRoom()
+        await userEvent.click(screen.getByRole('radio', { name: 'Custom' }))
+        await userEvent.clear(screen.getByRole('textbox', { name: 'Focus (5–120)' }))
+        await save()
+        expect(await screen.findByText('Focus must be from 5 to 120 minutes')).toBeInTheDocument()
+        await userEvent.click(screen.getByRole('radio', { name: '50/10' }))
+        await userEvent.click(screen.getByRole('radio', { name: 'Custom' }))
+        expect(screen.queryByText('Focus must be from 5 to 120 minutes')).not.toBeInTheDocument()
+
+        await save()
+        expect(await screen.findByText('Focus must be from 5 to 120 minutes')).toBeInTheDocument()
+        await userEvent.click(screen.getByRole('switch', { name: 'Study room' }))
+        await userEvent.click(screen.getByRole('switch', { name: 'Study room' }))
+        expect(screen.queryByText('Focus must be from 5 to 120 minutes')).not.toBeInTheDocument()
+    })
+
+    it('still sends a rename made before the right to manage channels went: the API refuses it, and they are told', async () => {
+        layoutApi.updateChannel.mockRejectedValue(refused(403, 'FORBIDDEN_ERROR'))
+        const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        useChannelDialogs.getState().show({ kind: 'channelSettings', serverId: 'ot', channelId: 'phong' })
+        renderDialogs(OT, client)
+        const name = await screen.findByRole('textbox', { name: 'Room name' })
+        await userEvent.clear(name)
+        await userEvent.type(name, 'Phòng ôn thi')
+        // A role taken away meanwhile: the list read again has no MANAGE_CHANNELS, only the study room right.
+        const studyOnly = String((1n << 8n) | (1n << 10n) | (1n << 15n) | (1n << 20n))
+        act(() => void client.setQueryData<Server[]>(serverKeys.list(), [withRoom({ permissions: studyOnly })]))
+        await save()
+        expect(await sent()).toEqual({ name: 'Phòng ôn thi' })
+        expect(await screen.findByText('You can no longer change channels in this server')).toBeInTheDocument()
+    })
+
+    it('puts a cycle the API refuses under the field it names, or above the buttons when it is hidden (`study_cycle`)', async () => {
+        layoutApi.updateChannel.mockRejectedValue(
+            refused(422, 'VALIDATION_ERROR', { rule: 'study_cycle', problem: 'short_break_minutes' })
+        )
+        await openRoom()
+        await userEvent.click(screen.getByRole('radio', { name: 'Custom' }))
+        await userEvent.clear(screen.getByRole('textbox', { name: 'Focus (5–120)' }))
+        await userEvent.type(screen.getByRole('textbox', { name: 'Focus (5–120)' }), '45')
+        await save()
+        expect(await screen.findByText('Short break must be from 1 to 30 minutes')).toBeInTheDocument()
+        expect(screen.getByRole('textbox', { name: 'Short break (1–30)' })).toHaveFocus()
+
+        layoutApi.updateChannel.mockRejectedValue(
+            refused(422, 'VALIDATION_ERROR', { rule: 'study_cycle', problem: 'long_break_pair' })
+        )
+        await userEvent.click(screen.getByRole('radio', { name: '50/10' }))
+        await save()
+        expect(await screen.findByText('The changes could not be saved. Try again.')).toBeInTheDocument()
+    })
+
+    it('lets someone with only the study room right change the study part alone (`study-only`)', async () => {
+        // VIEW_CHANNEL, SEND_MESSAGES, CONNECT, MANAGE_STUDY_ROOMS: Bình, without MANAGE_CHANNELS.
+        const bits = String((1n << 8n) | (1n << 10n) | (1n << 15n) | (1n << 20n))
+        // A private room: its roles are not sent to someone who does not manage channels.
+        await openRoom(withRoom({ permissions: bits, isPrivate: true, viewRoleIds: null }, { permissions: bits }))
+        expect(screen.getByText('Your role can only change the study room part.')).toBeInTheDocument()
+        expect(screen.getByRole('textbox', { name: 'Room name' })).toHaveAttribute('readonly')
+        expect(screen.getByRole('switch', { name: 'Private channel' })).toBeDisabled()
+        expect(screen.queryByText(/Roles that can see it/)).not.toBeInTheDocument()
+        expect(screen.queryByRole('button', { name: 'Delete room' })).not.toBeInTheDocument()
+        await expectNoA11yViolations()
+
+        await userEvent.click(screen.getByRole('radio', { name: /Only study room managers/ }))
+        await save()
+        expect(await sent()).toEqual({ studyStarter: 'managers' })
+    })
+
+    it('shows the room icon of what the switch says, in the name field', async () => {
+        await openRoom(withRoom({ isStudyRoom: false }))
+        const field = screen.getByRole('textbox', { name: 'Room name' }).parentElement!
+        expect(field.querySelector('.lucide-volume-2')).not.toBeNull()
+        await userEvent.click(screen.getByRole('switch', { name: 'Study room' }))
+        expect(field.querySelector('.lucide-lamp-desk')).not.toBeNull()
     })
 })
 

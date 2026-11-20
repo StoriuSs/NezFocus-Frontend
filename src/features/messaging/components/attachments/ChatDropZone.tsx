@@ -60,7 +60,8 @@ export function ChatDropZone({
     useEffect(() => {
         chosen.current = choose
     }, [choose])
-    // Outside the column: nothing happens, rather than the browser opening the file.
+    // Outside the column: nothing happens, rather than the browser opening the file. The
+    // AppShell does the same for every page; this keeps the zone right wherever it is drawn.
     useRefuseFileDrops()
 
     useEffect(() => {
