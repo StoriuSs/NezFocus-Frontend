@@ -117,8 +117,9 @@ export function ChannelRow({
 
     const path = channelPath(server.id, channel.id)
     // Strings, not NavLink's functions: a locked room's Tooltip (Radix Slot)
-    // merges the link's className as text, and would print a function.
-    const active = useMatch({ path, end: true }) !== null
+    // merges the link's className as text, and would print a function. Not
+    // `end`: like NavLink's own aria-current, the channel opened at a message is open too.
+    const active = useMatch({ path, end: false }) !== null
 
     const row = (
         <NavLink

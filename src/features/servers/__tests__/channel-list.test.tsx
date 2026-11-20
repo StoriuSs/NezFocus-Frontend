@@ -81,16 +81,20 @@ const server = (permissions: string, channels?: ServerChannel[]): Server => ({
     ).map((c) => ({ ...c, permissions: permissions === MANAGER ? c.permissions : MEMBER }))
 })
 
-function renderColumn(data: Server, client?: QueryClient) {
+function renderColumn(data: Server, client?: QueryClient, at = '/channels/ot/chao-mung') {
     serversApi.fetchServers.mockResolvedValue([data])
     const router = createMemoryRouter(
         [
             {
                 path: '/channels/:serverId/:channelId',
                 element: <ServerChannelColumn serverId='ot' />
+            },
+            {
+                path: '/channels/:serverId/:channelId/:messageId',
+                element: <ServerChannelColumn serverId='ot' />
             }
         ],
-        { initialEntries: ['/channels/ot/chao-mung'] }
+        { initialEntries: [at] }
     )
     render(
         <TooltipProvider>
@@ -458,6 +462,14 @@ describe('The channel list for a member', () => {
     beforeEach(async () => {
         await i18n.changeLanguage('en')
         vi.clearAllMocks()
+    })
+
+    it('marks the open channel the same way when it opened at a message (a link, the inbox)', async () => {
+        renderColumn(server(MEMBER), undefined, '/channels/ot/tai-lieu/m1')
+        const open = await screen.findByRole('link', { name: 'tai-lieu' })
+        expect(open).toHaveAttribute('aria-current', 'page')
+        expect(open).toHaveClass('bg-surface-3', 'font-semibold')
+        expect(screen.getByRole('link', { name: 'hoi-dap' })).not.toHaveClass('bg-surface-3')
     })
 
     it('dims a room they may not join and locks it, keeping the row a row (its Tooltip wraps the link)', async () => {

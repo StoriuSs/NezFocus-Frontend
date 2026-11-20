@@ -13,6 +13,8 @@ const { RoomDock } = await import('../components/RoomDock')
 const { serverKeys } = await import('../api/keys')
 const { useVoiceStore } = await import('@/features/voice')
 const { useToastArea } = await import('@/hooks/useToastArea')
+// Loaded once here: a test that the dock is not drawn must not pass only because its chunk is still on the way.
+await import('@/features/voice/components/InRoomDock')
 
 /** The dock is a lazy chunk: its first load can outlast the default second on a busy machine. */
 const LAZY = 5000
@@ -163,7 +165,10 @@ describe('the dock while in a room (C-09)', () => {
             ])
         ])
         const router = createMemoryRouter(
-            [{ path: '/channels/:serverId/:channelId?', element: <RoomDock shape={shape} /> }],
+            [
+                { path: '/channels/:serverId/:channelId?', element: <RoomDock shape={shape} /> },
+                { path: '/channels/:serverId/:channelId/:messageId', element: <RoomDock shape={shape} /> }
+            ],
             { initialEntries: [at] }
         )
         render(
@@ -233,7 +238,18 @@ describe('the dock while in a room (C-09)', () => {
         expect(useToastArea.getState().barTop).toBeNull()
     })
 
+    it("is not on the room's own page opened at a message of its chat (a link, the inbox)", async () => {
+        wide()
+        useVoiceStore.setState({
+            call: { serverId: 'ot', channelId: 'thao-luan', name: 'thao-luan', phase: 'connected' }
+        })
+        show('/channels/ot/thao-luan/m1')
+        await new Promise((resolve) => setTimeout(resolve, 50))
+        expect(screen.queryByRole('region')).not.toBeInTheDocument()
+    })
+
     it("is not on the room's own page, nor while joining, nor out of any room", async () => {
+        wide()
         useVoiceStore.setState({
             call: { serverId: 'ot', channelId: 'thao-luan', name: 'thao-luan', phase: 'connected' }
         })

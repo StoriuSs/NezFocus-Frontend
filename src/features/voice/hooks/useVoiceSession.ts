@@ -1,5 +1,5 @@
 import { createElement, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { LogOut, Mic, MicOff, MonitorX } from 'lucide-react'
+import { LogOut, Mic, MicOff, MonitorSmartphone, MonitorX, RotateCw } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { onRealtimeEvent } from '@/features/realtime'
@@ -67,7 +67,11 @@ export function useVoiceSession(directory: VoiceDirectory | undefined): void {
         const timedOut = room?.timeoutUntil != null && new Date(room.timeoutUntil) > new Date()
         if (!room?.canConnect || timedOut) return
         void joinRoom(room, { devicesOff: true }).then((joined) => {
-            if (joined) toast(t('shell.voice.rejoined', { room: room.name }), { id: 'voice-rejoined' })
+            if (joined)
+                toast(t('shell.voice.rejoined', { room: room.name }), {
+                    id: 'voice-rejoined',
+                    icon: createElement(RotateCw, ICON)
+                })
         })
     }, [directory, t])
 
@@ -79,7 +83,10 @@ export function useVoiceSession(directory: VoiceDirectory | undefined): void {
         const elsewhere = !removed.reason && useVoiceStore.getState().call?.channelId !== movedTo?.channelId
         if (elsewhere && movedTo && movedTo.channelId !== removed.channelId) {
             useVoiceStore.setState({ removed: null })
-            toast(t('shell.voice.movedElsewhere', { room: movedTo.name }), { id: 'voice-moved' })
+            toast(t('shell.voice.movedElsewhere', { room: movedTo.name }), {
+                id: 'voice-moved',
+                icon: createElement(MonitorSmartphone, ICON)
+            })
             return
         }
         const timer = setTimeout(

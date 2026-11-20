@@ -1089,7 +1089,9 @@ describe('voice in every tab (useVoiceSession)', () => {
         rerender({ rooms: directory([room()]) })
         await waitFor(() => expect(useVoiceStore.getState().call?.phase).toBe('connected'))
         expect(useVoiceStore.getState().mic).toBe('off')
-        expect(await screen.findByText('Back in Phòng thảo luận nhóm · your mic is off')).toBeVisible()
+        const said = await screen.findByText('Back in Phòng thảo luận nhóm · your mic is off')
+        expect(said).toBeVisible()
+        expect(said.closest('[data-sonner-toast]')?.querySelector('.lucide-rotate-cw')).not.toBeNull()
     })
 
     it('still joins again when the shell is drawn again before the rooms are known (signing in on a reload)', async () => {
@@ -1122,9 +1124,9 @@ describe('voice in every tab (useVoiceSession)', () => {
         const { rerender } = session(directory([room()]))
         act(() => linkEvents[0]?.onEnd('removed'))
         rerender({ rooms: directory([room({ people: [person(AN, 'An')] })]) })
-        expect(
-            await screen.findByText('You joined Phòng thảo luận nhóm in another tab or on another device')
-        ).toBeVisible()
+        const said = await screen.findByText('You joined Phòng thảo luận nhóm in another tab or on another device')
+        expect(said).toBeVisible()
+        expect(said.closest('[data-sonner-toast]')?.querySelector('.lucide-monitor-smartphone')).not.toBeNull()
         expect(useVoiceStore.getState().removed).toBeNull()
     })
 

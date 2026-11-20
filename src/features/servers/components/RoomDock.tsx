@@ -18,7 +18,10 @@ import { voiceRoomOf } from '../lib/voice-room'
 export function RoomDock({ shape }: { shape: 'column' | 'strip' }) {
     const call = useVoiceStore((state) => state.call)
     const wide = useMediaQuery(LIST_SHOWS)
-    const here = useMatch(SERVERS_PATHS.channel)?.params.channelId
+    // The room's page opened at a message of its chat (a link, the inbox) is its own page too.
+    const atChannel = useMatch(SERVERS_PATHS.channel)
+    const atMessage = useMatch(SERVERS_PATHS.message)
+    const here = (atChannel ?? atMessage)?.params.channelId
     const server = useServers().data?.find((one) => one.id === call?.serverId)
     const channel = server?.channels.find((one) => one.id === call?.channelId)
     const room = server && channel ? voiceRoomOf(server, channel) : undefined
