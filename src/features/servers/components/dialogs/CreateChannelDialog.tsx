@@ -97,9 +97,9 @@ export function CreateChannelDialog({
             viewRoleIds: startingRoles(server)
         }
     })
-    const [type, name, categoryId, isPrivate] = useWatch({
+    const [type, name, categoryId, isPrivate, isStudyRoom] = useWatch({
         control,
-        name: ['type', 'name', 'categoryId', 'isPrivate']
+        name: ['type', 'name', 'categoryId', 'isPrivate', 'isStudyRoom']
     })
     const [failure, setFailure] = useState<LayoutFailure['form'] | null>(null)
     // The right to create was lost meanwhile: only "Close" is left (03 SRV-EDGE).
@@ -227,6 +227,7 @@ export function CreateChannelDialog({
                             render={({ field }) => (
                                 <ChannelNameField
                                     kind={type}
+                                    studyRoom={type === 'voice' && isStudyRoom}
                                     value={field.value}
                                     onChange={(next) => {
                                         field.onChange(next)

@@ -194,7 +194,11 @@ describe('Create a channel (S-SRV-05)', () => {
         await userEvent.click(screen.getByRole('radio', { name: /Text channel/ }))
         expect(screen.getByRole('textbox', { name: 'Channel name' })).toHaveValue('Phòng ôn chương 3')
         await userEvent.click(screen.getByRole('radio', { name: /Voice room/ }))
+        const field = screen.getByRole('textbox', { name: 'Room name' }).parentElement!
+        expect(field.querySelector('.lucide-volume-2')).not.toBeNull()
         await userEvent.click(screen.getByRole('switch', { name: 'Make it a study room' }))
+        // The icon follows the switch, as in the room settings (S-SET-06).
+        expect(field.querySelector('.lucide-lamp-desk')).not.toBeNull()
         await userEvent.click(screen.getByRole('button', { name: 'Create channel' }))
         await waitFor(() => expect(layoutApi.createChannel).toHaveBeenCalled())
         expect(layoutApi.createChannel.mock.calls[0]![1]).toMatchObject({
