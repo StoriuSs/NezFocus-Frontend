@@ -9,7 +9,9 @@ import { apiUrl, asOwnClient, codeFromEmail, watchForProblems } from './helpers'
  * away from the room, leaving, a reload joining again with both off (D-51)
  * and the same account in a second tab (`other-tab`). The room's chat (M4
  * L6b, S-ROOM-08): read and written without joining, no pins (D-213), a
- * mention there opening the chat from the inbox. With E2E_SHOTS naming a
+ * mention there opening the chat from the inbox. Then M4's "done when" with
+ * three people at once: they hear each other, a camera, a shared screen, a
+ * moderator's mute, a closed tab leaving the room. With E2E_SHOTS naming a
  * folder, pictures of the pages for the frame compare.
  *
  * Needs the API with LiveKit (the backend's `pnpm test:services:up` starts
@@ -32,6 +34,7 @@ const shoot = async (page: Page, name: string) => {
 
 let anEmail: string
 let binhEmail: string
+let chiEmail: string
 let roomPath: string
 let firstPath: string
 
@@ -78,6 +81,8 @@ test.beforeAll(async ({ browserName }) => {
     binhEmail = `e2e-voice-binh-${browserName}${stamp}@example.test`
     const an = await account(anEmail, 'An', `e2e_va${stamp}`)
     const binh = await account(binhEmail, 'Bình', `e2e_vb${stamp}`)
+    chiEmail = `e2e-voice-chi-${browserName}${stamp}@example.test`
+    const chi = await account(chiEmail, 'Chi', `e2e_vc${stamp}`)
 
     const server: { id: string; channels: { id: string; type: string; name: string }[] } = (
         await ok('POST', 'servers', { name: 'Ôn thi Giải tích 2', template: 'study' }, an, crypto.randomUUID())
@@ -92,6 +97,7 @@ test.beforeAll(async ({ browserName }) => {
         )
     ).data
     await ok('POST', `invites/${invite.code}/accept`, {}, binh)
+    await ok('POST', `invites/${invite.code}/accept`, {}, chi)
     const room = server.channels.find((channel) => channel.type === 'voice' && channel.name === ROOM)
     const first = server.channels.find((channel) => channel.type === 'text' && channel.name === 'hoi-dap')
     roomPath = `/channels/${server.id}/${room!.id}`
@@ -118,6 +124,33 @@ const channelList = (page: Page) => page.getByRole('navigation', { name: 'Channe
 const OTHER_TAB = "You're in this room in another tab or on another device"
 /** The width of the picture a <video> plays: 0 until frames arrive. */
 const pictureWidth = (video: ReturnType<Page['locator']>) => video.evaluate((one: HTMLVideoElement) => one.videoWidth)
+
+/**
+ * How loud the quietest sound this page plays is, over a second and a half:
+ * each <audio> LiveKit plays a remote mic in is read through an analyser, and
+ * the fake microphone beeps, so a sound that arrives is above 0.
+ */
+const quietestSound = (page: Page) =>
+    page.evaluate(async () => {
+        const context = new AudioContext()
+        await context.resume()
+        const analysers = Array.from(document.querySelectorAll<HTMLAudioElement>('body > audio'), (audio) => {
+            const analyser = context.createAnalyser()
+            context.createMediaStreamSource(audio.srcObject as MediaStream).connect(analyser)
+            return analyser
+        })
+        const loudest = analysers.map(() => 0)
+        const samples = new Uint8Array(2048)
+        for (let round = 0; round < 30; round++) {
+            await new Promise((done) => setTimeout(done, 50))
+            analysers.forEach((analyser, index) => {
+                analyser.getByteTimeDomainData(samples)
+                for (const sample of samples) loudest[index] = Math.max(loudest[index], Math.abs(sample - 128))
+            })
+        }
+        await context.close()
+        return analysers.length === 0 ? 0 : Math.min(...loudest)
+    })
 
 test('joining, the mic, the dock and leaving show live to everyone who views the room', async ({ browser }) => {
     const an = await openAs(browser, anEmail, roomPath)
@@ -398,4 +431,72 @@ test("a room's chat is read and written without joining; a mention there reaches
     expect(binh.problems).toEqual([])
     await an.context.close()
     await binh.context.close()
+})
+
+test('three people in one room hear each other, see a camera and a screen; a moderator mutes one; a closed tab leaves the room (M4 done when)', async ({
+    browser
+}) => {
+    test.setTimeout(180_000)
+    const an = await openAs(browser, anEmail, roomPath)
+    const binh = await openAs(browser, binhEmail, roomPath)
+    const chi = await openAs(browser, chiEmail, roomPath)
+    const everyone = [an, binh, chi]
+    for (const one of everyone) {
+        await one.page.getByRole('button', { name: 'Join room' }).click({ timeout: 20_000 })
+        await expect(grid(one.page).getByRole('button', { name: 'You, mic off' })).toBeVisible({ timeout: 15_000 })
+    }
+    for (const one of everyone) await expect(grid(one.page).getByRole('listitem')).toHaveCount(3, { timeout: 15_000 })
+
+    // Talking: everyone's mic on, each plays the other two, and their sound arrives (REQ-VC-01, VC-03).
+    for (const one of everyone) await one.page.getByRole('button', { name: 'Unmute (Ctrl Shift M)' }).click()
+    for (const one of everyone) {
+        await expect(one.page.locator('body > audio')).toHaveCount(2, { timeout: 15_000 })
+        await expect.poll(() => quietestSound(one.page), { timeout: 20_000 }).toBeGreaterThan(0)
+    }
+
+    // Chi's camera: the other two see the picture on Chi's tile.
+    await chi.page.getByRole('button', { name: 'Turn on camera' }).click()
+    for (const one of [an, binh]) {
+        const tile = grid(one.page).getByRole('button', { name: /^Chi, mic on, camera on/ })
+        await expect(tile).toBeVisible({ timeout: 15_000 })
+        await expect.poll(() => pictureWidth(tile.locator('video')), { timeout: 15_000 }).toBeGreaterThan(0)
+    }
+
+    // Bình shares a screen: the other two see it on the stage (VC-05), then it stops.
+    await binh.page.getByRole('button', { name: 'Share your screen' }).click()
+    await expect(binh.page.getByText("You're sharing your screen")).toBeVisible({ timeout: 15_000 })
+    for (const one of [an, chi]) {
+        const shown = one.page.getByRole('group', { name: "Bình's screen" })
+        await expect(shown).toBeVisible({ timeout: 15_000 })
+        await expect.poll(() => pictureWidth(shown.locator('video')), { timeout: 15_000 }).toBeGreaterThan(0)
+    }
+    await binh.page.getByRole('button', { name: 'Stop sharing' }).first().click()
+    for (const one of [an, chi]) await expect(one.page.getByRole('group', { name: "Bình's screen" })).toBeHidden()
+
+    // An, the owner, mutes Chi: Chi is told, and neither An nor Bình gets Chi's sound any more (VC-04, D-207).
+    await grid(an.page).getByRole('button', { name: /^Chi,/ }).hover()
+    await grid(an.page).getByRole('button', { name: 'Manage Chi' }).click()
+    await an.page.getByRole('menuitem', { name: 'Mute' }).click()
+    await expect(chi.page.locator('[data-sonner-toast]').getByText('A moderator muted your mic')).toBeVisible({
+        timeout: 15_000
+    })
+    for (const one of [an, binh]) {
+        await expect(one.page.locator('body > audio')).toHaveCount(1, { timeout: 15_000 })
+        await expect(grid(one.page).getByRole('button', { name: /^Chi, muted by a moderator/ })).toBeVisible({
+            timeout: 15_000
+        })
+    }
+
+    // Chi closes the tab without leaving: Chi goes from the room and from the list under it (REQ-VC-01).
+    await expect(channelList(an.page).getByRole('listitem', { name: /^Chi,/ })).toHaveCount(1)
+    await chi.page.close()
+    for (const one of [an, binh]) {
+        await expect(grid(one.page).getByRole('listitem')).toHaveCount(2, { timeout: 30_000 })
+        await expect(channelList(one.page).getByRole('listitem', { name: /^Chi,/ })).toHaveCount(0, { timeout: 30_000 })
+    }
+    await an.page.getByRole('button', { name: 'Leave room' }).click()
+    await binh.page.getByRole('button', { name: 'Leave room' }).click()
+
+    for (const one of everyone) expect(one.problems).toEqual([])
+    for (const one of everyone) await one.context.close()
 })

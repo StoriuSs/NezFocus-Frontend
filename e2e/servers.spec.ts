@@ -155,6 +155,8 @@ test('a plain server from ＋ joins the end of the rail, opened at chung', async
         .evaluateAll((links) => links.map((link) => link.getAttribute('aria-label')))
     expect(names).toEqual(['Ôn thi Giải tích 2', 'Nhóm chơi'])
 
+    // A room opens its preview page; joining waits for the press (REQ-VC-01, M4).
     await page.getByRole('link', { name: 'Phòng thoại chung' }).click()
-    await expect(page.getByRole('heading', { level: 2, name: 'Voice rooms come in a later version' })).toBeVisible()
+    await expect(page.getByText('No one is in the room')).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByRole('button', { name: 'Join room' })).toBeVisible()
 })
