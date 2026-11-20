@@ -19,7 +19,9 @@ import { IconButton } from '@/components/ui/icon-button'
  *
  * Under the Header, the connection Banner when the AppShell has one (C-16).
  * `composer`: the page has a message box, so offline says messages will be
- * sent later. `bare`: no Header from 1024 up, and below only its ☰ (11
+ * sent later. `reconnecting`: the page's own link is coming back (the voice
+ * room's, 07 S-ROOM-06): the `reconnecting` Banner too, one connection Banner
+ * at a time (C-16). `bare`: no Header from 1024 up, and below only its ☰ (11
  * S-MOD-06), the title left to screen readers. `overlay`: drawn inside the
  * content column, which it may cover from the Header down (the chat's cover
  * for dropped files, C-12 `drop-target`); the right panel stays uncovered.
@@ -32,6 +34,7 @@ export function ShellPage({
     children,
     bodyClassName,
     composer = false,
+    reconnecting = false,
     bare = false,
     overlay
 }: {
@@ -42,6 +45,7 @@ export function ShellPage({
     children?: ReactNode
     bodyClassName?: string
     composer?: boolean
+    reconnecting?: boolean
     bare?: boolean
     overlay?: ReactNode
 }) {
@@ -50,6 +54,7 @@ export function ShellPage({
     // The content area: toasts keep to its bottom right (C-16).
     const area = useRef<HTMLElement>(null)
     useToastEdge('contentRight', area)
+    const connection = shell?.connection ?? (reconnecting ? 'reconnecting' : null)
 
     return (
         <>
@@ -79,7 +84,7 @@ export function ShellPage({
                     </h1>
                     {actions ? <div className='flex shrink-0 items-center gap-1'>{actions}</div> : null}
                 </header>
-                {shell?.connection ? <ConnectionBanner status={shell.connection} composer={composer} /> : null}
+                {connection ? <ConnectionBanner status={connection} composer={composer} /> : null}
                 <div className={cn('min-h-0 flex-1 overflow-y-auto', bodyClassName)}>{children}</div>
                 {overlay}
             </section>

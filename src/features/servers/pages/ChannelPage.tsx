@@ -136,6 +136,10 @@ function VoiceChannel({ server, channel, messageId }: { server: Server; channel:
     const mentioned = chat.open ? 0 : (read?.mentionCount ?? 0)
     const unread = !chat.open && (mentioned > 0 || (read?.unreadCount ?? 0) > 0)
     const title = t('channel.roomChat')
+    // In this room and LiveKit trying again: the page says so as the dock does elsewhere (S-ROOM-06, M4 A3).
+    const reconnecting = useVoiceStore(
+        (state) => state.call?.channelId === channel.id && state.call.phase === 'reconnecting'
+    )
     const label = unread
         ? common('shell.unread.label', {
               name: title,
@@ -151,6 +155,7 @@ function VoiceChannel({ server, channel, messageId }: { server: Server; channel:
             title={channel.name}
             icon={icon}
             composer={chat.open}
+            reconnecting={reconnecting}
             actions={
                 <WithTooltip label={title} side='bottom'>
                     <IconButton

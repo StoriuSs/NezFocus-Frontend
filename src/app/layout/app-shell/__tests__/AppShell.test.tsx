@@ -494,6 +494,26 @@ describe('AppShell (S-SHELL-01)', () => {
             expect(screen.getByRole('button', { name: 'Join room' })).toBeEnabled()
         })
 
+        it("says the room's link is coming back on the room's page, under the Header (S-ROOM-06, M4 A3)", async () => {
+            useVoiceStore.setState({
+                call: { serverId: 'ot', channelId: 'quiet', name: 'Phòng học im lặng', phase: 'reconnecting' }
+            })
+            try {
+                renderAt('/channels/ot/quiet')
+                await screen.findByRole('heading', { level: 1, name: 'Phòng học im lặng' })
+                const banner = { selector: 'p[role="status"] span' }
+                expect(await screen.findByText('Reconnecting…', banner)).toBeVisible()
+                act(() =>
+                    useVoiceStore.setState({
+                        call: { serverId: 'ot', channelId: 'quiet', name: 'Phòng học im lặng', phase: 'connected' }
+                    })
+                )
+                expect(screen.queryByText('Reconnecting…', banner)).toBeNull()
+            } finally {
+                useVoiceStore.setState({ call: null })
+            }
+        })
+
         it('says "Page not found" for the address of a channel one cannot see (02 S-CHAT-01 forbidden)', async () => {
             const router = renderAt('/channels/ot/0195a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b')
             expect(await screen.findByRole('heading', { name: "We can't find this page" })).toBeInTheDocument()
