@@ -108,7 +108,7 @@ export function DeviceControl({
                     />
                 </span>
             </PopoverAnchor>
-            <PopoverContent side='top' className='w-80'>
+            <PopoverContent side='top' className='w-80 p-4'>
                 <div className='flex flex-col gap-2'>
                     <h2 className='text-body-sm font-semibold text-text-primary'>{t(looks.help[0])}</h2>
                     <ol className='flex flex-col gap-1 text-label text-text-secondary'>

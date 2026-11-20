@@ -142,7 +142,9 @@
       "noLongerAllowed": "You no longer have access to this room · you left it",
       "roomGone": "This room is no longer available",
       "shareRace": "{{name}} started sharing their screen before you",
-      "shareNotAllowed": "You can no longer share your screen"
+      "shareNotAllowed": "You can no longer share your screen",
+      "micBusy": "Another app is using your mic",
+      "cameraBusy": "Another app is using your camera"
     },
     "serverMenu": {
       "createChannel": "Create channel",

@@ -30,6 +30,12 @@ export type LinkEnd = 'left' | 'other-tab' | 'removed' | 'lost'
 /** The microphone or camera after a switch: on, off, or refused by the browser (S-MOD-04). */
 export type DeviceState = 'on' | 'off' | 'blocked'
 
+/**
+ * What the browser answered to a switch: a DeviceState, or `busy` when another
+ * app or browser holds the device (S-MOD-04 `device-busy`): it stays off.
+ */
+export type DeviceAnswer = DeviceState | 'busy'
+
 /** What to send as the room is joined (asked on the preview page, REQ-VC-03). */
 export interface JoinDevices {
     mic: boolean
@@ -57,8 +63,8 @@ export type ScreenEnd = 'stopped' | 'refused' | 'muted'
 export interface RoomLink {
     /** The LiveKit room, for the room page's hooks (`@livekit/components-react`). */
     room: Room
-    setMic: (on: boolean) => Promise<DeviceState>
-    setCamera: (on: boolean) => Promise<DeviceState>
+    setMic: (on: boolean) => Promise<DeviceAnswer>
+    setCamera: (on: boolean) => Promise<DeviceAnswer>
     /**
      * Shares a screen or stops: on asks the browser which (its own picker,
      * with ARCHITECTURE §4's hints), `off` when the person cancels it or the
@@ -107,8 +113,10 @@ const screenOptions = (sound: boolean) => ({
 const REFUSED_MS = 3_000
 
 /** What the browser answered when asked for the microphone or camera. */
-export function deviceStateOf(error: unknown): DeviceState {
-    return MediaDeviceFailure.getFailure(error) === MediaDeviceFailure.PermissionDenied ? 'blocked' : 'off'
+export function deviceStateOf(error: unknown): DeviceAnswer {
+    const failure = MediaDeviceFailure.getFailure(error)
+    if (failure === MediaDeviceFailure.PermissionDenied) return 'blocked'
+    return failure === MediaDeviceFailure.DeviceInUse ? 'busy' : 'off'
 }
 
 /**
@@ -120,14 +128,15 @@ export function deviceStateOf(error: unknown): DeviceState {
  * pictures are attached by the room page to its own <video>, only where shown.
  *
  * Rejects when the room cannot be reached; a microphone or camera refused
- * only leaves it off (`micState` / `cameraState` then say `blocked`).
+ * or held elsewhere only leaves it off (`micState` / `cameraState` then say
+ * `blocked` or `busy`).
  */
 export async function joinRoom(
     url: string,
     token: string,
     devices: JoinDevices,
     events: LinkEvents
-): Promise<{ link: RoomLink; micState: DeviceState; cameraState: DeviceState }> {
+): Promise<{ link: RoomLink; micState: DeviceAnswer; cameraState: DeviceAnswer }> {
     const room = new Room({ adaptiveStream: true, dynacast: true, disconnectOnPageLeave: true })
     let leaving = false
     const players = new Map<string, HTMLMediaElement>()
@@ -202,7 +211,7 @@ export async function joinRoom(
         if (!leaving) events.onEnd((reason !== undefined && ENDS[reason]) || 'lost')
     })
 
-    const switched = async (on: boolean, apply: (on: boolean) => Promise<unknown>): Promise<DeviceState> => {
+    const switched = async (on: boolean, apply: (on: boolean) => Promise<unknown>): Promise<DeviceAnswer> => {
         try {
             await apply(on)
             return on ? 'on' : 'off'

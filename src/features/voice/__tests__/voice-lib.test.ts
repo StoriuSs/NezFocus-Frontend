@@ -160,6 +160,7 @@ describe("the browser's camera before joining (D-53, S-MOD-04)", () => {
             .mockResolvedValueOnce(stream)
             .mockRejectedValueOnce(new DOMException('no', 'NotAllowedError'))
             .mockRejectedValueOnce(new Error('none'))
+            .mockRejectedValueOnce(new DOMException('Device in use', 'NotReadableError'))
         Object.defineProperty(navigator, 'mediaDevices', { value: { getUserMedia }, configurable: true })
         expect(await openCamera()).toEqual({ state: 'on', stream })
         expect(getUserMedia).toHaveBeenCalledWith({ video: true })
@@ -168,6 +169,8 @@ describe("the browser's camera before joining (D-53, S-MOD-04)", () => {
         expect(stop).toHaveBeenCalled()
         expect(await openCamera()).toEqual({ state: 'blocked', stream: null })
         expect(await openCamera()).toEqual({ state: 'off', stream: null })
+        // Held by another app or browser (S-MOD-04 device-busy, M4 A3).
+        expect(await openCamera()).toEqual({ state: 'busy', stream: null })
         expect(() => closeCamera(null)).not.toThrow()
     })
 

@@ -142,7 +142,9 @@
       "noLongerAllowed": "Bạn không còn quyền vào phòng này · đã rời phòng",
       "roomGone": "Phòng này không còn khả dụng",
       "shareRace": "{{name}} vừa chia sẻ màn hình trước bạn",
-      "shareNotAllowed": "Bạn không còn quyền chia sẻ màn hình"
+      "shareNotAllowed": "Bạn không còn quyền chia sẻ màn hình",
+      "micBusy": "Mic đang được ứng dụng khác dùng",
+      "cameraBusy": "Camera đang được ứng dụng khác dùng"
     },
     "serverMenu": {
       "createChannel": "Tạo kênh",

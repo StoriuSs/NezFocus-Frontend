@@ -1,5 +1,5 @@
 import { createElement, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { LogOut, Mic, MicOff, MonitorSmartphone, MonitorX, RotateCw } from 'lucide-react'
+import { LogOut, Mic, MicOff, MonitorSmartphone, MonitorX, RotateCw, VideoOff } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { onRealtimeEvent } from '@/features/realtime'
@@ -55,6 +55,8 @@ function inRoom(channelId: string): boolean {
  *   the tab in that room stops its own and says who (ROOM-EDGE `share-race`),
  *   by the room's list, else LiveKit's name. The server took one's screen
  *   for VIDEO lost: said too (ROOM-EDGE).
+ * - The mic or camera pressed on is held by another app or browser: said
+ *   (S-MOD-04 `device-busy`), the button off.
  */
 export function useVoiceSession(directory: VoiceDirectory | undefined): void {
     const { t, i18n } = useTranslation()
@@ -126,6 +128,18 @@ export function useVoiceSession(directory: VoiceDirectory | undefined): void {
         useVoiceStore.setState({ screenRefused: null })
         toast(t('shell.voice.shareNotAllowed'), { id: 'voice-share', icon: createElement(MonitorX, ICON) })
     }, [screenRefused, t])
+
+    // Another app or browser holds the mic or camera (S-MOD-04 `device-busy`): one Toast a device.
+    const busy = useVoiceStore((state) => state.deviceBusy)
+    useEffect(() => {
+        if (busy === null) return
+        useVoiceStore.setState({ deviceBusy: null })
+        const mic = busy.device === 'mic'
+        toast.error(t(mic ? 'shell.voice.micBusy' : 'shell.voice.cameraBusy'), {
+            id: `voice-busy-${busy.device}`,
+            icon: createElement(mic ? MicOff : VideoOff, ICON)
+        })
+    }, [busy, t])
 
     // The latest rooms, for the share race's name (the listeners below stay for the hook's life).
     const rooms = useRef(directory)

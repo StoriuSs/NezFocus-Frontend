@@ -46,8 +46,13 @@ vi.mock('livekit-client', () => ({
     DisconnectReason: { CLIENT_INITIATED: 1, DUPLICATE_IDENTITY: 2, PARTICIPANT_REMOVED: 4, ROOM_DELETED: 5 },
     MediaDeviceFailure: {
         PermissionDenied: 'PermissionDenied',
+        DeviceInUse: 'DeviceInUse',
         getFailure: (error: unknown) =>
-            error instanceof DOMException && error.name === 'NotAllowedError' ? 'PermissionDenied' : 'Other'
+            error instanceof DOMException && error.name === 'NotAllowedError'
+                ? 'PermissionDenied'
+                : error instanceof DOMException && error.name === 'NotReadableError'
+                  ? 'DeviceInUse'
+                  : 'Other'
     }
 }))
 
@@ -122,6 +127,11 @@ describe('the link to a LiveKit room (ARCHITECTURE §4)', () => {
         FakeRoom.last.localParticipant.setMicrophoneEnabled.mockRejectedValueOnce(new Error('no device'))
         expect(await link.setMic(true)).toBe('off')
         expect(deviceStateOf(refused())).toBe('blocked')
+        // Held by another app or browser (S-MOD-04 device-busy, M4 A3).
+        FakeRoom.last.localParticipant.setCameraEnabled.mockRejectedValueOnce(
+            new DOMException('Device in use', 'NotReadableError')
+        )
+        expect(await link.setCamera(true)).toBe('busy')
     })
 
     it("plays others' sound whatever the page, and stops it when the track goes", async () => {

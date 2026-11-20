@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { Room } from 'livekit-client'
 import type { DeviceState } from '@/lib/livekit'
+import type { Device } from './lib/devices'
 import type { PutOutReason } from './types'
 
 /** Joining (the button `loading`), in the room, or LiveKit trying again (C-09 `+reconnecting`). */
@@ -32,6 +33,8 @@ interface VoiceState {
     screen: 'on' | 'off'
     /** When the server took this tab's screen for VIDEO lost, until `useVoiceSession` says so (07 ROOM-EDGE). */
     screenRefused: number | null
+    /** A device another app or browser held at the last switch, until `useVoiceSession` says so (S-MOD-04 `device-busy`). */
+    deviceBusy: { device: Device; at: number } | null
     /**
      * The last join that failed: why, for that room's page (`join-error`,
      * `forbidden`); a timeout says until when (ISO), from the API's answer.
@@ -67,6 +70,7 @@ export const useVoiceStore = create<VoiceState>(() => ({
     cameraPreview: null,
     screen: 'off',
     screenRefused: null,
+    deviceBusy: null,
     problem: null,
     removed: null,
     modMuted: null

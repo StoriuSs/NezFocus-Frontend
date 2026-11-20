@@ -9,7 +9,7 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { userKeys } from '@/features/users'
 import { expectNoA11yViolations } from '@/test/a11y'
 import { apiError } from '@/test/helpers'
-import type { JoinDevices, LinkEvents } from '@/lib/livekit'
+import type { DeviceAnswer, JoinDevices, LinkEvents } from '@/lib/livekit'
 import type { Room } from 'livekit-client'
 import type { RoomPerson, VoiceDirectory, VoiceRoom, VoiceToken } from '../types'
 
@@ -23,7 +23,7 @@ const voiceApi = {
 vi.mock('../api/voice.api', () => voiceApi)
 
 const linkEvents: LinkEvents[] = []
-const setMic = vi.fn(async (on: boolean) => (on ? 'on' : 'off'))
+const setMic = vi.fn(async (on: boolean): Promise<DeviceAnswer> => (on ? 'on' : 'off'))
 const setCamera = vi.fn(async (on: boolean) => (on ? 'on' : 'off'))
 const setScreen = vi.fn(async (on: boolean) => (on ? 'on' : 'off'))
 const livekit = {
@@ -104,7 +104,7 @@ vi.mock('@/features/realtime', () => ({
 const { default: VoiceRoomView } = await import('../components/VoiceRoomView')
 const { default: InRoomDock } = await import('../components/InRoomDock')
 const { useVoiceSession, MOVED_WINDOW_MS } = await import('../hooks/useVoiceSession')
-const { resetSession, joinRoom } = await import('../lib/session')
+const { resetSession, joinRoom, switchCamera, switchMic } = await import('../lib/session')
 const { keepRoom, resetRejoin } = await import('../lib/rejoin')
 const { useVoiceStore } = await import('../voice.store')
 
@@ -259,6 +259,8 @@ describe("a voice room's preview page (S-ROOM-01 voice-preview)", () => {
         await userEvent.click(screen.getByRole('button', { name: 'How to fix' }))
         expect(await screen.findByText('Turn the camera back on')).toBeVisible()
         expect(screen.getByText('2. Under Camera, choose Allow.')).toBeVisible()
+        // The steps sit inside the Popover's padding (C-15: 12–16), not against its border (M4 A3).
+        expect(screen.getByRole('dialog')).toHaveClass('p-4')
         await expectNoA11yViolations()
         unmount()
 
@@ -1078,6 +1080,22 @@ describe('voice in every tab (useVoiceSession)', () => {
         act(() => useVoiceStore.setState({ screenRefused: Date.now() }))
         expect(await screen.findByText('You can no longer share your screen')).toBeVisible()
         expect(useVoiceStore.getState().screenRefused).toBeNull()
+    })
+
+    it('says so when another app holds the camera or mic: the button off, not blocked (S-MOD-04 device-busy)', async () => {
+        session(directory([room()]))
+        const getUserMedia = vi.fn().mockRejectedValue(new DOMException('Device in use', 'NotReadableError'))
+        Object.defineProperty(navigator, 'mediaDevices', { value: { getUserMedia }, configurable: true })
+        await act(() => switchCamera(true))
+        expect(useVoiceStore.getState()).toMatchObject({ camera: 'off', cameraPreview: null })
+        expect(await screen.findByText('Another app is using your camera')).toBeVisible()
+
+        await joinRoom({ serverId: 'ot', channelId: 'thao-luan', name: 'Phòng thảo luận nhóm' })
+        setMic.mockResolvedValueOnce('busy')
+        await act(() => switchMic(true))
+        expect(useVoiceStore.getState().mic).toBe('off')
+        expect(await screen.findByText('Another app is using your mic')).toBeVisible()
+        expect(useVoiceStore.getState().deviceBusy).toBeNull()
     })
 
     it('joins again after a reload, mic off, once the rooms are known, and says so (reload-rejoin)', async () => {

@@ -1,17 +1,21 @@
-import type { DeviceState } from '@/lib/livekit'
+import type { DeviceAnswer } from '@/lib/livekit'
 
 /** A device the browser asks the person for (S-MOD-04). */
 export type Device = 'mic' | 'camera'
 
-const refusedState = (error: unknown): DeviceState =>
-    error instanceof DOMException && error.name === 'NotAllowedError' ? 'blocked' : 'off'
+/** Refused by the person or the browser: `blocked`; held by another app or browser: `busy` (S-MOD-04 `device-busy`). */
+function refusedState(error: unknown): DeviceAnswer {
+    if (!(error instanceof DOMException)) return 'off'
+    if (error.name === 'NotAllowedError') return 'blocked'
+    return error.name === 'NotReadableError' ? 'busy' : 'off'
+}
 
 /**
  * Asks the browser for the microphone before joining (the preview page's
  * Mic, REQ-VC-03, D-36): it asks the person only now, on the press. The
  * sound itself is not kept: joining takes the microphone again.
  */
-export async function askMicrophone(): Promise<DeviceState> {
+export async function askMicrophone(): Promise<DeviceAnswer> {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
         for (const track of stream.getTracks()) track.stop()
@@ -27,7 +31,7 @@ export async function askMicrophone(): Promise<DeviceState> {
  * picture is kept until the camera goes off, the page goes, or the room is
  * joined (LiveKit then opens the camera itself).
  */
-export async function openCamera(): Promise<{ state: DeviceState; stream: MediaStream | null }> {
+export async function openCamera(): Promise<{ state: DeviceAnswer; stream: MediaStream | null }> {
     try {
         return { state: 'on', stream: await navigator.mediaDevices.getUserMedia({ video: true }) }
     } catch (error) {

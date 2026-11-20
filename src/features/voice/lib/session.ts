@@ -1,7 +1,7 @@
 import { sendRealtimeSignal } from '@/features/realtime'
 import { getApiErrorType, timedOutUntil } from '@/lib/api-error'
 import { onBeforeSignOut } from '@/lib/before-sign-out'
-import type { DeviceState, LinkEnd, RoomLink, ScreenEnd } from '@/lib/livekit'
+import type { DeviceAnswer, DeviceState, LinkEnd, RoomLink, ScreenEnd } from '@/lib/livekit'
 import { leaveVoiceRoom, requestVoiceToken } from '../api/voice.api'
 import { useVoiceStore } from '../voice.store'
 import { askMicrophone, closeCamera, openCamera, type Device } from './devices'
@@ -54,6 +54,16 @@ const devicesOut = (state: ReturnType<typeof get>) => ({
     mic: state.mic === 'blocked' ? ('blocked' as const) : ('off' as const),
     camera: state.camera === 'blocked' ? ('blocked' as const) : ('off' as const)
 })
+
+/**
+ * The browser's answer as the button shows it: a device held by another app
+ * or browser is off, and kept for `useVoiceSession` to say (S-MOD-04 `device-busy`).
+ */
+function shown(device: Device, answer: DeviceAnswer): DeviceState {
+    if (answer !== 'busy') return answer
+    set({ deviceBusy: { device, at: Date.now() } })
+    return 'off'
+}
 
 /** The preview's picture stopped, its stream let go (LiveKit has the camera, or it is off). */
 function dropPreview(): void {
@@ -181,8 +191,8 @@ export async function joinRoom(room: RoomToJoin, options: { devicesOff?: boolean
         set({
             call: { ...room, phase: 'connected' },
             room: joined.link.room,
-            mic: micState,
-            camera: cameraState
+            mic: shown('mic', micState),
+            camera: shown('camera', cameraState)
         })
         tellOwnState()
         return true
@@ -205,12 +215,16 @@ export async function joinRoom(room: RoomToJoin, options: { devicesOff?: boolean
     }
 }
 
-/** A device as LiveKit joined with it, switched to the state pressed since, unless the browser refused it. */
+/**
+ * A device as LiveKit joined with it, switched to the state pressed since,
+ * unless the browser refused it. Held elsewhere and pressed off since: off, nothing to say.
+ */
 async function settle(
-    joined: DeviceState,
+    joined: DeviceAnswer,
     wanted: DeviceState,
-    apply: (on: boolean) => Promise<DeviceState>
-): Promise<DeviceState> {
+    apply: (on: boolean) => Promise<DeviceAnswer>
+): Promise<DeviceAnswer> {
+    if (joined === 'busy') return wanted === 'on' ? 'busy' : 'off'
     if (joined === 'blocked' || wanted === 'blocked' || (joined === 'on') === (wanted === 'on')) return joined
     return apply(wanted === 'on')
 }
@@ -253,11 +267,12 @@ function signOutLeave(): void {
 /**
  * The Mic button (C-21), in a room or on the preview page: in a room it
  * switches the sound sent; before joining it only asks the browser, which
- * asks the person on this first press (D-36). Refused: `blocked` (S-MOD-04).
+ * asks the person on this first press (D-36). Refused: `blocked`; held by
+ * another app: off, and said (S-MOD-04).
  */
 export async function switchMic(on: boolean): Promise<void> {
-    const state = link ? await link.setMic(on) : on ? await askMicrophone() : 'off'
-    set({ mic: state })
+    const answer = link ? await link.setMic(on) : on ? await askMicrophone() : 'off'
+    set({ mic: shown('mic', answer) })
     tellOwnState()
 }
 
@@ -278,11 +293,11 @@ export async function micTakenAway(channelId: string): Promise<void> {
  * The Camera button (C-21), in a room or on the preview page: in a room it
  * starts or stops sending the picture; before joining it opens the camera
  * for one's own tile, the browser asking the person on this first press
- * (D-53). Refused: `blocked` (S-MOD-04).
+ * (D-53). Refused: `blocked`; held by another app: off, and said (S-MOD-04).
  */
 export async function switchCamera(on: boolean): Promise<void> {
     if (link) {
-        set({ camera: await link.setCamera(on) })
+        set({ camera: shown('camera', await link.setCamera(on)) })
         tellOwnState()
         return
     }
@@ -299,7 +314,7 @@ export async function switchCamera(on: boolean): Promise<void> {
         closeCamera(opened.stream)
         return
     }
-    set({ camera: opened.state, cameraPreview: opened.stream })
+    set({ camera: shown('camera', opened.state), cameraPreview: opened.stream })
 }
 
 /**
@@ -393,6 +408,7 @@ export function resetSession(): void {
         cameraPreview: null,
         screen: 'off',
         screenRefused: null,
+        deviceBusy: null,
         problem: null,
         removed: null,
         modMuted: null
