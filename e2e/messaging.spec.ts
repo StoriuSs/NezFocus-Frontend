@@ -564,6 +564,22 @@ test('who is online and who is typing reach the other browser: the member panel,
     const article = log(binh.page).getByRole('article', { name: /@here họp nhóm 21:00$/ })
     await expect(article).toHaveAttribute('data-related', 'true', { timeout: 15_000 })
 
+    // A display name of 32 characters, the longest there is (D-69), is cut with "…" in its row: the
+    // panel never scrolls sideways (C-13, M4 A3).
+    const longName = 'Bình Nguyễn Thị Minh Khuê K23 A1'
+    const signedIn: { access_token: string } = (
+        await ok('POST', 'auth/login', { email: binhEmail, password: PASSWORD }, undefined, crypto.randomUUID())
+    ).data
+    const binhToken = signedIn.access_token
+    await ok('PATCH', 'users/me', { display_name: longName }, binhToken, crypto.randomUUID())
+    await an.page.reload()
+    const longRow = onlineGroup.getByText(longName, { exact: true })
+    await expect(longRow).toBeVisible({ timeout: 15_000 })
+    const rowRight = await longRow.evaluate((name) => name.getBoundingClientRect().right)
+    const panelRight = await panel.evaluate((aside) => aside.getBoundingClientRect().right)
+    expect(rowRight).toBeLessThanOrEqual(panelRight)
+    await ok('PATCH', 'users/me', { display_name: 'Bình' }, binhToken, crypto.randomUUID())
+
     expect([...an.problems, ...binh.problems]).toEqual([])
     await an.context.close()
     await binh.context.close()

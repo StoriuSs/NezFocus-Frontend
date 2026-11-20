@@ -63,8 +63,9 @@ export function MemberPanel({ serverId }: { serverId: string }) {
 
     const away = offline.data.pages.flatMap((page) => page.items)
     const awayTotal = offline.data.pages[0]?.meta.totalItems ?? 0
+    // One column no wider than the panel: an auto column would grow to the longest name, past "…" (C-13).
     return (
-        <div className='grid gap-4'>
+        <div className='grid grid-cols-1 gap-4'>
             <Group title={t('shell.members.online', { count: online.data.total })} members={online.data.items} />
             {awayTotal > 0 ? (
                 <Group title={t('shell.members.offline', { count: awayTotal })} members={away} offline>
