@@ -1302,7 +1302,8 @@ export interface paths {
          *     one may not view is NOT_FOUND; no CONNECT FORBIDDEN_ERROR; a timeout
          *     MEMBER_TIMED_OUT with `timeout_until`; LiveKit unreachable
          *     SERVICE_UNAVAILABLE_ERROR. Not `@Idempotent()`: a retry is simply
-         *     another token.
+         *     another token. The token carries this request's sign-in session, whose
+         *     end puts the connection out (D-214).
          */
         post: operations['VoiceController_token_v1']
         delete?: never
