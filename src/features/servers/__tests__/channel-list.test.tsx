@@ -13,6 +13,8 @@ import { expectNoA11yViolations } from '@/test/a11y'
 import { queryWrapper } from '@/test/helpers'
 import { serverKeys } from '../api/keys'
 import type { RoomPerson, Server, ServerChannel } from '../types'
+import { session as studySession } from '@/test/study-sessions'
+import { noteServerTime } from '@/lib/server-clock'
 
 const serversApi = { fetchServers: vi.fn(), createServer: vi.fn(), uploadServerIcon: vi.fn() }
 vi.mock('@/features/servers/api/servers.api', () => serversApi)
@@ -29,6 +31,7 @@ vi.mock('@/features/voice/api/voice.api', () => voiceApi)
 const { ServerChannelColumn } = await import('../components/channel-list/ServerChannelColumn')
 const { useChannelDialogs } = await import('../channel-dialogs.store')
 const { useVoiceStore } = await import('@/features/voice')
+const { roomSessionOf } = await import('@/features/study')
 
 const MEMBER = String((1n << 8n) | (1n << 10n) | (1n << 15n))
 /** And MANAGE_CHANNELS. */
@@ -485,6 +488,21 @@ describe('The channel list for a member', () => {
         expect(room).not.toHaveClass('text-text-primary')
         expect(room.className).not.toContain('=>')
         expect(within(room).getByRole('img', { name: 'You may not join this room' })).toBeInTheDocument()
+    })
+
+    it("shows a room's session under its row, to anyone, in the room or not (C-06 focus-running)", async () => {
+        noteServerTime(studySession().serverTime)
+        const data = server(MEMBER)
+        renderColumn({
+            ...data,
+            channels: data.channels.map((c) =>
+                c.type === 'voice' ? { ...c, isStudyRoom: true, focusSession: roomSessionOf(studySession()) } : c
+            )
+        })
+        const line = (await screen.findByText('Focus')).parentElement!
+        expect(line).toHaveTextContent('Focus · 18 min left')
+        expect(line.parentElement).toHaveClass('text-phase-focus')
+        expect(line.closest('li')).toContainElement(screen.getByRole('link', { name: /Phòng học im lặng/ }))
     })
 
     it('has a menu with Leave only, no buttons on rows, and Space does not lift anything', async () => {

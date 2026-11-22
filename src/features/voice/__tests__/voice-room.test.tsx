@@ -12,6 +12,9 @@ import { apiError } from '@/test/helpers'
 import type { DeviceAnswer, JoinDevices, LinkEvents } from '@/lib/livekit'
 import type { Room } from 'livekit-client'
 import type { RoomPerson, VoiceDirectory, VoiceRoom, VoiceToken } from '../types'
+import type { RoomSession } from '@/features/study'
+import { session as studySession } from '@/test/study-sessions'
+import { noteServerTime } from '@/lib/server-clock'
 
 const voiceApi = {
     requestVoiceToken: vi.fn<(channelId: string) => Promise<VoiceToken>>(),
@@ -102,6 +105,7 @@ vi.mock('@/features/realtime', () => ({
 }))
 
 const { default: VoiceRoomView } = await import('../components/VoiceRoomView')
+const { roomSessionOf } = await import('@/features/study')
 const { default: InRoomDock } = await import('../components/InRoomDock')
 const { useVoiceSession, MOVED_WINDOW_MS } = await import('../hooks/useVoiceSession')
 const { resetSession, joinRoom, switchCamera, switchMic } = await import('../lib/session')
@@ -975,7 +979,7 @@ describe('a screen shared in the room (S-ROOM-07, C-31, D-101, D-102)', () => {
 })
 
 describe('the dock away from the room (InRoomDock voice, C-09)', () => {
-    const dock = (shape: 'column' | 'strip', canSpeak = true, modMuted = false) =>
+    const dock = (shape: 'column' | 'strip', canSpeak = true, modMuted = false, session: RoomSession | null = null) =>
         render(
             <InRoomDock
                 shape={shape}
@@ -987,6 +991,7 @@ describe('the dock away from the room (InRoomDock voice, C-09)', () => {
                     canSpeak,
                     canVideo: canSpeak,
                     modMuted,
+                    session,
                     count: 4
                 }}
             />,
@@ -1022,6 +1027,34 @@ describe('the dock away from the room (InRoomDock voice, C-09)', () => {
             screen.getByRole('button', { name: "You don't have permission to turn on your camera in this room" })
         )
         expect(setCamera).not.toHaveBeenCalled()
+    })
+
+    it('with a study session: its phase, the time left by the second, the round (room-session, S-ROOM-05)', async () => {
+        noteServerTime(studySession().serverTime)
+        await joinRoom({ serverId: 'ot', channelId: 'thao-luan', name: 'Phòng thảo luận nhóm' })
+        const view = dock('column', true, false, roomSessionOf(studySession()))
+        // The link is named by the phase and the room, never the seconds.
+        const link = screen.getByRole('link', { name: 'Focus, Phòng thảo luận nhóm, Round 2' })
+        expect(within(link).getByText('18:42')).toHaveClass('text-text-primary')
+        // The minutes are read out only while the dock has the focus (C-09 › Accessibility), outside the link.
+        const said = screen.getByText('Focus · 18 min left')
+        expect(link).not.toContainElement(said)
+        expect(said).toHaveAttribute('aria-live', 'off')
+        act(() => link.focus())
+        expect(said).toHaveAttribute('aria-live', 'polite')
+        // From the link to a button of the dock: still within it.
+        act(() => screen.getByRole('button', { name: 'Leave room' }).focus())
+        expect(said).toHaveAttribute('aria-live', 'polite')
+        act(() => link.blur())
+        act(() => (document.activeElement as HTMLElement | null)?.blur())
+        expect(said).toHaveAttribute('aria-live', 'off')
+        await expectNoA11yViolations()
+
+        view.unmount()
+        const paused = studySession({ status: 'paused', phaseEndsAt: null, pausedRemainingMs: 1_122_000 })
+        dock('strip', true, false, roomSessionOf(paused))
+        const still = screen.getByRole('link', { name: 'Paused, Phòng thảo luận nhóm, Round 2' })
+        expect(within(still).getByText('18:42')).toHaveClass('text-text-secondary')
     })
 
     it('keeps the Mic off while a moderator has it muted', async () => {

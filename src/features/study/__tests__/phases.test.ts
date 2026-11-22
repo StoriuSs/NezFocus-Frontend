@@ -3,21 +3,26 @@ import i18n from '@/i18n'
 import '@/i18n/study'
 import { cycleName, cycleSummary } from '../lib/cycle-words'
 import { studiedText } from '../lib/durations'
+import { sessionLineText, tabText } from '../lib/phase-words'
+import { DAY_CAP_SECONDS, dayStartOf, streakShown, todaySecondsAt } from '../lib/today'
 import {
     clockText,
     isLater,
     isLongClock,
+    minutesLeft,
     nextPhaseOf,
     phaseGone,
     phaseMinutes,
     remainingMs,
     roomSessionOf,
     roundOf,
-    sessionCycle
+    sessionCycle,
+    untilMinuteChanges
 } from '../lib/phases'
-import { AT, session } from './fixtures'
+import { AT, session } from '@/test/study-sessions'
 
 const t = i18n.getFixedT('vi', 'study')
+const shell = i18n.getFixedT('vi', 'common')
 const LONG = { longBreakMinutes: 15, longBreakEvery: 4 }
 
 describe('the phases of a session, as the backend works them out', () => {
@@ -68,9 +73,134 @@ describe("the ring's clock", () => {
         expect(phaseGone(session(), Date.parse('2026-11-22T15:30:00.000Z'))).toBe(1)
     })
 
+    it('says the whole minutes the clock shows, and when that number changes (C-19 list)', () => {
+        expect(minutesLeft((18 * 60 + 42) * 1000)).toBe(18)
+        expect(minutesLeft(18 * 60 * 1000 + 1)).toBe(18)
+        expect(minutesLeft(18 * 60 * 1000)).toBe(18)
+        // 01:00 still says a minute; 00:59 is under one.
+        expect(minutesLeft(59_001)).toBe(1)
+        expect(minutesLeft(59_000)).toBe(0)
+        // 18:42 shows 18 until the clock reads 17:59, 43 seconds on.
+        expect(untilMinuteChanges((18 * 60 + 42) * 1000)).toBe(43_000)
+        expect(minutesLeft((18 * 60 + 42) * 1000 - 43_000)).toBe(17)
+        expect(minutesLeft((18 * 60 + 42) * 1000 - 42_999)).toBe(18)
+        // Under a minute, nothing changes until the phase ends.
+        expect(untilMinuteChanges(30_000)).toBe(30_000)
+    })
+
     it('chooses the long number for a phase of 100 minutes or more', () => {
         expect(isLongClock(session({ focusMinutes: 100 }))).toBe(true)
         expect(isLongClock(session({ focusMinutes: 99 }))).toBe(false)
+    })
+})
+
+describe("one's minutes today (D-224, D-231)", () => {
+    const today = (countedUntil: string | null, todaySeconds = 1200) => ({
+        todaySeconds,
+        countedUntil,
+        streak: 5,
+        readAt: '2026-11-22T14:47:18.000Z'
+    })
+    /** 22/11 began at 00:00 in Hồ Chí Minh (UTC+7). */
+    const DAY = Date.parse('2026-11-21T17:00:00.000Z')
+
+    it('knows when today began in the zone given', () => {
+        expect(dayStartOf(AT, 'Asia/Ho_Chi_Minh')).toBe(DAY)
+        expect(dayStartOf(AT, 'UTC')).toBe(Date.parse('2026-11-22T00:00:00.000Z'))
+    })
+
+    it('starts from 0 at midnight: a last count from yesterday wrote yesterday, the stretch counts from 00:00', () => {
+        // Focus from 23:50 yesterday, counted to 23:55; at 00:10 today: 10 minutes, not 20 nor yesterday's.
+        const late = session({
+            phaseStartedAt: '2026-11-21T16:50:00.000Z',
+            stretchStartedAt: '2026-11-21T16:50:00.000Z',
+            phaseEndsAt: '2026-11-21T17:15:00.000Z'
+        })
+        const at = Date.parse('2026-11-21T17:10:00.000Z')
+        expect(todaySecondsAt(today('2026-11-21T16:55:00.000Z', 5 * 3600), late, at, DAY)).toBe(600)
+    })
+
+    it('shows the streak one more once today reaches 15 minutes before a count wrote it (STUDY-07)', () => {
+        // 14 minutes counted to 21:47:00: 14:18 at 21:47:18, 15:01 at 21:48:01.
+        expect(streakShown(today('2026-11-22T14:47:00.000Z', 14 * 60), session(), AT, DAY)).toBe(5)
+        expect(streakShown(today('2026-11-22T14:47:00.000Z', 14 * 60), session(), AT + 43_000, DAY)).toBe(6)
+        // A count already took today past 15: its streak has today in it.
+        expect(streakShown(today('2026-11-22T14:47:00.000Z', 16 * 60), session(), AT, DAY)).toBe(5)
+    })
+
+    describe('across midnight, the last count being of yesterday (REQ-STUDY-07)', () => {
+        // A focus from 23:45 yesterday to 00:20, in Hồ Chí Minh.
+        const late = session({
+            phaseStartedAt: '2026-11-21T16:45:00.000Z',
+            stretchStartedAt: '2026-11-21T16:45:00.000Z',
+            phaseEndsAt: '2026-11-21T17:20:00.000Z'
+        })
+        const at = (clock: string) => Date.parse(`2026-11-21T${clock}:00.000Z`)
+
+        it('keeps the streak of a yesterday that reached 15 minutes, one more as today does', () => {
+            const day = today('2026-11-21T16:55:00.000Z', 20 * 60)
+            expect(streakShown(day, late, at('17:10'), DAY)).toBe(5)
+            expect(streakShown(day, late, at('17:16'), DAY)).toBe(6)
+        })
+
+        it('breaks it when yesterday fell short even with the focus run on to midnight: 0, then 1', () => {
+            // 5 minutes counted to 23:58; 2 more to midnight: 7.
+            const day = today('2026-11-21T16:58:00.000Z', 5 * 60)
+            expect(streakShown(day, late, at('17:10'), DAY)).toBe(0)
+            expect(streakShown(day, late, at('17:16'), DAY)).toBe(1)
+        })
+
+        it('counts yesterday one more when only the focus run on to midnight took it to 15 minutes', () => {
+            // 800 seconds counted to 23:50; 10 more minutes to midnight: 1400.
+            const day = today('2026-11-21T16:50:00.000Z', 800)
+            expect(streakShown(day, late, at('17:10'), DAY)).toBe(6)
+            expect(streakShown(day, late, at('17:16'), DAY)).toBe(7)
+        })
+    })
+
+    it('shows no more than the 16-hour cap (D-224)', () => {
+        expect(todaySecondsAt(today('2026-11-22T14:41:00.000Z', DAY_CAP_SECONDS - 60), session(), AT, DAY)).toBe(
+            DAY_CAP_SECONDS
+        )
+    })
+
+    it('adds the running focus from where the last count stopped, or where the stretch began if later', () => {
+        // Counted to 21:47:00 (joined then): 18 seconds more at 21:47:18.
+        expect(todaySecondsAt(today('2026-11-22T14:47:00.000Z'), session(), AT, DAY)).toBe(1218)
+        // Counted to before the stretch (the break before it): from the stretch's start, 21:41.
+        expect(todaySecondsAt(today('2026-11-22T14:30:00.000Z'), session(), AT, DAY)).toBe(1200 + 6 * 60 + 18)
+    })
+
+    it('counts no further than the phase is due to end, and adds nothing paused, in a break or in no session', () => {
+        expect(
+            todaySecondsAt(today('2026-11-22T15:00:00.000Z'), session(), Date.parse('2026-11-22T15:10:00Z'), DAY)
+        ).toBe(1200 + 6 * 60)
+        const paused = session({ status: 'paused', phaseEndsAt: null, pausedRemainingMs: 90_000 })
+        expect(todaySecondsAt(today('2026-11-22T14:47:00.000Z'), paused, AT, DAY)).toBe(1200)
+        const rest = session({ phase: 'short_break', phaseIndex: 3, stretchStartedAt: null })
+        expect(todaySecondsAt(today('2026-11-22T14:47:00.000Z'), rest, AT, DAY)).toBe(1200)
+        expect(todaySecondsAt(today(null), session(), AT, DAY)).toBe(1200)
+        expect(todaySecondsAt(today('2026-11-22T14:47:00.000Z'), null, AT, DAY)).toBe(1200)
+        // A count written after now (a clock a little behind): nothing taken away.
+        expect(todaySecondsAt(today('2026-11-22T14:48:00.000Z'), session(), AT, DAY)).toBe(1200)
+    })
+})
+
+describe('the phase away from the room, in the shell words (C-19, X-01)', () => {
+    it('says the phase and its minutes, "under a minute" in the last, the phase alone while paused', () => {
+        expect(sessionLineText(shell, session(), AT)).toBe('Tập trung · còn 18 phút')
+        expect(sessionLineText(shell, session(), Date.parse('2026-11-22T15:05:30.000Z'))).toBe(
+            'Tập trung · còn dưới 1 phút'
+        )
+        expect(sessionLineText(shell, session({ phase: 'long_break' }), AT)).toBe('Nghỉ dài · còn 18 phút')
+        expect(sessionLineText(shell, session({ status: 'paused', pausedRemainingMs: 1000 }), AT)).toBe('Tạm dừng')
+    })
+
+    it('titles the tab with the clock by the second; paused, the number still (07 S-ROOM-05)', () => {
+        expect(tabText(shell, session(), AT)).toBe('18:42 · Tập trung')
+        expect(tabText(shell, session({ phase: 'short_break' }), AT + 1000)).toBe('18:41 · Nghỉ ngắn')
+        const paused = session({ status: 'paused', phaseEndsAt: null, pausedRemainingMs: 1_122_000 })
+        expect(tabText(shell, paused, AT + 60_000)).toBe('18:42 · Tạm dừng')
     })
 })
 

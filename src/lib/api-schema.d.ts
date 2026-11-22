@@ -3106,6 +3106,12 @@ export interface components {
              *     today_seconds (D-224, D-231).
              */
             counted_until: string | null
+            /**
+             * Format: date-time
+             * @description When today_seconds and counted_until were read: of this and the
+             *     `streak.updated` heard, the client keeps the later (D-232).
+             */
+            read_at: string
             /** @description A week's 4-week grid, the 28 days up to its Sunday; null for a month. */
             grid: components['schemas']['StudyGridDayResponseDto'][] | null
             /**

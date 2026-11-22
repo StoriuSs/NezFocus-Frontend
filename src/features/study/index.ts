@@ -14,12 +14,19 @@ import type { CycleFields as CycleFieldsComponent } from './components/CycleFiel
  * The parts of a room's page (the ring, the controls, the dialogs, their
  * words) are one lazy chunk, `StudyStage`, which only a joined study room
  * fetches; the rest here is light: the cycle rules the room settings use,
- * the phase rules and colours, the port, the store.
+ * the phase rules, the port, the store, the clocks of a phase. The phase as
+ * the channel list and the dock show it is the shell's (`PhaseTag`, in the
+ * main stylesheet's files: this feature's classes load with the room's page).
  */
 export const StudyStage = lazy(() => import('./components/StudyStage'))
 export type { ControlProps } from './components/StudyStage'
+/** The tab's title, the phase sound and the streak toast of the session one is in (07 S-ROOM-05), mounted by the shell. */
+export const SessionCues = lazy(() => import('./components/SessionCues'))
+export { useListClock } from './hooks/useListClock'
+export { useSessionClock } from './hooks/useSessionClock'
+export { phaseName, sessionLineText } from './lib/phase-words'
 export * from './lib/study-cycle'
-export { isLater, roomSessionOf } from './lib/phases'
+export { clockText, isLater, minutesLeft, remainingMs, roomSessionOf, roundOf } from './lib/phases'
 export { listenForSessions, type SessionSink } from './api/liveSessions'
 export { useEndedHere } from './hooks/useEndedHere'
 export type {

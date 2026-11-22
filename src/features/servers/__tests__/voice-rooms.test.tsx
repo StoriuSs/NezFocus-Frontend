@@ -1,20 +1,65 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import type { RoomPerson, Server, ServerChannel } from '../types'
+import { session as studySession } from '@/test/study-sessions'
+import { noteServerTime } from '@/lib/server-clock'
 
 vi.mock('@/features/users/api/useProfile', () => ({ useProfile: () => ({ data: { id: 'an' } }) }))
+// The session's cues read one's day (the streak toast).
+vi.mock('@/features/study/api/study.api', () => ({
+    fetchStudyToday: async () => ({
+        todaySeconds: 0,
+        countedUntil: null,
+        streak: 0,
+        readAt: '2026-11-22T14:47:18.000Z'
+    })
+}))
 
 const { withRoomPeople } = await import('../lib/room-people')
 const { voiceDirectory, voiceRoomOf } = await import('../lib/voice-room')
 const { RoomDock } = await import('../components/RoomDock')
+const { JoinedSessionCues } = await import('../components/JoinedSessionCues')
+const { roomSessionOf } = await import('@/features/study')
 const { serverKeys } = await import('../api/keys')
 const { useVoiceStore } = await import('@/features/voice')
 const { useToastArea } = await import('@/hooks/useToastArea')
 // Loaded once here: a test that the dock is not drawn must not pass only because its chunk is still on the way.
 await import('@/features/voice/components/InRoomDock')
+
+describe('the session of the room one is in, on every page (JoinedSessionCues, 07 S-ROOM-05)', () => {
+    afterEach(() => useVoiceStore.setState({ call: null }))
+
+    it("titles the tab with its clock once joined, the page's title again out of it or once it ends", async () => {
+        noteServerTime(studySession().serverTime)
+        const client = new QueryClient()
+        const held = (focusSession: ServerChannel['focusSession']) =>
+            client.setQueryData(serverKeys.list(), [
+                server('ot', [channel('im-lang', { isStudyRoom: true, focusSession })])
+            ])
+        held(roomSessionOf(studySession()))
+        useVoiceStore.setState({ call: { serverId: 'ot', channelId: 'im-lang', name: 'im-lang', phase: 'joining' } })
+        render(
+            <QueryClientProvider client={client}>
+                <JoinedSessionCues />
+            </QueryClientProvider>
+        )
+        await new Promise((resolve) => setTimeout(resolve, 50))
+        expect(document.title).not.toContain('Focus')
+        act(() =>
+            useVoiceStore.setState({
+                call: { serverId: 'ot', channelId: 'im-lang', name: 'im-lang', phase: 'connected' }
+            })
+        )
+        await waitFor(() => expect(document.title).toBe('18:42 · Focus · NezFocus'), { timeout: LAZY })
+        act(() => {
+            held(null)
+        })
+        await waitFor(() => expect(document.title).toBe('NezFocus'))
+    })
+})
 
 /** The dock is a lazy chunk: its first load can outlast the default second on a busy machine. */
 const LAZY = 5000

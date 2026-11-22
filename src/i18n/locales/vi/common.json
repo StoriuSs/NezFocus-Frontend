@@ -70,7 +70,20 @@
     "study": {
       "title": "Học",
       "overview": "Tổng quan",
-      "solo": "Học một mình"
+      "solo": "Học một mình",
+      "phase": {
+        "focus": "Tập trung",
+        "short_break": "Nghỉ ngắn",
+        "long_break": "Nghỉ dài",
+        "paused": "Tạm dừng"
+      },
+      "left_one": "còn <0>{{count}}</0> phút",
+      "left_other": "còn <0>{{count}}</0> phút",
+      "underAMinute": "còn dưới 1 phút",
+      "line": "{{phase}} · {{left}}",
+      "tab": "{{clock}} · {{phase}}",
+      "streakReached_one": "Đủ 15 phút hôm nay · chuỗi {{count}} ngày liên tiếp",
+      "streakReached_other": "Đủ 15 phút hôm nay · chuỗi {{count}} ngày liên tiếp"
     },
     "settings": {
       "title": "Cài đặt",

@@ -140,6 +140,7 @@
         "idle_other": "{{count}} people are in the room with you",
         "idleAlone": "You are alone in the room",
         "pausedNote": "The clock stands still, no minutes count",
-        "noHostNote": "A study room manager who joins will control the session"
+        "noHostNote": "A study room manager who joins will control the session",
+        "today": "You have focused {{time}} today"
     }
 }

@@ -2,6 +2,7 @@ import type { QueryClient } from '@tanstack/react-query'
 import { onRealtimeEvent } from '@/features/realtime'
 import { noteServerTime } from '@/lib/server-clock'
 import { isLater } from '../lib/phases'
+import { isLaterRead } from '../lib/today'
 import { hearNews } from '../study.store'
 import type { FocusSession, SessionNews, StudyToday } from '../types'
 import { studyKeys } from './keys'
@@ -16,6 +17,7 @@ interface StreakNews {
     longest: number
     todaySeconds: number
     countedUntil: string | null
+    readAt: string
 }
 
 /** A query client listening: its sink, and each room's latest state told to it. */
@@ -57,8 +59,9 @@ export function tellSession(session: FocusSession): boolean {
  * later state goes to the sink, and its word (who did what, the end's
  * seconds) to the study store, also when a command's answer brought the
  * same state first (an answer has no word of who did it). `streak.updated`
- * replaces today's numbers held, unless they are of a later count
- * (`counted_until`, D-231). Returns the way to stop (the first call only).
+ * replaces today's numbers held, unless they were read later (`read_at`,
+ * D-232: two reads may come in either order); told as a participation
+ * opens too, and with `counted_until` null once in no session. Returns the way to stop (the first call only).
  */
 export function listenForSessions(client: QueryClient, sink: SessionSink): () => void {
     if (listening.has(client)) return () => undefined
@@ -78,9 +81,14 @@ export function listenForSessions(client: QueryClient, sink: SessionSink): () =>
         onRealtimeEvent('streak.updated', (data) => {
             const told = data as StreakNews
             client.setQueryData<StudyToday>(studyKeys.today(), (held) =>
-                held?.countedUntil && told.countedUntil && held.countedUntil > told.countedUntil
+                held && isLaterRead(held, told)
                     ? held
-                    : { todaySeconds: told.todaySeconds, countedUntil: told.countedUntil, streak: told.current }
+                    : {
+                          todaySeconds: told.todaySeconds,
+                          countedUntil: told.countedUntil,
+                          streak: told.current,
+                          readAt: told.readAt
+                      }
             )
         }),
         // Live again: today's numbers may have moved meanwhile (the room's sessions come with GET /servers).

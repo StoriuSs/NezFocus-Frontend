@@ -154,6 +154,8 @@
     "taskDueOthers_other": "{{names}} and {{count}} others",
     "viewTask": "View task",
     "viewTaskLabel": "View task {{title}}",
+    "sessionStarted": "<0>{{name}}</0> started a {{cycle}} study session",
+    "sessionEnded": "The study session ended",
     "label": "{{text}}, {{time}}"
   },
   "mention": {

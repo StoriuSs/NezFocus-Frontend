@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { renderHook } from '@testing-library/react'
-import { useDocumentTitle, useTitleCount } from '../useDocumentTitle'
+import { useDocumentTitle, useTitleClock, useTitleCount } from '../useDocumentTitle'
 
 describe('useDocumentTitle (X-01)', () => {
     it('shows the page with the product after it, and the product alone once the page closes', () => {
@@ -33,5 +33,23 @@ describe('useDocumentTitle (X-01)', () => {
         expect(document.title).toBe('(99+) NezFocus')
         count.unmount()
         expect(document.title).toBe('NezFocus')
+    })
+
+    it("puts the session's clock in the page's place, the number still first, and gives the page back (07 S-ROOM-05)", () => {
+        const page = renderHook(() => useDocumentTitle('Page not found'))
+        const count = renderHook(() => useTitleCount(2))
+        const clock = renderHook(({ text }: { text: string | null }) => useTitleClock(text), {
+            initialProps: { text: '18:42 · Tập trung' as string | null }
+        })
+        expect(document.title).toBe('(2) 18:42 · Tập trung · NezFocus')
+        clock.rerender({ text: '18:41 · Tập trung' })
+        expect(document.title).toBe('(2) 18:41 · Tập trung · NezFocus')
+        clock.rerender({ text: null })
+        expect(document.title).toBe('(2) Page not found · NezFocus')
+        clock.rerender({ text: '18:41 · Tạm dừng' })
+        clock.unmount()
+        expect(document.title).toBe('(2) Page not found · NezFocus')
+        count.unmount()
+        page.unmount()
     })
 })

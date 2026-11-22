@@ -197,10 +197,16 @@ the Host's controls, the start and cycle dialogs, the summary) lazily, the
 voice feature shows it inside a `Suspense`, so a plain voice room never
 fetches it. Its words (`study`) and classes (`tailwind.study.config.js`,
 `study.css`, `StudyStyles-<hash>.css`, "Study CSS") come with it. The
-phase's colours shown outside it (a room page's ground, the channel list)
-are in `src/lib/phase-colors.ts`, the main stylesheet's; the rest of
-`study`'s index (the cycle rules, the phase rules, `listenForSessions`) is
-light and not lazy. `CycleFields` (a cycle in a React Hook Form form) is
+phase's colours and icons shown outside it (a room page's ground, the
+channel list, the dock) are in `src/lib/phase-colors.ts`, and the phase as
+the shell shows it in `src/components/shell/PhaseTag.tsx` (used by the
+servers feature's `PhaseListLine` under a room's row and by the dock), both
+the main stylesheet's: a class only in `study.css` would be missing on a
+page opened before any study room. The rest of `study`'s index (the cycle
+rules, the phase rules and clocks, `listenForSessions`) is light and not
+lazy. `SessionCues` (the tab's title, the phase sound and the streak
+toast of the session one is in) is lazy, fetched once one is in a room with a session.
+`CycleFields` (a cycle in a React Hook Form form) is
 exported lazily too, for a room's settings (S-SET-06, inside a `Suspense`):
 it brings the `study` words, which an index export would put in the shell's
 shared chunk.

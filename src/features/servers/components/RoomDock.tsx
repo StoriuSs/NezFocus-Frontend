@@ -9,7 +9,7 @@ import { voiceRoomOf } from '../lib/voice-room'
 
 /**
  * The InRoomDock (C-09) while this tab is in a voice room, with the room's
- * name and how many are in it from the servers held; none on that room's own
+ * name, how many are in it and its study session from the servers held; none on that room's own
  * page (C-09: the page shows it all). `column` at the bottom of the channel
  * list from 1024 up, `strip` across the bottom of the window below; the
  * other draws nothing (not hidden by CSS: a hidden strip would still hold the
@@ -40,6 +40,8 @@ export function RoomDock({ shape }: { shape: 'column' | 'strip' }) {
                     canSpeak: room?.canSpeak ?? false,
                     canVideo: room?.canVideo ?? false,
                     modMuted: room?.people.some((one) => one.user.id === me && one.modMuted) ?? false,
+                    // Its study session: the dock shows its phase and clock (C-09 `room-session`).
+                    session: room?.session ?? null,
                     // Oneself at least, while the list waits for LiveKit's word.
                     count: Math.max(room?.people.length ?? 0, 1)
                 }}

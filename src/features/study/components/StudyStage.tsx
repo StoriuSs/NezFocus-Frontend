@@ -5,6 +5,7 @@ import '@/i18n/study'
 import '../study.css'
 import { Button } from '@/components/ui/button'
 import { useConnectionBanner } from '@/features/realtime'
+import { accountTimeZone } from '@/lib/time-zones'
 import { cn } from '@/lib/utils'
 import { useSessionCommand, useStartSession } from '../api/useSessionCommands'
 import { useStudyToday } from '../api/useStudyToday'
@@ -17,6 +18,7 @@ import { useSessionNews } from '../hooks/useSessionNews'
 import { studiedText } from '../lib/durations'
 import { clockText, phaseGone, remainingMs, roundOf } from '../lib/phases'
 import { endLine, peopleLine } from '../lib/room-lines'
+import { dayStartOf, todaySecondsAt } from '../lib/today'
 import type { SessionCommand, StudyRoomView } from '../types'
 import { ChangeCycleDialog, StartSessionDialog } from './CycleDialogs'
 import { PhaseBadge } from './PhaseBadge'
@@ -50,6 +52,10 @@ type Dialog = 'start' | 'change' | 'stop' | null
  * Tập trung 25 phút" at once with the room's cycle; "Chu kỳ khác", S-ROOM-03).
  * Ended while one was here: the summary in the ring until a new session or
  * one leaves (D-49; never after a reload, D-231), the start under it.
+ *
+ * Under the people line, one's minutes today as they grow ("Bạn đã tập
+ * trung 45 phút hôm nay", 07 Q5; from the first whole minute: D-224, D-231),
+ * unless paused or with no Host, which say so there instead.
  *
  * Toasts name who did what (`useSessionNews`); one's own doings show in
  * place. Syncing again (07 `syncing`), the ring's number is `text-tertiary`
@@ -102,7 +108,7 @@ export default function StudyStage({
     useJustJoined(session, joinedAt)
 
     const ended = useEndedHere(room.channelId, session === null, joinedAt)
-    const today = useStudyToday(ended !== null)
+    const today = useStudyToday()
     const isHost = session?.hostId === me
     const canControl = session !== null && (isHost || room.canManage)
     const canResume = session?.status === 'paused' && (canControl || session.hostId === null)
@@ -156,6 +162,8 @@ export default function StudyStage({
         ) : null
 
     const endText = ended && endLine(t, ended, me, nameOf)
+    const todaySeconds =
+        session && today.data ? todaySecondsAt(today.data, session, now, dayStartOf(now, accountTimeZone())) : 0
     const mine = ended?.summaries?.find((summary) => summary.userId === me)?.seconds ?? 0
     const face = session ? (
         <SessionFace session={session} now={now} line={line} syncing={syncing} />
@@ -230,6 +238,10 @@ export default function StudyStage({
                             <p className='text-label text-text-secondary'>{t('people.pausedNote')}</p>
                         ) : session && session.hostId === null && !paused ? (
                             <p className='text-label text-text-secondary'>{t('people.noHostNote')}</p>
+                        ) : session && !paused && todaySeconds >= 60 ? (
+                            <p className='text-label text-text-secondary'>
+                                {t('people.today', { time: studiedText(t, todaySeconds) })}
+                            </p>
                         ) : null}
                     </div>
                 </div>

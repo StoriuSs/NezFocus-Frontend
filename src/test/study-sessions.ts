@@ -1,4 +1,4 @@
-import type { FocusSession, SessionNews } from '../types'
+import type { FocusSession, SessionNews } from '@/features/study'
 
 /**
  * World A of 07 at 21:47:18 (Asia/Ho_Chi_Minh, UTC+7): "Phòng học im lặng"

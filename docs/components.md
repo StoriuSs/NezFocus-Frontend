@@ -23,7 +23,7 @@ every page shows. Components used by one feature only live in that feature's
 src/components/
 ├── ui/                    # shadcn/ui primitives (button, dialog, input, tooltip…)
 │                          # and icon-button, presence-dot, count-badge, select, combobox, option-cards, empty-state
-├── shell/                 # ShellPage, RightPanel + usePanel, shell-context, ShellNotFound (S-MOD-06 in the AppShell)
+├── shell/                 # ShellPage, RightPanel + usePanel, shell-context, ShellNotFound (S-MOD-06 in the AppShell), PhaseTag (a study phase, C-19 S)
 ├── brand/Logo.tsx         # The NezFocus mark and the logo lockup
 ├── brand/mascot/          # Mascot (the still picture, then Rive), RiveMascot
 ├── form/FormField.tsx     # Label, control and the line under it, wired for screen readers
@@ -655,6 +655,12 @@ ResetPassword), the legal pages and the invite page. A page whose title is not
 known yet passes `null` and shows the product's name alone: the invite page
 until the server's name comes ("Nhóm đồ án Mobile · NezFocus", or "Invite no
 longer valid · NezFocus").
+
+Two more parts are set from elsewhere, once: `useTitleCount(n)` (the
+AppShell: the unread number first, "(3) …", stopping at "(99+)") and
+`useTitleClock(text)` (the study session one is in, by `SessionCues` of
+`study`: "18:42 · Tập trung" takes the page's place on every page, 07
+S-ROOM-05; `null` gives the page's title back).
 
 ## shadcn/ui components
 

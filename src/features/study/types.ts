@@ -50,6 +50,8 @@ export interface StudyToday {
     /** Where the count of the session one is in stands; null when in none (D-224, D-231). */
     countedUntil: string | null
     streak: number
+    /** When the backend read these numbers: of two reads (an event, GET), the later is kept (D-232). */
+    readAt: string
 }
 
 /** A study room as its page hands it to the session's parts (the voice feature's `VoiceRoom`, its study fields). */

@@ -14,6 +14,7 @@ import { can } from '../../lib/permissions'
 import { channelIcon } from '../../lib/channel-list'
 import { voiceRoomOf } from '../../lib/voice-room'
 import type { Server, ServerCategory, ServerChannel } from '../../types'
+import { PhaseListLine } from './PhaseListLine'
 import { RoomPeople } from './RoomPeople'
 
 const ROW =
@@ -76,7 +77,9 @@ export function DropLine({ blocked }: { blocked?: boolean }) {
  * the name (and "Private channel").
  *
  * A voice room shows who is in it under its row (C-06 `occupied`); the one
- * this tab is in is `connected`: icon and name `text-primary` 600.
+ * this tab is in is `connected`: icon and name `text-primary` 600. A study
+ * room with a session has its phase first ("Tập trung · còn 18 phút", C-06
+ * `focus-running`), whoever reads the list, in the room or not.
  */
 export function ChannelRow({
     server,
@@ -182,6 +185,7 @@ export function ChannelRow({
                     />
                 </span>
             ) : null}
+            {channel.focusSession ? <PhaseListLine session={channel.focusSession} /> : null}
             {channel.voiceStates?.length ? <RoomPeople room={voiceRoomOf(server, channel)} to={path} /> : null}
         </li>
     )

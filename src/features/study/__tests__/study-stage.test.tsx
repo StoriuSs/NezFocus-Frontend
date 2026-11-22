@@ -11,7 +11,7 @@ import { apiError } from '@/test/helpers'
 import { useStudyStore, hearNews } from '../study.store'
 import type { ControlProps } from '../components/StudyStage'
 import type { FocusSession, RoomSession, SessionNews, StudyRoomView, StudyToday } from '../types'
-import { news, session } from './fixtures'
+import { news, session } from '@/test/study-sessions'
 
 const studyApi = {
     startRoomSession: vi.fn<(channelId: string, cycle: unknown, key: string) => Promise<FocusSession>>(),
@@ -87,7 +87,12 @@ beforeEach(() => {
     useStudyStore.setState({ news: {}, pausedBy: {}, ended: {} })
     noteServerTime('2026-11-22T14:47:18.000Z')
     for (const call of Object.values(studyApi)) call.mockReset()
-    studyApi.fetchStudyToday.mockResolvedValue({ todaySeconds: 45 * 60, countedUntil: null, streak: 6 })
+    studyApi.fetchStudyToday.mockResolvedValue({
+        todaySeconds: 45 * 60,
+        countedUntil: null,
+        streak: 6,
+        readAt: '2026-11-22T14:47:18.000Z'
+    })
 })
 afterEach(() => toast.dismiss())
 
@@ -207,11 +212,51 @@ describe('A session running (07 S-ROOM-02)', () => {
         expect(await screen.findByText('Cả phòng đang nghỉ ngắn')).toBeVisible()
         expect(screen.getByText(/^Tập trung lại lúc \d\d:\d\d$/)).toBeVisible()
         expect(screen.getByText('03:20')).toBeVisible()
+        expect(await screen.findByText('Bạn đã tập trung 45 phút hôm nay')).toBeVisible()
     })
 
     it("tells no Host's room who will control it", async () => {
         stage(room(running({ hostId: null })), { me: 'phong', count: 3 })
         expect(await screen.findByText('Người quản lý phòng học vào sẽ điều khiển phiên')).toBeVisible()
+        expect(screen.queryByText(/hôm nay/)).toBeNull()
+    })
+
+    it("says one's minutes today with the focus running since the last count (07 Q5, D-231)", async () => {
+        // Joined at 21:47:00 with 20 minutes from this afternoon: still 20 (just-joined).
+        studyApi.fetchStudyToday.mockResolvedValue({
+            todaySeconds: 20 * 60,
+            countedUntil: '2026-11-22T14:47:00.000Z',
+            streak: 6,
+            readAt: '2026-11-22T14:47:18.000Z'
+        })
+        const { unmount } = stage(room(running()), { me: 'phong' })
+        expect(await screen.findByText('Bạn đã tập trung 20 phút hôm nay')).toBeVisible()
+        unmount()
+
+        // Counted to before this focus began (21:41): its 6 minutes 18 seconds are added.
+        client.clear()
+        studyApi.fetchStudyToday.mockResolvedValue({
+            todaySeconds: 20 * 60,
+            countedUntil: '2026-11-22T14:30:00.000Z',
+            streak: 6,
+            readAt: '2026-11-22T14:47:18.000Z'
+        })
+        const again = stage(room(running()), { me: 'phong' })
+        expect(await screen.findByText('Bạn đã tập trung 26 phút hôm nay')).toBeVisible()
+        again.unmount()
+
+        // Under a whole minute today: no line yet.
+        client.clear()
+        studyApi.fetchStudyToday.mockResolvedValue({
+            todaySeconds: 40,
+            countedUntil: null,
+            streak: 0,
+            readAt: '2026-11-22T14:47:18.000Z'
+        })
+        stage(room(running()), { me: 'phong' })
+        await screen.findByRole('timer')
+        await waitFor(() => expect(studyApi.fetchStudyToday).toHaveBeenCalled())
+        expect(screen.queryByText(/hôm nay/)).toBeNull()
     })
 
     it('skips the phase from the menu, which says where it goes; the cycle changes only while paused', async () => {
@@ -268,6 +313,9 @@ describe('A session running (07 S-ROOM-02)', () => {
         expect(await screen.findByText('Vòng 2 · 9 người')).toBeVisible()
         expect(screen.getByText('18:42')).toBeVisible()
         expect(screen.queryByRole('timer')).toBeNull()
+        // The grid has no people line and no minutes today (07 › Hai cách xem).
+        await waitFor(() => expect(studyApi.fetchStudyToday).toHaveBeenCalled())
+        expect(screen.queryByText(/hôm nay/)).toBeNull()
     })
 })
 
@@ -280,6 +328,7 @@ describe('A session paused', () => {
         expect(await screen.findByText('Đã tạm dừng')).toBeVisible()
         expect(screen.getByText('Đồng hồ đứng yên, không tính phút')).toBeVisible()
         expect(screen.getByText('8 người đang chờ cùng bạn')).toBeVisible()
+        expect(screen.queryByText(/hôm nay/)).toBeNull()
         act(() => hearNews(news({ status: 'paused', version: 5, action: 'pause', actorId: 'an' })))
         change(room(paused({ version: 5 })))
         expect(await screen.findByText('Bạn đã tạm dừng')).toBeVisible()
@@ -292,6 +341,8 @@ describe('A session paused', () => {
         stage(room(paused({ hostId: null })), { me: 'phong', count: 3 })
         expect(await screen.findByText('Bấm Tiếp tục để chạy lại')).toBeVisible()
         expect(screen.queryByText('Đồng hồ đứng yên, không tính phút')).toBeNull()
+        await waitFor(() => expect(studyApi.fetchStudyToday).toHaveBeenCalled())
+        expect(screen.queryByText(/hôm nay/)).toBeNull()
         expect(screen.queryByRole('button', { name: 'Điều khiển phiên học' })).toBeNull()
         await userEvent.click(screen.getByRole('button', { name: 'Tiếp tục phiên học (Space)' }))
         await waitFor(() => expect(studyApi.commandSession).toHaveBeenCalledWith('s1', 'resume', 4))

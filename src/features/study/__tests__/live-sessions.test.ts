@@ -6,7 +6,7 @@ import { studyKeys } from '../api/keys'
 import { listenForSessions, tellSession } from '../api/liveSessions'
 import { useStudyStore } from '../study.store'
 import type { FocusSession, StudyToday } from '../types'
-import { news, session } from './fixtures'
+import { news, session } from '@/test/study-sessions'
 
 let client: QueryClient
 const sink = vi.fn<(session: FocusSession) => void>()
@@ -87,33 +87,64 @@ describe("Hearing the rooms' sessions (SRS 5.2, D-225)", () => {
     })
 })
 
-describe("One's day so far (streak.updated, D-231)", () => {
+describe("One's day so far (streak.updated, D-231, D-232)", () => {
     const held = (today: StudyToday) => client.setQueryData(studyKeys.today(), today)
     const today = () => client.getQueryData<StudyToday>(studyKeys.today())
 
-    it('replaces the numbers held, unless they are of a later count', () => {
-        held({ todaySeconds: 600, countedUntil: '2026-11-22T14:47:00.000Z', streak: 5 })
+    it('replaces the numbers held, unless they were read later: two reads may come in either order', () => {
+        held({
+            todaySeconds: 600,
+            countedUntil: '2026-11-22T14:47:00.000Z',
+            streak: 5,
+            readAt: '2026-11-22T14:47:00.100Z'
+        })
         emitRealtimeEvent('streak.updated', {
             current: 6,
             longest: 9,
             todaySeconds: 900,
-            countedUntil: '2026-11-22T14:48:00.000Z'
+            countedUntil: '2026-11-22T14:48:00.000Z',
+            readAt: '2026-11-22T14:48:00.100Z'
         })
-        expect(today()).toEqual({ todaySeconds: 900, countedUntil: '2026-11-22T14:48:00.000Z', streak: 6 })
+        expect(today()).toEqual({
+            todaySeconds: 900,
+            countedUntil: '2026-11-22T14:48:00.000Z',
+            streak: 6,
+            readAt: '2026-11-22T14:48:00.100Z'
+        })
+        // Moving straight to another room: room B's start, read at :20, then room A's close, read at :10.
         emitRealtimeEvent('streak.updated', {
             current: 6,
             longest: 9,
-            todaySeconds: 840,
-            countedUntil: '2026-11-22T14:47:30.000Z'
+            todaySeconds: 960,
+            countedUntil: '2026-11-22T14:49:00.000Z',
+            readAt: '2026-11-22T14:49:00.200Z'
         })
-        expect(today()?.todaySeconds).toBe(900)
+        emitRealtimeEvent('streak.updated', {
+            current: 6,
+            longest: 9,
+            todaySeconds: 960,
+            countedUntil: null,
+            readAt: '2026-11-22T14:49:00.100Z'
+        })
+        expect(today()?.countedUntil).toBe('2026-11-22T14:49:00.000Z')
         // Left the session: no count stands open any more.
-        emitRealtimeEvent('streak.updated', { current: 6, longest: 9, todaySeconds: 960, countedUntil: null })
-        expect(today()).toEqual({ todaySeconds: 960, countedUntil: null, streak: 6 })
+        emitRealtimeEvent('streak.updated', {
+            current: 6,
+            longest: 9,
+            todaySeconds: 990,
+            countedUntil: null,
+            readAt: '2026-11-22T14:50:00.000Z'
+        })
+        expect(today()).toEqual({
+            todaySeconds: 990,
+            countedUntil: null,
+            streak: 6,
+            readAt: '2026-11-22T14:50:00.000Z'
+        })
     })
 
     it('reads them again once the socket is live again', () => {
-        held({ todaySeconds: 600, countedUntil: null, streak: 5 })
+        held({ todaySeconds: 600, countedUntil: null, streak: 5, readAt: '2026-11-22T14:47:00.000Z' })
         emitRealtimeEvent('ready', undefined)
         expect(client.getQueryState(studyKeys.today())?.isInvalidated).toBe(true)
     })

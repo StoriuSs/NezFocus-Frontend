@@ -1,5 +1,5 @@
 import { memo, type KeyboardEvent } from 'react'
-import { AlarmClock, Pin, UserPlus, type LucideIcon } from 'lucide-react'
+import { AlarmClock, LampDesk, Pin, UserPlus, type LucideIcon } from 'lucide-react'
 import { Trans, useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import '@/i18n/messaging'
@@ -9,13 +9,30 @@ import { messageTime, messageTimeInFull } from '../lib/message-time'
 import { reminderPeople, shortTaskTitle } from '../lib/task-due'
 import type { Message } from '../types'
 
-type SystemKey = 'system.pinned' | 'system.joined' | 'system.taskDue24h' | 'system.taskDue2h'
+type SystemKey =
+    | 'system.pinned'
+    | 'system.joined'
+    | 'system.taskDue24h'
+    | 'system.taskDue2h'
+    | 'system.sessionStarted'
+    | 'system.sessionEnded'
 
 /** The system messages the chat draws, with their icon and words (REQ-MSG-08, D-168). */
 const SYSTEM_EVENTS: Record<string, { icon: LucideIcon; key: SystemKey }> = {
     message_pinned: { icon: Pin, key: 'system.pinned' },
     member_joined: { icon: UserPlus, key: 'system.joined' },
-    task_due: { icon: AlarmClock, key: 'system.taskDue24h' }
+    task_due: { icon: AlarmClock, key: 'system.taskDue24h' },
+    // A study room's session, in its chat (D-222), with the room's icon (07 S-ROOM-08): who started it and its cycle then; that it ended.
+    study_session_started: { icon: LampDesk, key: 'system.sessionStarted' },
+    study_session_ended: { icon: LampDesk, key: 'system.sessionEnded' }
+}
+
+/** "25/5": the cycle a session started with, as kept in its message (focus and short break minutes). */
+function sessionCycleWords(message: Message): string {
+    const data = message.systemData
+    return typeof data?.focusMinutes === 'number' && typeof data.shortBreakMinutes === 'number'
+        ? `${data.focusMinutes}/${data.shortBreakMinutes}`
+        : ''
 }
 
 /** A due-date reminder's task, as sent (its title then, D-98), and the mark's words. */
@@ -55,6 +72,9 @@ export const isShownSystem = (message: Message) =>
  * `text-primary`, and the time. "An pinned a message · View": View shows the
  * pinned message, lit up (S-CHAT-03). No toolbar, no menu (C-11); reached
  * with ↑ / ↓ like the other messages.
+ *
+ * A study room's session (07, REQ-MSG-08): "An đã bắt đầu phiên học 25/5",
+ * "Phiên học đã kết thúc" (no one named: it may end by itself).
  *
  * A due-date reminder (05 S-TASK-01 › Tin nhắc hạn): "Còn 24 giờ tới hạn:
  * {task} · An, Chi · Hôm qua 23:59" and Button `text · S` "Xem việc", which
@@ -99,7 +119,7 @@ export const SystemMessageRow = memo(function SystemMessageRow({
     const people = task ? peopleWords(message, me, t) : ''
     const said = task
         ? [t(key, { title: task.title }).replace(/<\/?0>/g, ''), people].filter(Boolean).join(' · ')
-        : t(key, { name }).replace(/<\/?0>/g, '')
+        : t(key, { name, cycle: sessionCycleWords(message) }).replace(/<\/?0>/g, '')
     const moment = (className?: string) => (
         <WithTooltip label={messageTimeInFull(at, timeZone, t)}>
             <time dateTime={message.createdAt} className={className}>
@@ -162,7 +182,7 @@ export const SystemMessageRow = memo(function SystemMessageRow({
                     <Trans
                         t={t}
                         i18nKey={key}
-                        values={{ name }}
+                        values={{ name, cycle: sessionCycleWords(message) }}
                         components={[<span key='name' className='font-semibold text-text-primary' />]}
                     />
                     {typeof pinnedId === 'string' ? (

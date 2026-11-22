@@ -140,6 +140,7 @@
         "idle_other": "{{count}} người đang ở trong phòng cùng bạn",
         "idleAlone": "Bạn đang ở trong phòng một mình",
         "pausedNote": "Đồng hồ đứng yên, không tính phút",
-        "noHostNote": "Người quản lý phòng học vào sẽ điều khiển phiên"
+        "noHostNote": "Người quản lý phòng học vào sẽ điều khiển phiên",
+        "today": "Bạn đã tập trung {{time}} hôm nay"
     }
 }

@@ -51,6 +51,6 @@ export async function changeSessionCycle(sessionId: string, version: number, cyc
 /** GET /me/study-stats, this week: what one's day holds so far (REQ-STUDY-07, D-231). */
 export async function fetchStudyToday(): Promise<StudyToday> {
     const response = await api.get<ApiEnvelope<ApiModel<'StudyStatsResponseDto'>>>('/me/study-stats')
-    const { todaySeconds, countedUntil, streak } = response.data.data
-    return { todaySeconds, countedUntil, streak: streak.current }
+    const { todaySeconds, countedUntil, streak, readAt } = response.data.data
+    return { todaySeconds, countedUntil, streak: streak.current, readAt }
 }

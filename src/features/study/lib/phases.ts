@@ -50,6 +50,22 @@ export function clockText(ms: number): string {
     return `${String(minutes).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`
 }
 
+/**
+ * The whole minutes in what is left, as the minute words say it ("còn 18
+ * phút" at 18:42; 0: "còn dưới 1 phút"): the clock's minutes, so the two
+ * never disagree (C-19 `list`, the ring's spoken name).
+ */
+export const minutesLeft = (ms: number): number => Math.floor(Math.ceil(ms / 1000) / 60)
+
+/**
+ * How long until `minutesLeft` says another number, in milliseconds: when
+ * the clock drops below the minute it shows; the phase's end when under one.
+ */
+export function untilMinuteChanges(ms: number): number {
+    const minutes = minutesLeft(ms)
+    return minutes > 0 ? ms - (minutes * 60 - 1) * 1000 : ms
+}
+
 /** The big number's size is chosen by the phase's length when it began, and kept (C-18: ≥ 100 minutes, `timer-long`). */
 export const isLongClock = (session: AnySession): boolean => phaseMinutes(session) >= 100
 

@@ -46,7 +46,8 @@ react-starter/
     ├── components/            # Shared UI, used by more than one feature
     │   ├── ui/                # shadcn/ui primitives (button, dialog, input, tooltip…) and the project's own
     │   │                      #   (icon-button, segmented-control, select, option-cards, empty-state…)
-    │   ├── shell/             # ShellPage, RightPanel, ConnectionBanner, ShellNotFound — what a page in the AppShell draws
+    │   ├── shell/             # ShellPage, RightPanel, ConnectionBanner, ShellNotFound — what a page in the AppShell draws;
+    │   │                      #   PhaseTag (a study phase in the channel list and the dock, in the main stylesheet, D-193)
     │   ├── brand/             # Logo; mascot/ (Mascot, RiveMascot)
     │   ├── form/              # FormField — the label/control/error pattern; FormMessage, TimeZoneCombobox, NumberField (C-22)
     │   ├── settings/          # SaveBar, SettingsRow, SwitchRow — the rows of a settings page
@@ -173,11 +174,13 @@ react-starter/
     │   │                      #   data (D-205), handed in as VoiceRoom
     │   ├── study/             # Study sessions (07, 08, M5): index.ts (StudyStage lazy: the ring, its
     │   │                      #   seats, the Host's controls, the start and cycle dialogs, the summary, with
-    │   │                      #   their words; the light parts not lazy: the cycle rules,
-    │   │                      #   the phase rules, listenForSessions, the store), api/ (start, commands,
+    │   │                      #   their words; SessionCues lazy: the tab's title, the phase sound and the
+    │   │                      #   streak toast of the session one is in; the light parts not lazy: the cycle rules,
+    │   │                      #   the phase rules and clocks, listenForSessions, the store), api/ (start, commands,
     │   │                      #   today; liveSessions: `focus_session.*` and `streak.updated`, each later
     │   │                      #   state handed to the servers feature, D-231), lib/ (study-cycle, phases,
-    │   │                      #   durations, the words of a cycle), hooks/, study.store.ts (who did what,
+    │   │                      #   durations, the words of a cycle, today: one's seconds today with the
+    │   │                      #   running focus, phase-words), hooks/, study.store.ts (who did what,
     │   │                      #   who paused, the last session ended), study.css (its classes). A room's session is the servers'
     │   │                      #   data (D-220), handed in with the VoiceRoom
     │   └── users/             # The profile and the account's settings
@@ -321,7 +324,7 @@ Shared and feature-free.
 | `gone-places.ts` | The servers, channels and messages this tab just let go of (removed, deleted, gone private), kept two minutes or until listed again: a mutation failing about one shows no toast (11 S-MOD-02 E9); the features tell it |
 | `before-sign-out.ts` | Work that must be sent before the tab signs out or closes (a removed avatar waiting out its Undo); the auth store runs it while the token is still in hand |
 | `time-zones.ts` | The time zones to pick from (C-25), named and ordered, and the search over them; `wallClock()`, the calendar and clock in a zone (times shown in the account's zone); `endsAt()` / `endsAtText()`, when a timeout ends ("22:30", "22:30, 19/10" on another day); `accountTimeZone()`, the account's zone for code outside React, from the source the users feature sets (`setTimeZoneSource`) |
-| `phase-sound.ts` | `playPhaseSound()`: the phase sound, two short notes (C6 then E6) made with Web Audio (D-140), silent where the browser cannot play. "Play sample" on Notifications now, the end of a study phase later |
+| `phase-sound.ts` | `playPhaseSound()`: the phase sound, two short notes (C6 then E6) made with Web Audio (D-140), silent where the browser cannot play. "Play sample" on Notifications, and a study phase beginning in the room one is in (`usePhaseSound` of `study`) |
 | `server-clock.ts` | `noteServerTime()`, `serverNow()`: the server's clock as this tab knows it (D-18), taken from `ready` and each study session told live, never from a list in the cache; a phase counts down to the server's end |
 | `socket.ts` | `openSocket()`: the tab's one socket.io connection (SRS 5.2), websocket only, a new ticket for each attempt, a refused handshake tried again with a growing wait, a session that ended asked about (still signed in: connect again). Loaded with `import()` after the AppShell's first paint; knows no feature (the ticket and what to do come in its options) |
 | `livekit/` | `joinRoom()`: the tab's link to a LiveKit room (ARCHITECTURE §4): others' sound played whatever the page, the mic and camera switched, a screen shared with the picker's hints and why it stopped by itself (the browser's bar, VIDEO lost, muted by the server), how the link ended in the app's words (`other-tab`, `removed`, `lost`). Loaded with `import()` when a room is joined, never with the first screen; knows no feature |

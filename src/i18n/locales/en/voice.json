@@ -62,7 +62,8 @@
         "open": "Open {{room}}",
         "people_one": "{{count}} person",
         "people_other": "{{count}} people",
-        "reconnecting": "Reconnecting…"
+        "reconnecting": "Reconnecting…",
+        "round": "Round {{round}}"
     },
     "person": {
         "deletedAccount": "Deleted account",

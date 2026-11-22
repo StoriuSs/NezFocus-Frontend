@@ -154,6 +154,8 @@
     "taskDueOthers_other": "{{names}} và {{count}} người khác",
     "viewTask": "Xem việc",
     "viewTaskLabel": "Xem việc {{title}}",
+    "sessionStarted": "<0>{{name}}</0> đã bắt đầu phiên học {{cycle}}",
+    "sessionEnded": "Phiên học đã kết thúc",
     "label": "{{text}}, {{time}}"
   },
   "mention": {

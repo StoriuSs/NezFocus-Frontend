@@ -62,7 +62,8 @@
         "open": "Mở {{room}}",
         "people_one": "{{count}} người",
         "people_other": "{{count}} người",
-        "reconnecting": "Đang kết nối lại…"
+        "reconnecting": "Đang kết nối lại…",
+        "round": "Vòng {{round}}"
     },
     "person": {
         "deletedAccount": "Tài khoản đã bị xóa",

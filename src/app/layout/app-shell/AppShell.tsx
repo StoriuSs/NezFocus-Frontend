@@ -18,7 +18,7 @@ import { serverOwnership } from '@/features/servers/api/serverOwnership'
 import { connectServerOwnership } from '@/features/auth'
 import { useConnectionBanner, useRealtimeConnection } from '@/features/realtime'
 import { useMentionTotal } from '@/features/messaging'
-import { RoomDock, useServers, useVoiceRooms } from '@/features/servers'
+import { JoinedSessionCues, RoomDock, useServers, useVoiceRooms } from '@/features/servers'
 import { useTitleCount } from '@/hooks/useDocumentTitle'
 import { useRefuseFileDrops } from '@/hooks/useRefuseFileDrops'
 import { cn } from '@/lib/utils'
@@ -182,6 +182,8 @@ export default function AppShell() {
                 {/* Below 1024 the list column is a sheet: the dock is a strip across the window (C-09). */}
                 <RoomDock shape='strip' />
             </div>
+            {/* The tab's title, the phase sound and the streak toast of the session one is in, on every page (07 S-ROOM-05). */}
+            <JoinedSessionCues />
             {creatingServer ? (
                 <Suspense fallback={null}>
                     <CreateServerDialog />

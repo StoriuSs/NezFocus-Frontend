@@ -1,8 +1,9 @@
 /**
  * The phase sound (REQ-STUDY-06, D-140): two short rising notes, C6 then E6,
  * made by the browser, so there is no file to download or license. Played
- * by "Play sample" on the Notifications page now, and when a study phase ends
- * from M5. Silent where the browser has no Web Audio or will not play.
+ * by "Play sample" on the Notifications page, and as a phase begins in the
+ * study session one is in (`usePhaseSound` of study). Silent where the
+ * browser has no Web Audio or will not play.
  */
 
 /** C6 and E6, in hertz. */

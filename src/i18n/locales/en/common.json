@@ -70,7 +70,20 @@
     "study": {
       "title": "Study",
       "overview": "Overview",
-      "solo": "Study alone"
+      "solo": "Study alone",
+      "phase": {
+        "focus": "Focus",
+        "short_break": "Short break",
+        "long_break": "Long break",
+        "paused": "Paused"
+      },
+      "left_one": "<0>{{count}}</0> min left",
+      "left_other": "<0>{{count}}</0> min left",
+      "underAMinute": "under a minute left",
+      "line": "{{phase}} · {{left}}",
+      "tab": "{{clock}} · {{phase}}",
+      "streakReached_one": "15 minutes today · a {{count}}-day streak",
+      "streakReached_other": "15 minutes today · a {{count}}-day streak"
     },
     "settings": {
       "title": "Settings",
