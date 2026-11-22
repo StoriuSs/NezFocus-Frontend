@@ -7,6 +7,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { toast, Toaster } from 'sonner'
 import i18n from '@/i18n'
 import { noteServerTime } from '@/lib/server-clock'
+import { setTimeZoneSource } from '@/lib/time-zones'
 import { expectNoA11yViolations } from '@/test/a11y'
 import { apiError } from '@/test/helpers'
 import { solo, waitingSolo } from '@/test/study-sessions'
@@ -60,9 +61,12 @@ const toastText = (text: string | RegExp) => screen.findByText(text, { selector:
 
 beforeAll(async () => {
     await i18n.changeLanguage('vi')
+    // The times of 08's world S are An's, in Hồ Chí Minh, whatever the machine's zone (CI runs in UTC).
+    setTimeZoneSource(() => 'Asia/Ho_Chi_Minh')
 })
 afterAll(async () => {
     await i18n.changeLanguage('en')
+    setTimeZoneSource(() => undefined)
 })
 beforeEach(() => {
     client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
