@@ -560,12 +560,14 @@ describe('AppShell (S-SHELL-01)', () => {
             expect(await screen.findByRole('complementary', { name: 'Room chat' })).toBeInTheDocument()
 
             // As a column too it closes with its own button, the focus back on the seat (C-08).
-            const seat = screen.getByRole('button', { name: 'See all 13 people in the room' })
-            await userEvent.click(seat)
+            await userEvent.click(screen.getByRole('button', { name: 'See all 13 people in the room' }))
             const again = await screen.findByRole('complementary', { name: 'People in the room — 13' })
             await userEvent.click(within(again).getByRole('button', { name: 'Close' }))
             expect(screen.queryByRole('complementary', { name: 'People in the room — 13' })).toBeNull()
-            expect(seat).toHaveFocus()
+            // Looked up again: the page may have drawn the seat anew meanwhile.
+            await waitFor(() =>
+                expect(screen.getByRole('button', { name: 'See all 13 people in the room' })).toHaveFocus()
+            )
             // The chat, open before, is shown again.
             expect(screen.getByRole('complementary', { name: 'Room chat' })).toBeInTheDocument()
         }, 15_000)

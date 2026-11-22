@@ -441,6 +441,8 @@ describe("a voice room's preview page (S-ROOM-01 voice-preview)", () => {
 })
 
 describe("a study room's preview page (S-ROOM-01 session-running, idle, C-18)", () => {
+    // The ring is a lazy chunk: under a full parallel run its import can outlast the 1 s default.
+    const LAZY = { timeout: 5000 }
     const crowd = (count: number) => Array.from({ length: count }, (_, index) => person(`p${index}`, `Người ${index}`))
     const studyRoom = (more: Partial<VoiceRoom> = {}) =>
         room({ channelId: 'quiet', name: 'Phòng học im lặng', isStudyRoom: true, ...more })
@@ -450,7 +452,7 @@ describe("a study room's preview page (S-ROOM-01 session-running, idle, C-18)", 
         noteServerTime(studySession().serverTime)
         const session = roomSessionOf(studySession({ channelId: 'quiet', hostId: 'binh' }))
         show(studyRoom({ session, people: [TUAN, MINH, BINH] }))
-        expect(await screen.findByRole('timer', { name: /^Focus, round 2, 18 minutes left$/ })).toBeVisible()
+        expect(await screen.findByRole('timer', { name: /^Focus, round 2, 18 minutes left$/ }, LAZY)).toBeVisible()
         expect(screen.getByText('3 people focusing · Bình is in control')).toBeVisible()
         expect(screen.getByText(/^Study session started at \d{2}:\d{2}$/)).toBeVisible()
         const seats = screen.getByRole('group', { name: '3 people in the room' })
@@ -462,7 +464,7 @@ describe("a study room's preview page (S-ROOM-01 session-running, idle, C-18)", 
     it('says no one controls it, or only who is on a break', async () => {
         noteServerTime(studySession().serverTime)
         const view = show(studyRoom({ session: roomSessionOf(studySession({ hostId: null })), people: [TUAN] }))
-        expect(await screen.findByText('1 person focusing · No one is in control')).toBeVisible()
+        expect(await screen.findByText('1 person focusing · No one is in control', {}, LAZY)).toBeVisible()
         view.rerender(
             <VoiceRoomView
                 room={studyRoom({
@@ -476,7 +478,7 @@ describe("a study room's preview page (S-ROOM-01 session-running, idle, C-18)", 
 
     it('says "No study session yet" in the ring, or that the room is empty', async () => {
         const view = show(studyRoom({ people: [TUAN] }))
-        expect(await screen.findByText('No study session yet')).toBeVisible()
+        expect(await screen.findByText('No study session yet', {}, LAZY)).toBeVisible()
         expect(screen.queryByText(/Study session started/)).toBeNull()
         view.rerender(<VoiceRoomView room={studyRoom({ people: [] })} />)
         expect(await screen.findByText('The room is empty')).toBeVisible()
@@ -493,7 +495,7 @@ describe("a study room's preview page (S-ROOM-01 session-running, idle, C-18)", 
             />,
             { wrapper: Providers }
         )
-        expect(await screen.findByText('18 minutes left')).toBeVisible()
+        expect(await screen.findByText('18 minutes left', {}, LAZY)).toBeVisible()
         expect(screen.getByRole('timer', { name: 'Focus, round 2, 18 minutes left' })).toBeVisible()
     })
 
@@ -510,7 +512,7 @@ describe("a study room's preview page (S-ROOM-01 session-running, idle, C-18)", 
             />,
             { wrapper: Providers }
         )
-        expect(await screen.findByRole('timer', { name: 'Paused' })).toBeVisible()
+        expect(await screen.findByRole('timer', { name: 'Paused' }, LAZY)).toBeVisible()
         expect(screen.queryByText(/minutes left/)).toBeNull()
     })
 
@@ -519,7 +521,7 @@ describe("a study room's preview page (S-ROOM-01 session-running, idle, C-18)", 
         const view = render(<VoiceRoomView room={studyRoom({ people: crowd(13) })} onMorePeople={opened} />, {
             wrapper: Providers
         })
-        const ring = await screen.findByRole('group', { name: '13 people in the room' })
+        const ring = await screen.findByRole('group', { name: '13 people in the room' }, LAZY)
         expect(within(ring).getAllByRole('img')).toHaveLength(11)
         await userEvent.click(within(ring).getByRole('button', { name: 'See all 13 people in the room' }))
         // The seat, for the focus to come back to, and the seats' order, for the panel's.
