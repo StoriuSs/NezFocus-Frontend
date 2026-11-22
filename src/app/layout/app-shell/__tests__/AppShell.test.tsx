@@ -554,22 +554,25 @@ describe('AppShell (S-SHELL-01)', () => {
             expect(rows[0]).toHaveAccessibleName('Người 1, mic on')
             await expectNoA11yViolations()
 
+            // As a column too it closes with its own button, the focus back on the seat (C-08).
+            await userEvent.click(within(panel).getByRole('button', { name: 'Close' }))
+            expect(screen.queryByRole('complementary', { name: 'People in the room — 13' })).toBeNull()
+            await waitFor(() =>
+                expect(screen.getByRole('button', { name: 'See all 13 people in the room' })).toHaveFocus()
+            )
+
             // The room's chat takes its place.
+            await userEvent.click(screen.getByRole('button', { name: 'See all 13 people in the room' }))
+            await screen.findByRole('complementary', { name: 'People in the room — 13' })
             await userEvent.click(screen.getByRole('button', { name: 'Room chat' }))
             expect(screen.queryByRole('complementary', { name: 'People in the room — 13' })).toBeNull()
             expect(await screen.findByRole('complementary', { name: 'Room chat' })).toBeInTheDocument()
 
-            // As a column too it closes with its own button, the focus back on the seat (C-08).
+            // Opened over the chat, then closed: the chat, open before, is shown again (its message box takes the focus).
             await userEvent.click(screen.getByRole('button', { name: 'See all 13 people in the room' }))
             const again = await screen.findByRole('complementary', { name: 'People in the room — 13' })
             await userEvent.click(within(again).getByRole('button', { name: 'Close' }))
-            expect(screen.queryByRole('complementary', { name: 'People in the room — 13' })).toBeNull()
-            // Looked up again: the page may have drawn the seat anew meanwhile.
-            await waitFor(() =>
-                expect(screen.getByRole('button', { name: 'See all 13 people in the room' })).toHaveFocus()
-            )
-            // The chat, open before, is shown again.
-            expect(screen.getByRole('complementary', { name: 'Room chat' })).toBeInTheDocument()
+            expect(await screen.findByRole('complementary', { name: 'Room chat' })).toBeInTheDocument()
         }, 15_000)
 
         it('says "Page not found" for the address of a channel one cannot see (02 S-CHAT-01 forbidden)', async () => {
