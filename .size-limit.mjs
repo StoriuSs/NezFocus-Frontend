@@ -72,6 +72,11 @@
 // too, so they are the main stylesheet's); Voice JS raised to 208.83 kB
 // (208.64 kB: the joined room handing a study room to the study stage, its seats
 // around the ring, and the light parts of study it imports).
+// Voice JS raised to 213.14 kB after M5 L5b (22/11/2026, 212.08 kB, D-232):
+// the dock's study session (its phase, the clock by the second, the round:
+// about 0.7 kB more to fetch on joining) and the small phase chunks shared
+// with the channel list's phase line, which the shell has fetched already
+// but this count, every chunk outside the first download, takes in.
 // Raise them
 // only as CONSTRAINTS.md says: the owner decides, in a commit of its own.
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
@@ -181,6 +186,6 @@ export default [
     { name: 'Tasks CSS (gzip)', path: tasksCss, gzip: true, limit: '880 B' },
     { name: 'Notifications CSS (gzip)', path: notificationsCss, gzip: true, limit: '508 B' },
     { name: 'Voice CSS (gzip)', path: voiceCss, gzip: true, limit: '286 B' },
-    { name: 'Voice JS (gzip)', path: voiceJs, gzip: true, limit: '208.83 kB' },
+    { name: 'Voice JS (gzip)', path: voiceJs, gzip: true, limit: '213.14 kB' },
     { name: 'Study CSS (gzip)', path: studyCss, gzip: true, limit: '525 B' }
 ]
