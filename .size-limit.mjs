@@ -82,6 +82,10 @@
 // (its query, the store, its cues and dock slots, the question before a
 // room's session ends it), the dock frame shared with the Solo's dock, and
 // the round control as a chunk of its own; the shell fetched them already.
+// Initial CSS raised to 9.98 kB and Study CSS to 586 B after M5 L7b (22/11/2026,
+// 9930 B and 583 B): the Study page's two columns from a 1320 window and its
+// rooms' rows (84 high), in the main stylesheet with the servers feature and
+// the pages; the week chart's columns and today's progress bar in study.css.
 // Raise them
 // only as CONSTRAINTS.md says: the owner decides, in a commit of its own.
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
@@ -186,11 +190,11 @@ for (const [name, paths] of [
 
 export default [
     { name: 'Initial JS (gzip)', path: js, gzip: true, limit: '246.75 kB' },
-    { name: 'Initial CSS (gzip)', path: css, gzip: true, limit: '9.82 kB' },
+    { name: 'Initial CSS (gzip)', path: css, gzip: true, limit: '9.98 kB' },
     { name: 'Chat CSS (gzip)', path: chatCss, gzip: true, limit: '647 B' },
     { name: 'Tasks CSS (gzip)', path: tasksCss, gzip: true, limit: '880 B' },
     { name: 'Notifications CSS (gzip)', path: notificationsCss, gzip: true, limit: '508 B' },
     { name: 'Voice CSS (gzip)', path: voiceCss, gzip: true, limit: '286 B' },
     { name: 'Voice JS (gzip)', path: voiceJs, gzip: true, limit: '215.88 kB' },
-    { name: 'Study CSS (gzip)', path: studyCss, gzip: true, limit: '525 B' }
+    { name: 'Study CSS (gzip)', path: studyCss, gzip: true, limit: '586 B' }
 ]
