@@ -216,7 +216,12 @@ and fetch `SessionCues` / `SoloDock` only while a Solo runs. The query of the
 Solo (`api/useSoloSession.ts`) brings no `study` words; the start and the
 commands (`api/useSolo.ts`, with their toasts) live with the lazy parts. The
 Solo page's round controls are voice's `RoomControl`, which imports
-`voice.css` so its classes come wherever it shows.
+`voice.css` so its classes come wherever it shows. The Study page (M5 L7b)
+shows three lazy parts inside their own `Suspense`: the servers feature's
+`LiveRooms` (the rooms studying now: it brings the `study` words, which an
+index export would put in the shell's shared chunk; its classes are the main
+stylesheet's, as the channel list's) and study's `SoloCard` and
+`StudyStats` (with `study.css`).
 `CycleFields` (a cycle in a React Hook Form form) is
 exported lazily too, for a room's settings (S-SET-06, inside a `Suspense`):
 it brings the `study` words, which an index export would put in the shell's

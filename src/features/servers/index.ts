@@ -1,3 +1,5 @@
+import { lazy } from 'react'
+
 /**
  * What the rest of the app uses of the servers feature. The dialog and the
  * channel page are loaded lazily from their files.
@@ -9,6 +11,8 @@ export { ServerChannelColumn } from './components/channel-list/ServerChannelColu
 export { MyTasksColumn } from './components/MyTasksColumn'
 export { useInboxPlaces } from './hooks/useInboxPlaces'
 export { NoServers } from './components/NoServers'
+/** The Study page's rooms studying now (08 S-STUDY-01), lazy: it brings the `study` words; shown inside a Suspense. */
+export const LiveRooms = lazy(() => import('./components/live-rooms/LiveRooms'))
 export { RoomDock } from './components/RoomDock'
 export { JoinedSessionCues } from './components/JoinedSessionCues'
 export { useVoiceRooms } from './hooks/useVoiceRooms'

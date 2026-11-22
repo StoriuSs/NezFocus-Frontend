@@ -78,7 +78,8 @@ react-starter/
     │   │   │                  #   (auth's port), useMentionSource (the chat's MentionSource port),
     │   │   │                  #   liveServers (socket events: each server read again, D-178)
     │   │   ├── components/    # CreateServerDialog, NoServers, ServerIcon, ServerMenuItems, RoomHeader (a study
-    │   │   │                  #   room's Host chip and Ring / Grid switch); channel-list/,
+    │   │   │                  #   room's Host chip and Ring / Grid switch); channel-list/, live-rooms/ (the Study page's
+    │   │   │                  #   rooms studying now: LiveRooms, lazy from the index, and LiveRoomRow, C-44),
     │   │   │                  #   dialogs/ (channels, categories; RadioChoices, the radio rows of who may post / start;
     │   │   │                  #   a room's study part),
     │   │   │                  #   invites/, membership/ (leave, hand over, delete;
@@ -93,7 +94,8 @@ react-starter/
     │   │   │                  #   cues, and its Host asked before switching or signing out),
     │   │   │                  #   useInboxPlaces (the names and paths the inbox is handed),
     │   │   │                  #   useChannelChat (what the chat of a text channel or a voice room is handed),
-    │   │   │                  #   useRemovedWhileAway (kicked / banned while away: the Toast of H1, run by the AppShell)
+    │   │   │                  #   useRemovedWhileAway (kicked / banned while away: the Toast of H1, run by the AppShell),
+    │   │   │                  #   useLiveRooms (the Study page's rooms in the order held while one looks, 08 Q4)
     │   │   ├── lib/           # paths (SERVERS_PATHS and channelPath, messagePath, messageLink, invitePath,
     │   │   │                  #   serverSettingsPath, roleEditPath, isId), app-links (how a link in a message
     │   │   │                  #   shows: a message chip, "can't view", a page of the app, D-117; and a channel
@@ -102,7 +104,8 @@ react-starter/
     │   │   │                  #   channel-layout, channel-list, drop-target, layout-error, invites, moderation,
     │   │   │                  #   membership, permissions, roles, server-name, settings-sections, typed-name,
     │   │   │                  #   channel-settings (the form of channel / room settings: schema, what is sent),
-    │   │   │                  #   room-people (a room's people and study session swapped in the list)
+    │   │   │                  #   room-people (a room's people and study session swapped in the list),
+    │   │   │                  #   live-rooms (the rooms studying now and their order, REQ-STUDY-09, D-217)
     │   │   ├── pages/         # ChannelPage (/channels/:serverId/:channelId?, and /…/:messageId: the channel
     │   │   │                  #   at a message, D-48), ServerSettingsPage
     │   │   │                  #   (/servers/:serverId/settings/…), InvitePage (/invite/:code)
@@ -196,7 +199,12 @@ react-starter/
     │   │                      #   api/useSoloSession.ts (GET /me/solo-session, kept by `solo_session.updated`),
     │   │                      #   api/useSolo.ts (start, commands), lib/solo.ts (its seconds, its wait),
     │   │                      #   solo-yield.store.ts (the question before a room's session ends it,
-    │   │                      #   SoloYieldDialog the AppShell's, lazy)
+    │   │                      #   SoloYieldDialog the AppShell's, lazy). The Study page (08 S-STUDY-01,
+    │   │                      #   M5 L7b): SoloCard and StudyStats lazy (the Solo block; the streak, today's
+    │   │                      #   progress and the week, WeekChart), api/useStudyWeek.ts (this week's days,
+    │   │                      #   GET /me/study-stats, keyed by today), lib/week.ts (the chart's rules),
+    │   │                      #   lib/solo-words.ts (a Solo's cycle line); the rooms studying now are the
+    │   │                      #   servers feature's (LiveRooms)
     │   └── users/             # The profile and the account's settings
     │       ├── api/           # users.api.ts (fetchProfile, removeAvatar),
     │       │                  #   settings.api.ts (fetchSettings, settingsQuery, updateSettings), hooks, keys

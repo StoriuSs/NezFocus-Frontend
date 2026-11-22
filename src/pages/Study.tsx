@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ShellPage } from '@/components/shell/ShellPage'
-import { NoServers, useServers } from '@/features/servers'
+import { LiveRooms, NoServers, useJoinedSession, useServers } from '@/features/servers'
+import { SoloCard, StudyStats, useSoloSession } from '@/features/study'
 import { useProfile } from '@/features/users'
+import { useVoiceStore } from '@/features/voice'
 
 /** Set by the welcome page when the account has just been completed (01 S-ONB-01). */
 export interface StudyPageState {
@@ -11,12 +13,15 @@ export interface StudyPageState {
 }
 
 /**
- * The Study page, the app's home after sign-in (D-124). Its content (rooms
- * studying now, studying alone, the streak) arrives in M5. Until then, it
- * says when they are in no server yet, and offers to create one (02
- * S-SHELL-01 `no-server`, and `no-server-first` right after the account is
- * completed). M5 moves this into the page's rooms section (08 S-STUDY-01
- * `no-server`).
+ * The Study page, the app's home after sign-in (D-124; 08 S-STUDY-01, a
+ * Read page: left-aligned, at most 960 wide, 32 in). Two columns from a
+ * content area of 1008 (a 1320 window): the rooms studying now (600) and,
+ * 24 apart, the Solo block over the streak and week (336); below, one
+ * column at most 720 wide in the same reading order: who is studying, then
+ * studying alone, then the numbers. In no server the rooms' part says so
+ * and offers to create one (`no-server`); right after the account is
+ * completed, the whole page greets them instead (02 S-SHELL-01
+ * `no-server-first`, D-124).
  */
 export default function Study() {
     const { t } = useTranslation()
@@ -27,15 +32,40 @@ export default function Study() {
     const [first] = useState(state?.firstVisit === true)
     const servers = useServers()
     const profile = useProfile()
-    const noServers = servers.isSuccess && servers.data.length === 0
+    const joined = useJoinedSession()
+    const room = useVoiceStore((store) => store.call?.name ?? null)
+    const solo = useSoloSession().data?.session ?? null
 
     useEffect(() => {
         if (state?.firstVisit) void navigate('.', { replace: true, state: null })
     }, [navigate, state])
 
+    // Right after the account is completed, nothing until the servers say whether to greet.
+    if (first && servers.isPending) return <ShellPage title={t('shell.study.title')} />
+    if (first && servers.data?.length === 0) {
+        return (
+            <ShellPage title={t('shell.study.title')}>
+                <NoServers name={profile.data?.displayName ?? undefined} />
+            </ShellPage>
+        )
+    }
     return (
         <ShellPage title={t('shell.study.title')}>
-            {noServers ? <NoServers first={first} name={profile.data?.displayName ?? undefined} /> : null}
+            <div className='flex max-w-[720px] flex-col gap-8 p-6 lg:p-8 min-[1320px]:grid min-[1320px]:max-w-none min-[1320px]:grid-cols-[600px_336px] min-[1320px]:items-start min-[1320px]:gap-x-6'>
+                <div className='min-w-0'>
+                    <Suspense fallback={null}>
+                        <LiveRooms />
+                    </Suspense>
+                </div>
+                <div className='flex min-w-0 flex-col gap-8'>
+                    <Suspense fallback={null}>
+                        <SoloCard inRoom={joined ? room : null} />
+                    </Suspense>
+                    <Suspense fallback={null}>
+                        <StudyStats session={joined ?? solo} />
+                    </Suspense>
+                </div>
+            </div>
         </ShellPage>
     )
 }

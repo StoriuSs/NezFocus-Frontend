@@ -1,7 +1,7 @@
 import api from '@/lib/api'
 import type { ApiEnvelope, ApiModel } from '@/lib/api-types'
 import type { StudyCycle } from '../lib/study-cycle'
-import type { FocusSession, SoloCommand, SoloState, StudyToday } from '../types'
+import type { FocusSession, SoloCommand, SoloState, StudyToday, StudyWeek } from '../types'
 
 const cycleBody = (cycle: StudyCycle) => ({
     focusMinutes: cycle.focus,
@@ -75,11 +75,34 @@ export async function startSolo(cycle: StudyCycle | null, idempotencyKey: string
     return response.data.data
 }
 
+type StudyStats = ApiModel<'StudyStatsResponseDto'>
+
+const todayOf = ({ todaySeconds, countedUntil, streak, readAt }: StudyStats): StudyToday => ({
+    todaySeconds,
+    countedUntil,
+    streak: streak.current,
+    readAt
+})
+
 /** GET /me/study-stats, this week: what one's day holds so far (REQ-STUDY-07, D-231). */
 export async function fetchStudyToday(): Promise<StudyToday> {
-    const response = await api.get<ApiEnvelope<ApiModel<'StudyStatsResponseDto'>>>('/me/study-stats')
-    const { todaySeconds, countedUntil, streak, readAt } = response.data.data
-    return { todaySeconds, countedUntil, streak: streak.current, readAt }
+    const response = await api.get<ApiEnvelope<StudyStats>>('/me/study-stats')
+    return todayOf(response.data.data)
+}
+
+/** GET /me/study-stats, this week (08 S-STUDY-01's chart, D-105), and the day so far it read with it. */
+export async function fetchStudyWeek(): Promise<{ week: StudyWeek; today: StudyToday }> {
+    const response = await api.get<ApiEnvelope<StudyStats>>('/me/study-stats')
+    const stats = response.data.data
+    return {
+        week: {
+            today: stats.today,
+            days: stats.days.map((day) => ({ date: day.date, seconds: day.focusedSeconds })),
+            longest: stats.streak.longest,
+            firstDate: stats.firstDate
+        },
+        today: todayOf(stats)
+    }
 }
 
 /** Who would control a session if its Host left now (D-233): for "Rời phòng?"; null when nobody present may. */

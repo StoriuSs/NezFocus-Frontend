@@ -23,7 +23,7 @@ every page shows. Components used by one feature only live in that feature's
 src/components/
 ├── ui/                    # shadcn/ui primitives (button, dialog, input, tooltip…)
 │                          # and icon-button, presence-dot, count-badge, select, combobox, option-cards, empty-state
-├── shell/                 # ShellPage, RightPanel + usePanel, shell-context, ShellNotFound (S-MOD-06 in the AppShell), PhaseTag (a study phase, C-19 S; `waiting`: "Hết giờ nghỉ"), DockFrame (the frame of a dock, C-09: the voice room's and the Solo's, D-234)
+├── shell/                 # ShellPage, RightPanel + usePanel, shell-context, ShellNotFound (S-MOD-06 in the AppShell), PhaseTag (a study phase, C-19 S; `waiting`: "Hết giờ nghỉ") + PhaseLeft (" · còn 18 phút" after it: the channel list, the Study page's rooms and Solo block), DockFrame (the frame of a dock, C-09: the voice room's and the Solo's, D-234)
 ├── brand/Logo.tsx         # The NezFocus mark and the logo lockup
 ├── brand/mascot/          # Mascot (the still picture, then Rive), RiveMascot
 ├── form/FormField.tsx     # Label, control and the line under it, wired for screen readers

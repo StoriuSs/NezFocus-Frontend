@@ -67,6 +67,21 @@ export interface StudyToday {
     readAt: string
 }
 
+/**
+ * This week as GET /me/study-stats gives it (REQ-STUDY-07, D-105): every
+ * day Monday to Sunday with its seconds, those still ahead at 0; the
+ * longest streak; the first day ever counted. Today's own numbers live in
+ * `StudyToday`, which events keep.
+ */
+export interface StudyWeek {
+    /** Today in one's time zone (YYYY-MM-DD) as the backend read it: the days after it are ahead. */
+    today: string
+    days: { date: string; seconds: number }[]
+    longest: number
+    /** The first day with a second counted; null: never studied (08 S-STUDY-01 `never-studied`). */
+    firstDate: string | null
+}
+
 /** A study room as its page hands it to the session's parts (the voice feature's `VoiceRoom`, its study fields). */
 export interface StudyRoomView {
     channelId: string

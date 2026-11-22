@@ -406,19 +406,30 @@ describe('AppShell (S-SHELL-01)', () => {
         })
     })
 
-    describe('in no server yet (S-SHELL-01 no-server)', () => {
-        it('offers to create a Study Server, with it chosen', async () => {
+    describe('in no server yet (08 S-STUDY-01 no-server, 02 no-server-first)', () => {
+        it('offers to create a Study Server from the rooms part, with it chosen', async () => {
             serversApi.fetchServers.mockResolvedValue([])
             renderAt('/study')
-            expect(await screen.findByRole('heading', { level: 2, name: 'No servers yet' })).toBeInTheDocument()
-            await userEvent.click(screen.getByRole('button', { name: 'Create a Study Server' }))
+            expect(
+                await screen.findByRole(
+                    'heading',
+                    { level: 2, name: "You're not in any server yet" },
+                    { timeout: 5000 }
+                )
+            ).toBeInTheDocument()
+            await userEvent.click(screen.getByRole('button', { name: 'Create a server' }))
             const dialog = await screen.findByRole('dialog', { name: 'Create a server' })
             expect(within(dialog).getByRole('radio', { name: /Study Server/ })).toHaveAttribute('aria-checked', 'true')
         })
 
-        it('welcomes a new account by name, right after it is completed', async () => {
-            serversApi.fetchServers.mockResolvedValue([])
+        it('welcomes a new account by name, right after it is completed, and nothing else before', async () => {
+            let answer: (servers: never[]) => void = () => undefined
+            serversApi.fetchServers.mockImplementation(() => new Promise((resolve) => (answer = resolve)))
             renderAt({ pathname: '/study', state: { firstVisit: true } })
+            await screen.findByRole('heading', { level: 1, name: 'Study' })
+            // Time enough for the page's lazy parts to come, were they asked for.
+            await expect(screen.findByRole('heading', { name: 'Study alone' }, { timeout: 3000 })).rejects.toThrow()
+            act(() => answer([]))
             expect(
                 await screen.findByRole('heading', { level: 2, name: 'Welcome to NezFocus, An' })
             ).toBeInTheDocument()
@@ -427,6 +438,7 @@ describe('AppShell (S-SHELL-01)', () => {
         it('says nothing of it to someone in a server', async () => {
             renderAt('/study')
             await within(rail()).findByRole('link', { name: 'Ôn thi Giải tích 2' })
+            expect(screen.queryByRole('heading', { name: "You're not in any server yet" })).not.toBeInTheDocument()
             expect(screen.queryByRole('heading', { name: 'No servers yet' })).not.toBeInTheDocument()
         })
     })

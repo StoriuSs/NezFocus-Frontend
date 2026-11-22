@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Pause } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
+import { Trans, useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { PHASE_ICONS, PHASE_TEXT, type SessionPhase } from '@/lib/phase-colors'
 
@@ -49,6 +49,31 @@ export function PhaseTag({
                 <span className='truncate'>{t(name)}</span>
                 {children}
             </span>
+        </span>
+    )
+}
+
+/**
+ * What follows a running phase's name in a list (C-19 `list`): " · còn 18
+ * phút", the number in the numeric face, 500 (the .pen's PhaseBadge/S);
+ * " · còn dưới 1 phút" in the last minute. A child of `PhaseTag`.
+ */
+export function PhaseLeft({ minutes }: { minutes: number }) {
+    const { t } = useTranslation()
+    return (
+        <span className='shrink-0 whitespace-pre'>
+            {' · '}
+            {minutes > 0 ? (
+                <Trans
+                    t={t}
+                    i18nKey='shell.study.left'
+                    count={minutes}
+                    values={{ count: minutes }}
+                    components={[<span key='minutes' className='font-numeric font-medium tabular-nums' />]}
+                />
+            ) : (
+                t('shell.study.underAMinute')
+            )}
         </span>
     )
 }

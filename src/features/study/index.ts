@@ -27,6 +27,12 @@ export const SessionCues = lazy(() => import('./components/SessionCues'))
 /** The Solo page's stage (08 S-STUDY-02), lazy as a room's; its round controls handed in. */
 export const SoloStage = lazy(() => import('./components/SoloStage'))
 /**
+ * The Study page's Solo block and its streak and week (08 S-STUDY-01, C-45),
+ * lazy with their words and classes; the page shows them inside a Suspense.
+ */
+export const SoloCard = lazy(() => import('./components/SoloCard'))
+export const StudyStats = lazy(() => import('./components/StudyStats'))
+/**
  * One's Solo on every page (D-234): its cues and end toasts (`SoloWatch`,
  * mounted once by the AppShell), its dock under a room's (`SoloDockSlot`),
  * both light, their parts lazy; the question before a room's session ends it

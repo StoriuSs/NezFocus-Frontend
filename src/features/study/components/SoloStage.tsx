@@ -14,11 +14,12 @@ import { useCommandWhenLive } from '../hooks/useCommandWhenLive'
 import { usePhaseNews } from '../hooks/usePhaseNews'
 import { useSessionClock } from '../hooks/useSessionClock'
 import { studiedText } from '../lib/durations'
-import { nextPhaseOf, phaseGone, roundOf } from '../lib/phases'
+import { phaseGone } from '../lib/phases'
 import { waitLeftMs } from '../lib/solo'
+import { soloLine } from '../lib/solo-words'
 import { DAY_CAP_SECONDS, dayStartOf, todaySecondsAt } from '../lib/today'
 import { useStudyStore, type SoloEnded } from '../study.store'
-import type { FocusSession, SoloCommand } from '../types'
+import type { SoloCommand } from '../types'
 import { ChangeCycleDialog, SoloStartDialog } from './CycleDialogs'
 import { EndedFace, IdleFace, SessionFace, WaitingFace } from './RingFaces'
 import { RhythmRing } from './RhythmRing'
@@ -234,21 +235,6 @@ export default function SoloStage({
             ) : null}
         </div>
     )
-}
-
-/**
- * The line under a Solo's number (C-18 › Dòng chu kỳ), at one's own zone's
- * times: focus "Vòng 1 · nghỉ ngắn lúc 22:19"; a break "Hết nghỉ lúc 22:29"
- * (a Solo waits for Học tiếp, it does not go back to focus by itself);
- * paused "Bạn đã tạm dừng"; syncing again "Đang đồng bộ lại…".
- */
-function soloLine(t: ReturnType<typeof useTranslation<'study'>>['t'], session: FocusSession, syncing: boolean) {
-    if (syncing) return t('ring.syncing')
-    if (session.status === 'paused') return t('ring.pausedByYou')
-    const at = session.phaseEndsAt ? timeIn(accountTimeZone(), new Date(session.phaseEndsAt)) : ''
-    if (session.phase !== 'focus') return t('solo.breakEnds', { time: at })
-    const next = nextPhaseOf(session) as 'short_break' | 'long_break'
-    return t('ring.cycle', { round: roundOf(session), next: t(`next.${next}`), time: at })
 }
 
 /** Why the Solo ended, under its summary (08 S-STUDY-02 `ended`, `ended-expired`, edge `stopped-other-tab`). */

@@ -222,5 +222,77 @@
         "joinBodyShort": "{{room}} has a shared session. Studying alone will end.",
         "stay": "Stay",
         "join": "Join room"
+    },
+    "overview": {
+        "rooms": {
+            "title": "Studying now",
+            "titleCount_one": "Studying now — {{count}} room",
+            "titleCount_other": "Studying now — {{count}} rooms",
+            "people_one": "{{count}} person",
+            "people_other": "{{count}} people",
+            "alone": "Just you",
+            "here": "You're here",
+            "label": "{{room}}, {{server}}, {{phase}}, {{people}}",
+            "labelHere": "{{room}}, {{server}}, {{phase}}, {{people}}, you're here",
+            "emptyTitle": "No room is studying yet",
+            "emptyBody": "Join a study room and start a session, or study alone.",
+            "noServerTitle": "You're not in any server yet",
+            "noServerBody": "Create a server for your study group, or enter a friend's invite code.",
+            "create": "Create a server",
+            "joinByCode": "Enter an invite code",
+            "offline": "You need a connection to see the rooms studying",
+            "error": "Couldn't load the rooms"
+        },
+        "solo": {
+            "description": "At your own pace, still counted in your streak.",
+            "open": "Open",
+            "waitLeft_one": "{{count}} minute left to continue",
+            "waitLeft_other": "{{count}} minutes left to continue",
+            "waitUnderAMinute": "Under a minute left to continue",
+            "offline": "You need a connection to start"
+        },
+        "stats": {
+            "streakTitle": "Study streak",
+            "days_one": "day in a row",
+            "days_other": "days in a row",
+            "streakLabel_one": "{{count}} day in a row",
+            "streakLabel_other": "{{count}} days in a row",
+            "longest_one": "Longest {{count}} day",
+            "longest_other": "Longest {{count}} days",
+            "startNew": "Study 15 minutes today to start a new streak",
+            "todayShort_one": "Today {{count}} / 15 min",
+            "todayShort_other": "Today {{count}} / 15 min",
+            "todayDone": "Today {{time}} · 15 minutes reached",
+            "milestone_one": "{{count}} day in a row — great rhythm",
+            "milestone_other": "{{count}} days in a row — great rhythm",
+            "weekTitle": "<0>This week</0> · {{time}}",
+            "line": "15 min",
+            "chart": "Minutes studied each day this week",
+            "day": "Day",
+            "minutesColumn": "Minutes",
+            "short": {
+                "mon": "Mon",
+                "tue": "Tue",
+                "wed": "Wed",
+                "thu": "Thu",
+                "fri": "Fri",
+                "sat": "Sat",
+                "sun": "Sun"
+            },
+            "long": {
+                "mon": "Monday",
+                "tue": "Tuesday",
+                "wed": "Wednesday",
+                "thu": "Thursday",
+                "fri": "Friday",
+                "sat": "Saturday",
+                "sun": "Sunday"
+            },
+            "tip": "{{day}}, {{date}} · {{time}}",
+            "tipToday": "Today · {{time}}",
+            "neverTitle": "No study minutes yet",
+            "neverBody": "Study 15 minutes to start your first streak.",
+            "error": "Couldn't load your stats"
+        }
     }
 }

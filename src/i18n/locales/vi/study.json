@@ -222,5 +222,77 @@
         "joinBodyShort": "{{room}} đang có phiên học chung. Học một mình sẽ kết thúc.",
         "stay": "Ở lại",
         "join": "Vào phòng"
+    },
+    "overview": {
+        "rooms": {
+            "title": "Đang học lúc này",
+            "titleCount_one": "Đang học lúc này — {{count}} phòng",
+            "titleCount_other": "Đang học lúc này — {{count}} phòng",
+            "people_one": "{{count}} người",
+            "people_other": "{{count}} người",
+            "alone": "Chỉ có bạn",
+            "here": "Bạn ở đây",
+            "label": "{{room}}, {{server}}, {{phase}}, {{people}}",
+            "labelHere": "{{room}}, {{server}}, {{phase}}, {{people}}, bạn đang ở đây",
+            "emptyTitle": "Chưa có phòng nào đang học",
+            "emptyBody": "Vào một phòng học và bắt đầu phiên, hoặc học một mình.",
+            "noServerTitle": "Bạn chưa ở server nào",
+            "noServerBody": "Tạo server cho nhóm học của bạn, hoặc nhập mã mời của bạn bè.",
+            "create": "Tạo server",
+            "joinByCode": "Nhập mã mời",
+            "offline": "Cần kết nối mạng để xem phòng đang học",
+            "error": "Không tải được danh sách phòng"
+        },
+        "solo": {
+            "description": "Theo nhịp riêng, vẫn tính vào chuỗi ngày học.",
+            "open": "Mở",
+            "waitLeft_one": "Còn {{count}} phút để học tiếp",
+            "waitLeft_other": "Còn {{count}} phút để học tiếp",
+            "waitUnderAMinute": "Còn dưới 1 phút để học tiếp",
+            "offline": "Cần kết nối mạng để bắt đầu"
+        },
+        "stats": {
+            "streakTitle": "Chuỗi ngày học",
+            "days_one": "ngày liên tiếp",
+            "days_other": "ngày liên tiếp",
+            "streakLabel_one": "{{count}} ngày liên tiếp",
+            "streakLabel_other": "{{count}} ngày liên tiếp",
+            "longest_one": "Dài nhất {{count}} ngày",
+            "longest_other": "Dài nhất {{count}} ngày",
+            "startNew": "Học 15 phút hôm nay để bắt đầu chuỗi mới",
+            "todayShort_one": "Hôm nay {{count}} / 15 phút",
+            "todayShort_other": "Hôm nay {{count}} / 15 phút",
+            "todayDone": "Hôm nay {{time}} · đã đủ 15 phút",
+            "milestone_one": "{{count}} ngày liên tiếp — giữ nhịp tốt lắm",
+            "milestone_other": "{{count}} ngày liên tiếp — giữ nhịp tốt lắm",
+            "weekTitle": "<0>Tuần này</0> · {{time}}",
+            "line": "15 phút",
+            "chart": "Phút học mỗi ngày tuần này",
+            "day": "Ngày",
+            "minutesColumn": "Phút học",
+            "short": {
+                "mon": "T2",
+                "tue": "T3",
+                "wed": "T4",
+                "thu": "T5",
+                "fri": "T6",
+                "sat": "T7",
+                "sun": "CN"
+            },
+            "long": {
+                "mon": "Thứ 2",
+                "tue": "Thứ 3",
+                "wed": "Thứ 4",
+                "thu": "Thứ 5",
+                "fri": "Thứ 6",
+                "sat": "Thứ 7",
+                "sun": "Chủ nhật"
+            },
+            "tip": "{{day}}, {{date}} · {{time}}",
+            "tipToday": "Hôm nay · {{time}}",
+            "neverTitle": "Chưa có phút học nào",
+            "neverBody": "Học 15 phút để bắt đầu chuỗi ngày đầu tiên.",
+            "error": "Không tải được thống kê"
+        }
     }
 }
