@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { gridOf, orderPeople, personName } from '../lib/people'
+import { gridOf, orderPeople, personName, seatsOf } from '../lib/people'
 import { forgetRoom, keepRoom, takeRoomToRejoin, wasReloaded } from '../lib/rejoin'
 import { askMicrophone, closeCamera, openCamera, whenDeviceAllowed } from '../lib/devices'
 import { canShareScreen, fitted, hiddenEnds, sharerOf } from '../lib/share'
@@ -68,6 +68,16 @@ describe('the order people show in a room (C-06, C-18)', () => {
         expect(gridOf(5)).toEqual({ columns: 3, maxWidth: 320 })
         expect(gridOf(9)).toEqual({ columns: 3, maxWidth: 320 })
         expect(gridOf(13)).toEqual({ columns: 4, maxWidth: 254 })
+    })
+})
+
+describe('the seats shown (C-18: 12 at most, 11 and "+N" from 13)', () => {
+    it('shows everyone up to 12, then the first 11 and how many more', () => {
+        const people = (count: number) => Array.from({ length: count }, (_, index) => index)
+        expect(seatsOf(people(0))).toEqual({ shown: [], more: 0 })
+        expect(seatsOf(people(12))).toEqual({ shown: people(12), more: 0 })
+        expect(seatsOf(people(13))).toEqual({ shown: people(11), more: 2 })
+        expect(seatsOf(people(40))).toEqual({ shown: people(11), more: 29 })
     })
 })
 

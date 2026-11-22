@@ -55,7 +55,11 @@
         "left": "Left {{room}}",
         "joinAgain": "Join again",
         "zoomed": "{{name}}, zoomed in",
-        "zoomOut": "Zoom out"
+        "zoomOut": "Zoom out",
+        "leftCounted_one": "Left {{room}} · {{count}} minute counted",
+        "leftCounted_other": "Left {{room}} · {{count}} minutes counted",
+        "allPeople_one": "See all {{count}} person in the room",
+        "allPeople_other": "See all {{count}} people in the room"
     },
     "dock": {
         "inRoom": "In a room",
@@ -85,5 +89,9 @@
         "started": "{{name}} is sharing their screen",
         "stopped": "{{name}} stopped sharing",
         "more": "See more people"
+    },
+    "panel": {
+        "you": "You",
+        "host": "In control"
     }
 }

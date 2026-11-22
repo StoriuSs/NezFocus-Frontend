@@ -1517,6 +1517,27 @@ export interface paths {
         patch?: never
         trace?: never
     }
+    '/api/v1/focus-sessions/{sessionId}/next-host': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        /**
+         * Who would control the session if its Host left now, for the question
+         *     "Rời phòng?" (D-233): null when nobody present may start. Only its
+         *     Host asks; anyone else who sees the room is FORBIDDEN `not_host`.
+         */
+        get: operations['FocusSessionsController_nextHost_v1']
+        put?: never
+        post?: never
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
     '/api/v1/me/solo-session': {
         parameters: {
             query?: never
@@ -3042,6 +3063,19 @@ export interface components {
             long_break_minutes?: number | null
             long_break_every?: number | null
             version: number
+        }
+        NextHostPersonResponseDto: {
+            id: string
+            /** @description Null for an account shown as deleted (D-182): the client says it without a name. */
+            display_name: string | null
+        }
+        NextHostResponseDto: {
+            /**
+             * @description Who would control the session if its Host left now, by the rule a
+             *     leaving uses; null when nobody present may start, so the session would
+             *     run with no Host.
+             */
+            next_host: components['schemas']['NextHostPersonResponseDto'] | null
         }
         StartSoloSessionRequestDto: {
             focus_minutes?: number
@@ -6040,6 +6074,30 @@ export interface operations {
                     'application/json': {
                         meta: components['schemas']['ApiResponseMetaDto']
                         data: components['schemas']['FocusSessionResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    FocusSessionsController_nextHost_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                sessionId: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['NextHostResponseDto']
                     }
                 }
             }

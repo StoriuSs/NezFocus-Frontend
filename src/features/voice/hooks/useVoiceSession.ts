@@ -3,6 +3,7 @@ import { LogOut, Mic, MicOff, MonitorSmartphone, MonitorX, RotateCw, VideoOff } 
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { onRealtimeEvent } from '@/features/realtime'
+import { hearSessionLeft } from '@/features/study'
 import { useProfile } from '@/features/users'
 import { accountTimeZone, endsAtText } from '@/lib/time-zones'
 import { personName } from '../lib/people'
@@ -26,6 +27,12 @@ const PUT_OUT_WORDS: Partial<
     permission: 'shell.voice.noLongerAllowed',
     channel_deleted: 'shell.voice.roomGone'
 }
+
+/**
+ * How far back one's minutes told may come before the word of being put out
+ * (a room deleted ends its session on the same change, in any order).
+ */
+const LEFT_HEARD_BEFORE_MS = 10_000
 
 /** A Toast's icon (16, as the app's other Toasts). */
 const ICON = { className: 'size-4', 'aria-hidden': true }
@@ -150,7 +157,10 @@ export function useVoiceSession(directory: VoiceDirectory | undefined): void {
     // A timeout's put-out waiting for the servers held to know until when.
     const [timedOut, setTimedOut] = useState<{ channelId: string; at: number } | null>(null)
     useEffect(() => {
+        // The listeners for one's minutes of each Toast of being put out: gone with the Toast, or with this hook.
+        const hearing = new Set<() => void>()
         const off = [
+            () => hearing.forEach((stop) => stop()),
             onRealtimeEvent('voice.muted', (data) => {
                 const { channelId, muted } = data as { channelId: string; muted: boolean }
                 if (!inRoom(channelId)) return
@@ -170,10 +180,31 @@ export function useVoiceSession(directory: VoiceDirectory | undefined): void {
                 if (!words) return
                 // A room deleted or closed to one: its page may say it is gone too (02 channel-removed), one Toast.
                 const id = reason === 'moderator' ? 'voice-removed' : 'channel-removed'
-                toast(t(words), {
-                    id,
-                    ...(reason === 'moderator' ? { icon: createElement(LogOut, ICON) } : {})
+                // With a session there, the same Toast adds one's minutes in it once told (07 › Edge, D-233).
+                let open = true
+                let stop: () => void = () => undefined
+                const closed = () => {
+                    open = false
+                    stop()
+                    hearing.delete(stop)
+                }
+                const say = (text: string) =>
+                    toast(text, {
+                        id,
+                        onAutoClose: closed,
+                        onDismiss: closed,
+                        ...(reason === 'moderator' ? { icon: createElement(LogOut, ICON) } : {})
+                    })
+                say(t(words))
+                let best = 0
+                const sessionId = rooms.current?.room(channelId)?.session?.id ?? null
+                stop = hearSessionLeft(channelId, sessionId, Date.now() - LEFT_HEARD_BEFORE_MS, (seconds) => {
+                    const minutes = Math.floor(seconds / 60)
+                    if (!open || seconds <= best || minutes < 1) return
+                    best = seconds
+                    say(t(`${words}Counted`, { count: minutes }))
                 })
+                hearing.add(stop)
             }),
             onRealtimeEvent('voice.share_rejected', (data) => {
                 const { channelId, userId } = data as { channelId: string; userId: string }

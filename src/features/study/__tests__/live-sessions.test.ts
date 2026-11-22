@@ -4,7 +4,7 @@ import { emitRealtimeEvent } from '@/features/realtime/lib/realtime-events'
 import { serverNow } from '@/lib/server-clock'
 import { studyKeys } from '../api/keys'
 import { listenForSessions, tellSession } from '../api/liveSessions'
-import { useStudyStore } from '../study.store'
+import { hearSessionLeft, useStudyStore } from '../study.store'
 import type { FocusSession, StudyToday } from '../types'
 import { news, session } from '@/test/study-sessions'
 
@@ -15,7 +15,7 @@ let stop: () => void
 beforeEach(() => {
     client = new QueryClient()
     sink.mockReset()
-    useStudyStore.setState({ news: {}, pausedBy: {}, ended: {} })
+    useStudyStore.setState({ news: {}, pausedBy: {}, ended: {}, left: {} })
     stop = listenForSessions(client, sink)
 })
 afterEach(() => stop())
@@ -147,5 +147,38 @@ describe("One's day so far (streak.updated, D-231, D-232)", () => {
         held({ todaySeconds: 600, countedUntil: null, streak: 5, readAt: '2026-11-22T14:47:00.000Z' })
         emitRealtimeEvent('ready', undefined)
         expect(client.getQueryState(studyKeys.today())?.isInvalidated).toBe(true)
+    })
+})
+
+describe("One's seconds in a session as one's place closes (focus_session.left, D-233)", () => {
+    afterEach(() => vi.useRealTimers())
+
+    it('tells whoever listens for that session each total heard since, and nothing once stopped', () => {
+        const heard = vi.fn()
+        const stopHearing = hearSessionLeft('im-lang', 's1', Date.now(), heard)
+        emitRealtimeEvent('focus_session.left', { sessionId: 's0', channelId: 'thao-luan', seconds: 60 })
+        emitRealtimeEvent('focus_session.left', { sessionId: 's1', channelId: 'im-lang', seconds: 1860 })
+        emitRealtimeEvent('focus_session.left', { sessionId: 's1', channelId: 'im-lang', seconds: 1900 })
+        expect(heard.mock.calls).toEqual([[1860], [1900]])
+        stopHearing()
+        emitRealtimeEvent('focus_session.left', { sessionId: 's1', channelId: 'im-lang', seconds: 2000 })
+        expect(heard).toHaveBeenCalledTimes(2)
+    })
+
+    it('tells at once one heard just before listening (the leaving may come back first); not an older one, nor another session', () => {
+        vi.useFakeTimers({ toFake: ['Date'] })
+        const since = Date.now()
+        emitRealtimeEvent('focus_session.left', { sessionId: 's1', channelId: 'im-lang', seconds: 1860 })
+        const now = vi.fn()
+        hearSessionLeft('im-lang', 's1', since, now)()
+        expect(now).toHaveBeenCalledWith(1860)
+
+        vi.advanceTimersByTime(1)
+        const later = vi.fn()
+        hearSessionLeft('im-lang', 's1', Date.now(), later)()
+        const other = vi.fn()
+        hearSessionLeft('im-lang', 's2', since, other)()
+        expect(later).not.toHaveBeenCalled()
+        expect(other).not.toHaveBeenCalled()
     })
 })

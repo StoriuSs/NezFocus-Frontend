@@ -3,7 +3,7 @@ import { onRealtimeEvent } from '@/features/realtime'
 import { noteServerTime } from '@/lib/server-clock'
 import { isLater } from '../lib/phases'
 import { isLaterRead } from '../lib/today'
-import { hearNews } from '../study.store'
+import { hearLeft, hearNews, type SessionLeft } from '../study.store'
 import type { FocusSession, SessionNews, StudyToday } from '../types'
 import { studyKeys } from './keys'
 
@@ -61,7 +61,9 @@ export function tellSession(session: FocusSession): boolean {
  * same state first (an answer has no word of who did it). `streak.updated`
  * replaces today's numbers held, unless they were read later (`read_at`,
  * D-232: two reads may come in either order); told as a participation
- * opens too, and with `counted_until` null once in no session. Returns the way to stop (the first call only).
+ * opens too, and with `counted_until` null once in no session. `focus_session.left`
+ * (one's seconds in a session as one's place closes, D-233) goes to the
+ * study store. Returns the way to stop (the first call only).
  */
 export function listenForSessions(client: QueryClient, sink: SessionSink): () => void {
     if (listening.has(client)) return () => undefined
@@ -91,6 +93,8 @@ export function listenForSessions(client: QueryClient, sink: SessionSink): () =>
                       }
             )
         }),
+        // One's place in a room's session closed: one's seconds in it, for the toast of leaving (D-233).
+        onRealtimeEvent('focus_session.left', (data) => hearLeft(data as SessionLeft)),
         // Live again: today's numbers may have moved meanwhile (the room's sessions come with GET /servers).
         onRealtimeEvent('ready', () => void client.invalidateQueries({ queryKey: studyKeys.today() }))
     ]

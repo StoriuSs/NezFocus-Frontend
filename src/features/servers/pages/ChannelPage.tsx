@@ -1,6 +1,6 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { Hash, ListChecks, MessageSquare, Pin, Users } from 'lucide-react'
+import { Hash, ListChecks, MessageSquare, Pin, UserPlus, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import '@/i18n/servers'
@@ -9,13 +9,15 @@ import { RightPanel, usePanel } from '@/components/shell/RightPanel'
 import { ShellNotFound } from '@/components/shell/ShellNotFound'
 import { ShellPage } from '@/components/shell/ShellPage'
 import { CountBadge } from '@/components/ui/count-badge'
+import { Button } from '@/components/ui/button'
 import { IconButton } from '@/components/ui/icon-button'
 import { WithTooltip } from '@/components/ui/tooltip'
+import { LIST_SHOWS, useMediaQuery } from '@/hooks/useMediaQuery'
 import { PHASE_ROOM } from '@/lib/phase-colors'
 import { ChannelChat, ChatDropZone, PinsPanel, useChannelReadState } from '@/features/messaging'
 import { TaskBoard } from '@/features/tasks'
 import { useProfile } from '@/features/users'
-import { useVoiceStore, VoiceRoomView } from '@/features/voice'
+import { RoomPeopleList, useVoiceStore, VoiceRoomView } from '@/features/voice'
 import { MemberPanel } from '../components/member-panel/MemberPanel'
 import { HostChip, RoomViewSwitch } from '../components/RoomHeader'
 import { useServers } from '../api/useServers'
@@ -23,6 +25,8 @@ import { useTaskBoardPlace } from '../api/useTaskBoardPlace'
 import { useChannelChat } from '../hooks/useChannelChat'
 import { useChannelDialogs } from '../channel-dialogs.store'
 import { useGoneServerPath } from '../hooks/useGoneServerPath'
+import { useJoinedSession } from '../hooks/useJoinedSession'
+import { useRoomInvite } from '../hooks/useRoomInvite'
 import { channelIcon, firstTextChannel } from '../lib/channel-list'
 import { voiceRoomOf } from '../lib/voice-room'
 import { channelPath, isId, messagePath } from '../lib/paths'
@@ -87,7 +91,9 @@ export default function ChannelPage() {
         return <ShellPage title={server.name} />
     }
 
-    if (channel.type === 'voice') return <VoiceChannel server={server} channel={channel} messageId={messageId} />
+    // Keyed: another room's page starts afresh (its people panel closed, D-233 L6b).
+    if (channel.type === 'voice')
+        return <VoiceChannel key={channel.id} server={server} channel={channel} messageId={messageId} />
 
     return <TextChannel key={channel.id} server={server} channel={channel} messageId={messageId} />
 }
@@ -127,6 +133,29 @@ function VoiceChannel({ server, channel, messageId }: { server: Server; channel:
     const { t } = useTranslation('servers')
     const { t: common } = useTranslation()
     const [chat, chatButton] = usePanel('room-chat', { startClosed: true })
+    // "Người trong phòng", opened by a "+N" seat (C-18), never kept: it shows in the chat's place,
+    // the chat's own choice kept (C-08: one right panel at a time).
+    const [roster] = usePanel('room-people', { startClosed: true, remember: false })
+    // The "+N" seat that opened it, and the order of the seats then (the panel lists them so, C-18).
+    const rosterSeat = useRef<HTMLButtonElement | null>(null)
+    const [rosterOrder, setRosterOrder] = useState<string[]>([])
+    const openRoster = (seat: HTMLButtonElement, order: string[]) => {
+        rosterSeat.current = seat
+        setRosterOrder(order)
+        if (!roster.open) roster.toggle()
+    }
+    // Closed, the focus goes back to the seat, or to the chat's button once the seat is gone (joined, fewer people).
+    const rosterReturn = {
+        get current() {
+            return rosterSeat.current?.isConnected ? rosterSeat.current : chatButton.current
+        }
+    }
+    const chatShown = chat.open && !roster.open
+    const toggleChat = () => {
+        if (!roster.open) return chat.toggle()
+        roster.close()
+        if (!chat.open) chat.toggle()
+    }
     const { permissions, linkTo, readLink, mentions, target } = useChannelChat(server, channel, messageId)
     const icon = channelIcon(channel)
     // A message link or an inbox item: the chat open at it, once per visit.
@@ -134,15 +163,16 @@ function VoiceChannel({ server, channel, messageId }: { server: Server; channel:
     useEffect(() => {
         if (!target || openedAt === target.key) return
         setOpenedAt(target.key)
+        if (roster.open) roster.close()
         if (!chat.open) chat.toggle()
-    }, [target, openedAt, chat])
+    }, [target, openedAt, chat, roster])
     // Closed after that, the chat opens again where it would without the link: the URL keeps the message.
     const [spent, setSpent] = useState<string | null>(null)
     if (target && openedAt === target.key && !chat.open && spent !== target.key) setSpent(target.key)
     const chatTarget = target && target.key !== spent ? target : undefined
     const read = useChannelReadState(channel.id)
-    const mentioned = chat.open ? 0 : (read?.mentionCount ?? 0)
-    const unread = !chat.open && (mentioned > 0 || (read?.unreadCount ?? 0) > 0)
+    const mentioned = chatShown ? 0 : (read?.mentionCount ?? 0)
+    const unread = !chatShown && (mentioned > 0 || (read?.unreadCount ?? 0) > 0)
     const title = t('channel.roomChat')
     // In this room and LiveKit trying again: the page says so as the dock does elsewhere (S-ROOM-06, M4 A3).
     const reconnecting = useVoiceStore(
@@ -150,6 +180,11 @@ function VoiceChannel({ server, channel, messageId }: { server: Server; channel:
     )
     const me = useProfile().data?.id
     const inside = useVoiceStore((state) => state.call?.channelId === channel.id && state.call.phase !== 'joining')
+    // The session of the room one is in: its Host is asked before switching here (D-50).
+    const joinedSession = useJoinedSession()
+    // "Mời vào phòng" once in the room (07 S-ROOM-02, D-218; not on the preview page, Q6): a label from 1024, an icon below.
+    const roomInvite = useRoomInvite(server, channel)
+    const wide = useMediaQuery(LIST_SHOWS)
     const session = channel.focusSession
     const people = channel.voiceStates ?? []
     const label = unread
@@ -166,7 +201,7 @@ function VoiceChannel({ server, channel, messageId }: { server: Server; channel:
         <ShellPage
             title={channel.name}
             icon={icon}
-            composer={chat.open}
+            composer={chatShown}
             reconnecting={reconnecting}
             className={
                 session
@@ -179,12 +214,36 @@ function VoiceChannel({ server, channel, messageId }: { server: Server; channel:
                     {inside && channel.isStudyRoom && !people.some((person) => person.screenSharing) ? (
                         <RoomViewSwitch cameras={people.filter((person) => person.cameraOn).length} />
                     ) : null}
+                    {inside ? (
+                        wide ? (
+                            <Button
+                                type='button'
+                                variant='outline'
+                                size='sm'
+                                aria-busy={roomInvite.busy || undefined}
+                                onClick={roomInvite.invite}
+                            >
+                                <UserPlus aria-hidden='true' />
+                                {t('channel.inviteToRoom')}
+                            </Button>
+                        ) : (
+                            <WithTooltip label={t('channel.inviteToRoom')} side='bottom'>
+                                <IconButton
+                                    label={t('channel.inviteToRoom')}
+                                    aria-busy={roomInvite.busy || undefined}
+                                    onClick={roomInvite.invite}
+                                >
+                                    <UserPlus />
+                                </IconButton>
+                            </WithTooltip>
+                        )
+                    ) : null}
                     <WithTooltip label={title} side='bottom'>
                         <IconButton
                             ref={chatButton}
                             label={label}
-                            on={chat.open}
-                            onClick={chat.toggle}
+                            on={chatShown}
+                            onClick={toggleChat}
                             className='relative'
                         >
                             <MessageSquare />
@@ -206,36 +265,58 @@ function VoiceChannel({ server, channel, messageId }: { server: Server; channel:
                 </>
             }
             panel={
-                <RightPanel
-                    state={chat}
-                    buttonRef={chatButton}
-                    title={title}
-                    bodyClassName='relative flex flex-col overflow-y-hidden p-0'
-                >
-                    <Suspense fallback={<PageLoader className='min-h-0 flex-1' />}>
-                        <ChatDropZone
-                            channelId={channel.id}
-                            channelName={channel.name}
-                            room
-                            permissions={permissions}
-                        />
-                        <ChannelChat
-                            key={channel.id}
-                            channelId={channel.id}
-                            channelName={channel.name}
-                            roomIcon={icon}
-                            permissions={permissions}
-                            linkTo={linkTo}
-                            readLink={readLink}
-                            mentions={mentions}
-                            target={chatTarget}
-                        />
-                    </Suspense>
-                </RightPanel>
+                roster.open ? (
+                    <RightPanel
+                        state={roster}
+                        buttonRef={rosterReturn}
+                        title={common('shell.voice.roomPeople', { count: people.length })}
+                        closable
+                    >
+                        <Suspense fallback={<PageLoader className='min-h-0 flex-1' />}>
+                            <RoomPeopleList
+                                people={people}
+                                me={me}
+                                hostId={session?.hostId ?? null}
+                                order={rosterOrder}
+                            />
+                        </Suspense>
+                    </RightPanel>
+                ) : (
+                    <RightPanel
+                        state={chat}
+                        buttonRef={chatButton}
+                        title={title}
+                        bodyClassName='relative flex flex-col overflow-y-hidden p-0'
+                    >
+                        <Suspense fallback={<PageLoader className='min-h-0 flex-1' />}>
+                            <ChatDropZone
+                                channelId={channel.id}
+                                channelName={channel.name}
+                                room
+                                permissions={permissions}
+                            />
+                            <ChannelChat
+                                key={channel.id}
+                                channelId={channel.id}
+                                channelName={channel.name}
+                                roomIcon={icon}
+                                permissions={permissions}
+                                linkTo={linkTo}
+                                readLink={readLink}
+                                mentions={mentions}
+                                target={chatTarget}
+                            />
+                        </Suspense>
+                    </RightPanel>
+                )
             }
         >
             <Suspense fallback={<PageLoader className='min-h-0 flex-1' />}>
-                <VoiceRoomView room={voiceRoomOf(server, channel)} />
+                <VoiceRoomView
+                    room={voiceRoomOf(server, channel)}
+                    joinedSession={joinedSession}
+                    onMorePeople={openRoster}
+                />
             </Suspense>
         </ShellPage>
     )

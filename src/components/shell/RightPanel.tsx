@@ -23,19 +23,21 @@ export interface PanelState {
  * closed with `startClosed` (the pins, SRS 1.71); as a
  * sheet over the content it starts closed and is not remembered, so a narrow
  * window never opens with the content covered; one open as a column when the
- * window narrows stays open as a sheet.
+ * window narrows stays open as a sheet. `remember: false`: a panel opened
+ * from within the page (a room's "+N" seat), closed on every visit and not
+ * kept in this browser.
  *
  * Also returns the ref for the header button that opens it: focus goes back
  * there when the sheet closes.
  */
 export function usePanel(
     kind: string,
-    { startClosed = false }: { startClosed?: boolean } = {}
+    { startClosed = false, remember = true }: { startClosed?: boolean; remember?: boolean } = {}
 ): [PanelState, RefObject<HTMLButtonElement | null>] {
     const docked = useMediaQuery(PANEL_DOCKS)
     const key = `panel:${kind}`
     const [columnOpen, setColumnOpen] = useState(() => {
-        const stored = safeLocalStorage.get(key)
+        const stored = remember ? safeLocalStorage.get(key) : 'closed'
         return stored === null ? !startClosed : stored !== 'closed'
     })
     const [sheetOpen, setSheetOpen] = useState(false)
@@ -51,9 +53,9 @@ export function usePanel(
     const setColumn = useCallback(
         (open: boolean) => {
             setColumnOpen(open)
-            safeLocalStorage.set(key, open ? 'open' : 'closed')
+            if (remember) safeLocalStorage.set(key, open ? 'open' : 'closed')
         },
-        [key]
+        [key, remember]
     )
 
     const toggle = useCallback(
@@ -78,6 +80,8 @@ export function usePanel(
  * go at its end, before the sheet's close button. `bodyClassName` changes
  * the body under the header, which scrolls with an 8 inset by default (a
  * voice room's chat, S-ROOM-08: its own list scrolls, edge to edge).
+ * `closable`: the close button as a column too, for a panel no header button
+ * toggles (a room's "Người trong phòng", opened by its "+N" seat, C-08).
  */
 export function RightPanel({
     state,
@@ -86,6 +90,7 @@ export function RightPanel({
     heading,
     actions,
     bodyClassName,
+    closable = false,
     children
 }: {
     state: PanelState
@@ -94,6 +99,7 @@ export function RightPanel({
     heading?: ReactNode
     actions?: ReactNode
     bodyClassName?: string
+    closable?: boolean
     children: ReactNode
 }) {
     const { t } = useTranslation()
@@ -143,7 +149,7 @@ export function RightPanel({
             <header className='flex h-12 shrink-0 items-center gap-2 border-b pl-4 pr-2'>
                 {heading ?? <h2 className='flex-1 truncate text-headline text-text-primary'>{title}</h2>}
                 {actions}
-                {sheet ? (
+                {sheet || closable ? (
                     <WithTooltip label={t('shell.closePanel')} side='bottom'>
                         <IconButton label={t('shell.closePanel')} onClick={closeAndReturn}>
                             <X />

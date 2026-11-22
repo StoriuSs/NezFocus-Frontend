@@ -35,6 +35,19 @@ export function orderPeople(
     return me && here.has(me) ? [me, ...ids.filter((id) => id !== me)] : ids
 }
 
+/** The most seats a ring or the preview page's row shows (C-18, 07 S-ROOM-01). */
+export const MOST_SEATS = 12
+
+/**
+ * The seats shown of people in the order they show (C-18): everyone up to
+ * 12; from 13, the first 11 and `more` for a "+N" seat that opens the
+ * panel "Người trong phòng".
+ */
+export function seatsOf<T>(ordered: readonly T[]): { shown: T[]; more: number } {
+    if (ordered.length <= MOST_SEATS) return { shown: [...ordered], more: 0 }
+    return { shown: ordered.slice(0, MOST_SEATS - 1), more: ordered.length - (MOST_SEATS - 1) }
+}
+
 /** C-06: up to 10 people under a room in the list, then "+N people". */
 export const LISTED_PEOPLE = 10
 

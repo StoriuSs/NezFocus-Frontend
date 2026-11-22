@@ -88,6 +88,9 @@ react-starter/
     │   │   ├── hooks/         # useFoldedCategories (the categories folded, kept in this browser), useMoveAwayFrom,
     │   │   │                  #   useServerGoneWatch (D-143, D-178: starts liveServers, run by the AppShell),
     │   │   │                  #   useGoneServerPath (where a page of a server gone goes),
+    │   │   │                  #   useRoomInvite ("Mời vào phòng": the invite link with the room, copied, D-218),
+    │   │   │                  #   useJoinedSession (the session of the room this tab is in: the tab's
+    │   │   │                  #   cues, and its Host asked before switching or signing out),
     │   │   │                  #   useInboxPlaces (the names and paths the inbox is handed),
     │   │   │                  #   useChannelChat (what the chat of a text channel or a voice room is handed),
     │   │   │                  #   useRemovedWhileAway (kicked / banned while away: the Toast of H1, run by the AppShell)
@@ -161,7 +164,9 @@ react-starter/
     │   │                      #   panel, NotificationRow C-29), lib/ (cache changes, day groups and times,
     │   │                      #   a row's words), notifications.css (its classes, D-193)
     │   ├── voice/             # Voice rooms (07, M4): index.ts (VoiceRoomView: the preview page and the
-    │   │                      #   room, InRoomDock C-09, both lazy with LiveKit; useVoiceSession,
+    │   │                      #   room, InRoomDock C-09, both lazy with LiveKit; RoomPeopleList, the panel
+    │   │                      #   "Người trong phòng" a "+N" seat opens (SeatMore, seatsOf: 12, or 11 and
+    │   │                      #   "+N"), lazy; useVoiceSession,
     │   │                      #   useOrderedPeople, useVoiceStore, ModeratorMenu + useRoomMenu, not lazy),
     │   │                      #   voice.store.ts (the room this tab is in, its mic, camera and shared
     │   │                      #   screen, the last join's problem), api/ (token, leave, a moderator's
@@ -180,8 +185,11 @@ react-starter/
     │   │                      #   today; liveSessions: `focus_session.*` and `streak.updated`, each later
     │   │                      #   state handed to the servers feature, D-231), lib/ (study-cycle, phases,
     │   │                      #   durations, the words of a cycle, today: one's seconds today with the
-    │   │                      #   running focus, phase-words), hooks/, study.store.ts (who did what,
-    │   │                      #   who paused, the last session ended), study.css (its classes). A room's session is the servers'
+    │   │                      #   running focus, phase-words, host-leave: who is asked before leaving), hooks/,
+    │   │                      #   study.store.ts (who did what, who paused, the last session ended, one's
+    │   │                      #   seconds as one's place closed: `focus_session.left`), host-leave.store.ts
+    │   │                      #   ("Rời phòng?" asked, its HostLeaveDialog the AppShell's, lazy, D-233),
+    │   │                      #   study.css (its classes). A room's session is the servers'
     │   │                      #   data (D-220), handed in with the VoiceRoom
     │   └── users/             # The profile and the account's settings
     │       ├── api/           # users.api.ts (fetchProfile, removeAvatar),

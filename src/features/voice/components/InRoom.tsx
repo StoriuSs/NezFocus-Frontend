@@ -12,7 +12,7 @@ import { useLeaveRoom } from '../hooks/useLeaveRoom'
 import { useModMuted } from '../hooks/useModMuted'
 import { useRoomMenu } from '../hooks/useRoomMenu'
 import type { Device } from '../lib/devices'
-import { gridOf, personName } from '../lib/people'
+import { gridOf, personName, seatsOf } from '../lib/people'
 import { roomActionsOn } from '../lib/room-actions'
 import { switchScreen } from '../lib/session'
 import { sharerOf } from '../lib/share'
@@ -32,6 +32,7 @@ import {
 } from './PersonTile'
 import { RoomControl } from './RoomControl'
 import { Seat } from './Seat'
+import { SeatMore } from './SeatMore'
 import { ShareControl } from './ShareControl'
 import { StageView } from './StageView'
 import { TileStrip } from './TileStrip'
@@ -65,15 +66,34 @@ import { useVoiceStore } from '../voice.store'
  * tile zoomed in the same; its controls with the Host's. So is a room whose
  * study mode was turned off while one was in it, for the summary (07 › Edge).
  */
-export function InRoom({ room, live, me }: { room: VoiceRoom; live: Room; me: string }) {
+export function InRoom({
+    room,
+    live,
+    me,
+    onMorePeople
+}: {
+    room: VoiceRoom
+    live: Room
+    me: string
+    /** Opens the panel "Người trong phòng" (the ring's "+N" seat). */
+    onMorePeople?: (seat: HTMLButtonElement, order: string[]) => void
+}) {
     return (
         <RoomContext.Provider value={live}>
-            <Stage room={room} me={me} />
+            <Stage room={room} me={me} onMorePeople={onMorePeople} />
         </RoomContext.Provider>
     )
 }
 
-function Stage({ room, me }: { room: VoiceRoom; me: string }) {
+function Stage({
+    room,
+    me,
+    onMorePeople
+}: {
+    room: VoiceRoom
+    me: string
+    onMorePeople?: (seat: HTMLButtonElement, order: string[]) => void
+}) {
     const { t } = useTranslation('voice')
     const participants = useParticipants()
     // A camera sending a picture: published, not muted (`useParticipants` draws again as that changes).
@@ -264,7 +284,7 @@ function Stage({ room, me }: { room: VoiceRoom; me: string }) {
                             id: one.user.id,
                             name: personName(one.user) ?? words('person.deletedAccount')
                         }))}
-                        seats={ringSeats(ordered, byId)}
+                        seats={ringSeats(ordered, byId, onMorePeople)}
                         content={ringView ? null : tilesArea()}
                         devices={devices}
                         leave={leaveButton}
@@ -337,29 +357,38 @@ function Stage({ room, me }: { room: VoiceRoom; me: string }) {
     }
 }
 
-/** The most seats around the ring; more people: 11 and a "+N" (C-18). */
-const RING_SEATS = 12
-
 /**
  * The seats around a study room's ring (C-18), in the order shown, each
- * person's mic as LiveKit has it; 13 or more, 11 seats and "+N".
+ * person's mic as LiveKit has it; 13 or more, 11 seats and "+N", which
+ * opens the panel "Người trong phòng".
  */
-function ringSeats(ordered: RoomPerson[], byId: Map<string, Participant>) {
-    const shown = ordered.length > RING_SEATS ? ordered.slice(0, RING_SEATS - 1) : ordered
+function ringSeats(
+    ordered: RoomPerson[],
+    byId: Map<string, Participant>,
+    onMorePeople?: (seat: HTMLButtonElement, order: string[]) => void
+) {
+    const { shown, more } = seatsOf(ordered)
     const seats = shown.map((person) => {
         const participant = byId.get(person.user.id)
         const micOn = participant ? participant.isMicrophoneEnabled : person.micOn
         return { id: person.user.id, seat: <Seat as='div' person={{ ...person, micOn }} /> }
     })
-    if (ordered.length > RING_SEATS)
+    if (more > 0)
         seats.push({
             id: 'more',
             seat: (
-                <span className='flex size-14 items-center justify-center'>
-                    <span className='flex size-12 items-center justify-center rounded-full border border-border-input bg-surface-2 text-label font-semibold text-text-primary'>
-                        +{ordered.length - shown.length}
-                    </span>
-                </span>
+                <SeatMore
+                    more={more}
+                    total={ordered.length}
+                    onOpen={
+                        onMorePeople &&
+                        ((seat) =>
+                            onMorePeople(
+                                seat,
+                                ordered.map((one) => one.user.id)
+                            ))
+                    }
+                />
             )
         })
     return seats

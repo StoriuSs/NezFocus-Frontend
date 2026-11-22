@@ -142,5 +142,33 @@
         "pausedNote": "The clock stands still, no minutes count",
         "noHostNote": "A study room manager who joins will control the session",
         "today": "You have focused {{time}} today"
+    },
+    "hostLeave": {
+        "title": "Leave the room?",
+        "titleSignOut": "Sign out and leave the room?",
+        "next": "{{name}} will be in control of the study session.",
+        "nobody": "The study session keeps running, with no one in control.",
+        "unknown": "Whoever has been in the room longest and may start a session will be in control.",
+        "stay": "Stay",
+        "leave": "Leave room",
+        "switch": "Switch room",
+        "signOut": "Sign out"
+    },
+    "preview": {
+        "focus_one": "{{count}} person focusing",
+        "focus_other": "{{count}} people focusing",
+        "paused_one": "{{count}} person paused",
+        "paused_other": "{{count}} people paused",
+        "short_break_one": "{{count}} person on a short break",
+        "short_break_other": "{{count}} people on a short break",
+        "long_break_one": "{{count}} person on a long break",
+        "long_break_other": "{{count}} people on a long break",
+        "host": "{{name}} is in control",
+        "noHost": "No one is in control",
+        "startedAt": "Study session started at {{time}}",
+        "empty": "The room is empty",
+        "left_one": "{{count}} minute left",
+        "left_other": "{{count}} minutes left",
+        "underAMinute": "under a minute left"
     }
 }

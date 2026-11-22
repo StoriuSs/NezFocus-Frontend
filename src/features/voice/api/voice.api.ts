@@ -15,7 +15,7 @@ export async function requestVoiceToken(channelId: string): Promise<VoiceToken> 
 
 /**
  * POST /voice/leave: off LiveKit and the room's list at once, without waiting
- * for its webhook. Only when one presses Leave or signs out: as the page
+ * for its webhook. Only when one presses Leave, switches rooms (D-50) or signs out: as the page
  * closes or reloads LiveKit hears it itself, and this would put out the
  * connection a reload makes (M4 L2). `onLeave`: sent while signing out
  * (`leavingRequest`), as the avatar's removal is.

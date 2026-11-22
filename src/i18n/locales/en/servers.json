@@ -77,7 +77,15 @@
       },
       "cycle": "Default cycle",
       "presetHint": "Filled in when a study session starts. Long break: off.",
-      "onlyStudyPart": "Your role can only change the study room part."
+      "onlyStudyPart": "Your role can only change the study room part.",
+      "sessionLive_one": "A study session is on · {{count}} person. Changes apply from the next start.",
+      "sessionLive_other": "A study session is on · {{count}} people. Changes apply from the next start.",
+      "off": {
+        "title_one": "Turn off the study room and end the study session ({{count}} person)?",
+        "title_other": "Turn off the study room and end the study session ({{count}} people)?",
+        "body": "Everyone stays in the voice room. Study time so far is kept.",
+        "confirm": "Turn off study room"
+      }
     },
     "taskBoard": {
       "label": "Task Board",
@@ -115,7 +123,8 @@
     "deleted": "Deleted #{{name}}",
     "roomDeleted": "Deleted {{name}}",
     "pins": "Pinned messages",
-    "roomChat": "Room chat"
+    "roomChat": "Room chat",
+    "inviteToRoom": "Invite to room"
   },
   "category": {
     "createTitle": "Create a category",
@@ -264,7 +273,12 @@
       "hours_other": "{{count}} hours",
       "minutes_one": "{{count}} minute",
       "minutes_other": "{{count}} minutes"
-    }
+    },
+    "roomTitle": "Invite to {{room}}",
+    "roomDescription": "They join {{server}} and land right on this room's page.",
+    "roomCopied": "Invite link to {{room}} copied",
+    "roomLinkCopied": "Link to {{room}} copied",
+    "roomLinkManual": "Your browser blocked copying · the room's link: {{link}}"
   },
   "join": {
     "title": "{{name}} invited you to",
@@ -646,7 +660,9 @@
       "body": "You will need a new invite to come back.",
       "submit": "Leave server",
       "done": "Left {{name}}",
-      "offline": "Couldn’t leave the server · Check your connection and try again"
+      "offline": "Couldn’t leave the server · Check your connection and try again",
+      "bodyInRoom": "You will need a new invite to come back. You will also leave {{room}}.",
+      "bodyInRoomHost": "You will need a new invite to come back. You will also leave {{room}}; control of the study session goes to whoever has been in the room longest and may start a session; if no one may, it keeps running with no one in control."
     },
     "ownerLeave": {
       "title": "Transfer ownership before leaving",

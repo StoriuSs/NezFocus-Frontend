@@ -10,6 +10,8 @@ import i18n from '@/i18n'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { expectNoA11yViolations } from '@/test/a11y'
 import { queryWrapper } from '@/test/helpers'
+import { session as studySession } from '@/test/study-sessions'
+import { roomSessionOf } from '@/features/study'
 import { serverKeys } from '../api/keys'
 import type { Server, ServerChannel } from '../types'
 
@@ -610,6 +612,33 @@ describe('Room settings (S-SET-06, D-210)', () => {
         await userEvent.click(screen.getByRole('switch', { name: 'Study room' }))
         await save()
         expect(await sent()).toEqual({ isStudyRoom: false })
+    })
+
+    it('with a session on, says changes apply from the next start, and asks before turning it off (`study-off-confirm`, D-88)', async () => {
+        await openRoom(withRoom({ focusSession: roomSessionOf(studySession({ channelId: 'phong' })) }))
+        expect(screen.getByText('A study session is on · 0 people. Changes apply from the next start.')).toBeVisible()
+
+        await userEvent.click(screen.getByRole('switch', { name: 'Study room' }))
+        await save()
+        const asked = await screen.findByRole('dialog', {
+            name: 'Turn off the study room and end the study session (0 people)?'
+        })
+        expect(within(asked).getByRole('button', { name: 'Cancel' })).toHaveFocus()
+        await expectNoA11yViolations()
+        await userEvent.click(within(asked).getByRole('button', { name: 'Cancel' }))
+        expect(layoutApi.updateChannel).not.toHaveBeenCalled()
+        expect(screen.getByRole('dialog', { name: 'Room settings' })).toBeVisible()
+
+        await save()
+        await userEvent.click(await screen.findByRole('button', { name: 'Turn off study room' }))
+        expect(await sent()).toEqual({ isStudyRoom: false })
+    })
+
+    it('saves other changes of a room with a session without asking', async () => {
+        await openRoom(withRoom({ focusSession: roomSessionOf(studySession({ channelId: 'phong' })) }))
+        await userEvent.click(screen.getByRole('radio', { name: '50/10' }))
+        await save()
+        expect(await sent()).toEqual({ studyFocusMinutes: 50, studyShortBreakMinutes: 10 })
     })
 
     it('opens Custom on the saved lengths, sums it up, and saves a long break (`cycle-custom`)', async () => {

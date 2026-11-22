@@ -14,6 +14,8 @@ import { lazy } from 'react'
  */
 export const VoiceRoomView = lazy(() => import('./components/VoiceRoomView'))
 export const InRoomDock = lazy(() => import('./components/InRoomDock'))
+/** The body of the panel "Người trong phòng" a "+N" seat opens (C-20 `list`), lazy with the room's page. */
+export const RoomPeopleList = lazy(() => import('./components/RoomPeopleList'))
 export { useVoiceSession } from './hooks/useVoiceSession'
 export { useRoomMenu } from './hooks/useRoomMenu'
 export { ModeratorMenu } from './components/ModeratorMenu'

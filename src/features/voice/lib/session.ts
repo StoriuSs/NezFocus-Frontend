@@ -73,6 +73,9 @@ function dropPreview(): void {
 
 class TooLong extends Error {}
 
+/** How long a switch waits for the old room's leaving to be asked before it asks for the new token. */
+const LEAVE_ASK_MS = 3000
+
 /** `promise`, or a TooLong once `ms` pass; one answered later goes to `late`. */
 function within<T>(promise: Promise<T>, ms: number, late: (value: T) => void): Promise<T> {
     return new Promise<T>((resolve, reject) => {
@@ -150,6 +153,15 @@ export async function joinRoom(room: RoomToJoin, options: { devicesOff?: boolean
             stopSignOut?.()
             stopSignOut = null
             await before.leave()
+            // Meant, as Rời is (D-50, D-215): the API would otherwise take LiveKit's leave as a lost
+            // connection, the old room's Host kept 3 minutes. Asked before the new token, waited for
+            // LEAVE_ASK_MS at most (the token puts one out of the old room anyway, D-210).
+            await Promise.race([
+                leaveVoiceRoom().catch(() => undefined),
+                new Promise((resolve) => setTimeout(resolve, LEAVE_ASK_MS))
+            ])
+            // Rời, or another join, pressed meanwhile.
+            if (id !== attempt) return false
         }
         const token = await within(requestVoiceToken(room.channelId), JOIN_MS, () => undefined)
         const livekit = await import('@/lib/livekit')

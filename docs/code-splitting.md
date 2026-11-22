@@ -206,6 +206,9 @@ page opened before any study room. The rest of `study`'s index (the cycle
 rules, the phase rules and clocks, `listenForSessions`) is light and not
 lazy. `SessionCues` (the tab's title, the phase sound and the streak
 toast of the session one is in) is lazy, fetched once one is in a room with a session.
+`PreviewRing` (a study room's ring on its preview page) is lazy like `StudyStage`.
+`HostLeaveDialog` ("Rời phòng?" of a session's Host, D-233) is the AppShell's,
+lazy like its other dialogs, fetched the first time it is asked.
 `CycleFields` (a cycle in a React Hook Form form) is
 exported lazily too, for a room's settings (S-SET-06, inside a `Suspense`):
 it brings the `study` words, which an index export would put in the shell's
@@ -213,7 +216,8 @@ shared chunk.
 
 Voice rooms (M4 L3a) are the heaviest: `src/features/voice/index.ts`
 exports `VoiceRoomView` (a room's preview page and the room, with the hooks
-of `@livekit/components-react`) and `InRoomDock` lazily, the servers feature
+of `@livekit/components-react`), `InRoomDock` and `RoomPeopleList` (the panel
+"Người trong phòng") lazily, the servers feature
 shows them inside a `Suspense`; LiveKit's client itself (`src/lib/livekit`,
 about 155 kB gzipped) is read with `import()` only when a room is joined, as
 `socket.ts` is. Their words (`voice`) and classes (`tailwind.voice.config.js`,

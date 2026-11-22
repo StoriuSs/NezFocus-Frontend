@@ -165,7 +165,15 @@
       "viewRing": "Vòng",
       "viewGrid": "Lưới",
       "cameras_one": "{{count}} người bật camera",
-      "cameras_other": "{{count}} người bật camera"
+      "cameras_other": "{{count}} người bật camera",
+      "roomPeople_one": "Người trong phòng — {{count}}",
+      "roomPeople_other": "Người trong phòng — {{count}}",
+      "disconnectedCounted_one": "Bạn đã bị ngắt khỏi phòng · {{count}} phút đã được tính",
+      "disconnectedCounted_other": "Bạn đã bị ngắt khỏi phòng · {{count}} phút đã được tính",
+      "noLongerAllowedCounted_one": "Bạn không còn quyền vào phòng này · đã rời phòng · {{count}} phút đã được tính",
+      "noLongerAllowedCounted_other": "Bạn không còn quyền vào phòng này · đã rời phòng · {{count}} phút đã được tính",
+      "roomGoneCounted_one": "Phòng này không còn khả dụng · {{count}} phút đã được tính",
+      "roomGoneCounted_other": "Phòng này không còn khả dụng · {{count}} phút đã được tính"
     },
     "serverMenu": {
       "createChannel": "Tạo kênh",

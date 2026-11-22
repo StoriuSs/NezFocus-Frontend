@@ -207,7 +207,10 @@ after sign-in, behind `ProtectedRoute`:
   (`src/components/shell/ShellPage.tsx`): the 48-high header with the
   title and the page's actions, a scrolling body, and an optional right
   panel (`RightPanel` + `usePanel`; `usePanel(kind, { startClosed: true })`
-  for a panel that starts closed as a column, the pins; `bodyClassName` for a
+  for a panel that starts closed as a column, the pins; `remember: false` for
+  one opened from inside the page and never kept, a room's "Người trong
+  phòng" from its "+N" seat, with `closable` on its `RightPanel` (the close
+  button as a column too: no header button toggles it); `bodyClassName` for a
   body that does not scroll or pad, a voice room's chat). A menu opened from
   a panel shown as a sheet counts as inside it. Under the header, the connection
   Banner when the AppShell has one (`ConnectionBanner`, C-16 `reconnecting`

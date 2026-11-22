@@ -77,7 +77,15 @@
       },
       "cycle": "Chu kỳ mặc định",
       "presetHint": "Điền sẵn khi bắt đầu phiên học. Nghỉ dài: tắt.",
-      "onlyStudyPart": "Vai trò của bạn chỉ sửa được phần Phòng học."
+      "onlyStudyPart": "Vai trò của bạn chỉ sửa được phần Phòng học.",
+      "sessionLive_one": "Đang có phiên học · {{count}} người. Thay đổi áp dụng từ lần bắt đầu sau.",
+      "sessionLive_other": "Đang có phiên học · {{count}} người. Thay đổi áp dụng từ lần bắt đầu sau.",
+      "off": {
+        "title_one": "Tắt phòng học và kết thúc phiên học ({{count}} người)?",
+        "title_other": "Tắt phòng học và kết thúc phiên học ({{count}} người)?",
+        "body": "Mọi người vẫn ở lại phòng thoại. Giờ học đã có được giữ.",
+        "confirm": "Tắt phòng học"
+      }
     },
     "taskBoard": {
       "label": "Task Board",
@@ -115,7 +123,8 @@
     "deleted": "Đã xóa #{{name}}",
     "roomDeleted": "Đã xóa {{name}}",
     "pins": "Tin đã ghim",
-    "roomChat": "Chat của phòng"
+    "roomChat": "Chat của phòng",
+    "inviteToRoom": "Mời vào phòng"
   },
   "category": {
     "createTitle": "Tạo danh mục",
@@ -264,7 +273,12 @@
       "hours_other": "{{count}} giờ",
       "minutes_one": "{{count}} phút",
       "minutes_other": "{{count}} phút"
-    }
+    },
+    "roomTitle": "Mời vào {{room}}",
+    "roomDescription": "Người nhận vào server {{server}} rồi mở thẳng trang của phòng này.",
+    "roomCopied": "Đã sao chép link mời vào {{room}}",
+    "roomLinkCopied": "Đã sao chép link {{room}}",
+    "roomLinkManual": "Trình duyệt không cho sao chép · link của phòng: {{link}}"
   },
   "join": {
     "title": "{{name}} mời bạn vào",
@@ -646,7 +660,9 @@
       "body": "Bạn sẽ cần một lời mời mới để quay lại.",
       "submit": "Rời server",
       "done": "Đã rời {{name}}",
-      "offline": "Chưa rời được server · Kiểm tra mạng rồi thử lại"
+      "offline": "Chưa rời được server · Kiểm tra mạng rồi thử lại",
+      "bodyInRoom": "Bạn sẽ cần một lời mời mới để quay lại. Bạn cũng sẽ rời {{room}}.",
+      "bodyInRoomHost": "Bạn sẽ cần một lời mời mới để quay lại. Bạn cũng sẽ rời {{room}}; quyền điều khiển phiên học chuyển cho người ở trong phòng lâu nhất mà đủ quyền bắt đầu; không ai đủ thì phiên chạy tiếp không có người điều khiển."
     },
     "ownerLeave": {
       "title": "Chuyển quyền trước khi rời",

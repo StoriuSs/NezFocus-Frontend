@@ -55,7 +55,11 @@
         "left": "Đã rời {{room}}",
         "joinAgain": "Vào lại",
         "zoomed": "{{name}}, đang phóng to",
-        "zoomOut": "Thu nhỏ"
+        "zoomOut": "Thu nhỏ",
+        "leftCounted_one": "Đã rời {{room}} · {{count}} phút đã được tính",
+        "leftCounted_other": "Đã rời {{room}} · {{count}} phút đã được tính",
+        "allPeople_one": "Xem cả {{count}} người trong phòng",
+        "allPeople_other": "Xem cả {{count}} người trong phòng"
     },
     "dock": {
         "inRoom": "Đang trong phòng",
@@ -85,5 +89,9 @@
         "started": "{{name}} đang chia sẻ màn hình",
         "stopped": "{{name}} đã dừng chia sẻ",
         "more": "Xem thêm người"
+    },
+    "panel": {
+        "you": "Bạn",
+        "host": "Đang điều khiển"
     }
 }

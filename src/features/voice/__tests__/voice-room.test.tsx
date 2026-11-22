@@ -98,6 +98,7 @@ const sendRealtimeSignal = vi.fn()
 const realtime = vi.hoisted(() => ({ listeners: new Map<string, (data?: unknown) => void>() }))
 vi.mock('@/features/realtime', () => ({
     sendRealtimeSignal,
+    useConnectionBanner: () => null,
     onRealtimeEvent: (event: string, listener: (data?: unknown) => void) => {
         realtime.listeners.set(event, listener)
         return () => realtime.listeners.delete(event)
@@ -367,6 +368,30 @@ describe("a voice room's preview page (S-ROOM-01 voice-preview)", () => {
         expect(screen.getByRole('button', { name: 'Switch to this room' })).toBeEnabled()
     })
 
+    it('asks the Host of the session of the room this tab is in before switching (D-50); others switch at once', async () => {
+        const { useHostLeave } = await import('@/features/study')
+        await joinRoom({ serverId: 'ot', channelId: 'quiet', name: 'Phòng học im lặng' })
+        voiceApi.requestVoiceToken.mockClear()
+        const hosted = roomSessionOf(studySession({ channelId: 'quiet', hostId: AN }))
+        const view = render(<VoiceRoomView room={room()} joinedSession={hosted} />, { wrapper: Providers })
+        await userEvent.click(screen.getByRole('button', { name: 'Switch to this room' }))
+        const asking = useHostLeave.getState().asking
+        expect(asking).toMatchObject({ sessionId: hosted!.id, kind: 'switch' })
+        expect(voiceApi.requestVoiceToken).not.toHaveBeenCalled()
+        await act(async () => asking!.confirm())
+        await waitFor(() => expect(voiceApi.requestVoiceToken).toHaveBeenCalledWith('thao-luan'))
+        act(() => useHostLeave.setState({ asking: null }))
+        view.unmount()
+
+        await joinRoom({ serverId: 'ot', channelId: 'quiet', name: 'Phòng học im lặng' })
+        voiceApi.requestVoiceToken.mockClear()
+        const others = roomSessionOf(studySession({ channelId: 'quiet', hostId: 'binh' }))
+        render(<VoiceRoomView room={room()} joinedSession={others} />, { wrapper: Providers })
+        await userEvent.click(screen.getByRole('button', { name: 'Switch to this room' }))
+        expect(useHostLeave.getState().asking).toBeNull()
+        await waitFor(() => expect(voiceApi.requestVoiceToken).toHaveBeenCalledWith('thao-luan'))
+    })
+
     it('says one is in this room elsewhere, and offers to join here (other-tab)', async () => {
         show(room({ people: [person(AN, 'An'), TUAN] }))
         expect(screen.getByText("You're in this room in another tab or on another device")).toBeVisible()
@@ -412,6 +437,102 @@ describe("a voice room's preview page (S-ROOM-01 voice-preview)", () => {
         show(room())
         await userEvent.keyboard('{Control>}{Shift>}m{/Shift}{/Control}')
         await waitFor(() => expect(useVoiceStore.getState().mic).toBe('on'))
+    })
+})
+
+describe("a study room's preview page (S-ROOM-01 session-running, idle, C-18)", () => {
+    const crowd = (count: number) => Array.from({ length: count }, (_, index) => person(`p${index}`, `Người ${index}`))
+    const studyRoom = (more: Partial<VoiceRoom> = {}) =>
+        room({ channelId: 'quiet', name: 'Phòng học im lặng', isStudyRoom: true, ...more })
+    const BINH = person('binh', 'Bình')
+
+    it('shows the ring of those in it, the Host at 12 o’clock, who is in which phase and who controls it, and when it began', async () => {
+        noteServerTime(studySession().serverTime)
+        const session = roomSessionOf(studySession({ channelId: 'quiet', hostId: 'binh' }))
+        show(studyRoom({ session, people: [TUAN, MINH, BINH] }))
+        expect(await screen.findByRole('timer', { name: /^Focus, round 2, 18 minutes left$/ })).toBeVisible()
+        expect(screen.getByText('3 people focusing · Bình is in control')).toBeVisible()
+        expect(screen.getByText(/^Study session started at \d{2}:\d{2}$/)).toBeVisible()
+        const seats = screen.getByRole('group', { name: '3 people in the room' })
+        expect(within(seats).getAllByRole('img')[0]).toHaveAccessibleName('Bình')
+        expect(screen.getByRole('button', { name: 'Join room' })).toBeEnabled()
+        await expectNoA11yViolations()
+    })
+
+    it('says no one controls it, or only who is on a break', async () => {
+        noteServerTime(studySession().serverTime)
+        const view = show(studyRoom({ session: roomSessionOf(studySession({ hostId: null })), people: [TUAN] }))
+        expect(await screen.findByText('1 person focusing · No one is in control')).toBeVisible()
+        view.rerender(
+            <VoiceRoomView
+                room={studyRoom({
+                    session: roomSessionOf(studySession({ phase: 'short_break', phaseIndex: 3 })),
+                    people: [TUAN, MINH]
+                })}
+            />
+        )
+        expect(await screen.findByText('2 people on a short break')).toBeVisible()
+    })
+
+    it('says "No study session yet" in the ring, or that the room is empty', async () => {
+        const view = show(studyRoom({ people: [TUAN] }))
+        expect(await screen.findByText('No study session yet')).toBeVisible()
+        expect(screen.queryByText(/Study session started/)).toBeNull()
+        view.rerender(<VoiceRoomView room={studyRoom({ people: [] })} />)
+        expect(await screen.findByText('The room is empty')).toBeVisible()
+    })
+
+    it('in another session already, says the minutes left, not a second clock by the second (C-18)', async () => {
+        noteServerTime(studySession().serverTime)
+        await joinRoom({ serverId: 'ot', channelId: 'thao-luan', name: 'Phòng thảo luận nhóm' })
+        const elsewhere = roomSessionOf(studySession({ channelId: 'thao-luan' }))
+        render(
+            <VoiceRoomView
+                room={studyRoom({ session: roomSessionOf(studySession({ channelId: 'quiet' })), people: [TUAN] })}
+                joinedSession={elsewhere}
+            />,
+            { wrapper: Providers }
+        )
+        expect(await screen.findByText('18 minutes left')).toBeVisible()
+        expect(screen.getByRole('timer', { name: 'Focus, round 2, 18 minutes left' })).toBeVisible()
+    })
+
+    it('in another session already, a paused one shows no number (C-19 list)', async () => {
+        noteServerTime(studySession().serverTime)
+        await joinRoom({ serverId: 'ot', channelId: 'thao-luan', name: 'Phòng thảo luận nhóm' })
+        const paused = roomSessionOf(
+            studySession({ channelId: 'quiet', status: 'paused', phaseEndsAt: null, pausedRemainingMs: 1_122_000 })
+        )
+        render(
+            <VoiceRoomView
+                room={studyRoom({ session: paused, people: [TUAN] })}
+                joinedSession={roomSessionOf(studySession({ channelId: 'thao-luan' }))}
+            />,
+            { wrapper: Providers }
+        )
+        expect(await screen.findByRole('timer', { name: 'Paused' })).toBeVisible()
+        expect(screen.queryByText(/minutes left/)).toBeNull()
+    })
+
+    it('shows 11 seats and a "+N" that opens the people panel from 13 in it; a voice room’s row too', async () => {
+        const opened = vi.fn()
+        const view = render(<VoiceRoomView room={studyRoom({ people: crowd(13) })} onMorePeople={opened} />, {
+            wrapper: Providers
+        })
+        const ring = await screen.findByRole('group', { name: '13 people in the room' })
+        expect(within(ring).getAllByRole('img')).toHaveLength(11)
+        await userEvent.click(within(ring).getByRole('button', { name: 'See all 13 people in the room' }))
+        // The seat, for the focus to come back to, and the seats' order, for the panel's.
+        expect(opened).toHaveBeenCalledWith(
+            expect.any(HTMLButtonElement),
+            crowd(13).map((one) => one.user.id)
+        )
+        view.unmount()
+
+        render(<VoiceRoomView room={room({ people: crowd(13) })} onMorePeople={opened} />, { wrapper: Providers })
+        const row = screen.getByRole('list', { name: 'People in the room' })
+        expect(within(row).getAllByRole('listitem')).toHaveLength(12)
+        expect(within(row).getByRole('button', { name: 'See all 13 people in the room' })).toBeVisible()
     })
 })
 
@@ -1251,6 +1372,29 @@ describe('voice in every tab (useVoiceSession)', () => {
             session(directory([room()]))
             hear('voice.disconnected', { channelId: 'thao-luan', reason })
             expect(await screen.findByText(words)).toBeVisible()
+        })
+
+        it('adds one’s minutes in the session there once told, before or after the word (07 › Edge, D-233)', async () => {
+            const { hearLeft } = await import('@/features/study/study.store')
+            await inLounge()
+            const withSession = room({
+                isStudyRoom: true,
+                session: roomSessionOf(studySession({ channelId: 'thao-luan' }))
+            })
+            session(directory([withSession]))
+            // The session ended with the room deleted: its word may come first.
+            act(() => hearLeft({ sessionId: 's1', channelId: 'thao-luan', seconds: 1860 }))
+            hear('voice.disconnected', { channelId: 'thao-luan', reason: 'channel_deleted' })
+            // Asked for: toasts of the tests before may still be leaving the stack.
+            expect(await screen.findByText('This room is no longer available · 31 minutes counted')).toBeInTheDocument()
+
+            await joinRoom({ serverId: 'ot', channelId: 'thao-luan', name: 'Phòng thảo luận nhóm' })
+            hear('voice.disconnected', { channelId: 'thao-luan', reason: 'moderator' })
+            expect(await screen.findByText(/^You were disconnected from the room/)).toBeInTheDocument()
+            act(() => hearLeft({ sessionId: 's1', channelId: 'thao-luan', seconds: 1920 }))
+            expect(
+                await screen.findByText('You were disconnected from the room · 32 minutes counted')
+            ).toBeInTheDocument()
         })
 
         it('says nothing for a kick, a ban, a server left, or a room this tab is not in', async () => {

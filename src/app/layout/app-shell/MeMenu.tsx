@@ -19,6 +19,8 @@ import {
 import { PresenceDot, type Presence } from '@/components/ui/presence-dot'
 import { AUTH_PATHS, useAuthStore } from '@/features/auth'
 import { useOwnPresence } from '@/features/realtime'
+import { useJoinedSession } from '@/features/servers'
+import { asksBeforeLeaving, useHostLeave } from '@/features/study'
 import { settingsCache } from '@/features/users/api/settingsCache'
 import { useChoosePresence } from '@/features/users/api/useChoosePresence'
 import { useProfile } from '@/features/users/api/useProfile'
@@ -49,7 +51,8 @@ function MyAvatar({ name, url, onError }: { name: string; url?: string | null; o
 
 /**
  * Your menu (S-ME-01), from your avatar at the foot of the rail: who you are
- * (opens your profile), your status, Settings, Sign out.
+ * (opens your profile), your status, Settings, Sign out (a session's Host is
+ * asked first, 10 `logout-host-confirm`, D-77).
  *
  * The status chosen is your settings' (saved at once, every tab and browser
  * follows; others see it through presence, REQ-AUTH-07). Every tab unused
@@ -62,6 +65,14 @@ export function MeMenu() {
     const logout = useAuthStore((state) => state.logout)
     const authUser = useAuthStore((state) => state.user)
     const { data: profile } = useProfile(true)
+    // Signing out leaves the room: its session's Host is asked first, "Đăng xuất" (D-77).
+    const joinedSession = useJoinedSession()
+    const askHost = useHostLeave((state) => state.ask)
+    const signOut = () => {
+        if (joinedSession && asksBeforeLeaving(joinedSession, profile?.id)) {
+            askHost({ sessionId: joinedSession.id, kind: 'signOut', confirm: () => void logout() })
+        } else void logout()
+    }
     const status: Status = useQuery(settingsCache).data?.presence ?? 'online'
     const choose = useChoosePresence()
     const shown = useOwnPresence(profile?.id ?? authUser?.id)
@@ -142,7 +153,7 @@ export function MeMenu() {
                     {t('shell.me.settings')}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onSelect={() => logout()} className='text-danger'>
+                <DropdownMenuItem onSelect={signOut} className='text-danger'>
                     <LogOut />
                     {t('shell.me.signOut')}
                 </DropdownMenuItem>

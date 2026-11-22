@@ -20,6 +20,8 @@ import type { CycleFields as CycleFieldsComponent } from './components/CycleFiel
  */
 export const StudyStage = lazy(() => import('./components/StudyStage'))
 export type { ControlProps } from './components/StudyStage'
+/** A study room's ring on its preview page (07 S-ROOM-01 `session-running`, `idle`), lazy as the stage. */
+export const PreviewRing = lazy(() => import('./components/PreviewRing'))
 /** The tab's title, the phase sound and the streak toast of the session one is in (07 S-ROOM-05), mounted by the shell. */
 export const SessionCues = lazy(() => import('./components/SessionCues'))
 export { useListClock } from './hooks/useListClock'
@@ -29,6 +31,11 @@ export * from './lib/study-cycle'
 export { clockText, isLater, minutesLeft, remainingMs, roomSessionOf, roundOf } from './lib/phases'
 export { listenForSessions, type SessionSink } from './api/liveSessions'
 export { useEndedHere } from './hooks/useEndedHere'
+/** Leaving as the Host asks first ("Rời phòng?", D-44, D-50, D-77); the dialog is the AppShell's, lazy. */
+export { asksBeforeLeaving } from './lib/host-leave'
+export { useHostLeave, type HostLeaveKind } from './host-leave.store'
+/** One's seconds in a room's session as one's place closed (`focus_session.left`, D-233). */
+export { hearSessionLeft } from './study.store'
 export type {
     AnySession,
     FocusSession,

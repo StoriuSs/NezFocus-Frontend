@@ -1,4 +1,4 @@
-import { afterEach, describe, it, expect, vi, beforeEach } from 'vitest'
+import { afterEach, describe, it, expect, vi, beforeEach, onTestFinished } from 'vitest'
 import { Toaster } from 'sonner'
 import { act, cleanup, createEvent, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -12,6 +12,7 @@ import { PANEL_DOCKS } from '@/hooks/useMediaQuery'
 import { ShellPage } from '@/components/shell/ShellPage'
 import { expectNoA11yViolations } from '@/test/a11y'
 import { mockAuthStore, queryWrapper } from '@/test/helpers'
+import { session as studySession } from '@/test/study-sessions'
 import type { Server, ServerChannel } from '@/features/servers'
 import { useChannelDialogs } from '@/features/servers/channel-dialogs.store'
 import { useServerRemovals } from '@/features/servers/server-removals.store'
@@ -491,7 +492,8 @@ describe('AppShell (S-SHELL-01)', () => {
         it("opens a voice room's preview page: who is in it and the way in (S-ROOM-01, M4)", async () => {
             renderAt('/channels/ot/quiet')
             expect(await screen.findByRole('heading', { level: 1, name: 'Phòng học im lặng' })).toBeInTheDocument()
-            expect(await screen.findByText('No one is in the room', {}, { timeout: 5000 })).toBeVisible()
+            // A study room: its ring, empty (07 S-ROOM-01 idle, C-18).
+            expect(await screen.findByText('The room is empty', {}, { timeout: 5000 })).toBeVisible()
             expect(screen.getByRole('button', { name: 'Join room' })).toBeEnabled()
         })
 
@@ -514,6 +516,59 @@ describe('AppShell (S-SHELL-01)', () => {
                 useVoiceStore.setState({ call: null })
             }
         })
+
+        it('opens "People in the room" from the "+N" seat, one right panel at a time (C-18, 07 room-13-people)', async () => {
+            const crowd = Array.from({ length: 13 }, (_, index) => ({
+                user: { id: `p${index}`, username: `p${index}`, displayName: `Người ${index}`, avatarUrl: null },
+                roleIds: [],
+                isOwner: false,
+                joinedAt: '2026-11-22T14:00:00.000Z',
+                micOn: index === 1,
+                cameraOn: false,
+                screenSharing: false,
+                modMuted: false
+            }))
+            const full: Server = {
+                ...OT,
+                channels: OT.channels.map((one) => (one.id === 'quiet' ? { ...one, voiceStates: crowd } : one))
+            }
+            serversApi.fetchServers.mockResolvedValue([full, ND])
+            // A window wide enough for a column (C-08): no sheet that a click outside would close by itself.
+            const before = window.matchMedia
+            window.matchMedia = ((query: string) => ({
+                matches: query === PANEL_DOCKS,
+                media: query,
+                addEventListener: () => undefined,
+                removeEventListener: () => undefined
+            })) as never
+            onTestFinished(() => {
+                window.matchMedia = before
+            })
+            renderAt('/channels/ot/quiet')
+            await userEvent.click(
+                await screen.findByRole('button', { name: 'See all 13 people in the room' }, { timeout: 5000 })
+            )
+            const panel = await screen.findByRole('complementary', { name: 'People in the room — 13' })
+            const rows = await within(panel).findAllByRole('listitem', {}, { timeout: 5000 })
+            expect(rows).toHaveLength(13)
+            expect(rows[0]).toHaveAccessibleName('Người 1, mic on')
+            await expectNoA11yViolations()
+
+            // The room's chat takes its place.
+            await userEvent.click(screen.getByRole('button', { name: 'Room chat' }))
+            expect(screen.queryByRole('complementary', { name: 'People in the room — 13' })).toBeNull()
+            expect(await screen.findByRole('complementary', { name: 'Room chat' })).toBeInTheDocument()
+
+            // As a column too it closes with its own button, the focus back on the seat (C-08).
+            const seat = screen.getByRole('button', { name: 'See all 13 people in the room' })
+            await userEvent.click(seat)
+            const again = await screen.findByRole('complementary', { name: 'People in the room — 13' })
+            await userEvent.click(within(again).getByRole('button', { name: 'Close' }))
+            expect(screen.queryByRole('complementary', { name: 'People in the room — 13' })).toBeNull()
+            expect(seat).toHaveFocus()
+            // The chat, open before, is shown again.
+            expect(screen.getByRole('complementary', { name: 'Room chat' })).toBeInTheDocument()
+        }, 15_000)
 
         it('says "Page not found" for the address of a channel one cannot see (02 S-CHAT-01 forbidden)', async () => {
             const router = renderAt('/channels/ot/0195a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b')
@@ -1491,6 +1546,33 @@ describe('AppShell (S-SHELL-01)', () => {
             renderAt('/study')
             await userEvent.click(within(await openMenu()).getByRole('menuitem', { name: 'Sign out' }))
             expect(authState.logout).toHaveBeenCalledTimes(1)
+        })
+
+        it('asks the Host of the session of the room one is in before signing out (10 logout-host-confirm, D-77)', async () => {
+            const { roomSessionOf } = await import('@/features/study')
+            const focusSession = roomSessionOf(studySession({ channelId: 'quiet', hostId: authState.user.id }))
+            const hosted: Server = {
+                ...OT,
+                channels: OT.channels.map((one) => (one.id === 'quiet' ? { ...one, focusSession } : one))
+            }
+            serversApi.fetchServers.mockResolvedValue([hosted, ND])
+            useVoiceStore.setState({
+                call: { serverId: 'ot', channelId: 'quiet', name: 'Phòng học im lặng', phase: 'connected' }
+            })
+            try {
+                renderAt('/study')
+                await userEvent.click(within(await openMenu()).getByRole('menuitem', { name: 'Sign out' }))
+                const asked = await screen.findByRole(
+                    'dialog',
+                    { name: 'Sign out and leave the room?' },
+                    { timeout: 5000 }
+                )
+                expect(authState.logout).not.toHaveBeenCalled()
+                await userEvent.click(within(asked).getByRole('button', { name: 'Sign out' }))
+                expect(authState.logout).toHaveBeenCalledTimes(1)
+            } finally {
+                useVoiceStore.setState({ call: null })
+            }
         })
 
         it('changes your status, shown on your avatar', async () => {

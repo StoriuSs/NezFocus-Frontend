@@ -165,7 +165,15 @@
       "viewRing": "Ring",
       "viewGrid": "Grid",
       "cameras_one": "{{count}} camera on",
-      "cameras_other": "{{count}} cameras on"
+      "cameras_other": "{{count}} cameras on",
+      "roomPeople_one": "People in the room — {{count}}",
+      "roomPeople_other": "People in the room — {{count}}",
+      "disconnectedCounted_one": "You were disconnected from the room · {{count}} minute counted",
+      "disconnectedCounted_other": "You were disconnected from the room · {{count}} minutes counted",
+      "noLongerAllowedCounted_one": "You no longer have access to this room · you left it · {{count}} minute counted",
+      "noLongerAllowedCounted_other": "You no longer have access to this room · you left it · {{count}} minutes counted",
+      "roomGoneCounted_one": "This room is no longer available · {{count}} minute counted",
+      "roomGoneCounted_other": "This room is no longer available · {{count}} minutes counted"
     },
     "serverMenu": {
       "createChannel": "Create channel",

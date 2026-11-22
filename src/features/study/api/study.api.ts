@@ -54,3 +54,14 @@ export async function fetchStudyToday(): Promise<StudyToday> {
     const { todaySeconds, countedUntil, streak, readAt } = response.data.data
     return { todaySeconds, countedUntil, streak: streak.current, readAt }
 }
+
+/** Who would control a session if its Host left now (D-233): for "Rời phòng?"; null when nobody present may. */
+export type NextHost = ApiModel<'NextHostPersonResponseDto'> | null
+
+/** GET /focus-sessions/{id}/next-host (REQ-STUDY-03, D-233): asked by the Host only. */
+export async function fetchNextHost(sessionId: string): Promise<NextHost> {
+    const response = await api.get<ApiEnvelope<ApiModel<'NextHostResponseDto'>>>(
+        `/focus-sessions/${sessionId}/next-host`
+    )
+    return response.data.data.nextHost
+}

@@ -142,5 +142,33 @@
         "pausedNote": "Đồng hồ đứng yên, không tính phút",
         "noHostNote": "Người quản lý phòng học vào sẽ điều khiển phiên",
         "today": "Bạn đã tập trung {{time}} hôm nay"
+    },
+    "hostLeave": {
+        "title": "Rời phòng?",
+        "titleSignOut": "Đăng xuất và rời phòng?",
+        "next": "{{name}} sẽ điều khiển phiên học.",
+        "nobody": "Phiên học vẫn chạy nhưng chưa có người điều khiển.",
+        "unknown": "Người ở trong phòng lâu nhất mà đủ quyền sẽ điều khiển phiên học.",
+        "stay": "Ở lại",
+        "leave": "Rời phòng",
+        "switch": "Chuyển phòng",
+        "signOut": "Đăng xuất"
+    },
+    "preview": {
+        "focus_one": "{{count}} người đang Tập trung",
+        "focus_other": "{{count}} người đang Tập trung",
+        "paused_one": "{{count}} người đang tạm dừng",
+        "paused_other": "{{count}} người đang tạm dừng",
+        "short_break_one": "{{count}} người đang nghỉ ngắn",
+        "short_break_other": "{{count}} người đang nghỉ ngắn",
+        "long_break_one": "{{count}} người đang nghỉ dài",
+        "long_break_other": "{{count}} người đang nghỉ dài",
+        "host": "{{name}} đang điều khiển",
+        "noHost": "Chưa có người điều khiển",
+        "startedAt": "Phiên học bắt đầu lúc {{time}}",
+        "empty": "Phòng đang trống",
+        "left_one": "còn {{count}} phút",
+        "left_other": "còn {{count}} phút",
+        "underAMinute": "còn dưới 1 phút"
     }
 }

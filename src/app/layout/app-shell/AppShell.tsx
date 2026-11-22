@@ -12,13 +12,14 @@ import { useChannelDialogs } from '@/features/servers/channel-dialogs.store'
 import { useInviteDialogs } from '@/features/servers/invite-dialogs.store'
 import { useMembershipDialogs } from '@/features/servers/membership-dialogs.store'
 import { useServerRemovals } from '@/features/servers/server-removals.store'
+import { useHostLeave } from '@/features/study/host-leave.store'
 import { useRemovedWhileAway } from '@/features/servers/hooks/useRemovedWhileAway'
 import { useServerGoneWatch } from '@/features/servers/hooks/useServerGoneWatch'
 import { serverOwnership } from '@/features/servers/api/serverOwnership'
 import { connectServerOwnership } from '@/features/auth'
 import { useConnectionBanner, useRealtimeConnection } from '@/features/realtime'
 import { useMentionTotal } from '@/features/messaging'
-import { JoinedSessionCues, RoomDock, useServers, useVoiceRooms } from '@/features/servers'
+import { JoinedSessionCues, RoomDock, useJoinedSession, useServers, useVoiceRooms } from '@/features/servers'
 import { useTitleCount } from '@/hooks/useDocumentTitle'
 import { useRefuseFileDrops } from '@/hooks/useRefuseFileDrops'
 import { cn } from '@/lib/utils'
@@ -42,6 +43,8 @@ const JoinInviteDialog = lazy(() => import('@/features/servers/components/invite
 const MembershipDialogs = lazy(() => import('@/features/servers/components/membership/MembershipDialogs'))
 // Kicked or banned while open (11 S-MOD-02), loaded when the first one comes.
 const RemovedDialog = lazy(() => import('@/features/servers/components/membership/RemovedDialog'))
+// "Rời phòng?" of a session's Host (07 S-ROOM-04, D-44, D-50, D-77), loaded the first time asked.
+const HostLeaveDialog = lazy(() => import('@/features/study/components/HostLeaveDialog'))
 // A task's detail on any page with `?task=` (05 Q6, S-TASK-02), loaded the first time one opens.
 const TaskDetailRoute = lazy(() => import('@/features/servers/components/TaskDetailRoute'))
 
@@ -76,6 +79,8 @@ export default function AppShell() {
     const joiningByInvite = useInviteDialogs((state) => state.join !== null)
     const membershipDialog = useMembershipDialogs((state) => state.open !== null)
     const removed = useServerRemovals((state) => state.queue.length > 0)
+    const askingHost = useHostLeave((state) => state.asking !== null)
+    const joinedSessionId = useJoinedSession()?.id ?? null
     const [params, setParams] = useSearchParams()
     const openTask = params.get('task')
     const closeTask = useCallback(
@@ -207,6 +212,11 @@ export default function AppShell() {
             {membershipDialog ? (
                 <Suspense fallback={null}>
                     <MembershipDialogs />
+                </Suspense>
+            ) : null}
+            {askingHost ? (
+                <Suspense fallback={null}>
+                    <HostLeaveDialog joinedSessionId={joinedSessionId} />
                 </Suspense>
             ) : null}
             {removed ? (

@@ -34,6 +34,7 @@ const { default: InvitePage } = await import('../pages/InvitePage')
 const { default: CreateServerDialog } = await import('../components/CreateServerDialog')
 const { InvitesSettings } = await import('../components/settings/InvitesSettings')
 const { useInviteDialogs } = await import('../invite-dialogs.store')
+const { useRoomInvite } = await import('../hooks/useRoomInvite')
 const { useCreateServerDialog } = await import('../create-server.store')
 const { parseInviteInput, sameSettings, timeLeft, usesLeft } = await import('../lib/invites')
 
@@ -614,5 +615,96 @@ describe('Invites settings (S-SET-04)', () => {
         invitesApi.fetchInvites.mockResolvedValue([row({ expiresAt: new Date(Date.now() - 1000).toISOString() })])
         show()
         expect(await screen.findByRole('heading', { name: 'No invites that still work' })).toBeInTheDocument()
+    })
+})
+
+describe('"Invite to room" (07 S-ROOM-02 invite-copied, D-218)', () => {
+    const ROOM = {
+        ...ND.channels[0]!,
+        id: 'phong',
+        type: 'voice' as const,
+        name: 'Phòng học im lặng',
+        isStudyRoom: true
+    }
+    const withRoom = (permissions = '2147483647') =>
+        server('nd', 'Nhóm đồ án Mobile', { permissions, channels: [ROOM] })
+    function Harness({ of }: { of: Server }) {
+        const { invite } = useRoomInvite(of, ROOM)
+        return (
+            <>
+                <button type='button' onClick={invite}>
+                    invite
+                </button>
+                <InviteDialog />
+            </>
+        )
+    }
+    const press = async (of: Server) => {
+        serversApi.fetchServers.mockResolvedValue([of])
+        renderAt('/channels/nd', [{ path: '/channels/:serverId', element: <Harness of={of} /> }])
+        await userEvent.click(screen.getByRole('button', { name: 'invite' }))
+    }
+    const clipboard = (writeText: () => Promise<void>) =>
+        Object.defineProperty(navigator, 'clipboard', { value: { writeText: vi.fn(writeText) }, configurable: true })
+    afterEach(() => useInviteDialogs.setState({ invite: null }))
+
+    it('copies the server’s link with the room as its target at once, and "Change settings" opens the room’s invite panel', async () => {
+        invitesApi.createInvite.mockResolvedValue(invite())
+        clipboard(async () => undefined)
+        await press(withRoom())
+        expect(await screen.findByText('Invite link to Phòng học im lặng copied')).toBeVisible()
+        expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+            `${window.location.origin}/invite/k7Qm2xPa?channel=phong`
+        )
+        expect(invitesApi.createInvite).toHaveBeenCalledWith(
+            'nd',
+            { maxAgeSeconds: 604800, maxUses: null },
+            expect.any(String)
+        )
+
+        await userEvent.click(screen.getByRole('button', { name: 'Change settings' }))
+        expect(await screen.findByRole('heading', { name: 'Invite to Phòng học im lặng' })).toBeVisible()
+        expect(await screen.findByRole('textbox', { name: 'Invite link' })).toHaveValue(
+            `${window.location.host}/invite/k7Qm2xPa?channel=phong`
+        )
+    })
+
+    it('copies the room’s own address without CREATE_INVITE, with nothing to change', async () => {
+        invitesApi.createInvite.mockClear()
+        clipboard(async () => undefined)
+        await press(withRoom('0'))
+        expect(await screen.findByText('Link to Phòng học im lặng copied')).toBeVisible()
+        expect(navigator.clipboard.writeText).toHaveBeenCalledWith(`${window.location.origin}/channels/nd/phong`)
+        expect(invitesApi.createInvite).not.toHaveBeenCalled()
+        expect(screen.queryByRole('button', { name: 'Change settings' })).toBeNull()
+    })
+
+    it('opens the room’s invite panel when the browser refuses to copy', async () => {
+        invitesApi.createInvite.mockResolvedValue(invite())
+        clipboard(async () => {
+            throw new Error('denied')
+        })
+        await press(withRoom())
+        expect(await screen.findByRole('heading', { name: 'Invite to Phòng học im lặng' })).toBeVisible()
+    })
+
+    it('without CREATE_INVITE and with copying refused, says the room’s address to copy by hand', async () => {
+        clipboard(async () => {
+            throw new Error('denied')
+        })
+        await press(withRoom('0'))
+        expect(
+            await screen.findByText(
+                `Your browser blocked copying · the room's link: ${window.location.origin}/channels/nd/phong`
+            )
+        ).toBeVisible()
+    })
+
+    it('says so when no link is made', async () => {
+        invitesApi.createInvite.mockRejectedValue(apiError(503, 'SERVICE_UNAVAILABLE_ERROR'))
+        clipboard(async () => undefined)
+        await press(withRoom())
+        expect(await screen.findByText('Could not create an invite link.')).toBeVisible()
+        expect(navigator.clipboard.writeText).not.toHaveBeenCalled()
     })
 })

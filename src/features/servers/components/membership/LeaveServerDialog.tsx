@@ -12,8 +12,12 @@ import {
     DialogHeader,
     DialogTitle
 } from '@/components/ui/dialog'
+import { asksBeforeLeaving } from '@/features/study'
+import { useProfile } from '@/features/users'
+import { useVoiceStore } from '@/features/voice'
 import { getApiErrorMessage, getApiErrorType, NETWORK_ERROR } from '@/lib/api-error'
 import { useLeaveServer } from '../../api/useMembership'
+import { useJoinedSession } from '../../hooks/useJoinedSession'
 import { useMoveAwayFrom } from '../../hooks/useMoveAwayFrom'
 import { toastName } from '../../lib/server-name'
 import { useMembershipDialogs } from '../../membership-dialogs.store'
@@ -21,7 +25,9 @@ import type { Server } from '../../types'
 
 /**
  * "Leave server" (03 S-SRV-04). A member is asked once (`leave-confirm`, the
- * focus on Cancel). The owner cannot leave, and is told so before any request
+ * focus on Cancel); in one of its rooms, it says one leaves the room too, and
+ * to the Host of its session, who will control it (D-85: asked once, not a
+ * second time by "Rời phòng?"). The owner cannot leave, and is told so before any request
  * (OWNER_CANNOT_LEAVE is only the backend's safety net): hand it over first
  * (`owner-cannot-leave`), or, alone in it, delete it (SRV-EDGE `owner-alone`).
  *
@@ -34,6 +40,18 @@ export function LeaveServerDialog({ server, onClose }: { server: Server; onClose
     const show = useMembershipDialogs((state) => state.show)
     const leave = useLeaveServer(server.id, useMoveAwayFrom(server.id))
     const next = useRef<HTMLButtonElement>(null)
+    const call = useVoiceStore((state) => state.call)
+    const me = useProfile().data?.id
+    const joinedSession = useJoinedSession()
+    const room =
+        call?.serverId === server.id
+            ? (server.channels.find((channel) => channel.id === call.channelId)?.name ?? call.name)
+            : null
+    const body = room
+        ? t(asksBeforeLeaving(joinedSession, me) ? 'membership.leave.bodyInRoomHost' : 'membership.leave.bodyInRoom', {
+              room
+          })
+        : t('membership.leave.body')
 
     // A promise, not mutate's callbacks: those skip a dialog already gone with its server.
     async function confirm() {
@@ -101,7 +119,7 @@ export function LeaveServerDialog({ server, onClose }: { server: Server; onClose
             <DialogContent className='sm:max-w-dialog'>
                 <DialogHeader>
                     <DialogTitle>{t('membership.leave.title', { name: server.name })}</DialogTitle>
-                    <DialogDescription>{t('membership.leave.body')}</DialogDescription>
+                    <DialogDescription>{body}</DialogDescription>
                 </DialogHeader>
                 <DialogFooter>
                     {/* First, so it has the focus (C-14, a `danger` dialog). */}

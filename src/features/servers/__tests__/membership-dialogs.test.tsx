@@ -7,7 +7,8 @@ import i18n from '@/i18n'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { expectNoA11yViolations } from '@/test/a11y'
 import { apiError, mockAuthStore, queryWrapper } from '@/test/helpers'
-import type { Server, ServerMember } from '../types'
+import { session as studySession } from '@/test/study-sessions'
+import type { Server, ServerChannel, ServerMember } from '../types'
 
 const serversApi = {
     fetchServers: vi.fn(),
@@ -20,10 +21,13 @@ const rolesApi = { fetchMembers: vi.fn() }
 vi.mock('@/features/servers/api/roles.api', () => rolesApi)
 const authState = { user: { id: 'an', email: 'an@example.test', username: 'an' }, logout: vi.fn() }
 vi.mock('@/features/auth/auth.store', () => mockAuthStore(authState))
+vi.mock('@/features/users/api/useProfile', () => ({ useProfile: () => ({ data: { id: 'an' } }) }))
 
 const { default: MembershipDialogs } = await import('../components/membership/MembershipDialogs')
 const { useMembershipDialogs } = await import('../membership-dialogs.store')
 const { useServers } = await import('../api/useServers')
+const { roomSessionOf } = await import('@/features/study')
+const { useVoiceStore } = await import('@/features/voice')
 
 const ROLES = [
     { id: 'admin', name: 'Quản trị', position: 3, administrator: true },
@@ -155,6 +159,44 @@ describe('leaving, handing over and deleting a server (03 S-SRV-04, 04 S-SET-07)
             expect(where()).toHaveTextContent('/channels/cg')
             expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
             expect(useMembershipDialogs.getState().open).toBeNull()
+        })
+
+        describe('in one of its rooms (D-85: asked once, no "Rời phòng?" after)', () => {
+            const room = (hostId: string) =>
+                ({
+                    id: 'phong',
+                    type: 'voice',
+                    name: 'Phòng học im lặng',
+                    isStudyRoom: true,
+                    focusSession: roomSessionOf(studySession({ channelId: 'phong', hostId }))
+                }) as unknown as ServerChannel
+            const askedIn = async (hostId: string) => {
+                useVoiceStore.setState({
+                    call: { serverId: 'nd', channelId: 'phong', name: 'Phòng học im lặng', phase: 'connected' }
+                } as never)
+                renderAt('/channels/ot', [OT, server('nd', 'Nhóm Đề cương', { channels: [room(hostId)] }), CG])
+                useMembershipDialogs.getState().show({ kind: 'leave', serverId: 'nd' })
+                return screen.findByRole('dialog', { name: 'Leave Nhóm Đề cương?' })
+            }
+            afterEach(() => useVoiceStore.setState({ call: null }))
+
+            it('says one leaves the room too', async () => {
+                const dialog = await askedIn('binh')
+                expect(
+                    within(dialog).getByText(
+                        'You will need a new invite to come back. You will also leave Phòng học im lặng.'
+                    )
+                ).toBeInTheDocument()
+            })
+
+            it('tells the Host of its session who will control it', async () => {
+                const dialog = await askedIn('an')
+                expect(
+                    await within(dialog).findByText(
+                        'You will need a new invite to come back. You will also leave Phòng học im lặng; control of the study session goes to whoever has been in the room longest and may start a session; if no one may, it keeps running with no one in control.'
+                    )
+                ).toBeInTheDocument()
+            })
         })
 
         it('stays on a page of another server', async () => {

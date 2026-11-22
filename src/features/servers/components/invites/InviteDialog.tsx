@@ -55,7 +55,9 @@ const settingsSchema = z.object({
  * "Invite friends" (S-SRV-02): a link to send, made or handed back again as
  * it opens (D-151), with "Copy" (no toast, Q6), its settings line (Q15),
  * "Change settings" in place, and "Revoke this link" for its creator.
- * Opened from the server menu, and right after creating a server (`created`).
+ * Opened from the server menu, right after creating a server (`created`),
+ * and for a room from the Toast of "Mời vào phòng" (`room`: its name, its
+ * link with `?channel=`, D-218).
  */
 export default function InviteDialog() {
     const { t } = useTranslation('servers')
@@ -121,7 +123,8 @@ export default function InviteDialog() {
     }, [copied])
 
     if (!target || !server) return null
-    const link = invite ? inviteLink(invite.code) : ''
+    const room = target.channelId ? server.channels.find((channel) => channel.id === target.channelId) : undefined
+    const link = invite ? inviteLink(invite.code, room?.id) : ''
 
     async function copy() {
         try {
@@ -191,8 +194,14 @@ export default function InviteDialog() {
                 ) : (
                     <div className='grid gap-5'>
                         <DialogHeader>
-                            <DialogTitle>{t('invite.title', { server: server.name })}</DialogTitle>
-                            <DialogDescription>{t('invite.description')}</DialogDescription>
+                            <DialogTitle>
+                                {room
+                                    ? t('invite.roomTitle', { room: room.name })
+                                    : t('invite.title', { server: server.name })}
+                            </DialogTitle>
+                            <DialogDescription>
+                                {room ? t('invite.roomDescription', { server: server.name }) : t('invite.description')}
+                            </DialogDescription>
                         </DialogHeader>
                         <div className='grid gap-1'>
                             <Label htmlFor='invite-link' className='text-label text-text-secondary'>

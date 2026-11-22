@@ -253,8 +253,14 @@ describe("a tab's time in a voice room (REQ-VC-01 → VC-03)", () => {
 
     it('leaves the room it was in before joining another (VC-02)', async () => {
         await joinRoom(LOUNGE)
+        voiceApi.requestVoiceToken.mockClear()
         await joinRoom(QUIET)
         expect(links[0]?.leave).toHaveBeenCalled()
+        // Asked like Rời: the old room's Host hands over now, not 3 minutes on; asked before the new token.
+        expect(voiceApi.leaveVoiceRoom).toHaveBeenCalledWith()
+        expect(voiceApi.leaveVoiceRoom.mock.invocationCallOrder[0]).toBeLessThan(
+            voiceApi.requestVoiceToken.mock.invocationCallOrder[0] ?? 0
+        )
         expect(state().call?.channelId).toBe('quiet')
         // The first room's link ending now is not this tab's news.
         links[0]?.events.onEnd('removed')
@@ -267,6 +273,8 @@ describe("a tab's time in a voice room (REQ-VC-01 → VC-03)", () => {
         expect(await joinRoom(QUIET)).toBe(false)
         expect(links[0]?.leave).toHaveBeenCalled()
         expect(kept()).toBeNull()
+        // The switch asked to leave the first room; signing out after it asks nothing more.
+        voiceApi.leaveVoiceRoom.mockClear()
         flushBeforeSignOut()
         expect(voiceApi.leaveVoiceRoom).not.toHaveBeenCalled()
     })
@@ -282,6 +290,27 @@ describe("a tab's time in a voice room (REQ-VC-01 → VC-03)", () => {
 
         await joinRoom(LOUNGE)
         expect(state().problem).toBeNull()
+    })
+
+    it('switches on when asking to leave the old room does not answer, 3 seconds on; not once Rời was pressed', async () => {
+        await joinRoom(LOUNGE)
+        vi.useFakeTimers()
+        voiceApi.requestVoiceToken.mockClear()
+        voiceApi.leaveVoiceRoom.mockImplementation(() => new Promise(() => undefined))
+        const switching = joinRoom(QUIET)
+        await vi.advanceTimersByTimeAsync(2900)
+        expect(voiceApi.requestVoiceToken).not.toHaveBeenCalled()
+        await vi.advanceTimersByTimeAsync(100)
+        expect(voiceApi.requestVoiceToken).toHaveBeenCalledWith('quiet')
+        expect(await switching).toBe(true)
+
+        voiceApi.requestVoiceToken.mockClear()
+        const again = joinRoom(LOUNGE)
+        void leaveRoom()
+        await vi.advanceTimersByTimeAsync(3000)
+        expect(await again).toBe(false)
+        expect(voiceApi.requestVoiceToken).not.toHaveBeenCalled()
+        voiceApi.leaveVoiceRoom.mockImplementation(async () => undefined)
     })
 
     it('gives up after 10 seconds, and leaves at once a room that answers later', async () => {

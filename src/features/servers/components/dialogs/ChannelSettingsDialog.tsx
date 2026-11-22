@@ -32,6 +32,7 @@ import type { Server, ServerChannel } from '../../types'
 import { ChannelNameField } from './ChannelNameField'
 import { DeleteChannelDialog } from './DeleteChannelDialog'
 import { RadioChoices } from './RadioChoices'
+import { StudyOffDialog } from './StudyOffDialog'
 import { StudyRoomFields } from './StudyRoomFields'
 import { ViewRolesPicker } from './ViewRolesPicker'
 
@@ -47,7 +48,9 @@ import { ViewRolesPicker } from './ViewRolesPicker'
  * post and the board (`StudyRoomFields`). Someone who manages study rooms but
  * not channels (D-210) sees why the rest is locked, and changes that part
  * only (`study-only`): the name read-only, the private switch off limits, no
- * delete. Ending a running session by turning it off comes with sessions (M5).
+ * delete. With a session on, a line says changes apply from the next start,
+ * and turning the room off asks first, the session ending for everyone
+ * (`study-off-confirm`, D-88).
  */
 export function ChannelSettingsDialog({
     server,
@@ -103,12 +106,17 @@ export function ChannelSettingsDialog({
     }
     const [failure, setFailure] = useState<LayoutFailure['form'] | null>(null)
     const [deleting, setDeleting] = useState(false)
+    // Saving these would turn off a room with a session: asked first (D-88).
+    const [endingWith, setEndingWith] = useState<ChannelSettingsValues | null>(null)
 
     const categoryId = channel.categoryId ?? null
     const category = server.categories.find((c) => c.id === categoryId)
     const room = channel.type === 'voice'
     const prefix = room ? '' : '#'
     const manages = can(channel.permissions, 'MANAGE_CHANNELS')
+    // Its session not yet ended, and how many are in the room (04 S-SET-06).
+    const session = room ? (channel.focusSession ?? null) : null
+    const people = channel.voiceStates?.length ?? 0
 
     // A number typed out of range changes nothing yet, but is an edit all the same.
     const dirty =
@@ -120,6 +128,12 @@ export function ChannelSettingsDialog({
     const send = handleSubmit(async (sending) => {
         const changes = changesOf(server, channel, sending)
         if (Object.keys(changes).length === 0) return onClose()
+        if (session && changes.isStudyRoom === false) return setEndingWith(sending)
+        await save(sending)
+    })
+
+    async function save(sending: ChannelSettingsValues) {
+        const changes = changesOf(server, channel, sending)
         setFailure(null)
         try {
             await update.mutateAsync({ channelId: channel.id, changes })
@@ -142,7 +156,7 @@ export function ChannelSettingsDialog({
             else if (shown) setError(`cycle.${cycleField}`, { message: cycleField }, { shouldFocus: true })
             else setFailure(described.form ?? { tone: 'danger', text: t('layoutError.saveFailed') })
         }
-    })
+    }
 
     return (
         <Dialog open onOpenChange={(open) => !open && !saving && onClose()}>
@@ -167,6 +181,11 @@ export function ChannelSettingsDialog({
                     </DialogHeader>
 
                     <div className='-mx-6 min-h-0 flex-1 space-y-5 overflow-y-auto px-6'>
+                        {session ? (
+                            <FormMessage tone='neutral'>
+                                {t('channel.studyRoom.sessionLive', { count: people })}
+                            </FormMessage>
+                        ) : null}
                         {manages ? null : (
                             <FormMessage tone='neutral' icon='lock'>
                                 {t('channel.studyRoom.onlyStudyPart')}
@@ -316,6 +335,14 @@ export function ChannelSettingsDialog({
                 </form>
             </DialogContent>
             {/* Over this one, with its own scrim (C-14, two layers at most). */}
+            {endingWith ? (
+                <StudyOffDialog
+                    people={people}
+                    saving={update.isPending}
+                    onCancel={() => setEndingWith(null)}
+                    onConfirm={() => void save(endingWith).finally(() => setEndingWith(null))}
+                />
+            ) : null}
             {deleting ? (
                 <DeleteChannelDialog
                     server={server}
