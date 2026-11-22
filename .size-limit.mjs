@@ -77,6 +77,11 @@
 // about 0.7 kB more to fetch on joining) and the small phase chunks shared
 // with the channel list's phase line, which the shell has fetched already
 // but this count, every chunk outside the first download, takes in.
+// Voice JS raised to 215.88 kB after M5 L7a (22/11/2026, 214.80 kB, D-234):
+// the light parts of one's Solo in the study index chunk the shell shares
+// (its query, the store, its cues and dock slots, the question before a
+// room's session ends it), the dock frame shared with the Solo's dock, and
+// the round control as a chunk of its own; the shell fetched them already.
 // Raise them
 // only as CONSTRAINTS.md says: the owner decides, in a commit of its own.
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
@@ -186,6 +191,6 @@ export default [
     { name: 'Tasks CSS (gzip)', path: tasksCss, gzip: true, limit: '880 B' },
     { name: 'Notifications CSS (gzip)', path: notificationsCss, gzip: true, limit: '508 B' },
     { name: 'Voice CSS (gzip)', path: voiceCss, gzip: true, limit: '286 B' },
-    { name: 'Voice JS (gzip)', path: voiceJs, gzip: true, limit: '213.14 kB' },
+    { name: 'Voice JS (gzip)', path: voiceJs, gzip: true, limit: '215.88 kB' },
     { name: 'Study CSS (gzip)', path: studyCss, gzip: true, limit: '525 B' }
 ]
