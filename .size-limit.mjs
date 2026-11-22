@@ -63,6 +63,15 @@
 // Initial CSS raised to 9.64 kB after M4 L4b (9586 B): the ⋯ of a person's row in
 // the channel list shows on that row's hover or focus (a named group, as the room's
 // row is a group itself).
+// From M5 L5a (22/11/2026, D-193) study sessions are a stylesheet of their own
+// (tailwind.study.config.js), loaded with a study room's stage: "Study CSS"
+// below, 522 B when it began (the ring, its seats, the dialogs, the Host's
+// controls), limit with the same 0.5% tolerance. With it: Initial CSS raised to
+// 9.82 kB (9767 B: a study room's Header, its Host chip and Ring / Grid switch,
+// and the phase's ground under the Header and page, which the preview page shows
+// too, so they are the main stylesheet's); Voice JS raised to 208.83 kB
+// (208.64 kB: the joined room handing a study room to the study stage, its seats
+// around the ring, and the light parts of study it imports).
 // Raise them
 // only as CONSTRAINTS.md says: the owner decides, in a commit of its own.
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
@@ -102,6 +111,7 @@ const chatCss = chunkCss('ChannelChat')
 const tasksCss = chunkCss('TaskStyles')
 const notificationsCss = chunkCss('NotificationStyles')
 const voiceCss = chunkCss('VoiceStyles')
+const studyCss = chunkCss('StudyStyles')
 
 // A lazy chunk's script, by the name Vite gives it (VoiceRoomView-<hash>.js).
 const chunkJs = (chunk) => {
@@ -154,7 +164,8 @@ for (const [name, paths] of [
     ['chat', chatCss],
     ['tasks', tasksCss],
     ['notifications', notificationsCss],
-    ['voice', voiceCss]
+    ['voice', voiceCss],
+    ['study', studyCss]
 ]) {
     const shared = [...classesIn(paths)].filter((one) => mainClasses.has(one))
     if (shared.length)
@@ -165,10 +176,11 @@ for (const [name, paths] of [
 
 export default [
     { name: 'Initial JS (gzip)', path: js, gzip: true, limit: '246.75 kB' },
-    { name: 'Initial CSS (gzip)', path: css, gzip: true, limit: '9.64 kB' },
+    { name: 'Initial CSS (gzip)', path: css, gzip: true, limit: '9.82 kB' },
     { name: 'Chat CSS (gzip)', path: chatCss, gzip: true, limit: '647 B' },
     { name: 'Tasks CSS (gzip)', path: tasksCss, gzip: true, limit: '880 B' },
     { name: 'Notifications CSS (gzip)', path: notificationsCss, gzip: true, limit: '508 B' },
     { name: 'Voice CSS (gzip)', path: voiceCss, gzip: true, limit: '286 B' },
-    { name: 'Voice JS (gzip)', path: voiceJs, gzip: true, limit: '206.97 kB' }
+    { name: 'Voice JS (gzip)', path: voiceJs, gzip: true, limit: '208.83 kB' },
+    { name: 'Study CSS (gzip)', path: studyCss, gzip: true, limit: '525 B' }
 ]
