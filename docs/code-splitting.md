@@ -191,6 +191,20 @@ chunk of its own name, `NotificationStyles-<hash>.css`, "Notifications CSS"
 in `.size-limit.mjs`). The badge's `useUnreadNotificationCount` is not lazy
 and sits in the AppShell's chunk (M3 L6b).
 
+A study room's stage (M5 L5a) is lazy inside a joined room's page:
+`src/features/study/index.ts` exports `StudyStage` (the ring and its seats,
+the Host's controls, the start and cycle dialogs, the summary) lazily, the
+voice feature shows it inside a `Suspense`, so a plain voice room never
+fetches it. Its words (`study`) and classes (`tailwind.study.config.js`,
+`study.css`, `StudyStyles-<hash>.css`, "Study CSS") come with it. The
+phase's colours shown outside it (a room page's ground, the channel list)
+are in `src/lib/phase-colors.ts`, the main stylesheet's; the rest of
+`study`'s index (the cycle rules, the phase rules, `listenForSessions`) is
+light and not lazy. `CycleFields` (a cycle in a React Hook Form form) is
+exported lazily too, for a room's settings (S-SET-06, inside a `Suspense`):
+it brings the `study` words, which an index export would put in the shell's
+shared chunk.
+
 Voice rooms (M4 L3a) are the heaviest: `src/features/voice/index.ts`
 exports `VoiceRoomView` (a room's preview page and the room, with the hooks
 of `@livekit/components-react`) and `InRoomDock` lazily, the servers feature

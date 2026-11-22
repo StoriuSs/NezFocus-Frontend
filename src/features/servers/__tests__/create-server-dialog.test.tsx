@@ -62,7 +62,8 @@ const created: Server = {
             taskBoardEnabled: false,
             permissions: '8388607',
             viewRoleIds: [],
-            voiceStates: null
+            voiceStates: null,
+            focusSession: null
         }
     ]
 }

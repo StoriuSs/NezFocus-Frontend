@@ -4,6 +4,7 @@ import { forgetRoom, keepRoom, takeRoomToRejoin, wasReloaded } from '../lib/rejo
 import { askMicrophone, closeCamera, openCamera, whenDeviceAllowed } from '../lib/devices'
 import { canShareScreen, fitted, hiddenEnds, sharerOf } from '../lib/share'
 import type { RoomPerson } from '../types'
+import { chooseRoomView, useVoiceStore } from '../voice.store'
 
 const person = (
     id: string,
@@ -30,6 +31,15 @@ describe('the order people show in a room (C-06, C-18)', () => {
         ]
         expect(orderPeople(people, 'an', [])).toEqual(['an', 'tuan', 'minh', 'nam'])
         expect(orderPeople(people, undefined, [])).toEqual(['tuan', 'minh', 'nam', 'an'])
+    })
+
+    it("puts a study session's Host right after oneself around the ring, when worked out afresh (C-18)", () => {
+        const people = [person('nam'), person('tuan', { micOn: true }), person('an'), person('binh')]
+        expect(orderPeople(people, 'an', [], 'binh')).toEqual(['an', 'binh', 'tuan', 'nam'])
+        // Oneself the Host: still first, once.
+        expect(orderPeople(people, 'an', [], 'an')).toEqual(['an', 'tuan', 'nam', 'binh'])
+        // Already shown: no one moves for the Host.
+        expect(orderPeople(people, 'an', ['an', 'tuan', 'nam', 'binh'], 'binh')).toEqual(['an', 'tuan', 'nam', 'binh'])
     })
 
     it('keeps places once shown: a mic switched on moves no one, newcomers go to the end, oneself first', () => {
@@ -239,5 +249,16 @@ describe('screen sharing (REQ-VC-05, D-101, C-31)', () => {
         expect(canShareScreen()).toBe(false)
         vi.stubGlobal('navigator', {})
         expect(canShareScreen()).toBe(false)
+    })
+})
+
+describe("a study room's view (D-55)", () => {
+    afterEach(() => chooseRoomView('ring'))
+
+    it('is the ring at first, and the one chosen is kept by the browser', () => {
+        expect(useVoiceStore.getState().roomView).toBe('ring')
+        chooseRoomView('grid')
+        expect(useVoiceStore.getState().roomView).toBe('grid')
+        expect(localStorage.getItem('room:view')).toBe('grid')
     })
 })

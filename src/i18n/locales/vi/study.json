@@ -1,0 +1,145 @@
+{
+    "phase": {
+        "focus": "Tập trung",
+        "short_break": "Nghỉ ngắn",
+        "long_break": "Nghỉ dài",
+        "paused": "Tạm dừng",
+        "pausedPhase": "Tạm dừng · {{phase}}"
+    },
+    "next": {
+        "short_break": "nghỉ ngắn",
+        "long_break": "nghỉ dài"
+    },
+    "minutes_one": "{{count}} phút",
+    "minutes_other": "{{count}} phút",
+    "hoursMinutes": "{{hours}} giờ {{minutes}} phút",
+    "hours": "{{hours}} giờ",
+    "ring": {
+        "cycle": "Vòng {{round}} · {{next}} lúc {{time}}",
+        "focusAgain": "Tập trung lại lúc {{time}}",
+        "pausedByYou": "Bạn đã tạm dừng",
+        "pausedBy": "{{name}} đã tạm dừng",
+        "paused": "Đã tạm dừng",
+        "pressResume": "Bấm Tiếp tục để chạy lại",
+        "syncing": "Đang đồng bộ lại…",
+        "timer": "{{phase}}, vòng {{round}}, còn {{left}}",
+        "underAMinute": "dưới 1 phút",
+        "idle": "Chưa có phiên học",
+        "start_one": "Bắt đầu Tập trung {{count}} phút",
+        "start_other": "Bắt đầu Tập trung {{count}} phút",
+        "otherCycle": "Chu kỳ khác",
+        "managersOnly": "Chỉ người quản lý phòng học bắt đầu được phiên",
+        "ended": "Phiên học đã kết thúc",
+        "underOne": "Phiên này chưa đủ 1 phút",
+        "today_one": "Hôm nay {{time}} · chuỗi {{count}} ngày",
+        "today_other": "Hôm nay {{time}} · chuỗi {{count}} ngày",
+        "todayNoStreak": "Hôm nay {{time}}",
+        "compact_one": "Vòng {{round}} · {{count}} người",
+        "compact_other": "Vòng {{round}} · {{count}} người",
+        "compactEnded": "Phiên học đã kết thúc · {{time}}",
+        "switched": "Chuyển sang {{phase}}, {{time}}",
+        "seats_one": "{{count}} người trong phòng",
+        "seats_other": "{{count}} người trong phòng"
+    },
+    "controls": {
+        "pause": "Tạm dừng",
+        "resume": "Tiếp tục",
+        "menu": "Điều khiển",
+        "pauseHint": "Tạm dừng phiên học (Space)",
+        "resumeHint": "Tiếp tục phiên học (Space)",
+        "menuHint": "Điều khiển phiên học"
+    },
+    "menu": {
+        "moderator": "{{name}} đang điều khiển · bạn có quyền quản lý phòng học",
+        "moderatorNoHost": "Chưa có người điều khiển · bạn có quyền quản lý phòng học",
+        "skip": "Bỏ qua pha",
+        "skipTo": {
+            "focus": "Sang Tập trung ngay",
+            "short_break": "Sang Nghỉ ngắn ngay",
+            "long_break": "Sang Nghỉ dài ngay"
+        },
+        "changeCycle": "Đổi chu kỳ",
+        "pauseToChange": "Tạm dừng để đổi chu kỳ",
+        "currentCycle": "Đang {{cycle}}",
+        "stop": "Dừng phiên học",
+        "stopFor_one": "Kết thúc cho cả {{count}} người",
+        "stopFor_other": "Kết thúc cho cả {{count}} người",
+        "stopAlone": "Kết thúc phiên học của bạn"
+    },
+    "stop": {
+        "title_one": "Dừng phiên học cho cả phòng ({{count}} người)?",
+        "title_other": "Dừng phiên học cho cả phòng ({{count}} người)?",
+        "titleAlone": "Dừng phiên học?",
+        "body": "Đồng hồ dừng cho mọi người. Mọi người vẫn ở lại phòng, giờ đã học được giữ.",
+        "cancel": "Hủy",
+        "confirm": "Dừng phiên học"
+    },
+    "start": {
+        "title": "Bắt đầu phiên học",
+        "description_one": "Cả {{count}} người trong phòng sẽ cùng nhịp. Bạn sẽ là người điều khiển.",
+        "description_other": "Cả {{count}} người trong phòng sẽ cùng nhịp. Bạn sẽ là người điều khiển.",
+        "descriptionAlone": "Bạn sẽ là người điều khiển. Người vào sau sẽ học cùng nhịp.",
+        "cancel": "Hủy",
+        "submit": "Bắt đầu cho cả phòng",
+        "conflict": "{{name}} vừa bắt đầu phiên học"
+    },
+    "change": {
+        "title": "Đổi chu kỳ",
+        "note": "Pha hiện tại ({{phase}}) sẽ bắt đầu lại với độ dài mới. Giờ đã học được giữ.",
+        "cancel": "Hủy",
+        "save": "Lưu"
+    },
+    "cycle": {
+        "label": "Chu kỳ",
+        "custom": "Tùy chỉnh",
+        "roomDefault": "Nghỉ dài: tắt · Cấu hình mặc định của phòng",
+        "roomDefaultLongBreak": "Nghỉ dài {{longBreak}} sau mỗi {{every}} vòng · Cấu hình mặc định của phòng",
+        "minutes": "phút",
+        "longBreak": "Nghỉ dài",
+        "field": {
+            "focus": "Tập trung ({{min}}–{{max}})",
+            "shortBreak": "Nghỉ ngắn ({{min}}–{{max}})",
+            "longBreak": "Nghỉ dài ({{min}}–{{max}})",
+            "longBreakEvery": "Sau mỗi ({{min}}–{{max}}) vòng"
+        },
+        "error": {
+            "focus": "Tập trung phải từ {{min}} đến {{max}} phút",
+            "shortBreak": "Nghỉ ngắn phải từ {{min}} đến {{max}} phút",
+            "longBreak": "Nghỉ dài phải từ {{min}} đến {{max}} phút",
+            "longBreakEvery": "Số vòng phải từ {{min}} đến {{max}}"
+        },
+        "summary": "{{focus}} phút tập trung · nghỉ {{shortBreak}} · không nghỉ dài",
+        "summaryLongBreak": "{{focus}} phút tập trung · nghỉ {{shortBreak}} · nghỉ dài {{longBreak}} sau mỗi {{every}} vòng",
+        "short": "{{focus}}/{{shortBreak}}",
+        "shortLongBreak": "{{focus}}/{{shortBreak}} · nghỉ dài {{longBreak}} sau mỗi {{every}} vòng"
+    },
+    "news": {
+        "started": "{{name}} đã bắt đầu phiên học",
+        "skipped": "{{name}} đã bỏ qua pha",
+        "changed": "{{name}} đã đổi chu kỳ thành {{cycle}}",
+        "resumed": "{{name}} đã tiếp tục phiên học",
+        "youHost": "Bạn đang điều khiển phiên học",
+        "youHostAfter": "{{name}} đã rời phòng · bạn đang điều khiển phiên học",
+        "counting": "Bạn đang được tính giờ từ {{time}}",
+        "someone": "Một người"
+    },
+    "end": {
+        "byYou": "Bạn đã dừng phiên học",
+        "byOther": "{{name}} đã dừng phiên học cho cả phòng",
+        "studyOff": "Chế độ phòng học đã tắt"
+    },
+    "people": {
+        "focus_one": "{{count}} người đang Tập trung cùng bạn",
+        "focus_other": "{{count}} người đang Tập trung cùng bạn",
+        "paused_one": "{{count}} người đang chờ cùng bạn",
+        "paused_other": "{{count}} người đang chờ cùng bạn",
+        "short_break": "Cả phòng đang nghỉ ngắn",
+        "long_break": "Cả phòng đang nghỉ dài",
+        "alone": "Bạn đang học một mình trong phòng này",
+        "idle_one": "{{count}} người đang ở trong phòng cùng bạn",
+        "idle_other": "{{count}} người đang ở trong phòng cùng bạn",
+        "idleAlone": "Bạn đang ở trong phòng một mình",
+        "pausedNote": "Đồng hồ đứng yên, không tính phút",
+        "noHostNote": "Người quản lý phòng học vào sẽ điều khiển phiên"
+    }
+}

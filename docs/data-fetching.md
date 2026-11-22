@@ -569,6 +569,14 @@ lifted for a move is let go, a moderation dialog reads the person as last
 listed (`blockedOn`), and the channel settings form takes new values into
 the fields not touched (`values` with `keepDirtyValues`).
 
+A voice room's study session is on its room in that list (`focusSession`,
+D-220) and changes at once, with no read: the study feature hears
+`focus_session.*` and takes each command's answer (`listenForSessions`, a
+port), and hands each state later than the last (D-225: the same session's
+higher `version`, or a session started later) to `liveServers.ts`, which
+writes it on the room (`withRoomSession`), none once ended, and keeps it over
+a read begun before it, as it does a room's people.
+
 ## A server one is no longer in
 
 Besides the events, the app learns that someone was kicked, banned, or saw

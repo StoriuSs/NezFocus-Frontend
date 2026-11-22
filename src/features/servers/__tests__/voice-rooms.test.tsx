@@ -49,6 +49,7 @@ const channel = (id: string, extra: Partial<ServerChannel> = {}): ServerChannel 
     permissions: String(CONNECT | SPEAK),
     viewRoleIds: null,
     voiceStates: [],
+    focusSession: null,
     ...extra
 })
 const server = (id: string, channels: ServerChannel[], timeoutUntil: string | null = null): Server => ({
@@ -90,6 +91,10 @@ describe('a voice room as the voice feature takes it', () => {
             channelId: 'thao-luan',
             name: 'thao-luan',
             isStudyRoom: false,
+            session: null,
+            cycle: { focus: 25, shortBreak: 5, longBreak: null, longBreakEvery: null },
+            canStartSession: false,
+            canManageStudy: false,
             people: [],
             canConnect: true,
             canSpeak: false,
@@ -99,6 +104,52 @@ describe('a voice room as the voice feature takes it', () => {
             canMove: false,
             outranked: new Set()
         })
+    })
+
+    it('hands the study session, the cycle, and who may start or control one (REQ-STUDY-01, 03)', () => {
+        const MANAGE_STUDY = 1n << 20n
+        const session = {
+            id: 's1',
+            hostId: 'an',
+            focusMinutes: 25,
+            shortBreakMinutes: 5,
+            longBreakMinutes: 15,
+            longBreakEvery: 4,
+            status: 'running' as const,
+            phase: 'focus' as const,
+            phaseIndex: 2,
+            phaseStartedAt: '2026-11-22T14:41:00.000Z',
+            phaseEndsAt: '2026-11-22T15:06:00.000Z',
+            pausedRemainingMs: null,
+            stretchStartedAt: '2026-11-22T14:41:00.000Z',
+            startedAt: '2026-11-22T14:11:00.000Z',
+            version: 3,
+            serverTime: '2026-11-22T14:47:18.000Z'
+        }
+        const study = { isStudyRoom: true, studyLongBreakMinutes: 15, studyLongBreakEvery: 4, focusSession: session }
+        const anyone = server('ot', [channel('im-lang', study)])
+        expect(voiceRoomOf(anyone, anyone.channels[0]!)).toMatchObject({
+            session,
+            cycle: { focus: 25, shortBreak: 5, longBreak: 15, longBreakEvery: 4 },
+            canStartSession: true,
+            canManageStudy: false
+        })
+        const managers = server('ot', [channel('im-lang', { ...study, studyStarter: 'managers' })])
+        expect(voiceRoomOf(managers, managers.channels[0]!)).toMatchObject({ canStartSession: false })
+        const manager = server('ot', [
+            channel('im-lang', {
+                ...study,
+                studyStarter: 'managers',
+                permissions: String(CONNECT | MANAGE_STUDY)
+            })
+        ])
+        expect(voiceRoomOf(manager, manager.channels[0]!)).toMatchObject({
+            canStartSession: true,
+            canManageStudy: true
+        })
+        // A plain voice room starts nothing, whatever it lets.
+        const voice = server('ot', [channel('thao-luan')])
+        expect(voiceRoomOf(voice, voice.channels[0]!)).toMatchObject({ session: null, canStartSession: false })
     })
 
     it('says whom one may mute or put out there: the bits of the room, and only people ranked below (D-207, D-208)', () => {

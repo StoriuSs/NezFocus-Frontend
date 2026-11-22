@@ -1,10 +1,11 @@
 import type { QueryClient } from '@tanstack/react-query'
 import { forgetChannels } from '@/features/messaging'
 import { onRealtimeEvent } from '@/features/realtime'
+import { listenForSessions, type FocusSession } from '@/features/study'
 import { userKeys, type UserProfile } from '@/features/users'
 import { getApiErrorInfo, getApiErrorType, retryAfterSeconds } from '@/lib/api-error'
 import { reportError } from '@/lib/error-tracking'
-import { withRoomPeople } from '../lib/room-people'
+import { withRoomPeople, withRoomSession } from '../lib/room-people'
 import type { RoomPerson, Server } from '../types'
 import { serverKeys } from './keys'
 import { fetchServer } from './servers.api'
@@ -114,6 +115,12 @@ const listening = new WeakSet<QueryClient>()
  * same for every read of the whole list, whoever asked for it (`ready`, L2-e;
  * a change this tab made).
  *
+ * A voice room's study session the same (D-231 L5-b): each state told (a
+ * `focus_session.*` event, the answer to a command this tab sent, heard
+ * through the study feature's `listenForSessions`) goes on its room at once
+ * when later than the one held (D-225), and is kept over a read begun before
+ * it, which saw an older one.
+ *
  * A timeout ends with no event: a server whose timeout runs is read again
  * once it is over, for the channels it gives back (the composer opens again,
  * 02 `timed-out`). Given, changed or lifted, the read that tells of it moves
@@ -143,6 +150,8 @@ export function listenForServers(client: QueryClient, notices: ServerNotices): (
     let swapping = false
     /** Each room's last list told, and when (a count of lists told): put back over a read older than it. */
     const told = new Map<string, { at: number; people: RoomPerson[] }>()
+    /** Each room's last session told, and when (the same count). */
+    const toldSessions = new Map<string, { at: number; session: FocusSession }>()
     let tellings = 0
     /** The lists told when the list's current read (GET /servers, whoever asked for it) began. */
     let listReadFrom: number | null = null
@@ -202,8 +211,17 @@ export function listenForServers(client: QueryClient, notices: ServerNotices): (
     }
 
     function swapPeople(channelId: string, people: RoomPerson[]): void {
+        swap((servers) => withRoomPeople(servers, channelId, people))
+    }
+
+    function swapSession(session: FocusSession): void {
+        swap((servers) => withRoomSession(servers, session))
+    }
+
+    /** A room's change written at once, as not a change that makes a read answered meanwhile old. */
+    function swap(change: (servers: Server[] | undefined) => Server[] | undefined): void {
         const servers = client.getQueryData<Server[]>(serverKeys.list())
-        const next = withRoomPeople(servers, channelId, people)
+        const next = change(servers)
         if (next === servers) return
         swapping = true
         try {
@@ -216,6 +234,7 @@ export function listenForServers(client: QueryClient, notices: ServerNotices): (
     /** The rooms told since `since` keep the list told: a read begun before it saw an older one. */
     function keepToldSince(since: number): void {
         for (const [channelId, { at, people }] of told) if (at > since) swapPeople(channelId, people)
+        for (const { at, session } of toldSessions.values()) if (at > since) swapSession(session)
     }
 
     function gone(serverId: string): Server | undefined {
@@ -291,6 +310,12 @@ export function listenForServers(client: QueryClient, notices: ServerNotices): (
 
     followTimeouts()
     const stops = [
+        listenForSessions(client, (session) => {
+            if (!session.channelId) return
+            tellings += 1
+            toldSessions.set(session.channelId, { at: tellings, session })
+            swapSession(session)
+        }),
         ...READ_AGAIN.map((event) =>
             onRealtimeEvent(event, (data) => {
                 const news = data as MemberNews
@@ -339,6 +364,7 @@ export function listenForServers(client: QueryClient, notices: ServerNotices): (
         late.clear()
         again.clear()
         told.clear()
+        toldSessions.clear()
         listening.delete(client)
     }
 }

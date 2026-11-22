@@ -76,24 +76,7 @@
         "managersDescription": "Người có quyền Quản lý phòng học."
       },
       "cycle": "Chu kỳ mặc định",
-      "custom": "Tùy chỉnh",
       "presetHint": "Điền sẵn khi bắt đầu phiên học. Nghỉ dài: tắt.",
-      "field": {
-        "focus": "Tập trung ({{min}}–{{max}})",
-        "shortBreak": "Nghỉ ngắn ({{min}}–{{max}})",
-        "longBreak": "Nghỉ dài ({{min}}–{{max}})",
-        "longBreakEvery": "Sau mỗi ({{min}}–{{max}}) vòng"
-      },
-      "minutes": "phút",
-      "longBreak": "Nghỉ dài",
-      "error": {
-        "focus": "Tập trung phải từ {{min}} đến {{max}} phút",
-        "shortBreak": "Nghỉ ngắn phải từ {{min}} đến {{max}} phút",
-        "longBreak": "Nghỉ dài phải từ {{min}} đến {{max}} phút",
-        "longBreakEvery": "Số vòng phải từ {{min}} đến {{max}}"
-      },
-      "summary": "{{focus}} phút tập trung · nghỉ {{shortBreak}} · không nghỉ dài",
-      "summaryLongBreak": "{{focus}} phút tập trung · nghỉ {{shortBreak}} · nghỉ dài {{longBreak}} sau mỗi {{every}} vòng",
       "onlyStudyPart": "Vai trò của bạn chỉ sửa được phần Phòng học."
     },
     "taskBoard": {

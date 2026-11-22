@@ -23,7 +23,8 @@ const room = (permissions: string): ServerChannel => ({
     taskBoardEnabled: false,
     permissions,
     viewRoleIds: ['lead'],
-    voiceStates: null
+    voiceStates: null,
+    focusSession: null
 })
 
 const server = { roles: [{ id: 'lead', name: 'Trưởng nhóm', position: 1, administrator: false }] } as Server

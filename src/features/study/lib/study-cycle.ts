@@ -1,5 +1,4 @@
-import type { ServerChannel } from '../types'
-
+import * as z from 'zod'
 /**
  * The lengths a study room's cycle may take, in minutes, and how often the
  * long break comes, in focus phases (REQ-STUDY-01, 07 S-ROOM-03). The same
@@ -45,7 +44,15 @@ export interface CycleForm {
     longBreakEvery: string
 }
 
-export const cycleOf = (channel: ServerChannel): StudyCycle => ({
+/** A study room's saved cycle, as GET /servers gives it on the channel. */
+export interface StudyRoomCycle {
+    studyFocusMinutes: number
+    studyShortBreakMinutes: number
+    studyLongBreakMinutes: number | null
+    studyLongBreakEvery: number | null
+}
+
+export const cycleOf = (channel: StudyRoomCycle): StudyCycle => ({
     focus: channel.studyFocusMinutes,
     shortBreak: channel.studyShortBreakMinutes,
     longBreak: channel.studyLongBreakMinutes,
@@ -121,3 +128,28 @@ const PROBLEM_FIELDS = new Map<unknown, CycleField>([
 
 /** The field a `study_cycle` refusal is about (its `problem`, backend StudyCycleProblem). */
 export const cycleFieldOfProblem = (problem: unknown): CycleField | null => PROBLEM_FIELDS.get(problem) ?? null
+
+/** A cycle form's values, as the forms hold them (React Hook Form + zod, docs/shadcn-forms.md). */
+export const cycleFormSchema = z.object({
+    choice: z.custom<CycleChoice>(),
+    focus: z.string(),
+    shortBreak: z.string(),
+    longBreakOn: z.boolean(),
+    longBreak: z.string(),
+    longBreakEvery: z.string()
+})
+
+/**
+ * The fields shown out of range, as issues at `path` (each issue's message is
+ * the field: the form puts it into words), for a schema's superRefine.
+ */
+export function addCycleIssues(form: CycleForm, ctx: z.RefinementCtx, path: string[]): void {
+    for (const field of badCycleFields(form)) ctx.addIssue({ code: 'custom', path: [...path, field], message: field })
+}
+
+/** A form that is only a cycle (07 S-ROOM-03, S-ROOM-04): checked when sent. */
+export const cycleOnlySchema = z
+    .object({ cycle: cycleFormSchema })
+    .superRefine((values, ctx) => addCycleIssues(values.cycle, ctx, ['cycle']))
+
+export type CycleOnlyValues = z.infer<typeof cycleOnlySchema>

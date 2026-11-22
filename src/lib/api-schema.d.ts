@@ -1394,6 +1394,193 @@ export interface paths {
         patch?: never
         trace?: never
     }
+    '/api/v1/channels/{channelId}/focus-session': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        /**
+         * Start a Room Session, from inside the study room, as its Host: everyone
+         *     in the room takes part from now. A room with a session already:
+         *     FOCUS_SESSION_ACTIVE.
+         */
+        post: operations['FocusSessionsController_start_v1']
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/focus-sessions/{sessionId}/pause': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        /** Pause: what is left of the phase is kept (Host or MANAGE_STUDY_ROOMS). */
+        post: operations['FocusSessionsController_pause_v1']
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/focus-sessions/{sessionId}/resume': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        /** Resume for what was left; with no Host, anyone in the room may (D-119). */
+        post: operations['FocusSessionsController_resume_v1']
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/focus-sessions/{sessionId}/skip': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        /** Skip to the next phase now; skipped while paused, it stays paused. */
+        post: operations['FocusSessionsController_skip_v1']
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/focus-sessions/{sessionId}/continue': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        /** Học tiếp of a waiting Solo: its next focus phase begins now (REQ-STUDY-05). Not waiting: nothing changes. */
+        post: operations['FocusSessionsController_continue_v1']
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/focus-sessions/{sessionId}/stop': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        /** End the session for the whole room; each one's seconds come in `focus_session.ended` (D-49). */
+        post: operations['FocusSessionsController_stop_v1']
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/focus-sessions/{sessionId}/config': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        /** A new cycle, only while paused: the phase begins again at its new length, still paused (D-50). */
+        post: operations['FocusSessionsController_config_v1']
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/me/solo-session': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        /** One's Solo not yet ended (a reload brings its clock back), and the cycle the next one starts with (D-229). */
+        get: operations['MyStudyController_solo_v1']
+        put?: never
+        /**
+         * Start a Solo: its first focus phase runs from now. No cycle sent: the
+         *     last Solo's (D-103). One taking part in a session already (a Room
+         *     Session, or another Solo): FOCUS_SESSION_ACTIVE.
+         */
+        post: operations['MyStudyController_startSolo_v1']
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/me/study-stats': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        /**
+         * The numbers of the week or month holding `date` (this week when left
+         *     out), in one's time zone, with the current streak, today and the
+         *     lifetime total (D-105, D-230).
+         */
+        get: operations['MyStudyController_stats_v1']
+        put?: never
+        post?: never
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/me/study-sessions': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        /**
+         * One's sessions of the week or month holding `date`, 20 a page, the one
+         *     one is in first (D-105, D-229, D-230). A `cursor` that is not one of
+         *     one's sessions: CONFLICT_ERROR, start again.
+         */
+        get: operations['MyStudyController_sessions_v1']
+        put?: never
+        post?: never
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
 }
 export type webhooks = Record<string, never>
 export interface components {
@@ -1733,6 +1920,46 @@ export interface components {
             /** @description A moderator turned their microphone off (D-207). */
             mod_muted: boolean
         }
+        RoomSessionResponseDto: {
+            /** @description Null: nobody in the room may start a session (REQ-STUDY-03). */
+            host_id: string | null
+            /** @description Both null: no long break. */
+            long_break_minutes: number | null
+            long_break_every: number | null
+            /**
+             * Format: date-time
+             * @description While running: when the phase ends.
+             */
+            phase_ends_at: string | null
+            /** @description While paused: what was left of the phase, in milliseconds. */
+            paused_remaining_ms: number | null
+            /**
+             * Format: date-time
+             * @description When the focus stretch running now began: today's minutes go up from here (D-224). Null when none runs.
+             */
+            stretch_started_at: string | null
+            id: string
+            /** @description The cycle, in minutes. */
+            focus_minutes: number
+            short_break_minutes: number
+            /** @enum {string} */
+            status: 'running' | 'paused'
+            /** @enum {string} */
+            phase: 'focus' | 'short_break' | 'long_break'
+            /** @description The phase's place from 0: focus at the even places. */
+            phase_index: number
+            /** Format: date-time */
+            phase_started_at: string
+            /** Format: date-time */
+            started_at: string
+            /** @description Raised by every change; sent back with each command (D-225). */
+            version: number
+            /**
+             * Format: date-time
+             * @description The server's clock when this was read (D-18).
+             */
+            server_time: string
+        }
         ServerChannelResponseDto: {
             /**
              * @description Who may start a session in it, and the cycle a session starts with
@@ -1756,6 +1983,11 @@ export interface components {
              *     date by `voice_state.updated`. Null for a text channel.
              */
             voice_states: components['schemas']['RoomPersonResponseDto'][] | null
+            /**
+             * @description A voice room: its study session not yet ended, or null (D-220); kept up
+             *     to date by `focus_session.*`. Null for a text channel.
+             */
+            focus_session: components['schemas']['RoomSessionResponseDto'] | null
             id: string
             /** @description Null: listed above the first category. */
             category_id: string | null
@@ -2197,12 +2429,17 @@ export interface components {
             mention_users: components['schemas']['MentionedUserResponseDto'][]
             /** @description The roles it mentions in effect, as named now; a role deleted since is left out (D-171). */
             mention_roles: components['schemas']['MentionedRoleResponseDto'][]
-            /** @description What a system message reports (`member_joined`, `message_pinned`, `task_due`); null on a regular one. */
+            /**
+             * @description What a system message reports (`member_joined`, `message_pinned`, `task_due`,
+             *     `study_session_started`, `study_session_ended`); null on a regular one.
+             */
             system_event: string | null
             /**
              * @description Whom a system message is about (`{ user_id }`, `{ user_id, message_id }`,
              *     D-168); a task's reminder: `{ task_id, title, reminder, due_at, user_ids }`,
-             *     its title when sent. Null on a regular one.
+             *     its title when sent; a study session: `{ user_id, session_id, focus_minutes,
+             *     short_break_minutes }` started, `{ session_id, reason }` ended. Null on a
+             *     regular one.
              */
             system_data: {
                 [key: string]: unknown
@@ -2256,12 +2493,17 @@ export interface components {
             mention_users: components['schemas']['MentionedUserResponseDto'][]
             /** @description The roles it mentions in effect, as named now; a role deleted since is left out (D-171). */
             mention_roles: components['schemas']['MentionedRoleResponseDto'][]
-            /** @description What a system message reports (`member_joined`, `message_pinned`, `task_due`); null on a regular one. */
+            /**
+             * @description What a system message reports (`member_joined`, `message_pinned`, `task_due`,
+             *     `study_session_started`, `study_session_ended`); null on a regular one.
+             */
             system_event: string | null
             /**
              * @description Whom a system message is about (`{ user_id }`, `{ user_id, message_id }`,
              *     D-168); a task's reminder: `{ task_id, title, reminder, due_at, user_ids }`,
-             *     its title when sent. Null on a regular one.
+             *     its title when sent; a study session: `{ user_id, session_id, focus_minutes,
+             *     short_break_minutes }` started, `{ session_id, reason }` ended. Null on a
+             *     regular one.
              */
             system_data: {
                 [key: string]: unknown
@@ -2343,12 +2585,17 @@ export interface components {
             mention_users: components['schemas']['MentionedUserResponseDto'][]
             /** @description The roles it mentions in effect, as named now; a role deleted since is left out (D-171). */
             mention_roles: components['schemas']['MentionedRoleResponseDto'][]
-            /** @description What a system message reports (`member_joined`, `message_pinned`, `task_due`); null on a regular one. */
+            /**
+             * @description What a system message reports (`member_joined`, `message_pinned`, `task_due`,
+             *     `study_session_started`, `study_session_ended`); null on a regular one.
+             */
             system_event: string | null
             /**
              * @description Whom a system message is about (`{ user_id }`, `{ user_id, message_id }`,
              *     D-168); a task's reminder: `{ task_id, title, reminder, due_at, user_ids }`,
-             *     its title when sent. Null on a regular one.
+             *     its title when sent; a study session: `{ user_id, session_id, focus_minutes,
+             *     short_break_minutes }` started, `{ session_id, reason }` ended. Null on a
+             *     regular one.
              */
             system_data: {
                 [key: string]: unknown
@@ -2715,6 +2962,196 @@ export interface components {
         JoinVoiceRequestDto: {
             /** Format: uuid */
             channel_id: string
+        }
+        FocusSessionResponseDto: {
+            /** @description A Room Session's room; null for a Solo. */
+            channel_id: string | null
+            /** @description Null: no Host (nobody in the room may start a session, REQ-STUDY-03), or a Solo. */
+            host_id: string | null
+            /** @description Both null: no long break. */
+            long_break_minutes: number | null
+            long_break_every: number | null
+            /**
+             * Format: date-time
+             * @description While running: when the phase ends.
+             */
+            phase_ends_at: string | null
+            /** @description While paused: what was left of the phase, in milliseconds. */
+            paused_remaining_ms: number | null
+            /**
+             * Format: date-time
+             * @description While waiting (a Solo): when it ends by itself.
+             */
+            waiting_until: string | null
+            /**
+             * Format: date-time
+             * @description When the focus stretch running now began: today's minutes go up from here (D-224). Null when none runs.
+             */
+            stretch_started_at: string | null
+            /** Format: date-time */
+            ended_at: string | null
+            /** @enum {string|null} */
+            ended_reason:
+                | 'stopped'
+                | 'empty'
+                | 'study_disabled'
+                | 'channel_deleted'
+                | 'expired'
+                | 'signed_out'
+                | 'joined_room'
+                | null
+            id: string
+            /** @enum {string} */
+            kind: 'room' | 'solo'
+            /** @description The cycle, in minutes. */
+            focus_minutes: number
+            short_break_minutes: number
+            /** @enum {string} */
+            status: 'running' | 'paused' | 'waiting' | 'ended'
+            /** @enum {string} */
+            phase: 'focus' | 'short_break' | 'long_break'
+            /** @description The phase's place from 0: focus at the even places. */
+            phase_index: number
+            /** Format: date-time */
+            phase_started_at: string
+            /** Format: date-time */
+            started_at: string
+            /** @description Raised by every change; sent back with each command (D-225). */
+            version: number
+            /**
+             * Format: date-time
+             * @description The server's clock when this was read (D-18).
+             */
+            server_time: string
+        }
+        StartRoomSessionRequestDto: {
+            focus_minutes?: number
+            short_break_minutes?: number
+            /** @description Null or left out, with long_break_every: no long break. */
+            long_break_minutes?: number | null
+            /** @description A long break after every this many focus phases. */
+            long_break_every?: number | null
+        }
+        SessionVersionRequestDto: {
+            version: number
+        }
+        ChangeCycleRequestDto: {
+            focus_minutes: number
+            short_break_minutes: number
+            /** @description Null or left out, with long_break_every: no long break. */
+            long_break_minutes?: number | null
+            long_break_every?: number | null
+            version: number
+        }
+        StartSoloSessionRequestDto: {
+            focus_minutes?: number
+            short_break_minutes?: number
+            /** @description Null or left out, with long_break_every: no long break. */
+            long_break_minutes?: number | null
+            /** @description A long break after every this many focus phases. */
+            long_break_every?: number | null
+        }
+        StudyCycleResponseDto: {
+            /** @description Both null: no long break. */
+            long_break_minutes: number | null
+            long_break_every: number | null
+            focus_minutes: number
+            short_break_minutes: number
+        }
+        SoloSessionResponseDto: {
+            /** @description One's Solo not yet ended, kept up to date by `solo_session.updated`; null when none. */
+            session: components['schemas']['FocusSessionResponseDto'] | null
+            /**
+             * @description The cycle POST /me/solo-session starts with when sent none ("Bắt đầu
+             *     Tập trung 50 phút"): the last Solo's, or 25/5 for a first one (D-103).
+             */
+            start_cycle: components['schemas']['StudyCycleResponseDto']
+        }
+        StudyGridDayResponseDto: {
+            /** @description YYYY-MM-DD. */
+            date: string
+            focused_seconds: number
+        }
+        StudyPeriodResponseDto: {
+            start: string
+            end: string
+        }
+        StudyDayResponseDto: {
+            /** @description YYYY-MM-DD. */
+            date: string
+            focused_seconds: number
+            room_seconds: number
+            solo_seconds: number
+        }
+        StudyStreakResponseDto: {
+            /** @description The run to show today: 0 once a day was missed, until one qualifies again. */
+            current: number
+            longest: number
+        }
+        StudyStatsResponseDto: {
+            /**
+             * @description The period before, over as many first days as this one has gone by
+             *     (all of it once this one is over). Null, no comparison shown: nothing
+             *     counted before this period, or a period still ahead.
+             */
+            previous_seconds: number | null
+            /** @description All of the period before, null when previous_seconds is: 0 says "Tuần trước chưa học" (D-230). */
+            previous_period_seconds: number | null
+            /** @description The first day with a second counted ("‹" stops at its period); null: never studied (the empty page). */
+            first_date: string | null
+            /**
+             * Format: date-time
+             * @description Where the count of the session one is in stands (room or Solo), null
+             *     when in none: the client adds the focus running after it to
+             *     today_seconds (D-224, D-231).
+             */
+            counted_until: string | null
+            /** @description A week's 4-week grid, the 28 days up to its Sunday; null for a month. */
+            grid: components['schemas']['StudyGridDayResponseDto'][] | null
+            /**
+             * @description The greatest total of any other week: the week shown is the best one
+             *     when its own is greater (D-230). Null for a month, and for the first
+             *     week with seconds or one before it.
+             */
+            best_other_week_seconds: number | null
+            /** @enum {string} */
+            view: 'week' | 'month'
+            /** @description Today in one's time zone (YYYY-MM-DD): the days after it are still ahead. */
+            today: string
+            period: components['schemas']['StudyPeriodResponseDto']
+            /** @description Every day of the period, in order, those still ahead included (0). */
+            days: components['schemas']['StudyDayResponseDto'][]
+            total_seconds: number
+            room_seconds: number
+            solo_seconds: number
+            /** @description The mean a day over the days gone by, today in, rounded down. */
+            average_seconds: number
+            all_time_seconds: number
+            streak: components['schemas']['StudyStreakResponseDto']
+            today_seconds: number
+        }
+        StudySessionLineResponseDto: {
+            room_name: string | null
+            server_name: string | null
+            /**
+             * Format: date-time
+             * @description Null while one is in it ("Đang học", "– bây giờ").
+             */
+            last_left_at: string | null
+            session_id: string
+            /** @enum {string} */
+            kind: 'room' | 'solo'
+            room_deleted: boolean
+            /** Format: date-time */
+            first_joined_at: string
+            /** @description The seconds counted so far; the client adds what runs on the line one is in. */
+            seconds: number
+            /** @description "· vào N lần" from 2. */
+            join_count: number
+        }
+        StudySessionPageResponseDto: {
+            items: components['schemas']['StudySessionLineResponseDto'][]
+            has_more: boolean
         }
     }
     responses: never
@@ -5398,6 +5835,312 @@ export interface operations {
                     'application/json': {
                         meta: components['schemas']['ApiResponseMetaDto']
                         data: null
+                    }
+                }
+            }
+        }
+    }
+    FocusSessionsController_start_v1: {
+        parameters: {
+            query?: never
+            header: {
+                /** @description UUID identifying one user intent */
+                'Idempotency-Key': string
+            }
+            path: {
+                channelId: string
+            }
+            cookie?: never
+        }
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['StartRoomSessionRequestDto']
+            }
+        }
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['FocusSessionResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    FocusSessionsController_pause_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                sessionId: string
+            }
+            cookie?: never
+        }
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['SessionVersionRequestDto']
+            }
+        }
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['FocusSessionResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    FocusSessionsController_resume_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                sessionId: string
+            }
+            cookie?: never
+        }
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['SessionVersionRequestDto']
+            }
+        }
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['FocusSessionResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    FocusSessionsController_skip_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                sessionId: string
+            }
+            cookie?: never
+        }
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['SessionVersionRequestDto']
+            }
+        }
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['FocusSessionResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    FocusSessionsController_continue_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                sessionId: string
+            }
+            cookie?: never
+        }
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['SessionVersionRequestDto']
+            }
+        }
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['FocusSessionResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    FocusSessionsController_stop_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                sessionId: string
+            }
+            cookie?: never
+        }
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['SessionVersionRequestDto']
+            }
+        }
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['FocusSessionResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    FocusSessionsController_config_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                sessionId: string
+            }
+            cookie?: never
+        }
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['ChangeCycleRequestDto']
+            }
+        }
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['FocusSessionResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    MyStudyController_solo_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['SoloSessionResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    MyStudyController_startSolo_v1: {
+        parameters: {
+            query?: never
+            header: {
+                /** @description UUID identifying one user intent */
+                'Idempotency-Key': string
+            }
+            path?: never
+            cookie?: never
+        }
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['StartSoloSessionRequestDto']
+            }
+        }
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['FocusSessionResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    MyStudyController_stats_v1: {
+        parameters: {
+            query?: {
+                /** @description `week` when left out. */
+                view?: 'week' | 'month'
+                /** @description Any day of the period, YYYY-MM-DD, from 1900 to 2099; today in one's time zone when left out. */
+                date?: string
+            }
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['StudyStatsResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    MyStudyController_sessions_v1: {
+        parameters: {
+            query?: {
+                /** @description `week` when left out. */
+                view?: 'week' | 'month'
+                /** @description Any day of the period, YYYY-MM-DD, from 1900 to 2099; today in one's time zone when left out. */
+                date?: string
+                /** @description The session of the last line the client holds; left out, the first page. Not one of one's sessions: CONFLICT_ERROR. */
+                cursor?: string
+            }
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['StudySessionPageResponseDto']
                     }
                 }
             }

@@ -4,11 +4,12 @@ import type { RoomPerson } from '../types'
 
 /**
  * A room's people in the order they show (C-06, C-18, `orderPeople`), kept
- * from one render to the next: newcomers to the end, no one moving for a mic.
+ * from one render to the next: newcomers to the end, no one moving for a mic;
+ * a study session's Host after oneself when first worked out (C-18).
  */
-export function useOrderedPeople(people: RoomPerson[], me: string | undefined): RoomPerson[] {
+export function useOrderedPeople(people: RoomPerson[], me: string | undefined, host?: string | null): RoomPerson[] {
     const [shown, setShown] = useState<string[]>([])
-    const ids = orderPeople(people, me, shown)
+    const ids = orderPeople(people, me, shown, host)
     // Adjusted while rendering (react.dev, "storing information from previous renders").
     if (ids.length !== shown.length || ids.some((id, index) => id !== shown[index])) setShown(ids)
     const byId = new Map(people.map((person) => [person.user.id, person]))

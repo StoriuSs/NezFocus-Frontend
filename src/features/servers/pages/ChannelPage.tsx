@@ -11,10 +11,13 @@ import { ShellPage } from '@/components/shell/ShellPage'
 import { CountBadge } from '@/components/ui/count-badge'
 import { IconButton } from '@/components/ui/icon-button'
 import { WithTooltip } from '@/components/ui/tooltip'
+import { PHASE_ROOM } from '@/lib/phase-colors'
 import { ChannelChat, ChatDropZone, PinsPanel, useChannelReadState } from '@/features/messaging'
 import { TaskBoard } from '@/features/tasks'
+import { useProfile } from '@/features/users'
 import { useVoiceStore, VoiceRoomView } from '@/features/voice'
 import { MemberPanel } from '../components/member-panel/MemberPanel'
+import { HostChip, RoomViewSwitch } from '../components/RoomHeader'
 import { useServers } from '../api/useServers'
 import { useTaskBoardPlace } from '../api/useTaskBoardPlace'
 import { useChannelChat } from '../hooks/useChannelChat'
@@ -114,6 +117,11 @@ function Removed({ to, room }: { to: string; room: boolean }) {
  * "#", with no pins (D-213); files dragged onto the panel go to its tray,
  * and anywhere else they do nothing (the AppShell's `useRefuseFileDrops`),
  * rather than the browser opening the file and leaving the room (L6b-a).
+ *
+ * A study room with a session has the phase's ground under its Header and
+ * page, joined or not (07 › Quy ước, Q6), crossfading over `long` as the
+ * phase changes; once joined, the Header has the Host chip (C-04) and the
+ * Ring / Grid switch (D-55, D-57; none while a screen is shared, 07 P6).
  */
 function VoiceChannel({ server, channel, messageId }: { server: Server; channel: ServerChannel; messageId?: string }) {
     const { t } = useTranslation('servers')
@@ -140,6 +148,10 @@ function VoiceChannel({ server, channel, messageId }: { server: Server; channel:
     const reconnecting = useVoiceStore(
         (state) => state.call?.channelId === channel.id && state.call.phase === 'reconnecting'
     )
+    const me = useProfile().data?.id
+    const inside = useVoiceStore((state) => state.call?.channelId === channel.id && state.call.phase !== 'joining')
+    const session = channel.focusSession
+    const people = channel.voiceStates ?? []
     const label = unread
         ? common('shell.unread.label', {
               name: title,
@@ -156,31 +168,42 @@ function VoiceChannel({ server, channel, messageId }: { server: Server; channel:
             icon={icon}
             composer={chat.open}
             reconnecting={reconnecting}
+            className={
+                session
+                    ? `${PHASE_ROOM[session.phase]} transition-colors duration-long ease-in-out motion-reduce:duration-short`
+                    : undefined
+            }
+            afterTitle={inside && session && me ? <HostChip session={session} people={people} me={me} /> : undefined}
             actions={
-                <WithTooltip label={title} side='bottom'>
-                    <IconButton
-                        ref={chatButton}
-                        label={label}
-                        on={chat.open}
-                        onClick={chat.toggle}
-                        className='relative'
-                    >
-                        <MessageSquare />
-                        {mentioned > 0 ? (
-                            <CountBadge
-                                count={mentioned}
-                                cutout='ring-bg'
-                                className='pointer-events-none absolute -right-1 -top-1'
-                            />
-                        ) : unread ? (
-                            <span
-                                aria-hidden='true'
-                                data-testid='room-chat-dot'
-                                className='pointer-events-none absolute right-0.5 top-0.5 size-2 rounded-full bg-danger ring-2 ring-bg'
-                            />
-                        ) : null}
-                    </IconButton>
-                </WithTooltip>
+                <>
+                    {inside && channel.isStudyRoom && !people.some((person) => person.screenSharing) ? (
+                        <RoomViewSwitch cameras={people.filter((person) => person.cameraOn).length} />
+                    ) : null}
+                    <WithTooltip label={title} side='bottom'>
+                        <IconButton
+                            ref={chatButton}
+                            label={label}
+                            on={chat.open}
+                            onClick={chat.toggle}
+                            className='relative'
+                        >
+                            <MessageSquare />
+                            {mentioned > 0 ? (
+                                <CountBadge
+                                    count={mentioned}
+                                    cutout='ring-bg'
+                                    className='pointer-events-none absolute -right-1 -top-1'
+                                />
+                            ) : unread ? (
+                                <span
+                                    aria-hidden='true'
+                                    data-testid='room-chat-dot'
+                                    className='pointer-events-none absolute right-0.5 top-0.5 size-2 rounded-full bg-danger ring-2 ring-bg'
+                                />
+                            ) : null}
+                        </IconButton>
+                    </WithTooltip>
+                </>
             }
             panel={
                 <RightPanel

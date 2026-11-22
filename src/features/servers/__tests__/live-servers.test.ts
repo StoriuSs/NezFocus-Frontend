@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { QueryClient, QueryObserver } from '@tanstack/react-query'
 import { apiError } from '@/test/helpers'
+import { roomSessionOf, type FocusSession } from '@/features/study'
 import { userKeys } from '@/features/users'
 import type { RoomPerson, Server, ServerChannel } from '../types'
 
@@ -28,7 +29,8 @@ const channel = (id: string): ServerChannel => ({
     taskBoardEnabled: false,
     permissions: '1024',
     viewRoleIds: null,
-    voiceStates: null
+    voiceStates: null,
+    focusSession: null
 })
 const server = (id: string, channels: string[], name = id): Server => ({
     id,
@@ -478,5 +480,102 @@ describe('Keeping the servers live from events (D-178)', () => {
             expect(peopleIn('thao-luan')).toEqual(['nam'])
             unsubscribe()
         })
+    })
+})
+
+describe("Keeping a study room's session on its room (D-231 L5-b)", () => {
+    const at = (version: number, more: Record<string, unknown> = {}) => ({
+        id: 's1',
+        kind: 'room',
+        channelId: 'im-lang',
+        hostId: 'an',
+        focusMinutes: 25,
+        shortBreakMinutes: 5,
+        longBreakMinutes: null,
+        longBreakEvery: null,
+        status: 'running',
+        phase: 'focus',
+        phaseIndex: 2,
+        phaseStartedAt: '2026-11-22T14:41:00.000Z',
+        phaseEndsAt: '2026-11-22T15:06:00.000Z',
+        pausedRemainingMs: null,
+        waitingUntil: null,
+        stretchStartedAt: '2026-11-22T14:41:00.000Z',
+        startedAt: '2026-11-22T14:11:00.000Z',
+        endedAt: null,
+        endedReason: null,
+        version,
+        serverTime: '2026-11-22T14:47:18.000Z',
+        action: 'pause',
+        actorId: 'an',
+        ...more
+    })
+    const studyRoom = (): ServerChannel => ({
+        ...channel('im-lang'),
+        type: 'voice',
+        isStudyRoom: true,
+        voiceStates: []
+    })
+    const withStudyRoom = (): Server => ({
+        ...server('ot', ['chung'], 'Ôn thi'),
+        channels: [channel('chung'), studyRoom()]
+    })
+    const sessionIn = () =>
+        list()
+            ?.flatMap((one) => one.channels)
+            .find((one) => one.id === 'im-lang')?.focusSession
+
+    beforeEach(() => {
+        vi.useFakeTimers()
+        fetchServer.mockReset()
+        client = new QueryClient()
+        client.setQueryData(userKeys.profile(), { id: 'an' })
+        client.setQueryData(serverKeys.list(), [withStudyRoom()])
+        stop = listenForServers(client, notices)
+    })
+    afterEach(() => {
+        stop()
+        vi.useRealTimers()
+    })
+
+    it('puts each later state told on the room, as GET /servers has it, and none once it ended', () => {
+        emitRealtimeEvent('focus_session.started', at(1, { action: 'start' }))
+        expect(sessionIn()).toMatchObject({ id: 's1', version: 1, status: 'running' })
+        expect(sessionIn()).not.toHaveProperty('channelId')
+        emitRealtimeEvent(
+            'focus_session.updated',
+            at(3, { status: 'paused', phaseEndsAt: null, pausedRemainingMs: 60_000 })
+        )
+        // Older than the one held: dropped, whichever way it came.
+        emitRealtimeEvent('focus_session.updated', at(2))
+        expect(sessionIn()).toMatchObject({ version: 3, status: 'paused' })
+        emitRealtimeEvent('focus_session.ended', at(4, { status: 'ended', action: 'stop', summaries: [] }))
+        expect(sessionIn()).toBeNull()
+        // A late event of the session ended brings nothing back.
+        emitRealtimeEvent('focus_session.updated', at(3))
+        expect(sessionIn()).toBeNull()
+        expect(fetchServer).not.toHaveBeenCalled()
+    })
+
+    it('drops a state older than the one a read put on the room', () => {
+        const read = withStudyRoom()
+        const held = roomSessionOf(at(5, { status: 'paused' }) as unknown as FocusSession)
+        read.channels[1] = { ...studyRoom(), focusSession: held }
+        client.setQueryData(serverKeys.list(), [read])
+        emitRealtimeEvent('focus_session.updated', at(4))
+        expect(sessionIn()).toMatchObject({ version: 5, status: 'paused' })
+    })
+
+    it('keeps a session told while the server was read: the read saw an older one', async () => {
+        emitRealtimeEvent('focus_session.started', at(1, { action: 'start' }))
+        let answer!: (value: Server) => void
+        fetchServer.mockImplementationOnce(() => new Promise((resolve) => (answer = resolve)))
+        emitRealtimeEvent('channel.updated', { serverId: 'ot' })
+        await settle()
+        emitRealtimeEvent('focus_session.updated', at(2, { status: 'paused', phaseEndsAt: null, pausedRemainingMs: 1 }))
+        answer({ ...withStudyRoom(), name: 'Ôn thi 2' })
+        await settle()
+        expect(list()?.[0]?.name).toBe('Ôn thi 2')
+        expect(sessionIn()).toMatchObject({ version: 2, status: 'paused' })
     })
 })

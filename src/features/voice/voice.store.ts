@@ -1,11 +1,26 @@
 import { create } from 'zustand'
 import type { Room } from 'livekit-client'
 import type { DeviceState } from '@/lib/livekit'
+import { safeLocalStorage } from '@/lib/safe-storage'
 import type { Device } from './lib/devices'
 import type { PutOutReason } from './types'
 
 /** Joining (the button `loading`), in the room, or LiveKit trying again (C-09 `+reconnecting`). */
 export type CallPhase = 'joining' | 'connected' | 'reconnecting'
+
+/** How a study room shows its people (D-55, C-26a `view`): around the ring, or a grid of tiles. */
+export type RoomView = 'ring' | 'grid'
+
+const VIEW_KEY = 'room:view'
+
+/** The view chosen last on this browser (07: remembered by the browser), the ring at first. */
+const viewKept = (): RoomView => (safeLocalStorage.get(VIEW_KEY) === 'grid' ? 'grid' : 'ring')
+
+/** A study room's view chosen (the Header's switch, D-55), kept for this browser. */
+export function chooseRoomView(view: RoomView): void {
+    safeLocalStorage.set(VIEW_KEY, view)
+    useVoiceStore.setState({ roomView: view })
+}
 
 /** The room this tab is in, or joining (VC-02: one per account; another tab's is not this one). */
 export interface Call {
@@ -54,6 +69,8 @@ interface VoiceState {
      * later. Null: the list's own `modMuted` holds. Forgotten on leaving.
      */
     modMuted: boolean | null
+    /** A study room's view (D-55): the same in every study room, remembered by the browser. */
+    roomView: RoomView
 }
 
 /**
@@ -73,5 +90,6 @@ export const useVoiceStore = create<VoiceState>(() => ({
     deviceBusy: null,
     problem: null,
     removed: null,
-    modMuted: null
+    modMuted: null,
+    roomView: viewKept()
 }))

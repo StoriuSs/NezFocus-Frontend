@@ -73,12 +73,14 @@ function vendorChunk(id: string): string | undefined {
  * A split feature's stylesheet (tailwind.feature.js, D-193) in a chunk of its
  * own name, whichever lazy chunks import it: the tasks' is shared by the Task
  * Board and the task detail, and `.size-limit.mjs` finds it by that name; so
- * are the inbox's and voice's (a room's page and the dock).
+ * are the inbox's, voice's (a room's page and the dock) and study's (a study
+ * room's stage).
  */
 const FEATURE_STYLES: Record<string, RegExp> = {
     TaskStyles: /\/src\/features\/tasks\/tasks\.css(\?|$)/,
     NotificationStyles: /\/src\/features\/notifications\/notifications\.css(\?|$)/,
-    VoiceStyles: /\/src\/features\/voice\/voice\.css(\?|$)/
+    VoiceStyles: /\/src\/features\/voice\/voice\.css(\?|$)/,
+    StudyStyles: /\/src\/features\/study\/study\.css(\?|$)/
 }
 
 function chunkOf(id: string): string | undefined {

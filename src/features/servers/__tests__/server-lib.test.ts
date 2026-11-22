@@ -22,6 +22,7 @@ const channel = (id: string, extra: Partial<ServerChannel> = {}): ServerChannel 
     permissions: '0',
     viewRoleIds: null,
     voiceStates: null,
+    focusSession: null,
     ...extra
 })
 

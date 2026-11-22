@@ -1,16 +1,18 @@
-import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { Suspense, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { Minimize2, PhoneOff } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import '@/i18n/voice'
 import { RoomContext, useIsSpeaking, useParticipants } from '@livekit/components-react'
 import { Track, type Participant, type Room } from 'livekit-client'
+import { PageLoader } from '@/components/PageLoader'
+import { StudyStage, useEndedHere, type StudyRoomView } from '@/features/study'
 import { useToastEdge } from '@/hooks/useToastArea'
 import { useOrderedPeople } from '../hooks/useOrderedPeople'
 import { useLeaveRoom } from '../hooks/useLeaveRoom'
 import { useModMuted } from '../hooks/useModMuted'
 import { useRoomMenu } from '../hooks/useRoomMenu'
 import type { Device } from '../lib/devices'
-import { gridOf } from '../lib/people'
+import { gridOf, personName } from '../lib/people'
 import { roomActionsOn } from '../lib/room-actions'
 import { switchScreen } from '../lib/session'
 import { sharerOf } from '../lib/share'
@@ -29,6 +31,7 @@ import {
     useTileName
 } from './PersonTile'
 import { RoomControl } from './RoomControl'
+import { Seat } from './Seat'
 import { ShareControl } from './ShareControl'
 import { StageView } from './StageView'
 import { TileStrip } from './TileStrip'
@@ -55,6 +58,12 @@ import { useVoiceStore } from '../voice.store'
  * A tile with a picture zooms in to the whole stage, the others hidden (07
  * câu L3b-a): a click on it, its zoom-out button or Esc goes back to the
  * grid, as does its picture stopping (the camera off, the person gone).
+ *
+ * A study room (07 S-ROOM-02, S-ROOM-06 `study-room-idle`) is the study
+ * feature's stage: the people around the ring, or this grid under the
+ * session's compact block (the Header's switch, D-55), a screen shared or a
+ * tile zoomed in the same; its controls with the Host's. So is a room whose
+ * study mode was turned off while one was in it, for the summary (07 › Edge).
  */
 export function InRoom({ room, live, me }: { room: VoiceRoom; live: Room; me: string }) {
     return (
@@ -96,7 +105,7 @@ function Stage({ room, me }: { room: VoiceRoom; me: string }) {
                 modMuted: false
             }
     )
-    const ordered = useOrderedPeople(people, me)
+    const ordered = useOrderedPeople(people, me, room.session?.hostId)
     const sharer = useHeldSharer(sharerOf([...screens.keys()], room.people.find((one) => one.screenSharing)?.user.id))
     const sharerPerson = sharer ? (people.find((one) => one.user.id === sharer) ?? listed.get(sharer)) : undefined
     const sharerName = useTileName(sharerPerson?.user ?? EMPTY_USER, false)
@@ -212,12 +221,78 @@ function Stage({ room, me }: { room: VoiceRoom; me: string }) {
         })
     // Muted by a moderator (07 mod-muted): their word, or one's own row in the API's list (D-205).
     const modMuted = useModMuted(room.people.some((one) => one.user.id === me && one.modMuted))
+    const joinedAt = room.people.find((one) => one.user.id === me)?.joinedAt ?? null
+    const endedHere = useEndedHere(room.channelId, room.session === null, joinedAt) !== null
+    const view = useVoiceStore((state) => state.roomView)
+    const { t: words } = useTranslation('voice')
+    const devices = (
+        <>
+            <DeviceControl device='mic' allowed={room.canSpeak} modMuted={modMuted} help={help} onHelp={setHelp} />
+            <DeviceControl device='camera' allowed={room.canVideo} help={help} onHelp={setHelp} />
+            <ShareControl
+                ref={shareButton}
+                allowed={room.canVideo}
+                other={sharer && sharer !== me ? sharerName : undefined}
+            />
+        </>
+    )
+    const leaveButton = (
+        <RoomControl icon={<PhoneOff />} label={t('controls.leave')} hint={t('controls.leave')} onClick={leave} />
+    )
+    if (room.isStudyRoom || endedHere) {
+        const study: StudyRoomView = {
+            channelId: room.channelId,
+            isStudyRoom: room.isStudyRoom,
+            session: room.session,
+            cycle: room.cycle,
+            canStart: room.canStartSession,
+            canManage: room.canManageStudy
+        }
+        const ringView = view === 'ring' && !sharer && !zoomedPicture
+        return (
+            <div className='flex min-h-full flex-col'>
+                <BlockedBanner onHowTo={setHelp} />
+                <p className='sr-only' aria-live='polite'>
+                    {said}
+                </p>
+                <Suspense fallback={<PageLoader className='min-h-0 flex-1' />}>
+                    <StudyStage
+                        room={study}
+                        me={me}
+                        joinedAt={joinedAt}
+                        people={ordered.map((one) => ({
+                            id: one.user.id,
+                            name: personName(one.user) ?? words('person.deletedAccount')
+                        }))}
+                        seats={ringSeats(ordered, byId)}
+                        content={ringView ? null : tilesArea()}
+                        devices={devices}
+                        leave={leaveButton}
+                        Control={RoomControl}
+                        barRef={bar}
+                    />
+                </Suspense>
+            </div>
+        )
+    }
     return (
         <div className='flex min-h-full flex-col'>
             <BlockedBanner onHowTo={setHelp} />
             <p className='sr-only' aria-live='polite'>
                 {said}
             </p>
+            {tilesArea()}
+            <div ref={bar} className='flex shrink-0 items-start justify-center gap-4 px-6 pb-6 pt-2'>
+                {devices}
+                <span className='w-6' aria-hidden='true' />
+                {leaveButton}
+            </div>
+        </div>
+    )
+
+    /** The people's tiles: the grid, a tile zoomed in, or the strip over a screen shared. */
+    function tilesArea() {
+        return (
             <div ref={area} className='flex min-h-0 flex-1 flex-col'>
                 {sharer ? (
                     <>
@@ -258,24 +333,36 @@ function Stage({ room, me }: { room: VoiceRoom; me: string }) {
                     </div>
                 )}
             </div>
-            <div ref={bar} className='flex shrink-0 items-start justify-center gap-4 px-6 pb-6 pt-2'>
-                <DeviceControl device='mic' allowed={room.canSpeak} modMuted={modMuted} help={help} onHelp={setHelp} />
-                <DeviceControl device='camera' allowed={room.canVideo} help={help} onHelp={setHelp} />
-                <ShareControl
-                    ref={shareButton}
-                    allowed={room.canVideo}
-                    other={sharer && sharer !== me ? sharerName : undefined}
-                />
-                <span className='w-6' aria-hidden='true' />
-                <RoomControl
-                    icon={<PhoneOff />}
-                    label={t('controls.leave')}
-                    hint={t('controls.leave')}
-                    onClick={leave}
-                />
-            </div>
-        </div>
-    )
+        )
+    }
+}
+
+/** The most seats around the ring; more people: 11 and a "+N" (C-18). */
+const RING_SEATS = 12
+
+/**
+ * The seats around a study room's ring (C-18), in the order shown, each
+ * person's mic as LiveKit has it; 13 or more, 11 seats and "+N".
+ */
+function ringSeats(ordered: RoomPerson[], byId: Map<string, Participant>) {
+    const shown = ordered.length > RING_SEATS ? ordered.slice(0, RING_SEATS - 1) : ordered
+    const seats = shown.map((person) => {
+        const participant = byId.get(person.user.id)
+        const micOn = participant ? participant.isMicrophoneEnabled : person.micOn
+        return { id: person.user.id, seat: <Seat as='div' person={{ ...person, micOn }} /> }
+    })
+    if (ordered.length > RING_SEATS)
+        seats.push({
+            id: 'more',
+            seat: (
+                <span className='flex size-14 items-center justify-center'>
+                    <span className='flex size-12 items-center justify-center rounded-full border border-border-input bg-surface-2 text-label font-semibold text-text-primary'>
+                        +{ordered.length - shown.length}
+                    </span>
+                </span>
+            )
+        })
+    return seats
 }
 
 /**

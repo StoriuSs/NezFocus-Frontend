@@ -76,24 +76,7 @@
         "managersDescription": "People who can manage study rooms."
       },
       "cycle": "Default cycle",
-      "custom": "Custom",
       "presetHint": "Filled in when a study session starts. Long break: off.",
-      "field": {
-        "focus": "Focus ({{min}}–{{max}})",
-        "shortBreak": "Short break ({{min}}–{{max}})",
-        "longBreak": "Long break ({{min}}–{{max}})",
-        "longBreakEvery": "After every ({{min}}–{{max}}) rounds"
-      },
-      "minutes": "min",
-      "longBreak": "Long break",
-      "error": {
-        "focus": "Focus must be from {{min}} to {{max}} minutes",
-        "shortBreak": "Short break must be from {{min}} to {{max}} minutes",
-        "longBreak": "Long break must be from {{min}} to {{max}} minutes",
-        "longBreakEvery": "Rounds must be from {{min}} to {{max}}"
-      },
-      "summary": "{{focus}} min focus · {{shortBreak}} min break · no long break",
-      "summaryLongBreak": "{{focus}} min focus · {{shortBreak}} min break · {{longBreak}} min long break every {{every}} rounds",
       "onlyStudyPart": "Your role can only change the study room part."
     },
     "taskBoard": {

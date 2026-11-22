@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { env } from '@/config/env'
+import { noteServerTime } from '@/lib/server-clock'
 import { fetchRealtimeTicket } from '../api/realtime.api'
 import type { Presence } from '@/components/ui/presence-dot'
 import { startPresenceSignals } from '../lib/presence-signals'
@@ -47,8 +48,10 @@ export function useRealtimeConnection(): void {
                         const state = useRealtimeStore.getState()
                         state.setSocket(status)
                         if (status !== 'connected') return
-                        const said = (ready as { status?: Presence } | undefined)?.status
-                        if (said) queryClient.setQueryData(realtimeKeys.ownPresence(), said)
+                        const told = ready as { status?: Presence; serverTime?: string } | undefined
+                        if (told?.status) queryClient.setQueryData(realtimeKeys.ownPresence(), told.status)
+                        // The server's clock, for the study sessions' countdowns (D-18).
+                        noteServerTime(told?.serverTime)
                         signals.ready()
                         // Live again: what was missed meanwhile is read now (ARCHITECTURE 3.4).
                         emitRealtimeEvent('ready', undefined)

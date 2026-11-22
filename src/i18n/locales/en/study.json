@@ -1,0 +1,145 @@
+{
+    "phase": {
+        "focus": "Focus",
+        "short_break": "Short break",
+        "long_break": "Long break",
+        "paused": "Paused",
+        "pausedPhase": "Paused · {{phase}}"
+    },
+    "next": {
+        "short_break": "short break",
+        "long_break": "long break"
+    },
+    "minutes_one": "{{count}} minute",
+    "minutes_other": "{{count}} minutes",
+    "hoursMinutes": "{{hours}} h {{minutes}} min",
+    "hours": "{{hours}} h",
+    "ring": {
+        "cycle": "Round {{round}} · {{next}} at {{time}}",
+        "focusAgain": "Focus again at {{time}}",
+        "pausedByYou": "You paused",
+        "pausedBy": "{{name}} paused",
+        "paused": "Paused",
+        "pressResume": "Press Resume to start again",
+        "syncing": "Syncing again…",
+        "timer": "{{phase}}, round {{round}}, {{left}} left",
+        "underAMinute": "under a minute",
+        "idle": "No study session yet",
+        "start_one": "Start a {{count}} minute focus",
+        "start_other": "Start a {{count}} minute focus",
+        "otherCycle": "Another cycle",
+        "managersOnly": "Only study room managers can start a session",
+        "ended": "The study session ended",
+        "underOne": "Under 1 minute this session",
+        "today_one": "Today {{time}} · {{count}} day streak",
+        "today_other": "Today {{time}} · {{count}} day streak",
+        "todayNoStreak": "Today {{time}}",
+        "compact_one": "Round {{round}} · {{count}} person",
+        "compact_other": "Round {{round}} · {{count}} people",
+        "compactEnded": "The study session ended · {{time}}",
+        "switched": "Now {{phase}}, {{time}}",
+        "seats_one": "{{count}} person in the room",
+        "seats_other": "{{count}} people in the room"
+    },
+    "controls": {
+        "pause": "Pause",
+        "resume": "Resume",
+        "menu": "Controls",
+        "pauseHint": "Pause the study session (Space)",
+        "resumeHint": "Resume the study session (Space)",
+        "menuHint": "Study session controls"
+    },
+    "menu": {
+        "moderator": "{{name}} is in control · you manage study rooms",
+        "moderatorNoHost": "No one is in control · you manage study rooms",
+        "skip": "Skip phase",
+        "skipTo": {
+            "focus": "Go to Focus now",
+            "short_break": "Go to Short break now",
+            "long_break": "Go to Long break now"
+        },
+        "changeCycle": "Change cycle",
+        "pauseToChange": "Pause to change the cycle",
+        "currentCycle": "Now {{cycle}}",
+        "stop": "Stop the study session",
+        "stopFor_one": "Ends it for {{count}} person",
+        "stopFor_other": "Ends it for all {{count}} people",
+        "stopAlone": "Ends your study session"
+    },
+    "stop": {
+        "title_one": "Stop the study session for the room ({{count}} person)?",
+        "title_other": "Stop the study session for the room ({{count}} people)?",
+        "titleAlone": "Stop the study session?",
+        "body": "The clock stops for everyone. Everyone stays in the room, and the time studied is kept.",
+        "cancel": "Cancel",
+        "confirm": "Stop the study session"
+    },
+    "start": {
+        "title": "Start a study session",
+        "description_one": "The {{count}} person in the room will keep the same rhythm. You will be in control.",
+        "description_other": "All {{count}} people in the room will keep the same rhythm. You will be in control.",
+        "descriptionAlone": "You will be in control. People who join later study in the same rhythm.",
+        "cancel": "Cancel",
+        "submit": "Start for the room",
+        "conflict": "{{name}} just started a study session"
+    },
+    "change": {
+        "title": "Change cycle",
+        "note": "The current phase ({{phase}}) starts again with its new length. The time studied is kept.",
+        "cancel": "Cancel",
+        "save": "Save"
+    },
+    "cycle": {
+        "label": "Cycle",
+        "custom": "Custom",
+        "roomDefault": "Long break: off · The room's default cycle",
+        "roomDefaultLongBreak": "Long break {{longBreak}} every {{every}} rounds · The room's default cycle",
+        "minutes": "min",
+        "longBreak": "Long break",
+        "field": {
+            "focus": "Focus ({{min}}–{{max}})",
+            "shortBreak": "Short break ({{min}}–{{max}})",
+            "longBreak": "Long break ({{min}}–{{max}})",
+            "longBreakEvery": "After every ({{min}}–{{max}}) rounds"
+        },
+        "error": {
+            "focus": "Focus must be from {{min}} to {{max}} minutes",
+            "shortBreak": "Short break must be from {{min}} to {{max}} minutes",
+            "longBreak": "Long break must be from {{min}} to {{max}} minutes",
+            "longBreakEvery": "Rounds must be from {{min}} to {{max}}"
+        },
+        "summary": "{{focus}} min focus · {{shortBreak}} min break · no long break",
+        "summaryLongBreak": "{{focus}} min focus · {{shortBreak}} min break · {{longBreak}} min long break every {{every}} rounds",
+        "short": "{{focus}}/{{shortBreak}}",
+        "shortLongBreak": "{{focus}}/{{shortBreak}} · {{longBreak}} long break every {{every}} rounds"
+    },
+    "news": {
+        "started": "{{name}} started a study session",
+        "skipped": "{{name}} skipped the phase",
+        "changed": "{{name}} changed the cycle to {{cycle}}",
+        "resumed": "{{name}} resumed the study session",
+        "youHost": "You are in control of the study session",
+        "youHostAfter": "{{name}} left the room · you are in control of the study session",
+        "counting": "Your time counts from {{time}}",
+        "someone": "Someone"
+    },
+    "end": {
+        "byYou": "You stopped the study session",
+        "byOther": "{{name}} stopped the study session for the room",
+        "studyOff": "Study room mode was turned off"
+    },
+    "people": {
+        "focus_one": "{{count}} person is focusing with you",
+        "focus_other": "{{count}} people are focusing with you",
+        "paused_one": "{{count}} person is waiting with you",
+        "paused_other": "{{count}} people are waiting with you",
+        "short_break": "The whole room is on a short break",
+        "long_break": "The whole room is on a long break",
+        "alone": "You are studying alone in this room",
+        "idle_one": "{{count}} person is in the room with you",
+        "idle_other": "{{count}} people are in the room with you",
+        "idleAlone": "You are alone in the room",
+        "pausedNote": "The clock stands still, no minutes count",
+        "noHostNote": "A study room manager who joins will control the session"
+    }
+}

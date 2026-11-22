@@ -25,6 +25,9 @@ import { IconButton } from '@/components/ui/icon-button'
  * S-MOD-06), the title left to screen readers. `overlay`: drawn inside the
  * content column, which it may cover from the Header down (the chat's cover
  * for dropped files, C-12 `drop-target`); the right panel stays uncovered.
+ * `afterTitle`: right after the title, which gives way to it (a study room's
+ * Host chip, C-07 `room`). `className`: the content column's ground, the
+ * Header in (a room's phase colour, 07 › Quy ước).
  */
 export function ShellPage({
     title,
@@ -36,7 +39,9 @@ export function ShellPage({
     composer = false,
     reconnecting = false,
     bare = false,
-    overlay
+    overlay,
+    afterTitle,
+    className
 }: {
     title: string
     icon?: LucideIcon
@@ -48,6 +53,8 @@ export function ShellPage({
     reconnecting?: boolean
     bare?: boolean
     overlay?: ReactNode
+    afterTitle?: ReactNode
+    className?: string
 }) {
     const { t } = useTranslation()
     const shell = useContext(ShellContext)
@@ -58,7 +65,10 @@ export function ShellPage({
 
     return (
         <>
-            <section ref={area} className={cn('flex min-w-0 flex-1 flex-col', overlay !== undefined && 'relative')}>
+            <section
+                ref={area}
+                className={cn('flex min-w-0 flex-1 flex-col', overlay !== undefined && 'relative', className)}
+            >
                 <header className={cn('flex h-12 shrink-0 items-center gap-2 border-b px-4', bare && 'lg:hidden')}>
                     {shell ? (
                         <WithTooltip label={t('shell.openNav')} side='bottom'>
@@ -77,11 +87,16 @@ export function ShellPage({
                     ) : null}
                     {Icon ? <Icon className='size-5 shrink-0 text-text-tertiary' aria-hidden='true' /> : null}
                     <h1
-                        className={cn('min-w-0 flex-1 truncate text-headline text-text-primary', bare && 'sr-only')}
+                        className={cn(
+                            'min-w-0 truncate text-headline text-text-primary',
+                            !afterTitle && 'flex-1',
+                            bare && 'sr-only'
+                        )}
                         title={title}
                     >
                         {title}
                     </h1>
+                    {afterTitle ? <div className='flex min-w-0 flex-1 items-center'>{afterTitle}</div> : null}
                     {actions ? <div className='flex shrink-0 items-center gap-1'>{actions}</div> : null}
                 </header>
                 {connection ? <ConnectionBanner status={connection} composer={composer} /> : null}

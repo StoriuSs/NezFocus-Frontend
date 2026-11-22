@@ -3,7 +3,7 @@ import * as z from 'zod'
 import type { TFunction } from 'i18next'
 import { storedName } from './channel-layout'
 import { nameError } from './layout-messages'
-import { badCycleFields, chosenCycle, cycleFormOf, cycleOf, type CycleChoice } from './study-cycle'
+import { addCycleIssues, chosenCycle, cycleFormOf, cycleFormSchema, cycleOf } from '@/features/study'
 import type { Server, ServerChannel, UpdateChannelRequest } from '../types'
 
 const sameSet = (a: string[], b: string[]) => a.length === b.length && a.every((id) => b.includes(id))
@@ -26,21 +26,10 @@ export const createChannelSettingsSchema = (t: TFunction<'servers'>, server: Ser
             taskBoardEnabled: z.boolean(),
             isStudyRoom: z.boolean(),
             studyStarter: z.custom<ServerChannel['studyStarter']>(),
-            cycle: z.object({
-                choice: z.custom<CycleChoice>(),
-                focus: z.string(),
-                shortBreak: z.string(),
-                longBreakOn: z.boolean(),
-                longBreak: z.string(),
-                longBreakEvery: z.string()
-            })
+            cycle: cycleFormSchema
         })
         .superRefine((values, ctx) => {
-            if (channel.type === 'voice' && values.isStudyRoom) {
-                for (const field of badCycleFields(values.cycle)) {
-                    ctx.addIssue({ code: 'custom', path: ['cycle', field], message: field })
-                }
-            }
+            if (channel.type === 'voice' && values.isStudyRoom) addCycleIssues(values.cycle, ctx, ['cycle'])
             if (storedName(channel.type, values.name) === channel.name) return
             const message = nameError(t, server, channel.type, values.name, channel.categoryId ?? null, channel.id)
             if (message) ctx.addIssue({ code: 'custom', path: ['name'], message })

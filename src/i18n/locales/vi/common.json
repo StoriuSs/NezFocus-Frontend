@@ -144,7 +144,15 @@
       "shareRace": "{{name}} vừa chia sẻ màn hình trước bạn",
       "shareNotAllowed": "Bạn không còn quyền chia sẻ màn hình",
       "micBusy": "Mic đang được ứng dụng khác dùng",
-      "cameraBusy": "Camera đang được ứng dụng khác dùng"
+      "cameraBusy": "Camera đang được ứng dụng khác dùng",
+      "hostYou": "Bạn đang điều khiển",
+      "hostOther": "{{name}} đang điều khiển",
+      "hostNone": "Chưa có người điều khiển",
+      "view": "Cách xem",
+      "viewRing": "Vòng",
+      "viewGrid": "Lưới",
+      "cameras_one": "{{count}} người bật camera",
+      "cameras_other": "{{count}} người bật camera"
     },
     "serverMenu": {
       "createChannel": "Tạo kênh",

@@ -3,7 +3,7 @@ import type { TFunction } from 'i18next'
 import { getApiErrorType, NETWORK_ERROR } from '@/lib/api-error'
 import { clashingChannel, nameProblem, storedName, type ChannelType } from './channel-layout'
 import { layoutRule } from './layout-error'
-import { cycleFieldOfProblem, type CycleField } from './study-cycle'
+import { cycleFieldOfProblem, type CycleField } from '@/features/study'
 import type { Server } from '../types'
 
 /** What the name is of: a text channel, a room, or a category. */

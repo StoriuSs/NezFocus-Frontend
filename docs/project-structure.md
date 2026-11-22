@@ -48,7 +48,7 @@ react-starter/
     │   │                      #   (icon-button, segmented-control, select, option-cards, empty-state…)
     │   ├── shell/             # ShellPage, RightPanel, ConnectionBanner, ShellNotFound — what a page in the AppShell draws
     │   ├── brand/             # Logo; mascot/ (Mascot, RiveMascot)
-    │   ├── form/              # FormField — the label/control/error pattern; FormMessage, TimeZoneCombobox
+    │   ├── form/              # FormField — the label/control/error pattern; FormMessage, TimeZoneCombobox, NumberField (C-22)
     │   ├── settings/          # SaveBar, SettingsRow, SwitchRow — the rows of a settings page
     │   └── ErrorBoundary.tsx, PageLoader.tsx, LanguageToggle.tsx, Banner.tsx, ImageCropDialog.tsx, …
     ├── config/                # env.ts and its zod schema; site.ts (the product's name); zod.ts (zod without eval, imported first)
@@ -76,9 +76,10 @@ react-starter/
     │   │   │                  #   useRoles, useModeration, useServerSettings, useMembership; serverOwnership
     │   │   │                  #   (auth's port), useMentionSource (the chat's MentionSource port),
     │   │   │                  #   liveServers (socket events: each server read again, D-178)
-    │   │   ├── components/    # CreateServerDialog, NoServers, ServerIcon, ServerMenuItems; channel-list/,
+    │   │   ├── components/    # CreateServerDialog, NoServers, ServerIcon, ServerMenuItems, RoomHeader (a study
+    │   │   │                  #   room's Host chip and Ring / Grid switch); channel-list/,
     │   │   │                  #   dialogs/ (channels, categories; RadioChoices, the radio rows of who may post / start;
-    │   │   │                  #   a room's study part and its number fields, C-22, until a second feature needs them),
+    │   │   │                  #   a room's study part),
     │   │   │                  #   invites/, membership/ (leave, hand over, delete;
     │   │   │                  #   RemovedDialog: kicked or banned, 11 S-MOD-02),
     │   │   │                  #   settings/ (ServerNameForm, ServerIconSetting, WelcomeChannelSetting, OwnerSettings,
@@ -97,7 +98,7 @@ react-starter/
     │   │   │                  #   channel-layout, channel-list, drop-target, layout-error, invites, moderation,
     │   │   │                  #   membership, permissions, roles, server-name, settings-sections, typed-name,
     │   │   │                  #   channel-settings (the form of channel / room settings: schema, what is sent),
-    │   │   │                  #   study-cycle (a study room's cycle: ranges, presets, the fields out of range)
+    │   │   │                  #   room-people (a room's people and study session swapped in the list)
     │   │   ├── pages/         # ChannelPage (/channels/:serverId/:channelId?, and /…/:messageId: the channel
     │   │   │                  #   at a message, D-48), ServerSettingsPage
     │   │   │                  #   (/servers/:serverId/settings/…), InvitePage (/invite/:code)
@@ -170,6 +171,15 @@ react-starter/
     │   │                      #   grid, StageView + TileStrip + ShareControl when a screen is shared),
     │   │                      #   hooks/, voice.css (its classes). The rooms' people are the servers'
     │   │                      #   data (D-205), handed in as VoiceRoom
+    │   ├── study/             # Study sessions (07, 08, M5): index.ts (StudyStage lazy: the ring, its
+    │   │                      #   seats, the Host's controls, the start and cycle dialogs, the summary, with
+    │   │                      #   their words; the light parts not lazy: the cycle rules,
+    │   │                      #   the phase rules, listenForSessions, the store), api/ (start, commands,
+    │   │                      #   today; liveSessions: `focus_session.*` and `streak.updated`, each later
+    │   │                      #   state handed to the servers feature, D-231), lib/ (study-cycle, phases,
+    │   │                      #   durations, the words of a cycle), hooks/, study.store.ts (who did what,
+    │   │                      #   who paused, the last session ended), study.css (its classes). A room's session is the servers'
+    │   │                      #   data (D-220), handed in with the VoiceRoom
     │   └── users/             # The profile and the account's settings
     │       ├── api/           # users.api.ts (fetchProfile, removeAvatar),
     │       │                  #   settings.api.ts (fetchSettings, settingsQuery, updateSettings), hooks, keys
@@ -312,6 +322,7 @@ Shared and feature-free.
 | `before-sign-out.ts` | Work that must be sent before the tab signs out or closes (a removed avatar waiting out its Undo); the auth store runs it while the token is still in hand |
 | `time-zones.ts` | The time zones to pick from (C-25), named and ordered, and the search over them; `wallClock()`, the calendar and clock in a zone (times shown in the account's zone); `endsAt()` / `endsAtText()`, when a timeout ends ("22:30", "22:30, 19/10" on another day); `accountTimeZone()`, the account's zone for code outside React, from the source the users feature sets (`setTimeZoneSource`) |
 | `phase-sound.ts` | `playPhaseSound()`: the phase sound, two short notes (C6 then E6) made with Web Audio (D-140), silent where the browser cannot play. "Play sample" on Notifications now, the end of a study phase later |
+| `server-clock.ts` | `noteServerTime()`, `serverNow()`: the server's clock as this tab knows it (D-18), taken from `ready` and each study session told live, never from a list in the cache; a phase counts down to the server's end |
 | `socket.ts` | `openSocket()`: the tab's one socket.io connection (SRS 5.2), websocket only, a new ticket for each attempt, a refused handshake tried again with a growing wait, a session that ended asked about (still signed in: connect again). Loaded with `import()` after the AppShell's first paint; knows no feature (the ticket and what to do come in its options) |
 | `livekit/` | `joinRoom()`: the tab's link to a LiveKit room (ARCHITECTURE §4): others' sound played whatever the page, the mic and camera switched, a screen shared with the picker's hints and why it stopped by itself (the browser's bar, VIDEO lost, muted by the server), how the link ended in the app's words (`other-tab`, `removed`, `lost`). Loaded with `import()` when a room is joined, never with the first screen; knows no feature |
 | `simple-markdown.ts` | The small Markdown subset the legal pages are written in, read into blocks React draws (never `innerHTML`) |
@@ -414,7 +425,11 @@ Habits worth keeping:
   `users, realtime, messaging ← notifications ← servers`: the inbox reads
   a message's words with the chat's mention names, and the servers feature
   hands it the names of channels and servers;
-  `users, realtime ← voice ← servers`: the channel page shows a room's page
+  `users, realtime ← study ← voice ← servers`: the study feature knows no
+  room but what it is handed (`StudyRoomView`, and the room's round control
+  as a prop), the servers feature keeps each room's session in its list from
+  what study hears (`listenForSessions`, a port: study declares the sink,
+  `liveServers.ts` hands one, D-231); `users, realtime ← voice ← servers`: the channel page shows a room's page
   and the channel list the people in each room, the servers feature handing
   voice each room as a `VoiceRoom` (`servers/lib/voice-room.ts`), what one
   may do there read from the bits and whom one outranks there (D-208), and keeping who is in it in its own list

@@ -13,7 +13,7 @@ const extract = defaultExtractor({ tailwindConfig: { separator: ':', prefix: '' 
  * voice rooms (M4 L3a).
  * tailwind.config.js leaves the same folders out.
  */
-export const SPLIT_FEATURES = ['messaging', 'tasks', 'notifications', 'voice']
+export const SPLIT_FEATURES = ['messaging', 'tasks', 'notifications', 'voice', 'study']
 const SPLIT = SPLIT_FEATURES.map((feature) => join('src', 'features', feature))
 
 /** Every .ts / .tsx file under `dir`, the split features left out: the main stylesheet's files. */

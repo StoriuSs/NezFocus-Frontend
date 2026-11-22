@@ -1,3 +1,4 @@
+import { cycleOf } from '@/features/study'
 import type { VoiceDirectory, VoiceRoom } from '@/features/voice'
 import { isBelow } from './moderation'
 import { can } from './permissions'
@@ -10,7 +11,8 @@ import type { Server, ServerChannel } from '../types'
  * so the page says until when (D-54). A moderator's menu (D-207, D-208)
  * goes by the room's MUTE_MEMBERS / MOVE_MEMBERS and by rank, worked out
  * here as plain values: who in the room ranks below one, the owner above
- * all and no one above themselves.
+ * all and no one above themselves. A study room's session, its cycle, and
+ * who may start or control one (REQ-STUDY-01, 03) come the same way.
  */
 export function voiceRoomOf(server: Server, channel: ServerChannel): VoiceRoom {
     const people = channel.voiceStates ?? []
@@ -19,6 +21,12 @@ export function voiceRoomOf(server: Server, channel: ServerChannel): VoiceRoom {
         channelId: channel.id,
         name: channel.name,
         isStudyRoom: channel.isStudyRoom,
+        session: channel.focusSession ?? null,
+        cycle: cycleOf(channel),
+        canStartSession:
+            channel.isStudyRoom &&
+            (channel.studyStarter === 'anyone' || can(channel.permissions, 'MANAGE_STUDY_ROOMS')),
+        canManageStudy: can(channel.permissions, 'MANAGE_STUDY_ROOMS'),
         people,
         canConnect: can(channel.permissions, 'CONNECT'),
         canSpeak: can(channel.permissions, 'SPEAK'),

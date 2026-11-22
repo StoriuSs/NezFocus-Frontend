@@ -54,7 +54,8 @@ export default {
         '!./src/features/messaging/**',
         '!./src/features/tasks/**',
         '!./src/features/notifications/**',
-        '!./src/features/voice/**'
+        '!./src/features/voice/**',
+        '!./src/features/study/**'
     ],
     // Words of the code read as classes the app never uses: `element.blur()` (useRemovedWhileAway).
     blocklist: ['blur'],
@@ -134,7 +135,9 @@ export default {
             transitionDuration: {
                 micro: '120ms',
                 short: '200ms',
-                medium: '320ms'
+                medium: '320ms',
+                // Only a study phase changing (DESIGN.md › Motion, "Cả phòng thở ra").
+                long: '1200ms'
             },
             // A message opened by a link (C-10 `highlight`, D-48): its background
             // fades to `surface-2` and back twice, 200ms (`short`) each way, then

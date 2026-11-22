@@ -7,6 +7,7 @@ import type { messagingResources } from './messaging'
 import type { tasksResources } from './tasks'
 import type { notificationsResources } from './notifications'
 import type { voiceResources } from './voice'
+import type { studyResources } from './study'
 
 /**
  * Types t() against the English catalogue: a key that doesn't exist is a
@@ -31,7 +32,8 @@ declare module 'i18next' {
             'messaging',
             'tasks',
             'notifications',
-            'voice'
+            'voice',
+            'study'
         ]
         resources: (typeof resources)['en'] & {
             settings: (typeof settingsResources)['en']
@@ -41,6 +43,7 @@ declare module 'i18next' {
             tasks: (typeof tasksResources)['en']
             notifications: (typeof notificationsResources)['en']
             voice: (typeof voiceResources)['en']
+            study: (typeof studyResources)['en']
         }
     }
 }

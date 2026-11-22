@@ -76,7 +76,8 @@ const ND = server('nd', 'Nhóm đồ án Mobile', {
             taskBoardEnabled: false,
             permissions: '1',
             viewRoleIds: null,
-            voiceStates: null
+            voiceStates: null,
+            focusSession: null
         }
     ]
 })

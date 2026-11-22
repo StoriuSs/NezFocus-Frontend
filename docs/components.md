@@ -29,6 +29,7 @@ src/components/
 ├── form/FormField.tsx     # Label, control and the line under it, wired for screen readers
 ├── form/FormMessage.tsx   # The message for a whole form, above its main button (C-22)
 ├── form/TimeZoneCombobox.tsx  # The time zone picker (C-25), on the Combobox
+├── form/NumberField.tsx    # A number in a range (C-22): label, unit, ↑ / ↓ step, error under it
 ├── ErrorBoundary.tsx      # Catches a page that crashes
 ├── RouteErrorPage.tsx     # The full-page screen for a crash outside any page
 ├── PageLoader.tsx         # The spinner while a page's chunk loads
@@ -470,7 +471,10 @@ chosen segment, and the arrow keys move **and choose** at once. A segment
 can carry `lang` when its label is in another language ("English" on a
 Vietnamese page), and `numeric` when its label is numbers ("25/5", drawn in
 Unbounded as C-26a writes numbers). Used for the theme and the language on
-Appearance & language, and a study room's cycle in its settings (S-SET-06).
+Appearance & language, a study room's cycle in its settings (S-SET-06) and
+in the start and cycle dialogs (S-ROOM-03, S-ROOM-04). `variant='view'` is
+the Header's (D-55): 32 high, a segment with an `icon` before its label and
+a `suffix` after it (the cameras on, "📹1"), for a study room's Ring / Grid.
 
 ### `Select`
 

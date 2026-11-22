@@ -27,7 +27,7 @@ import {
 } from '../../lib/channel-settings'
 import { describeFailure, type LayoutFailure } from '../../lib/layout-messages'
 import { can } from '../../lib/permissions'
-import { badCycleFields, shownCycleFields } from '../../lib/study-cycle'
+import { badCycleFields, shownCycleFields } from '@/features/study'
 import type { Server, ServerChannel } from '../../types'
 import { ChannelNameField } from './ChannelNameField'
 import { DeleteChannelDialog } from './DeleteChannelDialog'
@@ -200,12 +200,7 @@ export function ChannelSettingsDialog({
 
                         {room ? (
                             <div className='border-t pt-5'>
-                                <StudyRoomFields
-                                    control={control}
-                                    errors={errors}
-                                    clearErrors={clearErrors}
-                                    disabled={saving}
-                                />
+                                <StudyRoomFields control={control} clearErrors={clearErrors} disabled={saving} />
                             </div>
                         ) : (
                             <>

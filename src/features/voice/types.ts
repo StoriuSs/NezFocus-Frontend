@@ -1,3 +1,4 @@
+import type { RoomSession, StudyCycle } from '@/features/study'
 import type { ApiModel } from '@/lib/api-types'
 
 /** Someone in a voice room (D-205): who, since when, and their icons (mic and camera self-reported, D-206). */
@@ -22,6 +23,14 @@ export interface VoiceRoom {
     channelId: string
     name: string
     isStudyRoom: boolean
+    /** Its study session not yet ended, or null (D-220); kept live by the servers feature (D-231 L5-b). */
+    session: RoomSession | null
+    /** The cycle a session starts with (a study room's settings). */
+    cycle: StudyCycle
+    /** May start a session: anyone in a study room that lets anyone, else MANAGE_STUDY_ROOMS (REQ-STUDY-01). */
+    canStartSession: boolean
+    /** MANAGE_STUDY_ROOMS in the room: the Host's controls without being Host (07 › luật 6). */
+    canManageStudy: boolean
     /** In the order they joined. */
     people: RoomPerson[]
     canConnect: boolean

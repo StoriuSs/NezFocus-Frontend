@@ -12,9 +12,10 @@ import { PersonAvatar } from './PersonAvatar'
  * 56 frame; bottom right a mic for someone with theirs on (everyone joins
  * muted, D-43), or `mic-off` for someone a moderator muted (C-20: that one
  * first, 07 mod-muted), bottom left a camera. Hover: a Tooltip with the name (a screen reader reads
- * it, with the icons, from the seat's own label).
+ * it, with the icons, from the seat's own label). Around a study room's ring
+ * (C-18) it is no list item (`as='div'`): the ring's own name counts them.
  */
-export function Seat({ person }: { person: RoomPerson }) {
+export function Seat({ person, as: Tag = 'li' }: { person: RoomPerson; as?: 'li' | 'div' }) {
     const { t } = useTranslation('voice')
     const name = personName(person.user) ?? t('person.deletedAccount')
     const states = [
@@ -23,8 +24,9 @@ export function Seat({ person }: { person: RoomPerson }) {
     ].filter(Boolean)
     return (
         <WithTooltip label={name}>
-            <li
+            <Tag
                 aria-label={[name, ...states].join(', ')}
+                role={Tag === 'div' ? 'img' : undefined}
                 className='relative flex size-14 items-center justify-center rounded-full'
             >
                 <PersonAvatar person={person.user} className='size-12 text-body' />
@@ -36,7 +38,7 @@ export function Seat({ person }: { person: RoomPerson }) {
                         <Video />
                     </Indicator>
                 ) : null}
-            </li>
+            </Tag>
         </WithTooltip>
     )
 }

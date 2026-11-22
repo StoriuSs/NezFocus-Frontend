@@ -144,7 +144,15 @@
       "shareRace": "{{name}} started sharing their screen before you",
       "shareNotAllowed": "You can no longer share your screen",
       "micBusy": "Another app is using your mic",
-      "cameraBusy": "Another app is using your camera"
+      "cameraBusy": "Another app is using your camera",
+      "hostYou": "You are in control",
+      "hostOther": "{{name}} is in control",
+      "hostNone": "No one is in control",
+      "view": "View",
+      "viewRing": "Ring",
+      "viewGrid": "Grid",
+      "cameras_one": "{{count}} camera on",
+      "cameras_other": "{{count}} cameras on"
     },
     "serverMenu": {
       "createChannel": "Create channel",

@@ -8,16 +8,29 @@ const active = (person: RoomPerson) => person.micOn || person.cameraOn || person
  * that order). Worked out when the list is first shown; after that, as C-06
  * says, people keep their places: those gone leave, newcomers go to the end
  * (oneself still first), so a mic switched on moves no one. Friends come
- * before the rest in C-06; there are none yet (M6).
+ * before the rest in C-06; there are none yet (M6). Around a study room's
+ * ring the Host comes right after oneself (C-18), when worked out afresh.
  *
  * `before`: the ids as last shown (none, or none still here: worked out afresh).
+ * `host`: the study session's Host, if any.
  */
-export function orderPeople(people: RoomPerson[], me: string | undefined, before: readonly string[]): string[] {
+export function orderPeople(
+    people: RoomPerson[],
+    me: string | undefined,
+    before: readonly string[],
+    host?: string | null
+): string[] {
     const here = new Set(people.map((person) => person.user.id))
     const kept = before.filter((id) => here.has(id))
     const ids =
         kept.length === 0
-            ? [...people].sort((a, b) => Number(active(b)) - Number(active(a))).map((person) => person.user.id)
+            ? [...people]
+                  .sort(
+                      (a, b) =>
+                          Number(b.user.id === host) - Number(a.user.id === host) ||
+                          Number(active(b)) - Number(active(a))
+                  )
+                  .map((person) => person.user.id)
             : [...kept, ...people.map((person) => person.user.id).filter((id) => !kept.includes(id))]
     return me && here.has(me) ? [me, ...ids.filter((id) => id !== me)] : ids
 }

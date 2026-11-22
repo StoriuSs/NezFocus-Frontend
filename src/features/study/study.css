@@ -1,0 +1,10 @@
+/*
+ * The classes of study sessions (tailwind.study.config.js): only the
+ * utilities the study feature's files use that the main stylesheet lacks,
+ * loaded with a study room's stage (StudyStage). The base styles and the
+ * design tokens come from src/index.css, loaded first; a phase's colours
+ * shown outside the stage come from src/lib/phase-colors.ts, in the main one.
+ */
+@config "../../../tailwind.study.config.js";
+
+@tailwind utilities;
