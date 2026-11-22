@@ -1,7 +1,7 @@
 import api from '@/lib/api'
 import type { ApiEnvelope, ApiModel } from '@/lib/api-types'
 import type { StudyCycle } from '../lib/study-cycle'
-import type { FocusSession, SessionCommand, StudyToday } from '../types'
+import type { FocusSession, SoloCommand, SoloState, StudyToday } from '../types'
 
 const cycleBody = (cycle: StudyCycle) => ({
     focusMinutes: cycle.focus,
@@ -29,10 +29,11 @@ export async function startRoomSession(
 }
 
 /**
- * Pause, resume, skip or stop (REQ-STUDY-03), with the version seen: an
- * older one changes nothing and gets the session as it is (D-225).
+ * Pause, resume, skip or stop (REQ-STUDY-03), and a waiting Solo's Học tiếp
+ * (`continue`, REQ-STUDY-05), with the version seen: an older one changes
+ * nothing and gets the session as it is (D-225).
  */
-export async function commandSession(sessionId: string, command: SessionCommand, version: number) {
+export async function commandSession(sessionId: string, command: SoloCommand, version: number) {
     const response = await api.post<ApiEnvelope<FocusSession>>(`/focus-sessions/${sessionId}/${command}`, {
         version
     })
@@ -44,6 +45,32 @@ export async function changeSessionCycle(sessionId: string, version: number, cyc
     const response = await api.post<ApiEnvelope<FocusSession>>(`/focus-sessions/${sessionId}/config`, {
         version,
         ...cycleBody(cycle)
+    })
+    return response.data.data
+}
+
+/** GET /me/solo-session (REQ-STUDY-05, D-229): one's Solo not yet ended, or null, and the next start's cycle. */
+export async function fetchSolo(): Promise<SoloState> {
+    const response = await api.get<ApiEnvelope<ApiModel<'SoloSessionResponseDto'>>>('/me/solo-session')
+    const { session, startCycle } = response.data.data
+    return {
+        session,
+        startCycle: {
+            focus: startCycle.focusMinutes,
+            shortBreak: startCycle.shortBreakMinutes,
+            longBreak: startCycle.longBreakMinutes,
+            longBreakEvery: startCycle.longBreakEvery
+        }
+    }
+}
+
+/**
+ * POST /me/solo-session (REQ-STUDY-05): a Solo with the cycle chosen, or with
+ * none the last Solo's. Idempotent: a retry with the same key is the same Solo.
+ */
+export async function startSolo(cycle: StudyCycle | null, idempotencyKey: string): Promise<FocusSession> {
+    const response = await api.post<ApiEnvelope<FocusSession>>('/me/solo-session', cycle ? cycleBody(cycle) : {}, {
+        headers: { 'Idempotency-Key': idempotencyKey }
     })
     return response.data.data
 }

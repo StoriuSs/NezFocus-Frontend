@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { SessionNews } from './types'
+import type { FocusSession, SessionNews } from './types'
 
 interface StudyState {
     /**
@@ -25,6 +25,22 @@ interface StudyState {
      * toast of leaving adds "N phút đã được tính".
      */
     left: Record<string, SessionLeft & { heardAt: number }>
+    /**
+     * One's last Solo ended while this tab was open (D-234), its seconds in
+     * `countedSeconds`: its summary on the Solo page, the toasts of its end.
+     * Only heard (or found expired on reading again), never read: a reload
+     * opens the Solo page empty (`idle`).
+     */
+    soloEnded: SoloEnded | null
+}
+
+/** One's Solo ended, and whether this tab asked for it: its Dừng, or a start or join that ends it (D-103). */
+export interface SoloEnded {
+    session: FocusSession
+    /** Stopped by this tab ("Bạn đã dừng học một mình"); else elsewhere, expired, or a room's session took it. */
+    stoppedHere: boolean
+    /** Ended by a room's session this tab asked to join or start ("Đã dừng học một mình · N phút"). */
+    yieldedHere: boolean
 }
 
 /** `focus_session.left`: one's place in a room's session closed, with one's seconds in it, every stay added. */
@@ -34,7 +50,45 @@ export interface SessionLeft {
     seconds: number
 }
 
-export const useStudyStore = create<StudyState>(() => ({ news: {}, pausedBy: {}, ended: {}, left: {} }))
+export const useStudyStore = create<StudyState>(() => ({
+    news: {},
+    pausedBy: {},
+    ended: {},
+    left: {},
+    soloEnded: null
+}))
+
+/** What this tab asked of its Solo: the Solo it stopped, the one a room's session it joins or starts ends. */
+const asked: { stop: string | null; yield: string | null } = { stop: null, yield: null }
+
+/**
+ * This tab sends Dừng to Solo `id`: its end is "Bạn đã dừng học một mình",
+ * whichever word of it comes first; null: the Dừng sent was refused.
+ */
+export function askToStopSolo(id: string | null): void {
+    asked.stop = id
+}
+
+/** This tab joins or starts a room's session over Solo `id` (D-103): its end is the tab's own. */
+export function askToYieldSolo(id: string): void {
+    asked.yield = id
+}
+
+/** One's Solo ended (D-234): the first word of it kept, the answer to a command or the event. */
+export function hearSoloEnded(session: FocusSession): void {
+    if (useStudyStore.getState().soloEnded?.session.id === session.id) return
+    // What this tab asked counts only for the end it asked for: a Dừng refused or a join failed leaves it moot.
+    const stoppedHere = asked.stop === session.id && session.endedReason === 'stopped'
+    const yieldedHere = asked.yield === session.id && session.endedReason === 'joined_room'
+    if (asked.stop === session.id) asked.stop = null
+    if (asked.yield === session.id) asked.yield = null
+    useStudyStore.setState({ soloEnded: { session, stoppedHere, yieldedHere } })
+}
+
+/** The Solo page shown its summary and left, or a new Solo started: no summary any more. */
+export function forgetSoloEnded(): void {
+    useStudyStore.setState({ soloEnded: null })
+}
 
 /** One's place in a room's session closed (D-233). */
 export function hearLeft(left: SessionLeft): void {

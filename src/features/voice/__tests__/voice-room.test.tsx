@@ -13,7 +13,8 @@ import type { DeviceAnswer, JoinDevices, LinkEvents } from '@/lib/livekit'
 import type { Room } from 'livekit-client'
 import type { RoomPerson, VoiceDirectory, VoiceRoom, VoiceToken } from '../types'
 import type { RoomSession } from '@/features/study'
-import { session as studySession } from '@/test/study-sessions'
+import { solo, session as studySession } from '@/test/study-sessions'
+import { studyKeys } from '@/features/study/api/keys'
 import { noteServerTime } from '@/lib/server-clock'
 
 const voiceApi = {
@@ -459,6 +460,31 @@ describe("a study room's preview page (S-ROOM-01 session-running, idle, C-18)", 
         expect(within(seats).getAllByRole('img')[0]).toHaveAccessibleName('Bình')
         expect(screen.getByRole('button', { name: 'Join room' })).toBeEnabled()
         await expectNoA11yViolations()
+    })
+
+    it('asks first while one’s Solo runs: joining a room with a session ends it (08 join-room-confirm); none without one', async () => {
+        const { useSoloYield } = await import('@/features/study')
+        const startCycle = { focus: 50, shortBreak: 10, longBreak: null, longBreakEvery: null }
+        client.setQueryData(studyKeys.solo(), { session: solo(), startCycle })
+        noteServerTime(studySession().serverTime)
+        const session = roomSessionOf(studySession({ channelId: 'quiet', hostId: 'binh' }))
+        const view = show(studyRoom({ session, people: [TUAN, BINH] }))
+        await userEvent.click(await screen.findByRole('button', { name: 'Join room' }, LAZY))
+        const asking = useSoloYield.getState().asking
+        expect(asking).toMatchObject({ kind: 'join', room: 'Phòng học im lặng' })
+        expect(voiceApi.requestVoiceToken).not.toHaveBeenCalled()
+        await act(async () => asking!.confirm())
+        await waitFor(() => expect(voiceApi.requestVoiceToken).toHaveBeenCalledWith('quiet'))
+        act(() => useSoloYield.setState({ asking: null }))
+        view.unmount()
+        resetSession()
+        voiceApi.requestVoiceToken.mockClear()
+
+        client.setQueryData(studyKeys.solo(), { session: solo(), startCycle })
+        show(studyRoom({ session: null, people: [TUAN] }))
+        await userEvent.click(await screen.findByRole('button', { name: 'Join room' }, LAZY))
+        expect(useSoloYield.getState().asking).toBeNull()
+        await waitFor(() => expect(voiceApi.requestVoiceToken).toHaveBeenCalledWith('quiet'))
     })
 
     it('says no one controls it, or only who is on a break', async () => {

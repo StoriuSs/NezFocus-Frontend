@@ -75,7 +75,8 @@
         "focus": "Focus",
         "short_break": "Short break",
         "long_break": "Long break",
-        "paused": "Paused"
+        "paused": "Paused",
+        "waiting": "Break over"
       },
       "left_one": "<0>{{count}}</0> min left",
       "left_other": "<0>{{count}}</0> min left",
@@ -83,7 +84,17 @@
       "line": "{{phase}} · {{left}}",
       "tab": "{{clock}} · {{phase}}",
       "streakReached_one": "15 minutes today · a {{count}}-day streak",
-      "streakReached_other": "15 minutes today · a {{count}}-day streak"
+      "streakReached_other": "15 minutes today · a {{count}}-day streak",
+      "stats": "Stats",
+      "waitTab": "Break over",
+      "soloStopped_one": "Stopped studying alone · {{count}} minute counted",
+      "soloStopped_other": "Stopped studying alone · {{count}} minutes counted",
+      "soloStoppedShort": "Stopped studying alone",
+      "soloYielded_one": "Stopped studying alone · {{count}} minute",
+      "soloYielded_other": "Stopped studying alone · {{count}} minutes",
+      "soloTaken_one": "A shared session started · studying alone stopped · {{count}} minute counted",
+      "soloTaken_other": "A shared session started · studying alone stopped · {{count}} minutes counted",
+      "soloTakenShort": "A shared session started · studying alone stopped"
     },
     "settings": {
       "title": "Settings",

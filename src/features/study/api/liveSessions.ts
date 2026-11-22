@@ -1,10 +1,10 @@
 import type { QueryClient } from '@tanstack/react-query'
 import { onRealtimeEvent } from '@/features/realtime'
 import { noteServerTime } from '@/lib/server-clock'
-import { isLater } from '../lib/phases'
+import { isLater, sessionCycle } from '../lib/phases'
 import { isLaterRead } from '../lib/today'
-import { hearLeft, hearNews, type SessionLeft } from '../study.store'
-import type { FocusSession, SessionNews, StudyToday } from '../types'
+import { hearLeft, hearNews, hearSoloEnded, type SessionLeft } from '../study.store'
+import type { FocusSession, SessionNews, SoloState, StudyToday } from '../types'
 import { studyKeys } from './keys'
 
 /** Where a room's session goes once told: the servers feature keeps it on its room (D-231 L5-b). */
@@ -22,6 +22,7 @@ interface StreakNews {
 
 /** A query client listening: its sink, and each room's latest state told to it. */
 interface Listener {
+    client: QueryClient
     sink: SessionSink
     latest: Map<string, FocusSession>
 }
@@ -40,14 +41,45 @@ function tellTo(listener: Listener, session: FocusSession): boolean {
     return true
 }
 
+/** Each query client's latest state of one's Solo told, and when: an older one coming after changes nothing (D-225). */
+const latestSolo = new WeakMap<QueryClient, { session: FocusSession; at: number }>()
+
+/** The latest state of one's Solo told to `client`, and when (`Date.now()`): a read that comes back after it does not undo it. */
+export const latestSoloOf = (client: QueryClient): { session: FocusSession; at: number } | undefined =>
+    latestSolo.get(client)
+
 /**
- * A room's session as the server just told it (the answer to a command
- * this tab sent): its clock taken, then handed to the sinks, unless a later
- * state of it was told already. Ended, it is still handed on: the room no
- * longer has one.
+ * One's Solo as the server just told it (`solo_session.updated`, the answer
+ * to a command), into the query client's GET /me/solo-session, unless a later
+ * state was told already (D-225); the next start's cycle is its own (D-103).
+ * Ended: none held any more, and its summary to the study store (D-234).
+ */
+export function tellSolo(client: QueryClient, session: FocusSession): void {
+    noteServerTime(session.serverTime)
+    const last = latestSolo.get(client)?.session
+    if (last && !isLater(session, last)) return
+    latestSolo.set(client, { session, at: Date.now() })
+    if (session.status === 'ended') {
+        hearSoloEnded(session)
+        const held = client.getQueryData<SoloState>(studyKeys.solo())
+        if (held) client.setQueryData<SoloState>(studyKeys.solo(), { ...held, session: null })
+        return
+    }
+    client.setQueryData<SoloState>(studyKeys.solo(), { session, startCycle: sessionCycle(session) })
+}
+
+/**
+ * A session as the server just told it (the answer to a command this tab
+ * sent): its clock taken, then a room's handed to the sinks, unless a later
+ * state of it was told already (ended, it is still handed on: the room no
+ * longer has one); a Solo into each query client (`tellSolo`).
  */
 export function tellSession(session: FocusSession): boolean {
     noteServerTime(session.serverTime)
+    if (session.kind === 'solo') {
+        for (const listener of listeners) tellSolo(listener.client, session)
+        return listeners.size > 0
+    }
     let told = false
     for (const listener of listeners) told = tellTo(listener, session) || told
     return told
@@ -68,7 +100,7 @@ export function tellSession(session: FocusSession): boolean {
 export function listenForSessions(client: QueryClient, sink: SessionSink): () => void {
     if (listening.has(client)) return () => undefined
     listening.add(client)
-    const listener: Listener = { sink, latest: new Map() }
+    const listener: Listener = { client, sink, latest: new Map() }
     listeners.add(listener)
     const stops = [
         ...SESSION_EVENTS.map((event) =>
@@ -93,10 +125,16 @@ export function listenForSessions(client: QueryClient, sink: SessionSink): () =>
                       }
             )
         }),
+        // One's Solo, from its start to its end, in each tab and device (D-222).
+        onRealtimeEvent('solo_session.updated', (data) => tellSolo(client, data as FocusSession)),
         // One's place in a room's session closed: one's seconds in it, for the toast of leaving (D-233).
         onRealtimeEvent('focus_session.left', (data) => hearLeft(data as SessionLeft)),
         // Live again: today's numbers may have moved meanwhile (the room's sessions come with GET /servers).
-        onRealtimeEvent('ready', () => void client.invalidateQueries({ queryKey: studyKeys.today() }))
+        onRealtimeEvent('ready', () => {
+            void client.invalidateQueries({ queryKey: studyKeys.today() })
+            // One's Solo may have moved, or ended, meanwhile.
+            void client.invalidateQueries({ queryKey: studyKeys.solo() })
+        })
     ]
     return () => {
         for (const stop of stops) stop()

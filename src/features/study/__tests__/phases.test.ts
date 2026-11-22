@@ -19,7 +19,8 @@ import {
     sessionCycle,
     untilMinuteChanges
 } from '../lib/phases'
-import { AT, session } from '@/test/study-sessions'
+import { AT, session, solo, waitingSolo } from '@/test/study-sessions'
+import { expiredOf, soloSecondsAt, waitLeftMs } from '../lib/solo'
 
 const t = i18n.getFixedT('vi', 'study')
 const shell = i18n.getFixedT('vi', 'common')
@@ -201,6 +202,44 @@ describe('the phase away from the room, in the shell words (C-19, X-01)', () => 
         expect(tabText(shell, session({ phase: 'short_break' }), AT + 1000)).toBe('18:41 · Nghỉ ngắn')
         const paused = session({ status: 'paused', phaseEndsAt: null, pausedRemainingMs: 1_122_000 })
         expect(tabText(shell, paused, AT + 60_000)).toBe('18:42 · Tạm dừng')
+    })
+
+    it('says a Solo waiting for Học tiếp without a number (08 S-STUDY-02)', () => {
+        expect(tabText(shell, waitingSolo(), AT)).toBe('Hết giờ nghỉ')
+        expect(sessionLineText(shell, waitingSolo(), AT)).toBe('Hết giờ nghỉ')
+    })
+})
+
+describe("a Solo's seconds and wait (D-234, REQ-STUDY-05)", () => {
+    it('adds the focus stretch running to the seconds counted, up to the phase’s end; nothing while paused or waiting', () => {
+        expect(soloSecondsAt(solo(), AT)).toBe(18 * 60 + 18)
+        expect(soloSecondsAt(solo({ countedSeconds: 600 }), AT)).toBe(600 + 18 * 60 + 18)
+        // Past its phase's end (the tab asleep): no further than the end.
+        expect(soloSecondsAt(solo(), Date.parse('2026-11-22T15:30:00.000Z'))).toBe(50 * 60)
+        expect(soloSecondsAt(solo({ status: 'paused', stretchStartedAt: null, countedSeconds: 900 }), AT)).toBe(900)
+        expect(soloSecondsAt(waitingSolo(), AT)).toBe(50 * 60)
+    })
+
+    it('counts down the 10 minutes of a wait', () => {
+        expect(waitLeftMs(waitingSolo(), Date.parse('2026-11-22T15:30:48.000Z'))).toBe(8 * 60_000 + 12_000)
+        expect(waitLeftMs(solo(), AT)).toBe(0)
+    })
+
+    it('finds a waiting Solo read again past its wait expired at its break’s end, not before', () => {
+        expect(expiredOf(waitingSolo(), Date.parse('2026-11-22T15:38:59.000Z'))).toBeNull()
+        expect(expiredOf(waitingSolo(), Date.parse('2026-11-22T15:41:00.000Z'))).toMatchObject({
+            status: 'ended',
+            endedReason: 'expired',
+            endedAt: '2026-11-22T15:29:00.000Z',
+            countedSeconds: 3000
+        })
+        expect(expiredOf(solo(), Date.parse('2026-11-22T16:00:00.000Z'))).toBeNull()
+        // A break paused 6 minutes ended later than it began plus its length: 10 minutes before the wait's end.
+        const pausedBreak = waitingSolo({
+            phaseStartedAt: '2026-11-22T15:13:00.000Z',
+            waitingUntil: '2026-11-22T15:45:00.000Z'
+        })
+        expect(expiredOf(pausedBreak, Date.parse('2026-11-22T15:50:00.000Z'))?.endedAt).toBe('2026-11-22T15:35:00.000Z')
     })
 })
 

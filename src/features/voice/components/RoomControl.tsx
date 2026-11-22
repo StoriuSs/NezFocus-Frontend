@@ -1,4 +1,6 @@
 import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react'
+// Its classes are the voice stylesheet's: they come with it wherever it shows (the Solo page too).
+import '../voice.css'
 import { WithTooltip } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 

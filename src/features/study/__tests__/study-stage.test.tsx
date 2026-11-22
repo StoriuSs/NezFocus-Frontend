@@ -10,14 +10,16 @@ import { expectNoA11yViolations } from '@/test/a11y'
 import { apiError } from '@/test/helpers'
 import { useStudyStore, hearNews } from '../study.store'
 import type { ControlProps } from '../components/StudyStage'
-import type { FocusSession, RoomSession, SessionNews, StudyRoomView, StudyToday } from '../types'
-import { news, session } from '@/test/study-sessions'
+import type { FocusSession, RoomSession, SessionNews, SoloState, StudyRoomView, StudyToday } from '../types'
+import { news, session, solo } from '@/test/study-sessions'
+import { useSoloYield } from '../solo-yield.store'
 
 const studyApi = {
     startRoomSession: vi.fn<(channelId: string, cycle: unknown, key: string) => Promise<FocusSession>>(),
     commandSession: vi.fn<(sessionId: string, command: string, version: number) => Promise<FocusSession>>(),
     changeSessionCycle: vi.fn<(sessionId: string, version: number, cycle: unknown) => Promise<FocusSession>>(),
-    fetchStudyToday: vi.fn<() => Promise<StudyToday>>()
+    fetchStudyToday: vi.fn<() => Promise<StudyToday>>(),
+    fetchSolo: vi.fn<() => Promise<SoloState>>()
 }
 vi.mock('../api/study.api', () => studyApi)
 
@@ -93,6 +95,8 @@ beforeEach(() => {
         streak: 6,
         readAt: '2026-11-22T14:47:18.000Z'
     })
+    studyApi.fetchSolo.mockResolvedValue({ session: null, startCycle: ROOM_CYCLE })
+    useSoloYield.setState({ asking: null })
 })
 afterEach(() => toast.dismiss())
 
@@ -104,6 +108,30 @@ describe('A study room with no session (07 S-ROOM-06 study-room-idle)', () => {
         expect(screen.getByText('8 người đang ở trong phòng cùng bạn')).toBeVisible()
         await userEvent.click(screen.getByRole('button', { name: 'Bắt đầu Tập trung 25 phút' }))
         await waitFor(() => expect(studyApi.startRoomSession).toHaveBeenCalledWith('im-lang', null, expect.any(String)))
+    })
+
+    it('asks first while one’s Solo runs: starting ends it (08 start-while-solo-confirm, D-103)', async () => {
+        studyApi.fetchSolo.mockResolvedValue({ session: solo(), startCycle: ROOM_CYCLE })
+        studyApi.startRoomSession.mockResolvedValue(session({ version: 0 }))
+        stage(room(null))
+        await waitFor(() => expect(studyApi.fetchSolo).toHaveBeenCalled())
+        await userEvent.click(await screen.findByRole('button', { name: 'Bắt đầu Tập trung 25 phút' }))
+        expect(useSoloYield.getState().asking).toMatchObject({ kind: 'start', focusMinutes: 25 })
+        expect(studyApi.startRoomSession).not.toHaveBeenCalled()
+        act(() => useSoloYield.getState().asking?.confirm())
+        await waitFor(() => expect(studyApi.startRoomSession).toHaveBeenCalledWith('im-lang', null, expect.any(String)))
+    })
+
+    it('asks first from "Chu kỳ khác" while one’s Solo runs, the focus minutes chosen', async () => {
+        studyApi.fetchSolo.mockResolvedValue({ session: solo(), startCycle: ROOM_CYCLE })
+        stage(room(null))
+        await waitFor(() => expect(studyApi.fetchSolo).toHaveBeenCalled())
+        await userEvent.click(await screen.findByRole('button', { name: 'Chu kỳ khác' }))
+        const dialog = await screen.findByRole('dialog', { name: 'Bắt đầu phiên học' })
+        await userEvent.click(within(dialog).getByRole('radio', { name: '50/10' }))
+        await userEvent.click(within(dialog).getByRole('button', { name: 'Bắt đầu cho cả phòng' }))
+        expect(useSoloYield.getState().asking).toMatchObject({ kind: 'start', focusMinutes: 50 })
+        expect(studyApi.startRoomSession).not.toHaveBeenCalled()
     })
 
     it('says who may start, to one who may not', async () => {

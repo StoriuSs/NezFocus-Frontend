@@ -12,35 +12,41 @@ import { PHASE_ICONS, PHASE_TEXT, type SessionPhase } from '@/lib/phase-colors'
  * stylesheet's files and the shell's words (`common`), not in the study
  * feature, whose classes load with the room's page only (D-193). The size
  * of the words is the caller's: `label` 600 in the list, `body-sm` 600 in
- * the dock.
+ * the dock. `waiting` (a Solo after its break, C-19 `waiting`): the break's
+ * icon and "Hết giờ nghỉ" in `text-primary`.
  */
 export function PhaseTag({
     phase,
     paused,
+    waiting = false,
     className,
     children
 }: {
     phase: SessionPhase
     paused: boolean
+    waiting?: boolean
     className?: string
     children?: ReactNode
 }) {
     const { t } = useTranslation()
     const Icon = paused ? Pause : PHASE_ICONS[phase]
+    const name = waiting
+        ? 'shell.study.phase.waiting'
+        : paused
+          ? 'shell.study.phase.paused'
+          : (`shell.study.phase.${phase}` as const)
     return (
         <span
             className={cn(
                 'inline-flex min-w-0 items-center gap-1.5 font-semibold [&_svg]:size-3.5 [&_svg]:shrink-0',
-                paused ? 'text-text-secondary' : PHASE_TEXT[phase],
+                waiting ? 'text-text-primary' : paused ? 'text-text-secondary' : PHASE_TEXT[phase],
                 className
             )}
         >
             <Icon aria-hidden='true' />
             {/* What follows the name sits a space after it, as words do, not a gap away. */}
             <span className='flex min-w-0'>
-                <span className='truncate'>
-                    {t(paused ? 'shell.study.phase.paused' : `shell.study.phase.${phase}`)}
-                </span>
+                <span className='truncate'>{t(name)}</span>
                 {children}
             </span>
         </span>

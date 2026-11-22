@@ -101,6 +101,39 @@ describe('the session one is in, on every page (SessionCues, 07 S-ROOM-05)', () 
         view.rerender(<SessionCues session={session({ id: 's2', phaseIndex: 1, phaseStartedAt: now })} />)
         expect(sound.playPhaseSound).toHaveBeenCalledTimes(1)
     })
+
+    it("plays a Solo's sound in the one tab that takes the phase's lock (08 S-STUDY-02, D-222)", async () => {
+        settings(true)
+        // Two tabs of the person's, as navigator.locks sees them: the second asking gets no lock.
+        const held = new Set<string>()
+        const request = vi.fn(
+            async (name: string, _options: unknown, run: (lock: { name: string } | null) => Promise<void>) => {
+                const lock = held.has(name) ? null : { name }
+                if (lock) held.add(name)
+                await run(lock)
+            }
+        )
+        Object.defineProperty(navigator, 'locks', { value: { request }, configurable: true })
+        vi.useFakeTimers({ toFake: ['setTimeout'] })
+        try {
+            const next = session({
+                phase: 'short_break',
+                phaseIndex: 3,
+                phaseStartedAt: new Date(AT - 2000).toISOString()
+            })
+            const first = render(<SessionCues session={session()} shared />, { wrapper: Providers })
+            const second = render(<SessionCues session={session()} shared />, { wrapper: Providers })
+            first.rerender(<SessionCues session={next} shared />)
+            second.rerender(<SessionCues session={next} shared />)
+            await vi.advanceTimersByTimeAsync(20_000)
+            expect(request).toHaveBeenCalledTimes(2)
+            expect(request.mock.calls[0]![0]).toBe('phase-sound-s1-3')
+            expect(sound.playPhaseSound).toHaveBeenCalledTimes(1)
+        } finally {
+            vi.useRealTimers()
+            Reflect.deleteProperty(navigator, 'locks')
+        }
+    })
 })
 
 describe('the streak toast as today reaches 15 minutes (07 streak-reached, STUDY-07, D-232)', () => {

@@ -14,19 +14,28 @@ export function leftText(t: TFunction<'common'>, ms: number): string {
         : t('shell.study.underAMinute')
 }
 
-/** The phase's name, or "Tạm dừng" while paused (C-19), in the shell's words. */
+/** The phase's name, "Tạm dừng" while paused, "Hết giờ nghỉ" for a Solo waiting (C-19), in the shell's words. */
 export const phaseName = (t: TFunction<'common'>, session: AnySession): string =>
-    t(session.status === 'paused' ? 'shell.study.phase.paused' : `shell.study.phase.${session.phase}`)
+    t(
+        session.status === 'paused'
+            ? 'shell.study.phase.paused'
+            : session.status === 'waiting'
+              ? 'shell.study.phase.waiting'
+              : `shell.study.phase.${session.phase}`
+    )
 
-/** "Tập trung · còn 18 phút"; paused, "Tạm dừng" (C-19 `list`): a phase in words, minutes and no seconds. */
+/** "Tập trung · còn 18 phút"; paused, "Tạm dừng"; waiting, "Hết giờ nghỉ" (C-19 `list`): minutes, no seconds. */
 export const sessionLineText = (t: TFunction<'common'>, session: AnySession, now: number): string =>
-    session.status === 'paused'
+    session.status === 'paused' || session.status === 'waiting'
         ? phaseName(t, session)
         : t('shell.study.line', { phase: phaseName(t, session), left: leftText(t, remainingMs(session, now)) })
 
 /**
  * The session's part of the tab's title (07 S-ROOM-05, X-01): "18:42 · Tập
- * trung", counting down each second; paused, the number still: "18:42 · Tạm dừng".
+ * trung", counting down each second; paused, the number still: "18:42 · Tạm dừng";
+ * a Solo waiting for Học tiếp, no number: "Hết giờ nghỉ" (08 S-STUDY-02).
  */
 export const tabText = (t: TFunction<'common'>, session: AnySession, now: number): string =>
-    t('shell.study.tab', { clock: clockText(remainingMs(session, now)), phase: phaseName(t, session) })
+    session.status === 'waiting'
+        ? t('shell.study.waitTab')
+        : t('shell.study.tab', { clock: clockText(remainingMs(session, now)), phase: phaseName(t, session) })

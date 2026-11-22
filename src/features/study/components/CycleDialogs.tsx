@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog'
 import { notifyMutationError } from '@/lib/query-client'
 import { useChangeCycle, useStartSession } from '../api/useSessionCommands'
+import { useSoloSession } from '../api/useSoloSession'
 import { sessionCycle } from '../lib/phases'
 import { sessionRefusal } from '../lib/session-errors'
 import {
@@ -28,6 +29,7 @@ import {
     type CycleOnlyValues,
     type StudyCycle
 } from '../lib/study-cycle'
+import { useSoloYield } from '../solo-yield.store'
 import { useStudyStore } from '../study.store'
 import type { AnySession } from '../types'
 import { CycleFields } from './CycleFields'
@@ -56,7 +58,8 @@ function CycleDialog({
     note?: string
     submit: string
     initial: StudyCycle
-    roomCycle: StudyCycle
+    /** The room's own cycle, said as such when chosen ("Cấu hình phòng"); none for a Solo. */
+    roomCycle?: StudyCycle
     pending: boolean
     onSubmit: (cycle: StudyCycle) => void
     onClose: () => void
@@ -117,7 +120,16 @@ function CycleDialog({
                         clearErrors={clearErrors}
                         label={t('cycle.label')}
                         labelHidden
-                        hint={choice === cycleChoiceOf(roomCycle) ? t('cycle.roomDefault') : null}
+                        hint={
+                            roomCycle
+                                ? choice === cycleChoiceOf(roomCycle)
+                                    ? t('cycle.roomDefault')
+                                    : null
+                                : // A Solo's presets (08 `cycle-dialog`): no long break, said under them.
+                                  choice !== 'custom'
+                                  ? t('cycle.presetNote')
+                                  : null
+                        }
                     />
                     {note ? <p className='text-body-sm text-text-secondary'>{note}</p> : null}
                     <DialogFooter>
@@ -138,7 +150,8 @@ function CycleDialog({
 /**
  * Starting a session with a cycle of one's choice (07 S-ROOM-03): the
  * room's own chosen first. Someone else started one first (`conflict`): the
- * dialog closes as the room has a session, and the hook says who.
+ * dialog closes as the room has a session, and the hook says who. One's Solo
+ * running, asked over it first: it would end (08 `start-while-solo-confirm`).
  */
 export function StartSessionDialog({
     channelId,
@@ -157,6 +170,8 @@ export function StartSessionDialog({
 }) {
     const { t } = useTranslation('study')
     const start = useStartSession(channelId, roomNow)
+    const solo = useSoloSession().data?.session ?? null
+    const askYield = useSoloYield((state) => state.ask)
     return (
         <CycleDialog
             title={t('start.title')}
@@ -167,16 +182,51 @@ export function StartSessionDialog({
             pending={start.isPending}
             refusedField={null}
             onClose={onClose}
-            onSubmit={(cycle) => start.mutate(cycle, { onSuccess: onClose })}
+            onSubmit={(cycle) => {
+                const go = () => start.mutate(cycle, { onSuccess: onClose })
+                if (solo) askYield({ kind: 'start', focusMinutes: cycle.focus, confirm: go })
+                else go()
+            }}
         />
     )
 }
 
 /**
- * A new cycle while paused (07 S-ROOM-04 `paused-edit-config`): the
- * session's own chosen first; the phase starts again with its new length,
- * still paused (D-50). Someone resumes meanwhile: it closes unsaved, saying
- * who ("Bình đã tiếp tục phiên học").
+ * Starting a Solo with a cycle of one's choice (08 S-STUDY-01 `cycle-dialog`):
+ * the last Solo's chosen first (D-103), "Lần sau sẽ chọn sẵn chu kỳ này".
+ */
+export function SoloStartDialog({
+    startCycle,
+    pending,
+    onStart,
+    onClose
+}: {
+    startCycle: StudyCycle
+    pending: boolean
+    onStart: (cycle: StudyCycle) => void
+    onClose: () => void
+}) {
+    const { t } = useTranslation('study')
+    return (
+        <CycleDialog
+            title={t('solo.title')}
+            description={t('solo.startDescription')}
+            submit={t('solo.startSubmit')}
+            initial={startCycle}
+            pending={pending}
+            refusedField={null}
+            onClose={onClose}
+            onSubmit={onStart}
+        />
+    )
+}
+
+/**
+ * A new cycle while paused (07 S-ROOM-04 `paused-edit-config`, 08
+ * S-STUDY-02 `edit-cycle`): the session's own chosen first; the phase starts
+ * again with its new length, still paused (D-50). Resumed meanwhile: it
+ * closes unsaved, saying who ("Bình đã tiếp tục phiên học"); a Solo
+ * (`channelId` null), "Phiên đã tiếp tục ở tab khác".
  */
 export function ChangeCycleDialog({
     channelId,
@@ -185,9 +235,9 @@ export function ChangeCycleDialog({
     nameOf,
     onClose
 }: {
-    channelId: string
+    channelId: string | null
     session: AnySession
-    roomCycle: StudyCycle
+    roomCycle?: StudyCycle
     nameOf: (userId: string) => string
     onClose: () => void
 }) {
@@ -199,8 +249,12 @@ export function ChangeCycleDialog({
     useEffect(() => {
         if (resumedBy === undefined) return
         onClose()
-        toast(t('news.resumed', { name: resumedBy ? nameOf(resumedBy) : t('news.someone') }))
-    }, [resumedBy, nameOf, onClose, t])
+        toast(
+            channelId === null
+                ? t('solo.resumedElsewhere')
+                : t('news.resumed', { name: resumedBy ? nameOf(resumedBy) : t('news.someone') })
+        )
+    }, [resumedBy, channelId, nameOf, onClose, t])
     return (
         <CycleDialog
             title={t('change.title')}
@@ -228,9 +282,9 @@ export function ChangeCycleDialog({
     )
 }
 
-/** Who resumed the session once it runs again (undefined while paused; null: no one heard). */
-function useResumedBy(channelId: string, session: AnySession): string | null | undefined {
-    const news = useStudyStore((state) => state.news[channelId])
+/** Who resumed the session once it runs again (undefined while paused; null: no one heard, or a Solo). */
+function useResumedBy(channelId: string | null, session: AnySession): string | null | undefined {
+    const news = useStudyStore((state) => (channelId === null ? undefined : state.news[channelId]))
     if (session.status === 'paused') return undefined
     return news?.id === session.id && news.action === 'resume' ? news.actorId : null
 }

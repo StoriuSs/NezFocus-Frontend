@@ -12,13 +12,15 @@ import type { AnySession } from '../types'
  * ("(2) 18:42 · Tập trung · NezFocus"; paused, the number still), the phase
  * sound plays as a phase begins (D-140), and the streak toast says when
  * today reaches 15 minutes (D-232). Draws nothing; mounted by the shell
- * while the room it is in has a session, so only it re-renders each second.
+ * while the room it is in has a session, or one's Solo runs (`shared`: one
+ * tab of the person's plays its sound, 08 S-STUDY-02), so only it
+ * re-renders each second.
  */
-export default function SessionCues({ session }: { session: AnySession }) {
+export default function SessionCues({ session, shared = false }: { session: AnySession; shared?: boolean }) {
     const { t } = useTranslation()
     const now = useSessionClock(session)
     useTitleClock(tabText(t, session, now))
-    usePhaseSound(session)
+    usePhaseSound(session, { shared })
     useStreakToast(session, now)
     return null
 }

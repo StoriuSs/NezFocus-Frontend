@@ -3,6 +3,7 @@ import { NavLink, useMatches } from 'react-router-dom'
 import {
     Ban,
     Bell,
+    ChartColumn,
     IdCard,
     Info,
     LayoutGrid,
@@ -27,6 +28,7 @@ import {
     useServers,
     type SettingsSection
 } from '@/features/servers'
+import { SOLO_PATH, SoloDockSlot } from '@/features/study'
 import { USERS_PATHS } from '@/features/users'
 import { cn } from '@/lib/utils'
 
@@ -135,7 +137,7 @@ function SoonRow({
     )
 }
 
-/** The Study page's column (08 S-STUDY-01): Overview, and Study alone (M5). */
+/** The Study page's column (08 S-STUDY-01): Overview, Study alone, and the Stats (L8). */
 function StudyColumn() {
     const { t } = useTranslation()
     return (
@@ -145,7 +147,10 @@ function StudyColumn() {
                 <RowLink to='/study' end icon={LayoutGrid}>
                     {t('shell.study.overview')}
                 </RowLink>
-                <SoonRow icon={Timer} name={t('shell.study.solo')} />
+                <RowLink to={SOLO_PATH} icon={Timer}>
+                    {t('shell.study.solo')}
+                </RowLink>
+                <SoonRow icon={ChartColumn} name={t('shell.study.stats')} />
             </nav>
         </>
     )
@@ -219,7 +224,8 @@ function ServerSettingsColumn({ serverId }: { serverId: string | undefined }) {
 /**
  * The 240-wide list column (`surface-1`) next to the rail. Which list it
  * shows is the route's choice, in its `handle` (ShellHandle). At its bottom,
- * the InRoomDock while in a voice room (C-09, `column`).
+ * the InRoomDock while in a voice room, and one's Solo's under it (C-09,
+ * `column`, D-103).
  */
 export function ListColumn({ className, id }: { className?: string; id?: string }) {
     const matches = useMatches()
@@ -236,7 +242,10 @@ export function ListColumn({ className, id }: { className?: string; id?: string 
             {column === 'server' && <ServerChannelColumn serverId={deepest?.params.serverId} />}
             {column === 'serverSettings' && <ServerSettingsColumn serverId={deepest?.params.serverId} />}
             {column === 'tasks' && <MyTasksColumn />}
-            <RoomDock shape='column' />
+            <div className='mt-auto flex flex-col'>
+                <RoomDock shape='column' />
+                <SoloDockSlot shape='column' />
+            </div>
         </div>
     )
 }

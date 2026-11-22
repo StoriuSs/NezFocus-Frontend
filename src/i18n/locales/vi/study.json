@@ -4,7 +4,8 @@
         "short_break": "Nghỉ ngắn",
         "long_break": "Nghỉ dài",
         "paused": "Tạm dừng",
-        "pausedPhase": "Tạm dừng · {{phase}}"
+        "pausedPhase": "Tạm dừng · {{phase}}",
+        "waiting": "Hết giờ nghỉ"
     },
     "next": {
         "short_break": "nghỉ ngắn",
@@ -111,7 +112,8 @@
         "summary": "{{focus}} phút tập trung · nghỉ {{shortBreak}} · không nghỉ dài",
         "summaryLongBreak": "{{focus}} phút tập trung · nghỉ {{shortBreak}} · nghỉ dài {{longBreak}} sau mỗi {{every}} vòng",
         "short": "{{focus}}/{{shortBreak}}",
-        "shortLongBreak": "{{focus}}/{{shortBreak}} · nghỉ dài {{longBreak}} sau mỗi {{every}} vòng"
+        "shortLongBreak": "{{focus}}/{{shortBreak}} · nghỉ dài {{longBreak}} sau mỗi {{every}} vòng",
+        "presetNote": "Nghỉ dài: tắt"
     },
     "news": {
         "started": "{{name}} đã bắt đầu phiên học",
@@ -170,5 +172,55 @@
         "left_one": "còn {{count}} phút",
         "left_other": "còn {{count}} phút",
         "underAMinute": "còn dưới 1 phút"
+    },
+    "solo": {
+        "title": "Học một mình",
+        "otherTab": "Bạn đang có phiên học một mình ở tab khác",
+        "waitOver": "Đã quá 10 phút chờ",
+        "resumedElsewhere": "Phiên đã tiếp tục ở tab khác",
+        "startDescription": "Chọn chu kỳ cho phiên học của riêng bạn. Lần sau sẽ chọn sẵn chu kỳ này.",
+        "startSubmit": "Bắt đầu",
+        "breakEnds": "Hết nghỉ lúc {{time}}",
+        "waitLine": "Bấm Học tiếp để bắt đầu vòng mới",
+        "continue": "Học tiếp",
+        "skip": "Bỏ qua pha",
+        "skipHint": "Bỏ qua pha này",
+        "changeCycle": "Đổi chu kỳ",
+        "changeCycleHint": "Đổi chu kỳ của phiên",
+        "pauseToChange": "Tạm dừng để đổi chu kỳ",
+        "stop": "Dừng",
+        "stopHint": "Dừng học một mình",
+        "pauseHint": "Tạm dừng (Space)",
+        "resumeHint": "Tiếp tục (Space)",
+        "stoppedHere": "Bạn đã dừng học một mình",
+        "stoppedElsewhere": "Đã dừng ở tab hoặc thiết bị khác lúc {{time}}",
+        "expired": "Phiên kết thúc lúc {{time}} vì bạn chưa bấm Học tiếp",
+        "joinedRoom": "Học một mình đã dừng vì bạn vào phiên học chung",
+        "blocked": "Bạn đang trong phiên học ở {{room}}",
+        "dailyCap": "Hôm nay đã đủ 16 giờ, mức tối đa được ghi trong một ngày",
+        "waitingNews": "Hết giờ nghỉ, bấm Học tiếp trong 10 phút"
+    },
+    "dock": {
+        "label": "Học một mình",
+        "open": "Mở Học một mình",
+        "waitLeft": "Còn {{clock}} để học tiếp",
+        "pause": "Tạm dừng",
+        "resume": "Tiếp tục",
+        "stop": "Dừng học một mình",
+        "continue": "Học tiếp"
+    },
+    "yield": {
+        "startTitle": "Bắt đầu phiên chung và dừng học một mình?",
+        "startBody_one": "Học một mình sẽ kết thúc; {{count}} phút bạn đã học vẫn được tính. Cả phòng sẽ vào Tập trung {{focus}} phút.",
+        "startBody_other": "Học một mình sẽ kết thúc; {{count}} phút bạn đã học vẫn được tính. Cả phòng sẽ vào Tập trung {{focus}} phút.",
+        "startBodyShort": "Học một mình sẽ kết thúc. Cả phòng sẽ vào Tập trung {{focus}} phút.",
+        "cancel": "Hủy",
+        "start": "Bắt đầu",
+        "joinTitle": "Vào phòng và dừng học một mình?",
+        "joinBody_one": "{{room}} đang có phiên học chung. Học một mình sẽ kết thúc; {{count}} phút bạn đã học vẫn được tính.",
+        "joinBody_other": "{{room}} đang có phiên học chung. Học một mình sẽ kết thúc; {{count}} phút bạn đã học vẫn được tính.",
+        "joinBodyShort": "{{room}} đang có phiên học chung. Học một mình sẽ kết thúc.",
+        "stay": "Ở lại",
+        "join": "Vào phòng"
     }
 }

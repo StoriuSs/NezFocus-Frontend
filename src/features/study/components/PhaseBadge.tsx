@@ -15,10 +15,13 @@ import type { SessionPhase } from '../types'
 export function PhaseBadge({
     phase,
     paused = false,
+    waiting = false,
     className
 }: {
     phase: SessionPhase
     paused?: boolean
+    /** A Solo after its break (C-19 `waiting`): the break's icon and "Hết giờ nghỉ" in `text-primary`. */
+    waiting?: boolean
     className?: string
 }) {
     const { t } = useTranslation('study')
@@ -27,12 +30,16 @@ export function PhaseBadge({
         <span
             className={cn(
                 'inline-flex items-center gap-1.5 text-headline [&_svg]:size-[18px]',
-                paused ? 'text-text-secondary' : PHASE_TEXT[phase],
+                waiting ? 'text-text-primary' : paused ? 'text-text-secondary' : PHASE_TEXT[phase],
                 className
             )}
         >
             <Icon aria-hidden='true' />
-            {paused ? t('phase.pausedPhase', { phase: t(`phase.${phase}`) }) : t(`phase.${phase}`)}
+            {waiting
+                ? t('phase.waiting')
+                : paused
+                  ? t('phase.pausedPhase', { phase: t(`phase.${phase}`) })
+                  : t(`phase.${phase}`)}
         </span>
     )
 }

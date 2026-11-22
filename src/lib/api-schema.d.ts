@@ -3021,6 +3021,11 @@ export interface components {
                 | 'signed_out'
                 | 'joined_room'
                 | null
+            /**
+             * @description A Solo's seconds counted so far; the client adds the focus stretch
+             *     running since stretch_started_at (D-234). Null for a Room Session.
+             */
+            counted_seconds: number | null
             id: string
             /** @enum {string} */
             kind: 'room' | 'solo'

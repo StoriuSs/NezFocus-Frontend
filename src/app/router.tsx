@@ -22,6 +22,7 @@ import { usersRoutes } from '@/features/users/routes'
 const AuthShell = lazy(() => import('@/app/layout/AuthShell'))
 const AppShell = lazy(() => import('@/app/layout/app-shell/AppShell'))
 const Study = lazy(() => import('@/pages/Study'))
+const StudySolo = lazy(() => import('@/pages/StudySolo'))
 const Legal = lazy(() => import('@/pages/Legal'))
 const NotFound = lazy(() => import('@/pages/NotFound'))
 
@@ -74,7 +75,10 @@ export const router = createBrowserRouter([
                     </ProtectedRoute>
                 ),
                 children: [
-                    ...column('study')([{ path: '/study', element: <Study /> }]),
+                    ...column('study')([
+                        { path: '/study', element: <Study /> },
+                        { path: '/study/solo', element: <StudySolo /> }
+                    ]),
                     ...column('server')(serversChannelRoutes),
                     ...column('serverSettings')(serversSettingsRoutes),
                     ...column('tasks')(serversTasksRoutes),

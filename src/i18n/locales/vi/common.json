@@ -75,7 +75,8 @@
         "focus": "Tập trung",
         "short_break": "Nghỉ ngắn",
         "long_break": "Nghỉ dài",
-        "paused": "Tạm dừng"
+        "paused": "Tạm dừng",
+        "waiting": "Hết giờ nghỉ"
       },
       "left_one": "còn <0>{{count}}</0> phút",
       "left_other": "còn <0>{{count}}</0> phút",
@@ -83,7 +84,17 @@
       "line": "{{phase}} · {{left}}",
       "tab": "{{clock}} · {{phase}}",
       "streakReached_one": "Đủ 15 phút hôm nay · chuỗi {{count}} ngày liên tiếp",
-      "streakReached_other": "Đủ 15 phút hôm nay · chuỗi {{count}} ngày liên tiếp"
+      "streakReached_other": "Đủ 15 phút hôm nay · chuỗi {{count}} ngày liên tiếp",
+      "stats": "Thống kê",
+      "waitTab": "Hết giờ nghỉ",
+      "soloStopped_one": "Đã dừng học một mình · {{count}} phút đã được tính",
+      "soloStopped_other": "Đã dừng học một mình · {{count}} phút đã được tính",
+      "soloStoppedShort": "Đã dừng học một mình",
+      "soloYielded_one": "Đã dừng học một mình · {{count}} phút",
+      "soloYielded_other": "Đã dừng học một mình · {{count}} phút",
+      "soloTaken_one": "Phiên học chung đã bắt đầu · học một mình đã dừng · {{count}} phút đã được tính",
+      "soloTaken_other": "Phiên học chung đã bắt đầu · học một mình đã dừng · {{count}} phút đã được tính",
+      "soloTakenShort": "Phiên học chung đã bắt đầu · học một mình đã dừng"
     },
     "settings": {
       "title": "Cài đặt",

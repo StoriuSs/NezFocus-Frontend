@@ -2,8 +2,8 @@ import { lazy } from 'react'
 import type { CycleFields as CycleFieldsComponent } from './components/CycleFields'
 
 /**
- * What the app uses of study (M5): the sessions of study rooms (07) and,
- * later, Solo and the stats (08).
+ * What the app uses of study (M5): the sessions of study rooms (07), Solo
+ * (08 S-STUDY-02) and, later, the stats (08).
  *
  * A room's session is the servers feature's data, on its room in GET
  * /servers: the servers feature keeps it there from what this feature hears
@@ -24,6 +24,18 @@ export type { ControlProps } from './components/StudyStage'
 export const PreviewRing = lazy(() => import('./components/PreviewRing'))
 /** The tab's title, the phase sound and the streak toast of the session one is in (07 S-ROOM-05), mounted by the shell. */
 export const SessionCues = lazy(() => import('./components/SessionCues'))
+/** The Solo page's stage (08 S-STUDY-02), lazy as a room's; its round controls handed in. */
+export const SoloStage = lazy(() => import('./components/SoloStage'))
+/**
+ * One's Solo on every page (D-234): its cues and end toasts (`SoloWatch`,
+ * mounted once by the AppShell), its dock under a room's (`SoloDockSlot`),
+ * both light, their parts lazy; the question before a room's session ends it
+ * (`useSoloYield`, the AppShell's dialog).
+ */
+export { SoloWatch } from './components/SoloWatch'
+export { SoloDockSlot } from './components/SoloDockSlot'
+export { SOLO_PATH, useSoloSession } from './api/useSoloSession'
+export { useSoloYield } from './solo-yield.store'
 export { useListClock } from './hooks/useListClock'
 export { useSessionClock } from './hooks/useSessionClock'
 export { phaseName, sessionLineText } from './lib/phase-words'

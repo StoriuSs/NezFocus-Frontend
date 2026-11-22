@@ -5,8 +5,8 @@ import { serverNow } from '@/lib/server-clock'
 import { studyKeys } from '../api/keys'
 import { listenForSessions, tellSession } from '../api/liveSessions'
 import { hearSessionLeft, useStudyStore } from '../study.store'
-import type { FocusSession, StudyToday } from '../types'
-import { news, session } from '@/test/study-sessions'
+import type { FocusSession, SoloState, StudyToday } from '../types'
+import { news, session, solo } from '@/test/study-sessions'
 
 let client: QueryClient
 const sink = vi.fn<(session: FocusSession) => void>()
@@ -180,5 +180,50 @@ describe("One's seconds in a session as one's place closes (focus_session.left, 
         hearSessionLeft('im-lang', 's2', since, other)()
         expect(later).not.toHaveBeenCalled()
         expect(other).not.toHaveBeenCalled()
+    })
+})
+
+describe("One's Solo (solo_session.updated, D-222, D-234)", () => {
+    const soloHeld = () => client.getQueryData<SoloState>(studyKeys.solo())
+    beforeEach(() => {
+        useStudyStore.setState({ soloEnded: null })
+        client.setQueryData<SoloState>(studyKeys.solo(), {
+            session: solo(),
+            startCycle: { focus: 50, shortBreak: 10, longBreak: null, longBreakEvery: null }
+        })
+    })
+
+    it('keeps each later state, the next start’s cycle its own; not an older one, nor a room’s sinks', () => {
+        emitRealtimeEvent('solo_session.updated', solo({ version: 2, status: 'paused', focusMinutes: 40 }))
+        emitRealtimeEvent('solo_session.updated', solo({ version: 1 }))
+        expect(soloHeld()?.session).toMatchObject({ version: 2, status: 'paused' })
+        expect(soloHeld()?.startCycle.focus).toBe(40)
+        expect(sink).not.toHaveBeenCalled()
+    })
+
+    it('holds none once it ended, its summary in the store; an older word after it changes nothing', () => {
+        emitRealtimeEvent(
+            'solo_session.updated',
+            solo({ version: 3, status: 'ended', endedReason: 'stopped', countedSeconds: 1098 })
+        )
+        expect(soloHeld()?.session).toBeNull()
+        expect(useStudyStore.getState().soloEnded).toMatchObject({
+            session: { id: 'solo-1', countedSeconds: 1098 },
+            stoppedHere: false,
+            yieldedHere: false
+        })
+        emitRealtimeEvent('solo_session.updated', solo({ version: 2 }))
+        expect(soloHeld()?.session).toBeNull()
+    })
+
+    it('takes a command’s answer for a Solo into the query, never a room’s sink', () => {
+        tellSession(solo({ version: 1, status: 'paused' }))
+        expect(soloHeld()?.session?.status).toBe('paused')
+        expect(sink).not.toHaveBeenCalled()
+    })
+
+    it('reads it again once the socket is live again', () => {
+        emitRealtimeEvent('ready', undefined)
+        expect(client.getQueryState(studyKeys.solo())?.isInvalidated).toBe(true)
     })
 })

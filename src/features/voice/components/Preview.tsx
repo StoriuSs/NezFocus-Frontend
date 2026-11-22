@@ -5,7 +5,14 @@ import { useTranslation } from 'react-i18next'
 import '@/i18n/voice'
 import { Banner } from '@/components/Banner'
 import { Button } from '@/components/ui/button'
-import { asksBeforeLeaving, PreviewRing, useHostLeave, type RoomSession } from '@/features/study'
+import {
+    asksBeforeLeaving,
+    PreviewRing,
+    useHostLeave,
+    useSoloSession,
+    useSoloYield,
+    type RoomSession
+} from '@/features/study'
 import { settingsCache, useProfile } from '@/features/users'
 import { useBrowserOnline } from '@/hooks/useBrowserOnline'
 import { useToastEdge } from '@/hooks/useToastArea'
@@ -119,10 +126,15 @@ export function Preview({
             : null
 
     const askHost = useHostLeave((state) => state.ask)
+    const solo = useSoloSession().data?.session ?? null
+    const askYield = useSoloYield((state) => state.ask)
     const join = () => {
         const go = () => void joinRoom({ serverId: room.serverId, channelId: room.channelId, name: room.name })
-        // Switching is leaving: the Host of the room one is in is asked first, "Chuyển phòng" (D-50).
-        if (inOther && joinedSession && asksBeforeLeaving(joinedSession, me?.id)) {
+        // A room with a session ends one's Solo: asked first (08 `join-room-confirm`, D-103); none without one.
+        if (solo && room.session) {
+            askYield({ kind: 'join', room: room.name, confirm: go })
+        } else if (inOther && joinedSession && asksBeforeLeaving(joinedSession, me?.id)) {
+            // Switching is leaving: the Host of the room one is in is asked first, "Chuyển phòng" (D-50).
             askHost({ sessionId: joinedSession.id, kind: 'switch', confirm: go })
         } else go()
     }

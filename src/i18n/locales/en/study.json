@@ -4,7 +4,8 @@
         "short_break": "Short break",
         "long_break": "Long break",
         "paused": "Paused",
-        "pausedPhase": "Paused · {{phase}}"
+        "pausedPhase": "Paused · {{phase}}",
+        "waiting": "Break over"
     },
     "next": {
         "short_break": "short break",
@@ -111,7 +112,8 @@
         "summary": "{{focus}} min focus · {{shortBreak}} min break · no long break",
         "summaryLongBreak": "{{focus}} min focus · {{shortBreak}} min break · {{longBreak}} min long break every {{every}} rounds",
         "short": "{{focus}}/{{shortBreak}}",
-        "shortLongBreak": "{{focus}}/{{shortBreak}} · {{longBreak}} long break every {{every}} rounds"
+        "shortLongBreak": "{{focus}}/{{shortBreak}} · {{longBreak}} long break every {{every}} rounds",
+        "presetNote": "Long break: off"
     },
     "news": {
         "started": "{{name}} started a study session",
@@ -170,5 +172,55 @@
         "left_one": "{{count}} minute left",
         "left_other": "{{count}} minutes left",
         "underAMinute": "under a minute left"
+    },
+    "solo": {
+        "title": "Study alone",
+        "otherTab": "You have a solo session open in another tab",
+        "waitOver": "The 10-minute wait is over",
+        "resumedElsewhere": "The session was resumed in another tab",
+        "startDescription": "Choose a cycle for your own session. It will be chosen for you next time.",
+        "startSubmit": "Start",
+        "breakEnds": "Break ends at {{time}}",
+        "waitLine": "Press Keep going to start a new round",
+        "continue": "Keep going",
+        "skip": "Skip phase",
+        "skipHint": "Skip this phase",
+        "changeCycle": "Change cycle",
+        "changeCycleHint": "Change the session cycle",
+        "pauseToChange": "Pause to change the cycle",
+        "stop": "Stop",
+        "stopHint": "Stop studying alone",
+        "pauseHint": "Pause (Space)",
+        "resumeHint": "Resume (Space)",
+        "stoppedHere": "You stopped studying alone",
+        "stoppedElsewhere": "Stopped in another tab or device at {{time}}",
+        "expired": "The session ended at {{time}} because you did not press Keep going",
+        "joinedRoom": "Studying alone stopped because you joined a shared session",
+        "blocked": "You are in a study session in {{room}}",
+        "dailyCap": "You reached 16 hours today, the most a day can record",
+        "waitingNews": "Break over, press Keep going within 10 minutes"
+    },
+    "dock": {
+        "label": "Study alone",
+        "open": "Open Study alone",
+        "waitLeft": "{{clock}} left to keep going",
+        "pause": "Pause",
+        "resume": "Resume",
+        "stop": "Stop studying alone",
+        "continue": "Keep going"
+    },
+    "yield": {
+        "startTitle": "Start a shared session and stop studying alone?",
+        "startBody_one": "Studying alone will end; the {{count}} minute you studied still counts. The whole room will focus for {{focus}} minutes.",
+        "startBody_other": "Studying alone will end; the {{count}} minutes you studied still count. The whole room will focus for {{focus}} minutes.",
+        "startBodyShort": "Studying alone will end. The whole room will focus for {{focus}} minutes.",
+        "cancel": "Cancel",
+        "start": "Start",
+        "joinTitle": "Join the room and stop studying alone?",
+        "joinBody_one": "{{room}} has a shared session. Studying alone will end; the {{count}} minute you studied still counts.",
+        "joinBody_other": "{{room}} has a shared session. Studying alone will end; the {{count}} minutes you studied still count.",
+        "joinBodyShort": "{{room}} has a shared session. Studying alone will end.",
+        "stay": "Stay",
+        "join": "Join room"
     }
 }

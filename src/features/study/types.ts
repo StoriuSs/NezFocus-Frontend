@@ -44,6 +44,19 @@ export interface SessionNews extends FocusSession {
 /** The commands of a running or paused session (REQ-STUDY-03), each sent with the version seen. */
 export type SessionCommand = 'pause' | 'resume' | 'skip' | 'stop'
 
+/** A Solo's commands: a room's, and Học tiếp of one waiting (REQ-STUDY-05). */
+export type SoloCommand = SessionCommand | 'continue'
+
+/**
+ * One's Solo as GET /me/solo-session gives it and `solo_session.updated`
+ * keeps it (D-229): the one not yet ended, or null; and the cycle the start
+ * button names ("Bắt đầu Tập trung 50 phút": the last Solo's, 25/5 the first time).
+ */
+export interface SoloState {
+    session: FocusSession | null
+    startCycle: StudyCycle
+}
+
 /** `streak.updated` (SRS 5.2), and the same numbers from GET /me/study-stats: one's day so far. */
 export interface StudyToday {
     todaySeconds: number

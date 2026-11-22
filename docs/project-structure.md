@@ -190,7 +190,13 @@ react-starter/
     │   │                      #   seconds as one's place closed: `focus_session.left`), host-leave.store.ts
     │   │                      #   ("Rời phòng?" asked, its HostLeaveDialog the AppShell's, lazy, D-233),
     │   │                      #   study.css (its classes). A room's session is the servers'
-    │   │                      #   data (D-220), handed in with the VoiceRoom
+    │   │                      #   data (D-220), handed in with the VoiceRoom. Solo (08 S-STUDY-02,
+    │   │                      #   D-234): SoloStage lazy (the Solo page's stage), SoloDock lazy (its dock,
+    │   │                      #   under a room's), SoloWatch and SoloDockSlot light (mounted by the shell),
+    │   │                      #   api/useSoloSession.ts (GET /me/solo-session, kept by `solo_session.updated`),
+    │   │                      #   api/useSolo.ts (start, commands), lib/solo.ts (its seconds, its wait),
+    │   │                      #   solo-yield.store.ts (the question before a room's session ends it,
+    │   │                      #   SoloYieldDialog the AppShell's, lazy)
     │   └── users/             # The profile and the account's settings
     │       ├── api/           # users.api.ts (fetchProfile, removeAvatar),
     │       │                  #   settings.api.ts (fetchSettings, settingsQuery, updateSettings), hooks, keys

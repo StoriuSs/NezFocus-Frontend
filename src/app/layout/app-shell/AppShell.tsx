@@ -13,6 +13,7 @@ import { useInviteDialogs } from '@/features/servers/invite-dialogs.store'
 import { useMembershipDialogs } from '@/features/servers/membership-dialogs.store'
 import { useServerRemovals } from '@/features/servers/server-removals.store'
 import { useHostLeave } from '@/features/study/host-leave.store'
+import { useSoloYield } from '@/features/study/solo-yield.store'
 import { useRemovedWhileAway } from '@/features/servers/hooks/useRemovedWhileAway'
 import { useServerGoneWatch } from '@/features/servers/hooks/useServerGoneWatch'
 import { serverOwnership } from '@/features/servers/api/serverOwnership'
@@ -20,6 +21,7 @@ import { connectServerOwnership } from '@/features/auth'
 import { useConnectionBanner, useRealtimeConnection } from '@/features/realtime'
 import { useMentionTotal } from '@/features/messaging'
 import { JoinedSessionCues, RoomDock, useJoinedSession, useServers, useVoiceRooms } from '@/features/servers'
+import { SoloDockSlot, SoloWatch } from '@/features/study'
 import { useTitleCount } from '@/hooks/useDocumentTitle'
 import { useRefuseFileDrops } from '@/hooks/useRefuseFileDrops'
 import { cn } from '@/lib/utils'
@@ -45,6 +47,8 @@ const MembershipDialogs = lazy(() => import('@/features/servers/components/membe
 const RemovedDialog = lazy(() => import('@/features/servers/components/membership/RemovedDialog'))
 // "Rời phòng?" of a session's Host (07 S-ROOM-04, D-44, D-50, D-77), loaded the first time asked.
 const HostLeaveDialog = lazy(() => import('@/features/study/components/HostLeaveDialog'))
+// "… và dừng học một mình?" before a room's session ends one's Solo (08 S-STUDY-02, D-103), the same way.
+const SoloYieldDialog = lazy(() => import('@/features/study/components/SoloYieldDialog'))
 // A task's detail on any page with `?task=` (05 Q6, S-TASK-02), loaded the first time one opens.
 const TaskDetailRoute = lazy(() => import('@/features/servers/components/TaskDetailRoute'))
 
@@ -80,6 +84,7 @@ export default function AppShell() {
     const membershipDialog = useMembershipDialogs((state) => state.open !== null)
     const removed = useServerRemovals((state) => state.queue.length > 0)
     const askingHost = useHostLeave((state) => state.asking !== null)
+    const askingSoloYield = useSoloYield((state) => state.asking !== null)
     const joinedSessionId = useJoinedSession()?.id ?? null
     const [params, setParams] = useSearchParams()
     const openTask = params.get('task')
@@ -184,11 +189,14 @@ export default function AppShell() {
                         </ErrorBoundary>
                     </main>
                 </div>
-                {/* Below 1024 the list column is a sheet: the dock is a strip across the window (C-09). */}
+                {/* Below 1024 the list column is a sheet: the docks are strips across the window, a room's over a Solo's (C-09). */}
                 <RoomDock shape='strip' />
+                <SoloDockSlot shape='strip' />
             </div>
             {/* The tab's title, the phase sound and the streak toast of the session one is in, on every page (07 S-ROOM-05). */}
             <JoinedSessionCues />
+            {/* One's Solo: its title, sound and streak toast while it runs, its toast as it ends (08 S-STUDY-02). */}
+            <SoloWatch />
             {creatingServer ? (
                 <Suspense fallback={null}>
                     <CreateServerDialog />
@@ -217,6 +225,11 @@ export default function AppShell() {
             {askingHost ? (
                 <Suspense fallback={null}>
                     <HostLeaveDialog joinedSessionId={joinedSessionId} />
+                </Suspense>
+            ) : null}
+            {askingSoloYield ? (
+                <Suspense fallback={null}>
+                    <SoloYieldDialog />
                 </Suspense>
             ) : null}
             {removed ? (

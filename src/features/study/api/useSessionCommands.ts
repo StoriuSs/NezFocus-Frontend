@@ -1,4 +1,4 @@
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import '@/i18n/study'
@@ -8,7 +8,7 @@ import { sessionRefusal } from '../lib/session-errors'
 import type { StudyCycle } from '../lib/study-cycle'
 import { startToastId } from '../lib/toast-ids'
 import type { AnySession, FocusSession, SessionCommand } from '../types'
-import { tellSession } from './liveSessions'
+import { tellSession, tellSolo } from './liveSessions'
 import { changeSessionCycle, commandSession, startRoomSession } from './study.api'
 
 /**
@@ -48,11 +48,12 @@ export function useSessionCommand(session: AnySession | null) {
     })
 }
 
-/** A new cycle while paused (S-ROOM-04 `paused-edit-config`); the answer goes on the room. */
+/** A new cycle while paused (S-ROOM-04 `paused-edit-config`); the answer goes on the room, or a Solo's to its query. */
 export function useChangeCycle(session: AnySession) {
+    const client = useQueryClient()
     return useMutation({
         mutationFn: (cycle: StudyCycle) => changeSessionCycle(session.id, session.version, cycle),
-        onSuccess: (answer) => void tellSession(answer),
+        onSuccess: (answer) => (answer.kind === 'solo' ? tellSolo(client, answer) : void tellSession(answer)),
         meta: { errorToast: false }
     })
 }

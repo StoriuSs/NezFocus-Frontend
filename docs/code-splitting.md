@@ -208,7 +208,15 @@ lazy. `SessionCues` (the tab's title, the phase sound and the streak
 toast of the session one is in) is lazy, fetched once one is in a room with a session.
 `PreviewRing` (a study room's ring on its preview page) is lazy like `StudyStage`.
 `HostLeaveDialog` ("Rời phòng?" of a session's Host, D-233) is the AppShell's,
-lazy like its other dialogs, fetched the first time it is asked.
+lazy like its other dialogs, fetched the first time it is asked; so is
+`SoloYieldDialog` (before a room's session ends one's Solo, D-103). The Solo
+page's stage `SoloStage` and the Solo's dock `SoloDock` are lazy (both import
+`study.css`); `SoloWatch` and `SoloDockSlot`, which the shell mounts, are light
+and fetch `SessionCues` / `SoloDock` only while a Solo runs. The query of the
+Solo (`api/useSoloSession.ts`) brings no `study` words; the start and the
+commands (`api/useSolo.ts`, with their toasts) live with the lazy parts. The
+Solo page's round controls are voice's `RoomControl`, which imports
+`voice.css` so its classes come wherever it shows.
 `CycleFields` (a cycle in a React Hook Form form) is
 exported lazily too, for a room's settings (S-SET-06, inside a `Suspense`):
 it brings the `study` words, which an index export would put in the shell's

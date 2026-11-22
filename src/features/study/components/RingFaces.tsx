@@ -75,19 +75,25 @@ export function SessionFace({
 }
 
 /**
- * No session yet (C-18 `idle`): "Chưa có phiên học", and for one who may
- * start one "Bắt đầu Tập trung {N} phút" (the room's own cycle, started at
- * once) and "Chu kỳ khác" (S-ROOM-03); for anyone else, who may.
+ * No session yet (C-18 `idle`): "Chưa có phiên học" (a Solo's page: "Học
+ * một mình", `title`), and for one who may start one "Bắt đầu Tập trung {N}
+ * phút" (the room's own cycle, or the last Solo's, started at once) and "Chu
+ * kỳ khác" (S-ROOM-03); for anyone else, who may, or why not (`refused`:
+ * "Bạn đang trong phiên học ở …", 08 S-STUDY-02 `idle`).
  */
 export function IdleFace({
+    title,
     focusMinutes,
     canStart,
+    refused,
     starting,
     onStart,
     onOtherCycle
 }: {
+    title?: string
     focusMinutes: number
     canStart: boolean
+    refused?: string
     starting: boolean
     onStart: () => void
     onOtherCycle: () => void
@@ -95,7 +101,7 @@ export function IdleFace({
     const { t } = useTranslation('study')
     return (
         <div className='flex flex-col items-center gap-3'>
-            <p className='text-headline text-text-primary'>{t('ring.idle')}</p>
+            <p className='text-headline text-text-primary'>{title ?? t('ring.idle')}</p>
             {canStart ? (
                 <>
                     <Button type='button' onClick={onStart} aria-busy={starting || undefined}>
@@ -106,8 +112,34 @@ export function IdleFace({
                     </Button>
                 </>
             ) : (
-                <p className='max-w-[240px] text-label text-text-secondary'>{t('ring.managersOnly')}</p>
+                <p className='max-w-[240px] text-label text-text-secondary'>{refused ?? t('ring.managersOnly')}</p>
             )}
+        </div>
+    )
+}
+
+/**
+ * A Solo's break over, waiting for Học tiếp (C-18 `waiting`, REQ-STUDY-05):
+ * PhaseBadge `waiting` "Hết giờ nghỉ", what is left of the 10 minutes in
+ * `timer` counting down, "Bấm Học tiếp để bắt đầu vòng mới"; no mascot
+ * (DESIGN.md › Mascot). One `timer` element, named by the minutes left.
+ */
+export function WaitingFace({ phase, left }: { phase: AnySession['phase']; left: number }) {
+    const { t } = useTranslation('study')
+    const minutes = Math.floor(Math.ceil(left / 1000) / 60)
+    return (
+        <div
+            role='timer'
+            aria-label={`${t('phase.waiting')}, ${minutes > 0 ? t('minutes', { count: minutes }) : t('ring.underAMinute')}`}
+            className='flex flex-col items-center gap-1'
+        >
+            <PhaseBadge phase={phase} waiting />
+            <span aria-hidden='true' className='font-numeric text-timer tabular-nums text-text-primary'>
+                {clockText(left)}
+            </span>
+            <span aria-hidden='true' className='max-w-[264px] text-label font-medium text-text-secondary'>
+                {t('solo.waitLine')}
+            </span>
         </div>
     )
 }
@@ -119,22 +151,26 @@ export function IdleFace({
  */
 export function EndedFace({
     seconds,
-    today
+    today,
+    plainWhenShort = false
 }: {
     seconds: number
     today: { seconds: number; streak: number } | undefined
+    /** A Solo's summary under a minute (08 edge `too-short`): no mascot, no line of today. */
+    plainWhenShort?: boolean
 }) {
     const { t } = useTranslation('study')
+    const plain = plainWhenShort && seconds < 60
     return (
         <div className='flex flex-col items-center gap-1'>
-            <Mascot mood='happy' size={80} still={mascotHappy} loadWhen={ALWAYS} className='mb-1' />
+            {plain ? null : <Mascot mood='happy' size={80} still={mascotHappy} loadWhen={ALWAYS} className='mb-1' />}
             <p className='text-headline text-text-primary'>{t('ring.ended')}</p>
             {seconds >= 60 ? (
                 <p className='font-numeric text-stat tabular-nums text-text-primary'>{studiedText(t, seconds)}</p>
             ) : (
                 <p className='text-body text-text-secondary'>{t('ring.underOne')}</p>
             )}
-            {today ? (
+            {today && !plain ? (
                 <p className='text-label text-text-secondary'>
                     {today.streak > 0
                         ? t('ring.today', { time: studiedText(t, today.seconds), count: today.streak })

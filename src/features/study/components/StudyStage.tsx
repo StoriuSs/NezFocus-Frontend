@@ -8,7 +8,9 @@ import { useConnectionBanner } from '@/features/realtime'
 import { accountTimeZone } from '@/lib/time-zones'
 import { cn } from '@/lib/utils'
 import { useSessionCommand, useStartSession } from '../api/useSessionCommands'
+import { useSoloSession } from '../api/useSoloSession'
 import { useStudyToday } from '../api/useStudyToday'
+import { useCommandWhenLive } from '../hooks/useCommandWhenLive'
 import { useCycleLine } from '../hooks/useCycleLine'
 import { useEndedHere } from '../hooks/useEndedHere'
 import { useJustJoined } from '../hooks/useJustJoined'
@@ -19,6 +21,7 @@ import { studiedText } from '../lib/durations'
 import { clockText, phaseGone, remainingMs, roundOf } from '../lib/phases'
 import { endLine, peopleLine } from '../lib/room-lines'
 import { dayStartOf, todaySecondsAt } from '../lib/today'
+import { useSoloYield } from '../solo-yield.store'
 import type { SessionCommand, StudyRoomView } from '../types'
 import { ChangeCycleDialog, StartSessionDialog } from './CycleDialogs'
 import { PhaseBadge } from './PhaseBadge'
@@ -34,6 +37,8 @@ export interface ControlProps {
     onClick?: () => void
     'aria-busy'?: boolean
     'aria-haspopup'?: 'menu'
+    /** Shown, its Tooltip saying why, but does nothing ("Đổi chu kỳ" while running, 08 S-STUDY-02). */
+    disabled?: boolean
     className?: string
 }
 
@@ -49,7 +54,9 @@ type Dialog = 'start' | 'change' | 'stop' | null
  * in a paused session with no Host (D-119).
  *
  * No session: the ring's track and the start, for one who may ("Bắt đầu
- * Tập trung 25 phút" at once with the room's cycle; "Chu kỳ khác", S-ROOM-03).
+ * Tập trung 25 phút" at once with the room's cycle; "Chu kỳ khác", S-ROOM-03);
+ * while one's Solo runs, asked first: it would end (08
+ * `start-while-solo-confirm`, D-103).
  * Ended while one was here: the summary in the ring until a new session or
  * one leaves (D-49; never after a reload, D-231), the start under it.
  *
@@ -134,23 +141,18 @@ export default function StudyStage({
 
     // A command pressed while syncing again waits for the socket (07 `syncing`); sent at once otherwise.
     const command = useSessionCommand(session)
-    const [held, setHeld] = useState<SessionCommand | null>(null)
-    if (held && !session) setHeld(null)
-    const send = (next: SessionCommand) => {
-        if (command.isPending || held) return
-        if (syncing) setHeld(next)
-        else command.mutate(next)
-    }
-    const { mutate } = command
-    useEffect(() => {
-        if (!held || syncing) return
-        setHeld(null)
-        mutate(held)
-    }, [held, syncing, mutate])
-    const busy = command.isPending || held !== null
+    const { send, busy } = useCommandWhenLive<SessionCommand>(command.mutate, {
+        pending: command.isPending,
+        syncing,
+        active: session !== null
+    })
 
+    const solo = useSoloSession().data?.session ?? null
+    const askYield = useSoloYield((state) => state.ask)
     const startNow = () => {
-        if (!start.isPending) start.mutate(null)
+        if (start.isPending) return
+        if (solo) askYield({ kind: 'start', focusMinutes: room.cycle.focus, confirm: () => start.mutate(null) })
+        else start.mutate(null)
     }
     const canStart = room.isStudyRoom && room.canStart
     const startButton = (size: 'default' | 'sm') =>
