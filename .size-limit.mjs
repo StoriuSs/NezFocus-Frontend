@@ -86,6 +86,10 @@
 // 9930 B and 583 B): the Study page's two columns from a 1320 window and its
 // rooms' rows (84 high), in the main stylesheet with the servers feature and
 // the pages; the week chart's columns and today's progress bar in study.css.
+// Study CSS raised to 713 B after M5 L8 (23/11/2026, 709 B): the Stats page,
+// part of study (its words and classes load with the Study and Stats pages):
+// the 4-week grid's squares of 28, today's edge, and its two columns from a
+// 1320 window, ordered otherwise in one column.
 // Raise them
 // only as CONSTRAINTS.md says: the owner decides, in a commit of its own.
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
@@ -196,5 +200,5 @@ export default [
     { name: 'Notifications CSS (gzip)', path: notificationsCss, gzip: true, limit: '508 B' },
     { name: 'Voice CSS (gzip)', path: voiceCss, gzip: true, limit: '286 B' },
     { name: 'Voice JS (gzip)', path: voiceJs, gzip: true, limit: '215.88 kB' },
-    { name: 'Study CSS (gzip)', path: studyCss, gzip: true, limit: '586 B' }
+    { name: 'Study CSS (gzip)', path: studyCss, gzip: true, limit: '713 B' }
 ]
