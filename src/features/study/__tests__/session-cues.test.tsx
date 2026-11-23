@@ -170,6 +170,42 @@ describe('the streak toast as today reaches 15 minutes (07 streak-reached, STUDY
         expect(sonner.toast).toHaveBeenCalledTimes(1)
     })
 
+    it('says it once a day: the phase ending before its count comes dips the number a moment, no second toast', async () => {
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
+        vi.setSystemTime(AT)
+        noteServerTime(session().serverTime)
+        studyApi.fetchStudyToday.mockResolvedValue({
+            todaySeconds: 14 * 60,
+            countedUntil: '2026-11-22T14:47:00.000Z',
+            streak: 5,
+            readAt: '2026-11-22T14:47:18.000Z'
+        })
+        const view = cues()
+        await flush(10)
+        await flush(43_000)
+        expect(sonner.toast).toHaveBeenCalledTimes(1)
+        // The focus closed at 21:48:10: the session in its break comes first, today's count of it after (two events).
+        const rest = {
+            phase: 'short_break' as const,
+            phaseIndex: 3,
+            phaseStartedAt: '2026-11-22T14:48:10.000Z',
+            phaseEndsAt: '2026-11-22T14:53:10.000Z',
+            stretchStartedAt: null
+        }
+        view.rerender(<SessionCues session={session(rest)} />)
+        await flush(100)
+        act(() => {
+            client.setQueryData(studyKeys.today(), {
+                todaySeconds: 14 * 60 + 70,
+                countedUntil: '2026-11-22T14:48:10.000Z',
+                streak: 6,
+                readAt: '2026-11-22T14:48:10.000Z'
+            })
+        })
+        await flush(100)
+        expect(sonner.toast).toHaveBeenCalledTimes(1)
+    })
+
     it('says nothing for a day already past 15 minutes when the session opened', async () => {
         vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
         vi.setSystemTime(AT)
@@ -187,7 +223,7 @@ describe('the streak toast as today reaches 15 minutes (07 streak-reached, STUDY
             readAt: '2026-11-22T14:47:18.000Z'
         })
         const paused = session({ status: 'paused', phaseEndsAt: null, pausedRemainingMs: 60_000 })
-        render(<SessionCues session={paused} />, { wrapper: Providers })
+        const view = render(<SessionCues session={paused} />, { wrapper: Providers })
         await waitFor(() => expect(studyApi.fetchStudyToday).toHaveBeenCalled())
         await waitFor(() => expect(client.getQueryData(studyKeys.today())).toBeDefined())
 
@@ -202,8 +238,10 @@ describe('the streak toast as today reaches 15 minutes (07 streak-reached, STUDY
         await waitFor(() =>
             expect(sonner.toast).toHaveBeenCalledWith('Đủ 15 phút hôm nay · chuỗi 6 ngày liên tiếp', expect.anything())
         )
-        // A new day read (0 so far), then past 15 again: said again.
-        // Its own render first: the cache tells its watchers on the next tick.
+        // A new day (just past midnight; the session runs again, its clock read anew) read (0 so far),
+        // then past 15 again: said again. Its own render first: the cache tells its watchers on the next tick.
+        noteServerTime('2026-11-23T00:05:00.000Z')
+        view.rerender(<SessionCues session={session()} />)
         await act(async () => {
             client.setQueryData(studyKeys.today(), {
                 todaySeconds: 0,

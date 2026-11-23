@@ -130,11 +130,15 @@ function ended(id: number, room: RoomToJoin) {
 
 /**
  * Joins `room`, the microphone and camera as the preview page left them
- * (REQ-VC-03); `devicesOff` (a reload, D-51) joins with both off. True once
+ * (REQ-VC-03); `devicesOff` (a reload, D-51) joins with both off; `rejoin`:
+ * the reload's own join, which the call keeps (`rejoined`). True once
  * in; false when it failed (the store holds why) or another join or a leave
  * came first. The preview's picture stays until LiveKit has the camera.
  */
-export async function joinRoom(room: RoomToJoin, options: { devicesOff?: boolean } = {}): Promise<boolean> {
+export async function joinRoom(
+    room: RoomToJoin,
+    options: { devicesOff?: boolean; rejoin?: boolean } = {}
+): Promise<boolean> {
     attempt += 1
     const id = attempt
     const before = link
@@ -144,7 +148,8 @@ export async function joinRoom(room: RoomToJoin, options: { devicesOff?: boolean
         set((state) => devicesOut(state))
     }
     screenAsk += 1
-    set({ call: { ...room, phase: 'joining' }, room: null, problem: null, modMuted: null, screen: 'off' })
+    const rejoined = options.rejoin ? { rejoined: true } : {}
+    set({ call: { ...room, phase: 'joining', ...rejoined }, room: null, problem: null, modMuted: null, screen: 'off' })
     const deadline = Date.now() + JOIN_MS
     try {
         if (before) {
@@ -201,7 +206,7 @@ export async function joinRoom(room: RoomToJoin, options: { devicesOff?: boolean
         keepRoom({ serverId: room.serverId, channelId: room.channelId })
         dropPreview()
         set({
-            call: { ...room, phase: 'connected' },
+            call: { ...room, phase: 'connected', ...rejoined },
             room: joined.link.room,
             mic: shown('mic', micState),
             camera: shown('camera', cameraState)

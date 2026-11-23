@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { toast, Toaster } from 'sonner'
 import i18n from '@/i18n'
+import { useToastArea } from '@/hooks/useToastArea'
 import { noteServerTime } from '@/lib/server-clock'
 import { expectNoA11yViolations } from '@/test/a11y'
 import { apiError } from '@/test/helpers'
@@ -58,7 +59,8 @@ function stage(
         count = 9,
         content = null as ReactNode,
         self = undefined as ReactNode,
-        joinedAt = '2026-11-22T14:05:00.000Z'
+        joinedAt = '2026-11-22T14:05:00.000Z',
+        rejoined = false
     } = {}
 ) {
     const ui = (next: StudyRoomView) => (
@@ -69,6 +71,7 @@ function stage(
                 room={next}
                 me={me}
                 joinedAt={joinedAt}
+                rejoined={rejoined}
                 people={people(count)}
                 seats={people(count).map((one) => ({ id: one.id, seat: <span>{one.name}</span> }))}
                 content={content}
@@ -76,7 +79,6 @@ function stage(
                 devices={<button type='button'>Mic</button>}
                 leave={<button type='button'>Rời phòng</button>}
                 Control={Control}
-                barRef={() => undefined}
             />
         </QueryClientProvider>
     )
@@ -341,6 +343,26 @@ describe('A session running (07 S-ROOM-02)', () => {
     it('tells one just joined since when their time counts (07 just-joined)', async () => {
         stage(room(running()), { me: 'phong', joinedAt: '2026-11-22T14:47:10.000Z' })
         expect(await toastText(/^Bạn đang được tính giờ từ \d\d:\d\d$/)).toBeVisible()
+    })
+
+    it('tells nobody in the room as the session began: who started it saw it start (07 just-joined)', async () => {
+        // An joined the empty room at 14:10:50 and started the session at 14:11:00.
+        noteServerTime('2026-11-22T14:11:05.000Z')
+        stage(room(running()), { joinedAt: '2026-11-22T14:10:50.000Z' })
+        expect(await screen.findByText('Tập trung')).toBeVisible()
+        await expect(toastText(/^Bạn đang được tính giờ từ/)).rejects.toThrow()
+    })
+
+    it('tells nothing on joining again after a reload: one was counted all along (D-51, D-215)', async () => {
+        stage(room(running()), { me: 'phong', joinedAt: '2026-11-22T14:47:10.000Z', rejoined: true })
+        expect(await screen.findByText('Tập trung')).toBeVisible()
+        await expect(toastText(/^Bạn đang được tính giờ từ/)).rejects.toThrow()
+    })
+
+    it('keeps the toasts above its controls, loaded after the room (C-16)', async () => {
+        useToastArea.setState({ barTop: null })
+        stage(room(running()))
+        await waitFor(() => expect(useToastArea.getState().barTop).not.toBeNull())
     })
 
     it('shows the compact block over the grid (D-55)', async () => {

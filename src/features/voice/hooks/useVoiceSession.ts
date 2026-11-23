@@ -75,7 +75,7 @@ export function useVoiceSession(directory: VoiceDirectory | undefined): void {
         const room = directory.room(rejoin.channelId)
         const timedOut = room?.timeoutUntil != null && new Date(room.timeoutUntil) > new Date()
         if (!room?.canConnect || timedOut) return
-        void joinRoom(room, { devicesOff: true }).then((joined) => {
+        void joinRoom(room, { devicesOff: true, rejoin: true }).then((joined) => {
             if (joined)
                 toast(t('shell.voice.rejoined', { room: room.name }), {
                     id: 'voice-rejoined',

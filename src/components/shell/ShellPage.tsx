@@ -96,7 +96,7 @@ export function ShellPage({
                     >
                         {title}
                     </h1>
-                    {afterTitle ? <div className='flex min-w-0 flex-1 items-center'>{afterTitle}</div> : null}
+                    {afterTitle ? <div className='flex shrink-0 grow items-center'>{afterTitle}</div> : null}
                     {actions ? <div className='flex shrink-0 items-center gap-1'>{actions}</div> : null}
                 </header>
                 {connection ? <ConnectionBanner status={connection} composer={composer} /> : null}

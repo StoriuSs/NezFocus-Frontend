@@ -111,6 +111,13 @@ describe("a tab's time in a voice room (REQ-VC-01 → VC-03)", () => {
         expect(state()).toMatchObject({ mic: 'off', camera: 'off' })
     })
 
+    it('marks the call a reload joined again (D-51), and no other', async () => {
+        await joinRoom(QUIET, { devicesOff: true, rejoin: true })
+        expect(state().call).toMatchObject({ channelId: QUIET.channelId, rejoined: true })
+        await joinRoom(LOUNGE)
+        expect(state().call?.rejoined).toBeFalsy()
+    })
+
     it("before joining, opens the camera for one's own tile (D-53); refused, it is blocked until allowed again", async () => {
         const camera = aCamera()
         await switchCamera(true)

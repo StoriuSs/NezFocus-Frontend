@@ -28,6 +28,8 @@ export interface Call {
     channelId: string
     name: string
     phase: CallPhase
+    /** Joined again by reloading the tab (D-51): one never left the room for the API (D-215). */
+    rejoined?: boolean
 }
 
 interface VoiceState {

@@ -136,7 +136,6 @@ function Stage({
     const [help, setHelp] = useState<Device | null>(null)
     const leave = useLeaveRoom(room)
     const bar = useRef<HTMLDivElement>(null)
-    useToastEdge('barTop', bar)
 
     // The grid is one keyboard stop: the person whose tile was last focused holds it
     // (people come and go around them), ← → move. Inline, as the attachment tray's tiles.
@@ -243,7 +242,11 @@ function Stage({
     const modMuted = useModMuted(room.people.some((one) => one.user.id === me && one.modMuted))
     const joinedAt = room.people.find((one) => one.user.id === me)?.joinedAt ?? null
     const endedHere = useEndedHere(room.channelId, room.session === null, joinedAt) !== null
+    const studyStage = room.isStudyRoom || endedHere
+    // A study room's stage holds the edge for its own controls.
+    useToastEdge('barTop', bar, !studyStage)
     const view = useVoiceStore((state) => state.roomView)
+    const rejoined = useVoiceStore((state) => state.call?.rejoined ?? false)
     const { t: words } = useTranslation('voice')
     const devices = (
         <>
@@ -259,7 +262,7 @@ function Stage({
     const leaveButton = (
         <RoomControl icon={<PhoneOff />} label={t('controls.leave')} hint={t('controls.leave')} onClick={leave} />
     )
-    if (room.isStudyRoom || endedHere) {
+    if (studyStage) {
         const study: StudyRoomView = {
             channelId: room.channelId,
             isStudyRoom: room.isStudyRoom,
@@ -281,6 +284,7 @@ function Stage({
                         room={study}
                         me={me}
                         joinedAt={joinedAt}
+                        rejoined={rejoined}
                         people={ordered.map((one) => ({
                             id: one.user.id,
                             name: personName(one.user) ?? words('person.deletedAccount')
@@ -295,7 +299,6 @@ function Stage({
                         devices={devices}
                         leave={leaveButton}
                         Control={RoomControl}
-                        barRef={bar}
                     />
                 </Suspense>
             </div>

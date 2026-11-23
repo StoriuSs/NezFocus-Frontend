@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useRef, useState, type ComponentType, type ReactNode, type Ref } from 'react'
+import { useCallback, useEffect, useRef, useState, type ComponentType, type ReactNode } from 'react'
 import { Loader2, Pause, Play, SlidersHorizontal } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import '@/i18n/study'
 import '../study.css'
 import { Button } from '@/components/ui/button'
 import { useConnectionBanner } from '@/features/realtime'
+import { useToastEdge } from '@/hooks/useToastArea'
 import { accountTimeZone } from '@/lib/time-zones'
 import { cn } from '@/lib/utils'
 import { useSessionCommand, useStartSession } from '../api/useSessionCommands'
@@ -78,19 +79,21 @@ export default function StudyStage({
     room,
     me,
     joinedAt,
+    rejoined = false,
     people,
     seats,
     content,
     self,
     devices,
     leave,
-    Control,
-    barRef
+    Control
 }: {
     room: StudyRoomView
     me: string
     /** When one joined the room this time: a summary of a session ended before is not one's own. */
     joinedAt: string | null
+    /** This tab joined again by reloading (D-51): no word on when one is counted from, one was all along (D-215). */
+    rejoined?: boolean
     /** Everyone in the room, in the order shown, oneself first, with the names to say. */
     people: { id: string; name: string }[]
     seats: { id: string; seat: ReactNode }[]
@@ -102,13 +105,15 @@ export default function StudyStage({
     devices: ReactNode
     leave: ReactNode
     Control: ComponentType<ControlProps>
-    barRef: Ref<HTMLDivElement>
 }) {
     const { t } = useTranslation('study')
     const session = room.session
     const now = useSessionClock(session)
     const stage = useRef<HTMLDivElement>(null)
     usePhaseBreath(stage, session)
+    // Here, not by the room: this stage loads after it, so the room's own hold would find no bar yet.
+    const bar = useRef<HTMLDivElement>(null)
+    useToastEdge('barTop', bar)
     const syncing = useConnectionBanner() !== null
     const others = people.length - 1
 
@@ -123,7 +128,7 @@ export default function StudyStage({
     )
     useSessionNews(room.channelId, me, nameOf, session?.hostId ?? null)
     const said = usePhaseNews(session)
-    useJustJoined(session, joinedAt)
+    useJustJoined(session, rejoined ? null : joinedAt)
 
     const ended = useEndedHere(room.channelId, session === null, joinedAt)
     const today = useStudyToday()
@@ -295,7 +300,7 @@ export default function StudyStage({
                     {content}
                 </div>
             )}
-            <div ref={barRef} className='flex shrink-0 items-start justify-center gap-4 px-6 pb-6 pt-2'>
+            <div ref={bar} className='flex shrink-0 items-start justify-center gap-4 px-6 pb-6 pt-2'>
                 {devices}
                 {main}
                 {session && canControl ? (
