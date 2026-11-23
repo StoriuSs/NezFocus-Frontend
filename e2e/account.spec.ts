@@ -132,7 +132,7 @@ test('a new account with nowhere else to go is greeted once on Study (02 S-SHELL
     await page.waitForURL(/\/study$/)
     await expect(page.getByRole('heading', { name: 'Welcome to NezFocus, Ada' })).toBeVisible()
     await page.reload()
-    await expect(page.getByRole('heading', { name: 'No servers yet' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: "You're not in any server yet" })).toBeVisible()
     expect(problems).toEqual([])
 })
 

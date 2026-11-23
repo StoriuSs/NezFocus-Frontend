@@ -36,6 +36,8 @@ export default defineConfig({
         },
         {
             name: 'firefox',
+            // Study sessions need people in a LiveKit room, which Firefox's fake devices do not reach in Docker (M4 A3).
+            testIgnore: 'study.spec.ts',
             use: {
                 ...devices['Desktop Firefox'],
                 launchOptions: {

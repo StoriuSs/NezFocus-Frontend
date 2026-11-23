@@ -100,6 +100,8 @@ test.beforeAll(async ({ browserName }) => {
     await ok('POST', `invites/${invite.code}/accept`, {}, chi)
     const room = server.channels.find((channel) => channel.type === 'voice' && channel.name === ROOM)
     const first = server.channels.find((channel) => channel.type === 'text' && channel.name === 'hoi-dap')
+    // A plain voice room: since M5 a study room opens on its rhythm ring (D-56); study.spec.ts covers that.
+    await ok('PATCH', `servers/${server.id}/channels/${room!.id}`, { is_study_room: false }, an)
     roomPath = `/channels/${server.id}/${room!.id}`
     firstPath = `/channels/${server.id}/${first!.id}`
 })

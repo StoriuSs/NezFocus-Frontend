@@ -70,10 +70,10 @@ const rail = (page: Page) => page.getByRole('navigation', { name: 'Servers' })
 test('from no server to a Study Server with a picture, opened at its welcome channel', async ({ page }) => {
     const problems = await watchForProblems(page)
     await signIn(page)
-    await expect(page.getByRole('heading', { level: 2, name: 'No servers yet' })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 2, name: "You're not in any server yet" })).toBeVisible()
     await shoot(page, 'no-server')
 
-    await page.getByRole('button', { name: 'Create a Study Server' }).click()
+    await page.getByRole('button', { name: 'Create a server' }).click()
     const dialog = page.getByRole('dialog', { name: 'Create a server' })
     await expect(dialog.getByRole('radio', { name: /Study Server/ })).toHaveAttribute('aria-checked', 'true')
     await shoot(page, 'create-default')
