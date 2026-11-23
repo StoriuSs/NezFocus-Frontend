@@ -183,7 +183,8 @@ react-starter/
     │   ├── study/             # Study sessions (07, 08, M5): index.ts (StudyStage lazy: the ring, its
     │   │                      #   seats, the Host's controls, the start and cycle dialogs, the summary, with
     │   │                      #   their words; SessionCues lazy: the tab's title, the phase sound and the
-    │   │                      #   streak toast of the session one is in; the light parts not lazy: the cycle rules,
+    │   │                      #   streak toast of the session one is in; EndedOnArrival lazy: the Toast of a room
+    │   │                      #   opened from a Study page row as its session ended; the light parts not lazy: the cycle rules,
     │   │                      #   the phase rules and clocks, listenForSessions, the store), api/ (start, commands,
     │   │                      #   today; liveSessions: `focus_session.*` and `streak.updated`, each later
     │   │                      #   state handed to the servers feature, D-231), lib/ (study-cycle, phases,

@@ -206,6 +206,12 @@ page opened before any study room. The rest of `study`'s index (the cycle
 rules, the phase rules and clocks, `listenForSessions`) is light and not
 lazy. `SessionCues` (the tab's title, the phase sound and the streak
 toast of the session one is in) is lazy, fetched once one is in a room with a session.
+`EndedOnArrival` ("Phiên học vừa kết thúc lúc …" on a room opened from a Study
+page row whose session ended, 08 `room-ended-on-join`) is lazy too, fetched by
+the channel page only when a page was opened from such a row: its words are
+`study`'s, which the voice chunk does not carry. "Cả phòng thở ra" as a phase
+changes (`usePhaseBreath`) plays with the Web Animations API, so it adds
+nothing to `study.css`.
 `PreviewRing` (a study room's ring on its preview page) is lazy like `StudyStage`.
 `HostLeaveDialog` ("Rời phòng?" of a session's Host, D-233) is the AppShell's,
 lazy like its other dialogs, fetched the first time it is asked; so is

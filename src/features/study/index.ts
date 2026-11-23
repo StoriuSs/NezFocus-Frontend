@@ -24,6 +24,8 @@ export type { ControlProps } from './components/StudyStage'
 export const PreviewRing = lazy(() => import('./components/PreviewRing'))
 /** The tab's title, the phase sound and the streak toast of the session one is in (07 S-ROOM-05), mounted by the shell. */
 export const SessionCues = lazy(() => import('./components/SessionCues'))
+/** A room opened from a Study page row as its session ended: "Phiên học vừa kết thúc lúc …" (08 `room-ended-on-join`). */
+export const EndedOnArrival = lazy(() => import('./components/EndedOnArrival'))
 /** The Solo page's stage (08 S-STUDY-02), lazy as a room's; its round controls handed in. */
 export const SoloStage = lazy(() => import('./components/SoloStage'))
 /**

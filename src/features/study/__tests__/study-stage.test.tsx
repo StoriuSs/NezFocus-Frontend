@@ -53,7 +53,13 @@ const running = (more: Partial<FocusSession> = {}) => roomSessionOf(session(more
 let client: QueryClient
 function stage(
     view: StudyRoomView,
-    { me = 'an', count = 9, content = null as ReactNode, joinedAt = '2026-11-22T14:05:00.000Z' } = {}
+    {
+        me = 'an',
+        count = 9,
+        content = null as ReactNode,
+        self = undefined as ReactNode,
+        joinedAt = '2026-11-22T14:05:00.000Z'
+    } = {}
 ) {
     const ui = (next: StudyRoomView) => (
         <QueryClientProvider client={client}>
@@ -66,6 +72,7 @@ function stage(
                 people={people(count)}
                 seats={people(count).map((one) => ({ id: one.id, seat: <span>{one.name}</span> }))}
                 content={content}
+                self={self}
                 devices={<button type='button'>Mic</button>}
                 leave={<button type='button'>Rời phòng</button>}
                 Control={Control}
@@ -490,5 +497,99 @@ describe("The room hears others' doings (07 › Ma trận vai trò)", () => {
         await screen.findByRole('timer')
         act(() => hearNews(news({ version: 5, action: 'host', actorId: null, hostId: 'an' })))
         expect(await toastText('Bình đã rời phòng · bạn đang điều khiển phiên học')).toBeVisible()
+    })
+})
+
+describe('"Cả phòng thở ra" as the phase changes (DESIGN.md › Motion) and one’s own camera (D-56)', () => {
+    const animate = vi.fn()
+    beforeEach(() => {
+        animate.mockReset()
+        Object.defineProperty(HTMLElement.prototype, 'animate', { value: animate, configurable: true, writable: true })
+    })
+    afterEach(() => {
+        delete (HTMLElement.prototype as { animate?: unknown }).animate
+        vi.mocked(window.matchMedia).mockImplementation(
+            (query: string) =>
+                ({ matches: false, media: query, addEventListener: vi.fn(), removeEventListener: vi.fn() }) as never
+        )
+    })
+    /** The break that began a second ago on the server's clock (14:47:18 there). */
+    const breakNow = (more: Partial<FocusSession> = {}) =>
+        running({
+            phase: 'short_break',
+            phaseIndex: 3,
+            phaseStartedAt: '2026-11-22T14:47:17.000Z',
+            phaseEndsAt: '2026-11-22T14:52:17.000Z',
+            stretchStartedAt: null,
+            ...more
+        })
+    const seatCalls = () => animate.mock.calls.filter(([frames]) => JSON.stringify(frames).includes('scale'))
+    const labelCalls = () => animate.mock.calls.filter(([frames]) => !JSON.stringify(frames).includes('scale'))
+
+    it('slides the new phase’s label up 8 and lets the seats breathe one after another, 40 ms apart', async () => {
+        const view = stage(room(running()))
+        expect(await screen.findByRole('timer')).toBeVisible()
+        // Not for the phase found on joining.
+        expect(animate).not.toHaveBeenCalled()
+
+        view.change(room(breakNow()))
+        await waitFor(() => expect(seatCalls()).toHaveLength(9))
+        expect(seatCalls().map(([, options]) => (options as KeyframeAnimationOptions).delay)).toEqual([
+            0, 40, 80, 120, 160, 200, 240, 280, 320
+        ])
+        expect(labelCalls()).toHaveLength(1)
+        expect(labelCalls()[0]![0]).toEqual([
+            { translate: '0 8px', opacity: 0 },
+            { translate: '0 0', opacity: 1 }
+        ])
+        // The clock's number never moves.
+        const clock = screen.getByRole('timer').querySelector('.font-numeric')
+        expect(animate.mock.contexts).not.toContain(clock)
+    })
+
+    it('plays nothing for the phase found on opening the page, even one just begun', async () => {
+        stage(room(breakNow()))
+        expect(await screen.findByRole('timer')).toBeVisible()
+        await act(() => new Promise((done) => setTimeout(done, 50)))
+        expect(animate).not.toHaveBeenCalled()
+    })
+
+    it('plays no catch-up: not for a phase that began a while ago, nor in a hidden tab', async () => {
+        const view = stage(room(running()))
+        expect(await screen.findByRole('timer')).toBeVisible()
+        view.change(room(breakNow({ phaseStartedAt: '2026-11-22T14:46:00.000Z' })))
+        const hidden = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden')
+        view.change(room(running({ phaseIndex: 4, phaseStartedAt: '2026-11-22T14:47:17.000Z' })))
+        hidden.mockRestore()
+        await screen.findByRole('timer')
+        expect(animate).not.toHaveBeenCalled()
+    })
+
+    it('only crossfades the label with movement reduced', async () => {
+        vi.mocked(window.matchMedia).mockImplementation(
+            (query: string) =>
+                ({
+                    matches: query.includes('reduce'),
+                    media: query,
+                    addEventListener: vi.fn(),
+                    removeEventListener: vi.fn()
+                }) as never
+        )
+        const view = stage(room(running()))
+        expect(await screen.findByRole('timer')).toBeVisible()
+        view.change(room(breakNow()))
+        await waitFor(() => expect(animate).toHaveBeenCalledTimes(1))
+        expect(animate.mock.calls[0]).toEqual([[{ opacity: 0 }, { opacity: 1 }], { duration: 200, easing: 'ease-out' }])
+    })
+
+    it('shows one’s own camera under the lines of the ring, not over the controls (07 camera-on)', async () => {
+        stage(room(running()), { self: <div data-testid='own-camera' /> })
+        const own = await screen.findByTestId('own-camera')
+        const lines = screen.getByText('8 người đang Tập trung cùng bạn')
+        expect(lines.compareDocumentPosition(own) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+        expect(
+            own.compareDocumentPosition(screen.getByRole('button', { name: 'Rời phòng' })) &
+                Node.DOCUMENT_POSITION_FOLLOWING
+        ).toBeTruthy()
     })
 })

@@ -16,6 +16,27 @@ export interface LiveRoom {
 }
 
 /**
+ * What a Study page row hands the room's page as it opens it (08 › Edge):
+ * the session it showed and the room's name, for a session that has just
+ * ended (`room-ended-on-join`) or a room no longer one's to open.
+ */
+export interface StudyRow {
+    sessionId: string
+    name: string
+}
+
+/** How long a page opened from a Study page row remembers it: "just" ended, or lost, means about then. */
+export const STUDY_ROW_MS = 10_000
+
+/** The Study page row a page was opened from, if any (`location.state`). */
+export function studyRowOf(state: unknown): StudyRow | null {
+    const row = (state as { studyRow?: Partial<StudyRow> } | null)?.studyRow
+    return typeof row?.sessionId === 'string' && typeof row.name === 'string'
+        ? { sessionId: row.sessionId, name: row.name }
+        : null
+}
+
+/**
  * Every room with a session, running or paused, in one's servers that one
  * sees and may join (REQ-STUDY-09: CONNECT; a channel held is one seen; a
  * timeout leaves no CONNECT).

@@ -28,6 +28,7 @@ export function PhaseBadge({
     const Icon = paused ? Pause : PHASE_ICONS[phase]
     return (
         <span
+            data-phase-label
             className={cn(
                 'inline-flex items-center gap-1.5 text-headline [&_svg]:size-[18px]',
                 waiting ? 'text-text-primary' : paused ? 'text-text-secondary' : PHASE_TEXT[phase],

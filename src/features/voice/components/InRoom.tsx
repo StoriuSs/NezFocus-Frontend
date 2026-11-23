@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react'
-import { Minimize2, PhoneOff } from 'lucide-react'
+import { MicOff, Minimize2, PhoneOff } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import '@/i18n/voice'
 import { RoomContext, useIsSpeaking, useParticipants } from '@livekit/components-react'
@@ -269,6 +269,7 @@ function Stage({
             canManage: room.canManageStudy
         }
         const ringView = view === 'ring' && !sharer && !zoomedPicture
+        const ownPicture = pictures.get(me)
         return (
             <div className='flex min-h-full flex-col'>
                 <BlockedBanner onHowTo={setHelp} />
@@ -286,6 +287,11 @@ function Stage({
                         }))}
                         seats={ringSeats(ordered, byId, onMorePeople)}
                         content={ringView ? null : tilesArea()}
+                        self={
+                            ringView && ownPicture ? (
+                                <RingSelfTile picture={ownPicture} micOn={byId.get(me)?.isMicrophoneEnabled ?? false} />
+                            ) : undefined
+                        }
                         devices={devices}
                         leave={leaveButton}
                         Control={RoomControl}
@@ -405,6 +411,25 @@ function useHeldSharer(sharer: string | undefined): string | undefined {
     const [held, setHeld] = useState(sharer)
     if (held !== sharer && (sharer !== undefined || !reconnecting)) setHeld(sharer)
     return sharer ?? (reconnecting ? held : undefined)
+}
+
+/**
+ * One's own camera in the ring view (07 S-ROOM-02 `camera-on`, D-56): the
+ * ring shows nobody's picture, so one's own, mirrored, 192 × 144 under the
+ * lines, as on the preview page, "Bạn" and the mic off in its foot. Gone
+ * once the camera is off.
+ */
+function RingSelfTile({ picture, micOn }: { picture: Track; micOn: boolean }) {
+    const { t } = useTranslation('voice')
+    return (
+        <div className='relative flex h-36 w-48 shrink-0 flex-col overflow-hidden rounded-button bg-surface-2'>
+            <Picture track={picture} self />
+            <span className='relative mt-auto flex h-7 shrink-0 items-center justify-between bg-scrim px-2 text-label font-semibold text-text-primary'>
+                {t('preview.you')}
+                {micOn ? null : <MicOff role='img' className='size-4' aria-label={t('person.micOff')} />}
+            </span>
+        </div>
+    )
 }
 
 /** No one: the name hook's input while no screen is shared. */

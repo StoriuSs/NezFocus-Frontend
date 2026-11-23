@@ -11,6 +11,7 @@ import { useSoloCommand, useStartSolo } from '../api/useSolo'
 import { useSoloSession } from '../api/useSoloSession'
 import { useStudyToday } from '../api/useStudyToday'
 import { useCommandWhenLive } from '../hooks/useCommandWhenLive'
+import { usePhaseBreath } from '../hooks/usePhaseBreath'
 import { usePhaseNews } from '../hooks/usePhaseNews'
 import { useSessionClock } from '../hooks/useSessionClock'
 import { studiedText } from '../lib/durations'
@@ -76,6 +77,8 @@ export default function SoloStage({
     if (dialog === 'start' && session) setDialog(null)
 
     const bar = useRef<HTMLDivElement>(null)
+    const stage = useRef<HTMLDivElement>(null)
+    usePhaseBreath(stage, session)
     useToastEdge('barTop', bar, session !== null)
     // Học tiếp has the focus as the wait begins on the page shown (08 S-STUDY-02 › Tương tác).
     const continueButton = useRef<HTMLButtonElement>(null)
@@ -125,7 +128,7 @@ export default function SoloStage({
 
     const paused = session?.status === 'paused'
     return (
-        <div className='flex min-h-0 flex-1 flex-col'>
+        <div ref={stage} className='flex min-h-0 flex-1 flex-col'>
             {/* The break over has no phase of its own to announce: said as the wait begins. */}
             <p className='sr-only' aria-live='polite'>
                 {waiting ? t('solo.waitingNews') : said}

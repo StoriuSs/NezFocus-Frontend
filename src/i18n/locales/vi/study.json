@@ -241,7 +241,8 @@
             "create": "Tạo server",
             "joinByCode": "Nhập mã mời",
             "offline": "Cần kết nối mạng để xem phòng đang học",
-            "error": "Không tải được danh sách phòng"
+            "error": "Không tải được danh sách phòng",
+            "endedOnArrival": "Phiên học vừa kết thúc lúc {{time}}"
         },
         "solo": {
             "description": "Theo nhịp riêng, vẫn tính vào chuỗi ngày học.",

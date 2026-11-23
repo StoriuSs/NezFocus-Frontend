@@ -1,6 +1,6 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { Hash, ListChecks, MessageSquare, Pin, UserPlus, Users } from 'lucide-react'
+import { Hash, ListChecks, Lock, MessageSquare, Pin, UserPlus, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import '@/i18n/servers'
@@ -15,6 +15,7 @@ import { WithTooltip } from '@/components/ui/tooltip'
 import { LIST_SHOWS, useMediaQuery } from '@/hooks/useMediaQuery'
 import { PHASE_ROOM } from '@/lib/phase-colors'
 import { ChannelChat, ChatDropZone, PinsPanel, useChannelReadState } from '@/features/messaging'
+import { EndedOnArrival } from '@/features/study'
 import { TaskBoard } from '@/features/tasks'
 import { useProfile } from '@/features/users'
 import { RoomPeopleList, useVoiceStore, VoiceRoomView } from '@/features/voice'
@@ -28,6 +29,7 @@ import { useGoneServerPath } from '../hooks/useGoneServerPath'
 import { useJoinedSession } from '../hooks/useJoinedSession'
 import { useRoomInvite } from '../hooks/useRoomInvite'
 import { channelIcon, firstTextChannel } from '../lib/channel-list'
+import { STUDY_ROW_MS, studyRowOf, type StudyRow } from '../lib/live-rooms'
 import { voiceRoomOf } from '../lib/voice-room'
 import { channelPath, isId, messagePath } from '../lib/paths'
 import type { Server, ServerChannel } from '../types'
@@ -56,6 +58,8 @@ import type { Server, ServerChannel } from '../types'
  */
 export default function ChannelPage() {
     const { serverId, channelId, messageId } = useParams()
+    const location = useLocation()
+    const studyRow = useStudyRow()
     const servers = useServers()
     const goneTo = useGoneServerPath(serverId, servers.data)
     const server = servers.data?.find((candidate) => candidate.id === serverId)
@@ -76,6 +80,8 @@ export default function ChannelPage() {
     // list, so the page stays.
     if (servers.data === undefined) throw servers.error
 
+    // A room the Study page still listed, no longer one's to open (put out of the server, made private): back there.
+    if (studyRow && !wasIn && (goneTo || (server && !channel))) return <LostRoom name={studyRow.name} />
     if (goneTo) return <Navigate to={goneTo} replace />
     if (server && !channel && shown === here) {
         const first = firstTextChannel(server)
@@ -93,9 +99,57 @@ export default function ChannelPage() {
 
     // Keyed: another room's page starts afresh (its people panel closed, D-233 L6b).
     if (channel.type === 'voice')
-        return <VoiceChannel key={channel.id} server={server} channel={channel} messageId={messageId} />
+        return (
+            <>
+                {studyRow && !wasIn ? (
+                    <Suspense fallback={null}>
+                        <EndedOnArrival key={location.key} channelId={channel.id} sessionId={studyRow.sessionId} />
+                    </Suspense>
+                ) : null}
+                <VoiceChannel key={channel.id} server={server} channel={channel} messageId={messageId} />
+            </>
+        )
 
     return <TextChannel key={channel.id} server={server} channel={channel} messageId={messageId} />
+}
+
+/**
+ * The Study page row this page was opened from (08 › Edge: a session just
+ * ended, a room just lost), for STUDY_ROW_MS: then taken off the history
+ * entry, so a room lost or ended later, or the page come back to, is told
+ * as any other.
+ */
+function useStudyRow(): StudyRow | null {
+    const location = useLocation()
+    const navigate = useNavigate()
+    const row = studyRowOf(location.state)
+    const held = row !== null
+    const { key, pathname, search, hash } = location
+    useEffect(() => {
+        if (!held) return
+        const timer = setTimeout(
+            () => void navigate({ pathname, search, hash }, { replace: true, state: null }),
+            STUDY_ROW_MS
+        )
+        return () => clearTimeout(timer)
+    }, [held, key, pathname, search, hash, navigate])
+    return row
+}
+
+/**
+ * A room opened from a Study page row that is no longer one's to open,
+ * found as the list catches up (08 › Edge: put out of the server, the room
+ * made private): Toast `lock` "Bạn không còn quyền vào {phòng}", back to
+ * the Study page. Under the same Toast id as `Removed`.
+ */
+function LostRoom({ name }: { name: string }) {
+    const { t } = useTranslation('servers')
+    const notice = t('lostRoom', { name })
+    useEffect(
+        () => void toast(notice, { id: 'channel-removed', icon: <Lock className='size-4' aria-hidden='true' /> }),
+        [notice]
+    )
+    return <Navigate to='/study' replace />
 }
 
 /**

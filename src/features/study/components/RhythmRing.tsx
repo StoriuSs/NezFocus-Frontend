@@ -140,6 +140,7 @@ export function RhythmRing({
                     return (
                         <div
                             key={id}
+                            data-seat
                             className='absolute size-14 -translate-x-1/2 -translate-y-1/2 transition-[left,top] duration-medium ease-in-out motion-reduce:transition-none'
                             style={{
                                 left: CENTER + SEAT_RADIUS * Math.sin(angle),

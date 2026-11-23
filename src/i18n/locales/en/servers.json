@@ -718,5 +718,6 @@
     "kickAfter": "You can come back with a new invite.",
     "banAfter": "You cannot join this server again.",
     "ok": "Got it"
-  }
+  },
+  "lostRoom": "You no longer have access to {{name}}"
 }

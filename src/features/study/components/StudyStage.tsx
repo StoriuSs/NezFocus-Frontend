@@ -14,6 +14,7 @@ import { useCommandWhenLive } from '../hooks/useCommandWhenLive'
 import { useCycleLine } from '../hooks/useCycleLine'
 import { useEndedHere } from '../hooks/useEndedHere'
 import { useJustJoined } from '../hooks/useJustJoined'
+import { usePhaseBreath } from '../hooks/usePhaseBreath'
 import { usePhaseNews } from '../hooks/usePhaseNews'
 import { useSessionClock } from '../hooks/useSessionClock'
 import { useSessionNews } from '../hooks/useSessionNews'
@@ -62,7 +63,12 @@ type Dialog = 'start' | 'change' | 'stop' | null
  *
  * Under the people line, one's minutes today as they grow ("Bạn đã tập
  * trung 45 phút hôm nay", 07 Q5; from the first whole minute: D-224, D-231),
- * unless paused or with no Host, which say so there instead.
+ * unless paused or with no Host, which say so there instead. Under them,
+ * one's own camera's tile while it is on (`self`, 192 × 144, D-56): the ring
+ * shows nobody else's.
+ *
+ * A change of phase under one's eyes: "Cả phòng thở ra" (`usePhaseBreath`),
+ * on the ring or on the compact block.
  *
  * Toasts name who did what (`useSessionNews`); one's own doings show in
  * place. Syncing again (07 `syncing`), the ring's number is `text-tertiary`
@@ -75,6 +81,7 @@ export default function StudyStage({
     people,
     seats,
     content,
+    self,
     devices,
     leave,
     Control,
@@ -89,6 +96,8 @@ export default function StudyStage({
     seats: { id: string; seat: ReactNode }[]
     /** What the stage shows in place of the ring; null: the ring. */
     content: ReactNode | null
+    /** One's own camera's tile in the ring view, while it is on (07 `camera-on`, D-56). */
+    self?: ReactNode
     /** Mic, Camera, Share. */
     devices: ReactNode
     leave: ReactNode
@@ -98,6 +107,8 @@ export default function StudyStage({
     const { t } = useTranslation('study')
     const session = room.session
     const now = useSessionClock(session)
+    const stage = useRef<HTMLDivElement>(null)
+    usePhaseBreath(stage, session)
     const syncing = useConnectionBanner() !== null
     const others = people.length - 1
 
@@ -197,7 +208,7 @@ export default function StudyStage({
     )
 
     return (
-        <div className='flex min-h-0 flex-1 flex-col'>
+        <div ref={stage} className='flex min-h-0 flex-1 flex-col'>
             <p className='sr-only' aria-live='polite'>
                 {said}
             </p>
@@ -246,6 +257,7 @@ export default function StudyStage({
                             </p>
                         ) : null}
                     </div>
+                    {self}
                 </div>
             ) : (
                 <div className='flex min-h-0 flex-1 flex-col'>

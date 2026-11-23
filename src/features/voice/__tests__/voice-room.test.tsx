@@ -791,6 +791,44 @@ describe('the room once joined (S-ROOM-06 voice)', () => {
             await expectNoA11yViolations()
         })
 
+        it("shows only one's own picture, mirrored, under a study room's ring, while the camera is on (07 camera-on, D-56)", async () => {
+            await joinRoom({ serverId: 'ot', channelId: 'quiet', name: 'Phòng học im lặng' })
+            live.participants = [
+                { identity: AN, name: 'An', isMicrophoneEnabled: false },
+                { identity: 'minh', name: 'Minh', isMicrophoneEnabled: false }
+            ]
+            live.cameras = ['minh']
+            const study = () =>
+                room({
+                    channelId: 'quiet',
+                    name: 'Phòng học im lặng',
+                    isStudyRoom: true,
+                    people: [person(AN, 'An'), MINH]
+                })
+            const view = show(study())
+            expect(await screen.findByText('No study session yet', {}, { timeout: 5000 })).toBeVisible()
+            // Minh's camera is on: the ring shows nobody else's picture.
+            expect(document.querySelector('video')).toBeNull()
+
+            live.cameras = [AN, 'minh']
+            view.rerender(<VoiceRoomView room={study()} />)
+            const own = await waitFor(() => {
+                const video = document.querySelector('video')
+                expect(video).not.toBeNull()
+                return video!
+            })
+            expect(document.querySelectorAll('video')).toHaveLength(1)
+            expect(own).toHaveStyle({ transform: 'scaleX(-1)' })
+            expect(live.tracks.get(AN)?.attach).toHaveBeenCalledWith(own)
+            const tile = own.parentElement!
+            expect(within(tile).getByText('You')).toBeVisible()
+            expect(within(tile).getByRole('img', { name: 'mic off' })).toBeInTheDocument()
+
+            live.cameras = ['minh']
+            view.rerender(<VoiceRoomView room={study()} />)
+            await waitFor(() => expect(document.querySelector('video')).toBeNull())
+        })
+
         it('zooms a tile with a picture onto the stage, and back with a click, the button or Esc', async () => {
             const { tile } = await filmed()
             await userEvent.click(tile(/^Nam/))

@@ -2,7 +2,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { notifyManager, QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import i18n from '@/i18n'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { roomSessionOf } from '@/features/study'
@@ -196,6 +196,27 @@ describe("the Study page's rooms (08 S-STUDY-01, C-44)", () => {
         expect(within(gocKhuya as HTMLElement).getByText('1 người ·', { exact: false })).toBeVisible()
         expect(within(gocKhuya as HTMLElement).queryByText('Bạn ở đây')).toBeNull()
         await expectNoA11yViolations()
+    })
+
+    it('hands the room’s page the session the row showed and its name (08 room-ended-on-join, Edge)', async () => {
+        client.setQueryData(serverKeys.list(), worldA([person('an'), ...people(8)]))
+        const Opened = () => <output>{JSON.stringify(useLocation().state)}</output>
+        render(
+            <QueryClientProvider client={client}>
+                <TooltipProvider>
+                    <MemoryRouter>
+                        <Routes>
+                            <Route path='/' element={<LiveRooms />} />
+                            <Route path='/channels/:serverId/:channelId' element={<Opened />} />
+                        </Routes>
+                    </MemoryRouter>
+                </TooltipProvider>
+            </QueryClientProvider>
+        )
+        await userEvent.click(rows()[0]!)
+        expect(JSON.parse(screen.getByRole('status').textContent!)).toEqual({
+            studyRow: { sessionId: 's-im-lang', name: 'Phòng học im lặng' }
+        })
     })
 
     it('says "Chỉ có bạn" alone in one’s room, and "Tạm dừng" with no minutes', () => {

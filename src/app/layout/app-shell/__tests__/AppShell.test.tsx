@@ -12,7 +12,8 @@ import { PANEL_DOCKS } from '@/hooks/useMediaQuery'
 import { ShellPage } from '@/components/shell/ShellPage'
 import { expectNoA11yViolations } from '@/test/a11y'
 import { mockAuthStore, queryWrapper } from '@/test/helpers'
-import { session as studySession } from '@/test/study-sessions'
+import { accountTimeZone, timeIn } from '@/lib/time-zones'
+import { news, session as studySession } from '@/test/study-sessions'
 import type { Server, ServerChannel } from '@/features/servers'
 import { useChannelDialogs } from '@/features/servers/channel-dialogs.store'
 import { useServerRemovals } from '@/features/servers/server-removals.store'
@@ -768,6 +769,73 @@ describe('AppShell (S-SHELL-01)', () => {
             expect(await screen.findByText('This room is no longer available')).toBeInTheDocument()
             expect(screen.queryByText('This channel is no longer available')).toBeNull()
             useVoiceStore.setState({ removed: null })
+        })
+
+        it('goes back to the Study page, saying so, when a room opened from its row there is no longer one’s (08 › Edge)', async () => {
+            render(<Toaster />)
+            serversApi.fetchServer.mockResolvedValue(without('quiet'))
+            const studyRow = { sessionId: 's1', name: 'Phòng học im lặng' }
+            const router = renderAt({ pathname: '/channels/ot/quiet', state: { studyRow } })
+            expect(await screen.findByRole('heading', { level: 1, name: 'Phòng học im lặng' })).toBeInTheDocument()
+
+            // Made private meanwhile: the list catches up.
+            act(() => emitRealtimeEvent('channel.updated', { serverId: 'ot' }))
+
+            await waitFor(() => expect(router.state.location.pathname).toBe('/study'), { timeout: 2000 })
+            expect(await screen.findByText('You no longer have access to Phòng học im lặng')).toBeInTheDocument()
+            expect(screen.queryByText('This channel is no longer available')).toBeNull()
+        })
+
+        it('forgets the Study page row after a few seconds: a room lost later is told as any other (02 channel-removed)', async () => {
+            vi.useFakeTimers({ shouldAdvanceTime: true, toFake: ['setTimeout', 'clearTimeout'] })
+            render(<Toaster />)
+            serversApi.fetchServer.mockResolvedValue(without('quiet'))
+            const router = renderAt({
+                pathname: '/channels/ot/quiet',
+                state: { studyRow: { sessionId: 's1', name: 'Phòng học im lặng' } }
+            })
+            expect(await screen.findByRole('heading', { level: 1, name: 'Phòng học im lặng' })).toBeInTheDocument()
+            act(() => {
+                vi.advanceTimersByTime(10_000)
+            })
+            await waitFor(() => expect(router.state.location.state).toBeNull())
+            expect(router.state.location.pathname).toBe('/channels/ot/quiet')
+            vi.useRealTimers()
+
+            act(() => emitRealtimeEvent('channel.updated', { serverId: 'ot' }))
+
+            await waitFor(() => expect(router.state.location.pathname).toBe('/channels/ot/ban-can-su'), {
+                timeout: 2000
+            })
+            expect(await screen.findByText('This channel is no longer available')).toBeInTheDocument()
+        })
+
+        it('says when the session its Study page row showed ended, opening that room (08 room-ended-on-join)', async () => {
+            const { hearNews } = await import('@/features/study/study.store')
+            // The lazy part loaded first: there when the first word comes, as it would be after its import.
+            await import('@/features/study/components/EndedOnArrival')
+            render(<Toaster />)
+            renderAt({
+                pathname: '/channels/ot/quiet',
+                state: { studyRow: { sessionId: 's1', name: 'Phòng học im lặng' } }
+            })
+            expect(await screen.findByRole('heading', { level: 1, name: 'Phòng học im lặng' })).toBeInTheDocument()
+
+            const ended = (id: string, at: Date) =>
+                act(() =>
+                    hearNews(
+                        news({ id, channelId: 'quiet', status: 'ended', endedAt: at.toISOString(), action: 'stop' })
+                    )
+                )
+            const said = (at: Date) => `The study session just ended at ${timeIn(accountTimeZone(), at)}`
+            // Another session of the room says nothing, even ending now; the one the row showed does.
+            const now = new Date()
+            ended('s0', now)
+            // A Toast shows a moment after it is asked for: none within a second, none asked.
+            await expect(screen.findByText(said(now), {}, { timeout: 1000 })).rejects.toThrow()
+            ended('s1', now)
+            expect(await screen.findByText(said(now))).toBeInTheDocument()
+            expect(document.querySelectorAll('[data-sonner-toast]')).toHaveLength(1)
         })
 
         it('says it once when the open channel, held for a move, is deleted (S-SRV-06, 02 channel-removed)', async () => {

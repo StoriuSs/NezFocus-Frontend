@@ -7,7 +7,7 @@ import { PhaseLeft, PhaseTag } from '@/components/shell/PhaseTag'
 import { Tag } from '@/components/settings/SettingsRow'
 import { minutesLeft, remainingMs, sessionLineText, useListClock } from '@/features/study'
 import { cn } from '@/lib/utils'
-import type { LiveRoom } from '../../lib/live-rooms'
+import type { LiveRoom, StudyRow } from '../../lib/live-rooms'
 import { channelPath } from '../../lib/paths'
 
 /**
@@ -16,7 +16,8 @@ import { channelPath } from '../../lib/paths'
  * the room one is in: the dock counts the seconds), its name and "Bạn ở
  * đây", then "{N} người · {Server}" ("Chỉ có bạn" alone in it), the
  * server's name cut first. The whole row is a link to the room (its preview
- * page, or the room one is in); a chevron at its right. `leaving`: its
+ * page, or the room one is in), handing it the session shown (`StudyRow`:
+ * gone by the time the page opens, it says so, 08 › Edge); a chevron at its right. `leaving`: its
  * session ended, fading out (`useLiveRooms`: none with Giảm chuyển động). One Tab stop for
  * the list (`tabIndex`), ↑ ↓ handed to the list (`onKeyDown`).
  */
@@ -45,6 +46,7 @@ export const LiveRoomRow = forwardRef<
         <Link
             ref={ref}
             to={channelPath(room.serverId, room.channelId)}
+            state={{ studyRow: { sessionId: room.session.id, name: room.name } satisfies StudyRow }}
             aria-label={label}
             tabIndex={leaving ? -1 : tabIndex}
             aria-hidden={leaving || undefined}

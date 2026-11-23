@@ -241,7 +241,8 @@
             "create": "Create a server",
             "joinByCode": "Enter an invite code",
             "offline": "You need a connection to see the rooms studying",
-            "error": "Couldn't load the rooms"
+            "error": "Couldn't load the rooms",
+            "endedOnArrival": "The study session just ended at {{time}}"
         },
         "solo": {
             "description": "At your own pace, still counted in your streak.",

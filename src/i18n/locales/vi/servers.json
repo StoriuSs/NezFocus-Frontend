@@ -718,5 +718,6 @@
     "kickAfter": "Bạn có thể quay lại khi có lời mời mới.",
     "banAfter": "Bạn không thể tham gia lại server này.",
     "ok": "Đã hiểu"
-  }
+  },
+  "lostRoom": "Bạn không còn quyền vào {{name}}"
 }
