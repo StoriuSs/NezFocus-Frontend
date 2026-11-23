@@ -82,6 +82,29 @@ export interface StudyWeek {
     firstDate: string | null
 }
 
+/**
+ * A period of the Stats page as GET /me/study-stats gives it (REQ-STUDY-07,
+ * D-105, D-230): its days split room / Solo, totals, the comparison, the
+ * mean, the lifetime total, the streak, today, a week's 4-week grid and the
+ * best other week. The running focus is added by the page (D-235).
+ */
+export type StudyPeriodStats = ApiModel<'StudyStatsResponseDto'>
+
+/** A line of the history (C-47, D-230): one session of one's, its place as one may know it now. */
+export type StudyHistoryLine = ApiModel<'StudySessionLineResponseDto'>
+
+/** A page of the history: 20 lines, the one one is in first on the first (D-230). */
+export type StudyHistoryPage = ApiModel<'StudySessionPageResponseDto'>
+
+/**
+ * A page of the history as the Stats page holds it: with today's counted
+ * seconds as it was read (null: today not read yet), what the line one is
+ * in grows from until the history is read again (D-235).
+ */
+export interface StudyHistoryRead extends StudyHistoryPage {
+    countedToday: number | null
+}
+
 /** A study room as its page hands it to the session's parts (the voice feature's `VoiceRoom`, its study fields). */
 export interface StudyRoomView {
     channelId: string

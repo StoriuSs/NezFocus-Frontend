@@ -273,6 +273,12 @@ describe('the Study page’s streak and week (C-45 StudyStats)', () => {
         expect(screen.getByLabelText('Hôm nay · 32 phút')).toBeVisible()
     })
 
+    it('opens the Stats page from "Xem thống kê" (D-104)', async () => {
+        stats()
+        await userEvent.click(await screen.findByRole('link', { name: 'Xem thống kê' }))
+        expect(screen.getByTestId('where')).toHaveTextContent('/study/stats')
+    })
+
     it('says the longest is the streak as it passes the longest read, before a count writes it', async () => {
         holdStats(today({ countedUntil: '2026-11-22T14:29:00.000Z', streak: 5 }), week({ longest: 5 }))
         stats(solo())

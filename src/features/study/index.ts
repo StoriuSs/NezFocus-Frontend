@@ -3,7 +3,7 @@ import type { CycleFields as CycleFieldsComponent } from './components/CycleFiel
 
 /**
  * What the app uses of study (M5): the sessions of study rooms (07), Solo
- * (08 S-STUDY-02) and, later, the stats (08).
+ * (08 S-STUDY-02) and the stats (08 S-STUDY-03).
  *
  * A room's session is the servers feature's data, on its room in GET
  * /servers: the servers feature keeps it there from what this feature hears
@@ -32,6 +32,14 @@ export const SoloStage = lazy(() => import('./components/SoloStage'))
  */
 export const SoloCard = lazy(() => import('./components/SoloCard'))
 export const StudyStats = lazy(() => import('./components/StudyStats'))
+/**
+ * The Stats page (08 S-STUDY-03): its body and its period picker, lazy with
+ * their words and classes; the period is the URL's (`useStatsPeriod`, light).
+ */
+export const StatsBody = lazy(() => import('./components/stats/StatsBody'))
+export const PeriodPicker = lazy(() => import('./components/stats/PeriodPicker'))
+export { useStatsPeriod } from './hooks/useStatsPeriod'
+export { STATS_PATH } from './lib/periods'
 /**
  * One's Solo on every page (D-234): its cues and end toasts (`SoloWatch`,
  * mounted once by the AppShell), its dock under a room's (`SoloDockSlot`),

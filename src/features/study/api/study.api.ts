@@ -1,7 +1,16 @@
 import api from '@/lib/api'
 import type { ApiEnvelope, ApiModel } from '@/lib/api-types'
 import type { StudyCycle } from '../lib/study-cycle'
-import type { FocusSession, SoloCommand, SoloState, StudyToday, StudyWeek } from '../types'
+import type { StatsPeriod } from '../lib/periods'
+import type {
+    FocusSession,
+    SoloCommand,
+    SoloState,
+    StudyHistoryPage,
+    StudyPeriodStats,
+    StudyToday,
+    StudyWeek
+} from '../types'
 
 const cycleBody = (cycle: StudyCycle) => ({
     focusMinutes: cycle.focus,
@@ -103,6 +112,26 @@ export async function fetchStudyWeek(): Promise<{ week: StudyWeek; today: StudyT
         },
         today: todayOf(stats)
     }
+}
+
+/** GET /me/study-stats of a period (08 S-STUDY-03, D-105, D-230), and the day so far it read with it. */
+export async function fetchStudyPeriod(period: StatsPeriod): Promise<{ stats: StudyPeriodStats; today: StudyToday }> {
+    const response = await api.get<ApiEnvelope<StudyStats>>('/me/study-stats', {
+        params: { view: period.view, date: period.start }
+    })
+    const stats = response.data.data
+    return { stats, today: todayOf(stats) }
+}
+
+/**
+ * GET /me/study-sessions of a period (C-47, D-230): 20 lines a page, the next
+ * one after the session of the last line held (`cursor`).
+ */
+export async function fetchStudyHistory(period: StatsPeriod, cursor: string | null): Promise<StudyHistoryPage> {
+    const response = await api.get<ApiEnvelope<StudyHistoryPage>>('/me/study-sessions', {
+        params: { view: period.view, date: period.start, ...(cursor ? { cursor } : {}) }
+    })
+    return response.data.data
 }
 
 /** Who would control a session if its Host left now (D-233): for "Rời phòng?"; null when nobody present may. */

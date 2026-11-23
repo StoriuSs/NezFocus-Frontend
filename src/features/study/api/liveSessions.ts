@@ -124,6 +124,9 @@ export function listenForSessions(client: QueryClient, sink: SessionSink): () =>
                           readAt: told.readAt
                       }
             )
+            // A count: the Stats page's numbers and history read again, what was counted from the backend (D-235).
+            void client.invalidateQueries({ queryKey: studyKeys.periods() })
+            void client.invalidateQueries({ queryKey: studyKeys.histories() })
         }),
         // One's Solo, from its start to its end, in each tab and device (D-222).
         onRealtimeEvent('solo_session.updated', (data) => tellSolo(client, data as FocusSession)),
@@ -132,6 +135,8 @@ export function listenForSessions(client: QueryClient, sink: SessionSink): () =>
         // Live again: today's numbers may have moved meanwhile (the room's sessions come with GET /servers).
         onRealtimeEvent('ready', () => {
             void client.invalidateQueries({ queryKey: studyKeys.today() })
+            void client.invalidateQueries({ queryKey: studyKeys.periods() })
+            void client.invalidateQueries({ queryKey: studyKeys.histories() })
             // One's Solo may have moved, or ended, meanwhile.
             void client.invalidateQueries({ queryKey: studyKeys.solo() })
         })

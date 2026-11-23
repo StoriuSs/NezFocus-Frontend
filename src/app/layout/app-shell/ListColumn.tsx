@@ -28,7 +28,7 @@ import {
     useServers,
     type SettingsSection
 } from '@/features/servers'
-import { SOLO_PATH, SoloDockSlot } from '@/features/study'
+import { SOLO_PATH, SoloDockSlot, STATS_PATH } from '@/features/study'
 import { USERS_PATHS } from '@/features/users'
 import { cn } from '@/lib/utils'
 
@@ -111,33 +111,7 @@ function RowLink({
     )
 }
 
-/** A row for a page of a later milestone: says so on hover and focus. */
-function SoonRow({
-    icon: Icon,
-    name,
-    rounded = 'rounded-input'
-}: {
-    icon: LucideIcon
-    name: string
-    rounded?: string
-}) {
-    const { t } = useTranslation()
-    return (
-        <WithTooltip label={t('shell.comingSoon', { name })} side='right'>
-            <button
-                type='button'
-                aria-disabled='true'
-                aria-label={t('shell.comingSoon', { name })}
-                className={cn(ROW, rounded, 'w-full font-medium text-text-tertiary')}
-            >
-                <Icon aria-hidden='true' />
-                <span className='truncate'>{name}</span>
-            </button>
-        </WithTooltip>
-    )
-}
-
-/** The Study page's column (08 S-STUDY-01): Overview, Study alone, and the Stats (L8). */
+/** The Study page's column (08 › Quy ước): Tổng quan, Học một mình, Thống kê. */
 function StudyColumn() {
     const { t } = useTranslation()
     return (
@@ -150,7 +124,9 @@ function StudyColumn() {
                 <RowLink to={SOLO_PATH} icon={Timer}>
                     {t('shell.study.solo')}
                 </RowLink>
-                <SoonRow icon={ChartColumn} name={t('shell.study.stats')} />
+                <RowLink to={STATS_PATH} icon={ChartColumn}>
+                    {t('shell.study.stats')}
+                </RowLink>
             </nav>
         </>
     )

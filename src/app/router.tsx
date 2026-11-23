@@ -23,6 +23,7 @@ const AuthShell = lazy(() => import('@/app/layout/AuthShell'))
 const AppShell = lazy(() => import('@/app/layout/app-shell/AppShell'))
 const Study = lazy(() => import('@/pages/Study'))
 const StudySolo = lazy(() => import('@/pages/StudySolo'))
+const StudyStatsPage = lazy(() => import('@/pages/StudyStatsPage'))
 const Legal = lazy(() => import('@/pages/Legal'))
 const NotFound = lazy(() => import('@/pages/NotFound'))
 
@@ -77,7 +78,8 @@ export const router = createBrowserRouter([
                 children: [
                     ...column('study')([
                         { path: '/study', element: <Study /> },
-                        { path: '/study/solo', element: <StudySolo /> }
+                        { path: '/study/solo', element: <StudySolo /> },
+                        { path: '/study/stats', element: <StudyStatsPage /> }
                     ]),
                     ...column('server')(serversChannelRoutes),
                     ...column('serverSettings')(serversSettingsRoutes),

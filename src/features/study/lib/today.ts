@@ -22,7 +22,7 @@ export function dayStartOf(now: number, timeZone?: string): number {
  * and `to` (the server's times), never past the phase's end (the stretch
  * counts no further); 0 while paused, in a break, or with no session.
  */
-function runningBetween(session: AnySession | null, from: number, to: number): number {
+export function runningBetween(session: AnySession | null, from: number, to: number): number {
     if (session?.status !== 'running' || session.phase !== 'focus' || !session.stretchStartedAt || !session.phaseEndsAt)
         return 0
     const span = Math.min(to, Date.parse(session.phaseEndsAt)) - Math.max(from, Date.parse(session.stretchStartedAt))

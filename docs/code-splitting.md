@@ -221,7 +221,10 @@ shows three lazy parts inside their own `Suspense`: the servers feature's
 `LiveRooms` (the rooms studying now: it brings the `study` words, which an
 index export would put in the shell's shared chunk; its classes are the main
 stylesheet's, as the channel list's) and study's `SoloCard` and
-`StudyStats` (with `study.css`).
+`StudyStats` (with `study.css`). The Stats page (M5 L8) is a lazy route too;
+its body (`StatsBody`, with `study.css`) and its period picker (`PeriodPicker`,
+in the Header) are lazy exports of study, each inside a `Suspense`. Only the
+URL's period (`useStatsPeriod`, no words) is a light export.
 `CycleFields` (a cycle in a React Hook Form form) is
 exported lazily too, for a room's settings (S-SET-06, inside a `Suspense`):
 it brings the `study` words, which an index export would put in the shell's

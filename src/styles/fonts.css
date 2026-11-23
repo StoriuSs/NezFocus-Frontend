@@ -4,8 +4,13 @@
  * browser downloads a file only when the page shows a character from it.
  *
  * Be Vietnam Pro: every weight the type scale uses (800 only for hero and
- * display). Unbounded: numbers that change over time, Latin only. JetBrains
- * Mono: code and invite codes. The last two download only on pages using them.
+ * display). Unbounded: numbers that change over time, from its Latin file,
+ * for digits and the signs between them only (`: / + − % · –`): a letter in a
+ * `font-numeric` text ("1 giờ 4 phút", "dưới 1 phút") falls to Be Vietnam Pro,
+ * as DESIGN.md says (numbers one voice, words another; 08 › Quy ước › Số).
+ * Unbounded's Latin file has no ư, ơ, ờ: a word set in it mixed two fonts
+ * (M5 L8). JetBrains Mono: code and invite codes. The last two download only
+ * on pages using them.
  */
 
 @font-face {
@@ -104,7 +109,7 @@
   font-display: swap;
   font-weight: 200 900;
   src: url('@fontsource-variable/unbounded/files/unbounded-latin-wght-normal.woff2') format('woff2');
-  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+  unicode-range: U+0025,U+002B-003A,U+00B7,U+2013-2014,U+2212;
 }
 
 @font-face {

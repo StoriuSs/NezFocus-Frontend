@@ -204,7 +204,14 @@ react-starter/
     │   │                      #   progress and the week, WeekChart), api/useStudyWeek.ts (this week's days,
     │   │                      #   GET /me/study-stats, keyed by today), lib/week.ts (the chart's rules),
     │   │                      #   lib/solo-words.ts (a Solo's cycle line); the rooms studying now are the
-    │   │                      #   servers feature's (LiveRooms)
+    │   │                      #   servers feature's (LiveRooms). StreakBlock and CheerBlock are shared with
+    │   │                      #   the Stats page (08 S-STUDY-03, M5 L8): components/stats/ (StatsBody and
+    │   │                      #   PeriodPicker lazy; PeriodChart, PeriodTotals, MonthCalendar, StreakGrid,
+    │   │                      #   DayCell, SessionHistory, SessionRow), api/useStudyPeriod.ts (a period's
+    │   │                      #   GET /me/study-stats), api/useStudyHistory.ts (GET /me/study-sessions, a
+    │   │                      #   page at a time), hooks/useStatsPeriod.ts (the period on the URL, light),
+    │   │                      #   hooks/useStatsView.ts (the numbers as they stand now), hooks/useGridKeys.ts,
+    │   │                      #   lib/periods.ts, lib/period-stats.ts, lib/history.ts, lib/day-words.ts
     │   └── users/             # The profile and the account's settings
     │       ├── api/           # users.api.ts (fetchProfile, removeAvatar),
     │       │                  #   settings.api.ts (fetchSettings, settingsQuery, updateSettings), hooks, keys
@@ -225,7 +232,7 @@ react-starter/
     │                          #   useRefuseFileDrops (files dropped where nothing takes them do nothing; run by the AppShell)
     ├── i18n/                  # i18next setup and the translation catalogues (settings.ts, deletion.ts, servers.ts: words loaded with their pages)
     ├── lib/                   # Shared, feature-free: the API client, and friends
-    ├── pages/                 # Pages that belong to no feature: Study, Legal, NotFound
+    ├── pages/                 # Pages that belong to no feature: Study, StudySolo, StudyStatsPage, Legal, NotFound
     ├── styles/fonts.css       # The self-hosted fonts
     ├── test/                  # Vitest setup
     ├── main.tsx               # Entry point

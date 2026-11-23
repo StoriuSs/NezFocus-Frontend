@@ -1,8 +1,6 @@
-import { Flame } from 'lucide-react'
 import { Trans, useTranslation } from 'react-i18next'
 import '@/i18n/study'
 import '../study.css'
-import mascotHappy from '@/assets/mascot/runtime-happy-320.webp'
 import mascotNeutral from '@/assets/mascot/runtime-neutral-240.webp'
 import { Mascot } from '@/components/brand/mascot/Mascot'
 import { Button } from '@/components/ui/button'
@@ -14,15 +12,12 @@ import { useStudyWeek } from '../api/useStudyWeek'
 import { useNewDay } from '../hooks/useNewDay'
 import { useSessionClock } from '../hooks/useSessionClock'
 import { studiedText } from '../lib/durations'
-import { dayStartOf, STREAK_DAY_SECONDS, streakShown, todaySecondsAt } from '../lib/today'
+import { dayStartOf, streakShown, todaySecondsAt } from '../lib/today'
 import { dateKeyAt, isMilestoneDay, weekBars, weekTotal } from '../lib/week'
 import type { AnySession } from '../types'
+import { ALWAYS, CheerBlock } from './CheerBlock'
+import { SECTION_TITLE, StreakBlock } from './StreakBlock'
 import { WeekChart } from './WeekChart'
-
-/** Runtime is in view whenever this block is: load its animation at any width. */
-const ALWAYS = '(min-width: 0px)'
-
-const SECTION_TITLE = 'text-label font-semibold uppercase text-text-tertiary'
 
 /**
  * The Study page's streak and week (C-45 StudyStats, 08 S-STUDY-01):
@@ -33,8 +28,8 @@ const SECTION_TITLE = 'text-label font-semibold uppercase text-text-tertiary'
  * focus in the session one is in (`session`: the room's, or the Solo);
  * the streak goes up as today reaches 15 minutes (D-224). On a milestone
  * day (7, 30, 100, 365) Runtime cheers at the top; never studied, Runtime
- * neutral says how to begin, in place of the numbers. "Xem thống kê" comes
- * with the stats page (L8).
+ * neutral says how to begin, in place of the numbers. "Xem thống kê ›"
+ * opens the Stats page (08 S-STUDY-03).
  */
 export default function StudyStats({ session }: { session: AnySession | null }) {
     const { t } = useTranslation('study')
@@ -98,52 +93,12 @@ export default function StudyStats({ session }: { session: AnySession | null }) 
     const streak = streakShown(today.data, session, now, dayStart)
     const longest = Math.max(week.data.longest, streak)
     const bars = weekBars(week.data, todaySeconds)
-    const reached = todaySeconds >= STREAK_DAY_SECONDS
-    const todayMinutes = Math.floor(todaySeconds / 60)
     return (
         <section className='flex flex-col'>
             {isMilestoneDay(streak, todaySeconds) ? (
-                <div className='mb-6 flex items-center gap-4'>
-                    <Mascot mood='happy' size={120} still={mascotHappy} loadWhen={ALWAYS} className='shrink-0' />
-                    <p className='text-headline font-semibold text-text-primary'>
-                        {t('overview.stats.milestone', { count: streak })}
-                    </p>
-                </div>
+                <CheerBlock>{t('overview.stats.milestone', { count: streak })}</CheerBlock>
             ) : null}
-            {heading}
-            <p className='mt-2 flex items-center gap-2'>
-                <span className='sr-only'>{t('overview.stats.streakLabel', { count: streak })}</span>
-                <Flame className='size-5 shrink-0 text-text-primary' aria-hidden='true' />
-                <span aria-hidden='true' className='font-numeric text-stat text-text-primary'>
-                    {streak}
-                </span>
-                <span aria-hidden='true' className='text-body text-text-primary'>
-                    {t('overview.stats.days', { count: streak })}
-                </span>
-            </p>
-            <p className='mt-1 text-label text-text-secondary'>
-                {streak === 0
-                    ? `${t('overview.stats.startNew')} · ${t('overview.stats.longest', { count: longest })}`
-                    : t('overview.stats.longest', { count: longest })}
-            </p>
-            <p className='mt-4 text-label text-text-secondary'>
-                {reached
-                    ? t('overview.stats.todayDone', { time: studiedText(t, todaySeconds) })
-                    : t('overview.stats.todayShort', { count: todayMinutes })}
-            </p>
-            <div
-                role='progressbar'
-                aria-valuemin={0}
-                aria-valuemax={15}
-                aria-valuenow={Math.min(15, todayMinutes)}
-                aria-label={t('overview.stats.todayShort', { count: Math.min(15, todayMinutes) })}
-                className='mt-2 h-1.5 overflow-hidden rounded-full bg-surface-2'
-            >
-                <div
-                    className='h-full rounded-full bg-primary'
-                    style={{ width: `${Math.min(100, (todaySeconds / STREAK_DAY_SECONDS) * 100)}%` }}
-                />
-            </div>
+            <StreakBlock streak={streak} longest={longest} todaySeconds={todaySeconds} linked />
             <h2 className='mt-8 text-label font-semibold text-text-tertiary'>
                 <Trans
                     t={t}

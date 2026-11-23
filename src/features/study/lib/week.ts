@@ -18,6 +18,9 @@ export const STREAK_MILESTONES = [7, 30, 100, 365]
 /** The chart's tallest column, in pixels (C-45: 96 on the Study page). */
 export const CHART_HEIGHT = 96
 
+/** The Stats page's tallest column (C-45 `page`). */
+export const PAGE_CHART_HEIGHT = 160
+
 /** The day `now` falls on in the zone given (the account's; the browser's while unknown), as YYYY-MM-DD. */
 export function dateKeyAt(now: number, timeZone?: string): string {
     const { year, month, day } = wallClock(new Date(now), timeZone)

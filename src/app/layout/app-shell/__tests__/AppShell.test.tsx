@@ -279,6 +279,10 @@ describe('AppShell (S-SHELL-01)', () => {
             expect(within(pages).getByRole('link', { name: 'Study' })).toHaveAttribute('aria-current', 'page')
             const column = screen.getByRole('navigation', { name: 'Study' })
             expect(within(column).getByRole('link', { name: 'Overview' })).toHaveAttribute('aria-current', 'page')
+            // The Stats page is open now (08 S-STUDY-03), not marked here.
+            const stats = within(column).getByRole('link', { name: 'Stats' })
+            expect(stats).toHaveAttribute('href', '/study/stats')
+            expect(stats).not.toHaveAttribute('aria-current')
             // No server is selected.
             expect(within(rail()).queryByRole('link', { current: 'page' })).not.toBeInTheDocument()
         })
