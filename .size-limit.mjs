@@ -90,6 +90,13 @@
 // part of study (its words and classes load with the Study and Stats pages):
 // the 4-week grid's squares of 28, today's edge, and its two columns from a
 // 1320 window, ordered otherwise in one column.
+// From M6 L6 (25/11/2026, D-193) the Friends page is a stylesheet of its own
+// (tailwind.social.config.js), loaded with its chunk: "Social CSS" below, 271 B
+// when it began (its rows of 60, the time column of a request, the line
+// between rows hidden around the one hovered). Voice JS raised to 216.10 kB
+// after M6 L6 (25/11/2026, 216.05 kB): ChevronRight, now used by the Privacy
+// page's "Block list" row too, is a chunk of its own the room's page shares,
+// and the shell's chunks carry the relationships read as the app opens.
 // Raise them
 // only as CONSTRAINTS.md says: the owner decides, in a commit of its own.
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
@@ -130,6 +137,7 @@ const tasksCss = chunkCss('TaskStyles')
 const notificationsCss = chunkCss('NotificationStyles')
 const voiceCss = chunkCss('VoiceStyles')
 const studyCss = chunkCss('StudyStyles')
+const socialCss = chunkCss('SocialStyles')
 
 // A lazy chunk's script, by the name Vite gives it (VoiceRoomView-<hash>.js).
 const chunkJs = (chunk) => {
@@ -183,7 +191,8 @@ for (const [name, paths] of [
     ['tasks', tasksCss],
     ['notifications', notificationsCss],
     ['voice', voiceCss],
-    ['study', studyCss]
+    ['study', studyCss],
+    ['social', socialCss]
 ]) {
     const shared = [...classesIn(paths)].filter((one) => mainClasses.has(one))
     if (shared.length)
@@ -199,6 +208,7 @@ export default [
     { name: 'Tasks CSS (gzip)', path: tasksCss, gzip: true, limit: '880 B' },
     { name: 'Notifications CSS (gzip)', path: notificationsCss, gzip: true, limit: '508 B' },
     { name: 'Voice CSS (gzip)', path: voiceCss, gzip: true, limit: '286 B' },
-    { name: 'Voice JS (gzip)', path: voiceJs, gzip: true, limit: '215.88 kB' },
-    { name: 'Study CSS (gzip)', path: studyCss, gzip: true, limit: '713 B' }
+    { name: 'Voice JS (gzip)', path: voiceJs, gzip: true, limit: '216.10 kB' },
+    { name: 'Study CSS (gzip)', path: studyCss, gzip: true, limit: '713 B' },
+    { name: 'Social CSS (gzip)', path: socialCss, gzip: true, limit: '274 B' }
 ]
