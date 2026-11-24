@@ -10,6 +10,8 @@ import { ShellContext, type ConnectionNotice } from '@/components/shell/shell-co
 import { Popover, PopoverAnchor } from '@/components/ui/popover'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { userKeys } from '@/features/users'
+import { relationshipsQuery, type Relationship } from '@/features/social'
+import { apiError } from '@/test/helpers'
 import { expectNoA11yViolations } from '@/test/a11y'
 import type { InboxPlaces, MarkNotificationsReadRequest, Notification, NotificationList } from '../types'
 
@@ -19,6 +21,13 @@ const notificationsApi = {
     markNotificationsRead: vi.fn<(body: MarkNotificationsReadRequest) => Promise<number>>()
 }
 vi.mock('../api/notifications.api', () => notificationsApi)
+// Accept / Decline of a request (the social feature's hooks, D-248).
+const socialApi = vi.hoisted(() => ({
+    fetchRelationships: vi.fn(async (): Promise<unknown[]> => []),
+    acceptFriendRequest: vi.fn<(userId: string, key: string) => Promise<unknown>>(),
+    removeRelationship: vi.fn<(userId: string) => Promise<unknown>>()
+}))
+vi.mock('@/features/social/api/social.api', () => socialApi)
 
 const { default: InboxPanel } = await import('../components/InboxPanel')
 const { unreadCountOf } = await import('../lib/inbox-cache')
@@ -55,6 +64,7 @@ const mention = (n: number, name: string, content: string, more: Partial<Notific
     messageId: `m${n}`,
     roleId: null,
     taskId: null,
+    note: null,
     task: null,
     server: null,
     reason: 'user',
@@ -705,5 +715,88 @@ describe('Hộp thư thông báo (S-NOTI-01)', () => {
             expect(screen.queryByRole('link', { name: /tạm khóa/ })).not.toBeInTheDocument()
             expect(within(timedOut).getByRole('button', { name: 'Đánh dấu đã đọc', hidden: true })).toBeInTheDocument()
         })
+    })
+})
+
+describe('Lời mời kết bạn trong hộp thư (06 C-29, D-110, D-111, D-248)', () => {
+    const giang = { id: 'giang', username: 'giang.vo', displayName: 'Giang', avatarUrl: null }
+    const friendItem = (n: number, type: Notification['type'], more: Partial<Notification> = {}): Notification =>
+        mention(n, 'Giang', '', {
+            type,
+            serverId: null,
+            channelId: null,
+            messageId: null,
+            reason: null,
+            message: null,
+            actor: giang,
+            createdAt: today('19:48'),
+            ...more
+        })
+    const REQUEST = friendItem(20, 'friend_request', { note: 'Mình là Giang lớp K22, xin vào nhóm ôn cùng nhé' })
+    const ACCEPTED = friendItem(19, 'friend_accepted', { readAt: today('19:50') })
+    const asked: Relationship = {
+        type: 'incoming',
+        since: today('19:48'),
+        presence: null,
+        activity: null,
+        note: REQUEST.note,
+        user: giang
+    }
+
+    beforeEach(() => {
+        notificationsApi.fetchNotifications.mockResolvedValue(page([REQUEST, ACCEPTED, LAN], 2))
+        socialApi.acceptFriendRequest.mockReset()
+        socialApi.removeRelationship.mockReset()
+    })
+
+    it('says who wants to be friends, their note and username, with Accept and Decline; its body opens Pending', async () => {
+        const { container } = renderInbox()
+
+        const request = await screen.findByRole('link', { name: /Giang muốn kết bạn/ })
+        expect(request).toHaveAttribute('href', '/friends?tab=pending')
+        const item = request.closest('article')!
+        expect(item).toHaveTextContent('“Mình là Giang lớp K22, xin vào nhóm ôn cùng nhé”')
+        expect(item).toHaveTextContent('giang.vo')
+        expect(within(item).getByRole('button', { name: 'Chấp nhận' })).toBeInTheDocument()
+        expect(row(/Giang đã chấp nhận lời mời kết bạn/)).toHaveAttribute('href', '/friends?tab=all')
+        await expectNoA11yViolations(container)
+    })
+
+    it('keeps a request accepted here as "now friends" until the inbox closes, the API having deleted it; the friend list too', async () => {
+        socialApi.acceptFriendRequest.mockResolvedValue({ ...asked, type: 'friend', presence: 'online' })
+        const { client } = renderInbox()
+        client.setQueryData(relationshipsQuery.queryKey, [asked])
+        const item = (await screen.findByRole('link', { name: /Giang muốn kết bạn/ })).closest('article')!
+
+        await userEvent.click(within(item).getByRole('button', { name: 'Chấp nhận' }))
+        await waitFor(() => expect(row(/Bạn và Giang đã là bạn bè/)).toHaveAttribute('href', '/friends?tab=all'))
+        act(() => emitRealtimeEvent('notification.deleted', { ids: [REQUEST.id], unreadCount: 1 }))
+
+        const now = row(/Bạn và Giang đã là bạn bè/).closest('article')!
+        expect(within(now).queryByRole('button')).not.toBeInTheDocument()
+        expect(socialApi.acceptFriendRequest).toHaveBeenCalledWith('giang', expect.any(String))
+        expect(client.getQueryData<Relationship[]>(relationshipsQuery.queryKey)?.[0]?.type).toBe('friend')
+    })
+
+    it('declines with a Toast, and says "no longer valid" for a request gone meanwhile', async () => {
+        socialApi.removeRelationship.mockResolvedValue({ ...asked, type: 'none', since: null })
+        renderInbox()
+        const item = (await screen.findByRole('link', { name: /Giang muốn kết bạn/ })).closest('article')!
+
+        await userEvent.click(within(item).getByRole('button', { name: 'Từ chối' }))
+        expect(await screen.findByText('Đã từ chối lời mời của Giang')).toBeInTheDocument()
+        expect(socialApi.removeRelationship).toHaveBeenCalledWith('giang')
+
+        socialApi.acceptFriendRequest.mockRejectedValue(apiError(404, 'NOT_FOUND_ERROR'))
+        await userEvent.click(within(item).getByRole('button', { name: 'Chấp nhận' }))
+        expect(await screen.findByText('Lời mời không còn hiệu lực')).toBeInTheDocument()
+    })
+
+    it('turns Accept and Decline off while offline', async () => {
+        renderInbox({ connection: 'offline' })
+        const item = (await screen.findByRole('link', { name: /Giang muốn kết bạn/ })).closest('article')!
+
+        expect(within(item).getByRole('button', { name: 'Chấp nhận' })).toBeDisabled()
+        expect(within(item).getByRole('button', { name: 'Từ chối' })).toBeDisabled()
     })
 })

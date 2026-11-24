@@ -46,7 +46,6 @@
       "offline": "Bạn đang mất kết nối",
       "offlineWithComposer": "Bạn đang mất kết nối · Tin nhắn sẽ gửi khi có mạng lại"
     },
-    "comingSoon": "{{name}} · sắp có",
     "openNav": "Mở danh sách",
     "closePanel": "Đóng",
     "rail": {
@@ -61,6 +60,14 @@
       "notificationsUnread_other": "{{name}}, {{count}} thông báo chưa đọc",
       "tasksDue_one": "{{name}}, {{count}} việc quá hạn hoặc đến hạn hôm nay",
       "tasksDue_other": "{{name}}, {{count}} việc quá hạn hoặc đến hạn hôm nay"
+    },
+    "messages": {
+      "title": "Tin nhắn",
+      "friends": "Bạn bè",
+      "friendsWaiting_one": "{{name}}, {{count}} lời mời đến",
+      "friendsWaiting_other": "{{name}}, {{count}} lời mời đến",
+      "empty": "Chưa có tin nhắn nào",
+      "emptyHint": "Nhắn tin từ trang Bạn bè hoặc hồ sơ của thành viên cùng server."
     },
     "channels": {
       "label": "Kênh của {{name}}",

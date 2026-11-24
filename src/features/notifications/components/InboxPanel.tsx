@@ -7,11 +7,12 @@ import {
     useRef,
     useState,
     type KeyboardEvent,
-    type MouseEvent
+    type MouseEvent,
+    type ReactElement
 } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowUp, CloudOff, EyeOff, Settings } from 'lucide-react'
+import { ArrowUp, CloudOff, EyeOff, Settings, UserX } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import '@/i18n/notifications'
@@ -24,11 +25,13 @@ import { IconButton } from '@/components/ui/icon-button'
 import { PopoverContent } from '@/components/ui/popover'
 import { WithTooltip } from '@/components/ui/tooltip'
 import { useMentionWords } from '@/features/messaging'
+import { friendsPath, useAcceptFriendRequest, useRemoveRelationship } from '@/features/social'
 import { settingsCache, USERS_PATHS } from '@/features/users'
 import { useMinuteClock } from '@/hooks/useMinuteClock'
+import { getApiErrorType } from '@/lib/api-error'
 import { useToastEdge } from '@/hooks/useToastArea'
 import { hideChannelItems, useInbox, useMarkNotificationsRead } from '../api/useInbox'
-import { itemsOf, unreadCountOf } from '../lib/inbox-cache'
+import { itemsOf, unreadCountOf, withKept } from '../lib/inbox-cache'
 import { groupsOf, momentOf, rowTime } from '../lib/inbox-time'
 import { isRemoval, isServerItem, isTaskItem, notificationText } from '../lib/notification-text'
 import type { InboxPlaces, Notification } from '../types'
@@ -74,7 +77,11 @@ function RowSkeletons({ count }: { count: number }) {
  * A server item opens the server's settings (handed over) or its first text
  * channel (a timeout); a kick, a ban, a server one is no longer in opens
  * nothing. Opening it reads nothing on its own but the kicks and bans it
- * holds (not offline: 06 › Luật hộp thư, 11 › H1). `places`: the servers feature's names
+ * holds (not offline: 06 › Luật hộp thư, 11 › H1). A friend request has Accept
+ * and Decline under its words (the social feature's hooks, as the Friends page):
+ * accepted, the API deletes it but it stays here as "now friends" until the
+ * inbox closes (06 `friend-accepted`, D-248); declined, it goes with a Toast.
+ * `places`: the servers feature's names
  * and paths, handed by the app (D-197).
  */
 export default function InboxPanel({ places, onClose }: { places: InboxPlaces; onClose: () => void }) {
@@ -89,7 +96,11 @@ export default function InboxPanel({ places, onClose }: { places: InboxPlaces; o
     const timeZone = useQuery(settingsCache).data?.timezone
     const connection = useContext(ShellContext)?.connection ?? null
     const offline = connection === 'offline'
-    const items = useMemo(() => itemsOf(inbox.data), [inbox.data])
+    const acceptRequest = useAcceptFriendRequest()
+    const declineRequest = useRemoveRelationship()
+    /** Requests accepted in this opening: kept, as "now friends", until it closes (D-248). */
+    const [accepted, setAccepted] = useState<ReadonlyMap<string, Notification>>(new Map())
+    const items = useMemo(() => withKept(itemsOf(inbox.data), accepted), [inbox.data, accepted])
     const positions = useMemo(() => new Map(items.map((item, index) => [item.id, index + 1])), [items])
     const unread = unreadCountOf(inbox.data)
     const { hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage } = inbox
@@ -205,6 +216,9 @@ export default function InboxPanel({ places, onClose }: { places: InboxPlaces; o
     }
 
     const pathOf = (item: Notification): string | null => {
+        // A request: the Friends page's Pending tab; a friend now: its All tab (the DM in M6 L7).
+        if (item.type === 'friend_request') return friendsPath(accepted.has(item.id) ? 'all' : 'pending')
+        if (item.type === 'friend_accepted') return friendsPath('all')
         // A server's: its settings, a timeout its first text channel; a kick, a ban, a server left: nowhere.
         if (isServerItem(item)) {
             if (isRemoval(item) || !item.serverId || places.inServer(item.serverId) === false) return null
@@ -221,6 +235,69 @@ export default function InboxPanel({ places, onClose }: { places: InboxPlaces; o
         return item.serverId && item.channelId && item.messageId
             ? places.messagePath(item.serverId, item.channelId, item.messageId)
             : '#'
+    }
+
+    /** Accept / Decline of a request (06 › Tương tác): no question, as on the Friends page. */
+    const requestActions = (item: Notification) => {
+        const actor = item.actor
+        if (item.type !== 'friend_request' || !actor || accepted.has(item.id)) return undefined
+        const name = actor.displayName ?? actor.username ?? ''
+        const tabStop = item.id === current ? 0 : -1
+        // Off while offline, saying why (06 › `offline`, D-24): a Tooltip needs a live element around it.
+        const gate = (button: ReactElement) =>
+            offline ? (
+                <WithTooltip label={t('inbox.offline')}>
+                    <span>{button}</span>
+                </WithTooltip>
+            ) : (
+                button
+            )
+        return (
+            <>
+                {gate(
+                    <Button
+                        size='sm'
+                        tabIndex={tabStop}
+                        disabled={offline}
+                        onClick={() =>
+                            acceptRequest.mutate(actor.id, {
+                                onSuccess: () =>
+                                    setAccepted((kept) =>
+                                        new Map(kept).set(item.id, {
+                                            ...item,
+                                            readAt: item.readAt ?? new Date().toISOString()
+                                        })
+                                    ),
+                                // Any other failure is the hook's Toast.
+                                onError: (error) => {
+                                    if (getApiErrorType(error) === 'NOT_FOUND_ERROR')
+                                        toast(t('row.requestGone'), {
+                                            icon: <UserX className='size-4' aria-hidden='true' />
+                                        })
+                                }
+                            })
+                        }
+                    >
+                        {t('row.accept')}
+                    </Button>
+                )}
+                {gate(
+                    <Button
+                        size='sm'
+                        variant='secondary'
+                        tabIndex={tabStop}
+                        disabled={offline}
+                        onClick={() =>
+                            declineRequest.mutate(actor.id, {
+                                onSuccess: () => toast(t('row.declined', { name }))
+                            })
+                        }
+                    >
+                        {t('row.decline')}
+                    </Button>
+                )}
+            </>
+        )
     }
 
     const readAll = () => {
@@ -287,7 +364,11 @@ export default function InboxPanel({ places, onClose }: { places: InboxPlaces; o
                                     <NotificationRow
                                         key={item.id}
                                         item={item}
-                                        text={notificationText(item, { t, words, places, now, timeZone })}
+                                        text={notificationText(
+                                            item,
+                                            { t, words, places, now, timeZone },
+                                            accepted.has(item.id)
+                                        )}
                                         time={rowTime(at, now, timeZone)}
                                         fullTime={t('row.full', {
                                             weekday: t(`row.weekday_${moment.weekday as 0 | 1 | 2 | 3 | 4 | 5 | 6}`),
@@ -304,6 +385,8 @@ export default function InboxPanel({ places, onClose }: { places: InboxPlaces; o
                                         onKeyDown={onRowKeyDown}
                                         position={positions.get(item.id)!}
                                         setSize={hasNextPage ? -1 : items.length}
+                                        actions={requestActions(item)}
+                                        accepted={accepted.has(item.id)}
                                     />
                                 )
                             })}

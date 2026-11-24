@@ -12,6 +12,11 @@ describe('cn', () => {
         expect(cn('text-text-secondary', 'text-text-primary')).toBe('text-text-primary')
         expect(cn('bg-surface-1 rounded-input', 'bg-surface-2')).toBe('rounded-input bg-surface-2')
     })
+
+    it('takes a design-system radius as a radius: a later one, of either kind, replaces it', () => {
+        expect(cn('size-8 rounded-input', 'rounded-full')).toBe('size-8 rounded-full')
+        expect(cn('rounded-full', 'rounded-server')).toBe('rounded-server')
+    })
 })
 
 describe('folded', () => {

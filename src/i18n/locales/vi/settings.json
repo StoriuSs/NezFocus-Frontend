@@ -34,7 +34,11 @@
     "activity": "Hoạt động",
     "showStudyActivity": "Hiện hoạt động học",
     "showStudyActivityOn": "Bạn bè và người cùng server thấy bạn đang ở phòng nào hoặc đang học một mình. Người trong phòng vẫn thấy bạn trong danh sách của phòng.",
-    "showStudyActivityOff": "Không ai thấy bạn đang học hay đang ở phòng nào. Người trong phòng vẫn thấy bạn trong danh sách của phòng."
+    "showStudyActivityOff": "Không ai thấy bạn đang học hay đang ở phòng nào. Người trong phòng vẫn thấy bạn trong danh sách của phòng.",
+    "blocking": "Chặn",
+    "blockList": "Danh sách chặn",
+    "blockedCount_one": "{{count}} người",
+    "blockedCount_other": "{{count}} người"
   },
   "toasts": {
     "notSaved": "Chưa lưu được thay đổi",

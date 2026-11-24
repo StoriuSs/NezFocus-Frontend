@@ -39,6 +39,7 @@ const item = (more: Partial<Notification> = {}): Notification => ({
     messageId: 'm1',
     roleId: null,
     taskId: null,
+    note: null,
     task: null,
     server: null,
     reason: 'user',

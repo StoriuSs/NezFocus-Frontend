@@ -66,6 +66,7 @@ const member = (userId: string, name: string, extra: Partial<ServerMember> = {})
     joinedAt: '2026-10-01T00:00:00Z',
     timeoutUntil: null,
     timeoutReason: null,
+    activity: null,
     ...extra
 })
 const BINH = member('binh', 'Bình', { roleIds: ['lead'] })

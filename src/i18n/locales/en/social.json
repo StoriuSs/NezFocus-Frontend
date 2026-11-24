@@ -1,0 +1,112 @@
+{
+    "friends": {
+        "title": "Friends",
+        "addFriend": "Add friend",
+        "tabsLabel": "Friends list",
+        "tabs": {
+            "online": "Online",
+            "all": "All",
+            "pending": "Pending",
+            "blocked": "Blocked"
+        },
+        "incoming_one": "{{count}} incoming request",
+        "incoming_other": "{{count}} incoming requests",
+        "search": "Search by name or username",
+        "pendingSides": "Requests",
+        "sides": {
+            "incoming": "Incoming · {{count}}",
+            "outgoing": "Sent · {{count}}"
+        },
+        "groups": {
+            "online": "Online — {{count}}",
+            "offline": "Offline — {{count}}",
+            "incoming": "Incoming — {{count}}",
+            "outgoing": "Sent — {{count}}",
+            "blocked": "Blocked — {{count}}"
+        },
+        "presence": {
+            "online": "Online",
+            "idle": "Away",
+            "dnd": "Do not disturb",
+            "offline": "Offline"
+        },
+        "note": "“{{note}}”",
+        "noNote": "No note",
+        "blockedLine": "Blocked",
+        "deleted": "Deleted account",
+        "yesterday": "Yesterday",
+        "more": "More",
+        "accept": "Accept",
+        "decline": "Decline",
+        "cancel": "Cancel request",
+        "unblock": "Unblock",
+        "unfriend": "Remove friend",
+        "block": "Block",
+        "offline": "You need a connection",
+        "empty": {
+            "online": "No friends online",
+            "all": "No friends yet",
+            "incoming": "No incoming requests",
+            "outgoing": "You haven't sent any requests",
+            "blocked": "You haven't blocked anyone",
+            "noMatch": "No one matches “{{query}}”"
+        },
+        "emptyPage": {
+            "title": "No friends yet",
+            "body": "Add friends by username, or from the profile of someone in your servers."
+        }
+    },
+    "unfriend": {
+        "title": "Remove {{name}} as a friend?",
+        "body": "Your old messages stay. {{name}} won't be told.",
+        "keep": "Keep",
+        "confirm": "Remove friend"
+    },
+    "block": {
+        "title": "Block {{name}}?",
+        "body": "{{name}} won't be able to message you, call you or send you a friend request, and won't be told. In servers, {{name}}'s messages are collapsed.",
+        "cancel": "Cancel",
+        "confirm": "Block"
+    },
+    "toasts": {
+        "declined": "Declined {{name}}'s request",
+        "friends": "You and {{name}} are now friends",
+        "cancelled": "Cancelled your request to {{name}}",
+        "unblocked": "Unblocked {{name}}",
+        "sent": "Friend request sent to {{name}}",
+        "gone": "This request is no longer valid"
+    },
+    "add": {
+        "title": "Add friend",
+        "description": "Enter the username of the person you want to add.",
+        "username": "Username",
+        "placeholder": "e.g. binh.tran",
+        "note": "Note (optional)",
+        "cancel": "Cancel",
+        "find": "Find",
+        "send": "Send request",
+        "accept": "Accept",
+        "card": {
+            "friends": "You're already friends",
+            "outgoing": "You've sent {{name}} a request",
+            "incoming": "{{name}} sent you a request",
+            "sharedOne": "Both in {{first}}",
+            "sharedTwo": "Both in {{first}} and {{second}}",
+            "sharedMore_one": "Both in {{first}}, {{second}} and {{count}} other server",
+            "sharedMore_other": "Both in {{first}}, {{second}} and {{count}} other servers",
+            "noShared": "No servers in common"
+        },
+        "problems": {
+            "empty": "Enter a username",
+            "own": "That's your own username",
+            "notFound": "We couldn't find this username",
+            "cannot": "You can't send this person a request",
+            "dailyLimit": "You've sent 50 requests today. You can send more from 00:00 tomorrow. People in your servers can still message you without being friends.",
+            "lookupLimit_one": "You're searching too fast. Try again in {{count}} second.",
+            "lookupLimit_other": "You're searching too fast. Try again in {{count}} seconds.",
+            "pending": "You've already sent {{username}} a request",
+            "alreadyFriends": "You and {{name}} are already friends",
+            "offline": "You need a connection"
+        }
+    }
+}

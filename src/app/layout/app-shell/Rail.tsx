@@ -20,6 +20,7 @@ import {
 } from '@/features/servers'
 import { useServerReadState } from '@/features/messaging'
 import { InboxPanel, useInboxStore, useUnreadNotificationCount } from '@/features/notifications'
+import { friendsPath, isMessagesPath } from '@/features/social'
 import { useDueTaskCount } from '@/features/tasks'
 import { cn } from '@/lib/utils'
 import { MeMenu } from './MeMenu'
@@ -134,27 +135,27 @@ function AddServerItem() {
 }
 
 /**
- * A rail item whose page is not built yet: focusable, so its tooltip says so
- * to keyboard users too, but it does nothing (C-00: a disabled control always
- * says why).
+ * 💬 (C-05 `dm`): the messages area, a squircle on `surface-2` like a
+ * server, lit while one of its pages is open. It opens the Friends page,
+ * whose tab is the page's choice (09 Q6; the last DM opened comes with the
+ * DMs, D-248). The Badge of DMs unread comes with them too.
  */
-function SoonItem({ icon: Icon, name, squircle }: { icon: LucideIcon; name: string; squircle?: boolean }) {
+function MessagesItem() {
     const { t } = useTranslation()
-    const soon = t('shell.comingSoon', { name })
+    const isActive = isMessagesPath(useLocation().pathname)
+    const name = t('shell.rail.dm')
     return (
-        <li className='flex w-full justify-center'>
-            <WithTooltip label={soon} side='right'>
-                <button
-                    type='button'
-                    aria-disabled='true'
-                    aria-label={soon}
-                    className={cn(
-                        'flex items-center justify-center text-text-tertiary',
-                        squircle ? cn(SQUIRCLE, 'hover:bg-surface-2') : 'size-12 rounded-server'
-                    )}
+        <li className='relative flex w-full justify-center'>
+            <Indicator kind={isActive ? 'selected' : undefined} />
+            <WithTooltip label={name} side='right'>
+                <Link
+                    to={friendsPath()}
+                    aria-label={name}
+                    aria-current={isActive ? 'page' : undefined}
+                    className={cn(SQUIRCLE, isActive ? 'bg-surface-3 text-text-primary' : 'text-text-primary')}
                 >
-                    <Icon className='size-[22px]' aria-hidden='true' />
-                </button>
+                    <MessageCircle className='size-[22px]' aria-hidden='true' />
+                </Link>
             </WithTooltip>
         </li>
     )
@@ -285,8 +286,7 @@ function Group({ label, children, className }: { label: string; children: ReactN
  * the add button; at the bottom Study, To-do, Notifications and your own
  * avatar, which opens your menu (S-ME-01).
  *
- * Servers come in the order they were joined (GET /servers). Direct
- * messages are a page of a later milestone and say so.
+ * Servers come in the order they were joined (GET /servers).
  */
 export function Rail({ id, className }: { id?: string; className?: string }) {
     const { t } = useTranslation()
@@ -295,7 +295,7 @@ export function Rail({ id, className }: { id?: string; className?: string }) {
     return (
         <div id={id} className={cn('w-rail shrink-0 flex-col items-center gap-2 bg-bg py-3', className)}>
             <Group label={t('shell.rail.servers')} className='min-h-0 w-full flex-1 overflow-y-auto py-1'>
-                <SoonItem icon={MessageCircle} name={t('shell.rail.dm')} squircle />
+                <MessagesItem />
                 <li aria-hidden='true' className='h-0.5 w-8 shrink-0 rounded-full bg-border' />
                 {servers.isPending
                     ? [0, 1, 2].map((index) => (

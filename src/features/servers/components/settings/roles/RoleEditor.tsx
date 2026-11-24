@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
+import { tabPanelProps, Tabs } from '@/components/ui/tabs'
 import { WithTooltip } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { useDeleteRole, useSaveRoleSwitch, useServerRoles, useUpdateRole } from '../../../api/useRoles'
@@ -68,8 +69,8 @@ export function RoleEditor({ server, roleId }: { server: Server; roleId: string 
     const lock = roleLock(server, role)
     const tab = params.get('tab') === 'members' && !role.isEveryone ? 'members' : 'permissions'
     const tabs = [
-        { id: 'permissions', label: t('roles.edit.tabPermissions') },
-        { id: 'members', label: t('roles.edit.tabMembers', { count: role.memberCount }) }
+        { value: 'permissions', label: t('roles.edit.tabPermissions') },
+        { value: 'members', label: t('roles.edit.tabMembers', { count: role.memberCount }) }
     ] as const
 
     return (
@@ -85,36 +86,15 @@ export function RoleEditor({ server, roleId }: { server: Server; roleId: string 
             {/* A long name: two lines, then "…" (04 long-role-name). */}
             <h2 className='line-clamp-2 text-title-2 font-semibold text-text-primary'>{role.name}</h2>
             {role.isEveryone ? null : (
-                <div role='tablist' aria-label={role.name} className='flex gap-4 border-b'>
-                    {tabs.map((item) => (
-                        <button
-                            key={item.id}
-                            type='button'
-                            role='tab'
-                            id={`role-tab-${item.id}`}
-                            aria-selected={tab === item.id}
-                            aria-controls={`role-panel-${item.id}`}
-                            onClick={() =>
-                                setParams(item.id === 'members' ? { tab: 'members' } : {}, { replace: true })
-                            }
-                            className={cn(
-                                'border-b-2 pb-2 text-body-sm transition-colors duration-micro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                                tab === item.id
-                                    ? 'border-primary font-semibold text-text-primary'
-                                    : 'border-transparent text-text-secondary hover:text-text-primary'
-                            )}
-                        >
-                            {item.label}
-                        </button>
-                    ))}
-                </div>
+                <Tabs
+                    id='role'
+                    aria-label={role.name}
+                    value={tab}
+                    tabs={tabs}
+                    onValueChange={(next) => setParams(next === 'members' ? { tab: 'members' } : {}, { replace: true })}
+                />
             )}
-            <div
-                role={role.isEveryone ? undefined : 'tabpanel'}
-                id={`role-panel-${tab}`}
-                aria-labelledby={role.isEveryone ? undefined : `role-tab-${tab}`}
-                className='flex flex-1 flex-col gap-6'
-            >
+            <div {...(role.isEveryone ? {} : tabPanelProps('role', tab))} className='flex flex-1 flex-col gap-6'>
                 {tab === 'members' ? (
                     <RoleMembers server={server} role={role} roles={roles.data} readOnly={lock !== null} />
                 ) : (

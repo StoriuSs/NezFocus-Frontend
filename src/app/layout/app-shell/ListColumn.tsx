@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
+import { CountBadge } from '@/components/ui/count-badge'
 import { WithTooltip } from '@/components/ui/tooltip'
 import { AUTH_PATHS } from '@/features/auth'
 import {
@@ -28,6 +29,7 @@ import {
     useServers,
     type SettingsSection
 } from '@/features/servers'
+import { SOCIAL_PATHS, useIncomingRequestCount } from '@/features/social'
 import { SOLO_PATH, SoloDockSlot, STATS_PATH } from '@/features/study'
 import { USERS_PATHS } from '@/features/users'
 import { cn } from '@/lib/utils'
@@ -132,6 +134,41 @@ function StudyColumn() {
     )
 }
 
+/**
+ * The messages column (09 S-DM-01): "Messages", the "Friends" row with the
+ * requests waiting for me (Badge, 09 › luật 4), a line, then the DMs; none
+ * yet: "No messages yet" with where to start one. The DMs come in M6 L7.
+ */
+function MessagesColumn() {
+    const { t } = useTranslation()
+    const incoming = useIncomingRequestCount()
+    const friends = t('shell.messages.friends')
+    return (
+        <>
+            <ColumnTitle>{t('shell.messages.title')}</ColumnTitle>
+            <nav aria-label={t('shell.messages.title')} className='flex flex-col gap-0.5 p-2'>
+                <RowLink
+                    to={SOCIAL_PATHS.friends}
+                    icon={Users}
+                    label={
+                        incoming > 0
+                            ? t('shell.messages.friendsWaiting', { name: friends, count: incoming })
+                            : undefined
+                    }
+                    trailing={<CountBadge count={incoming} />}
+                >
+                    {friends}
+                </RowLink>
+                <div aria-hidden='true' className='my-1 border-t' />
+                <div className='px-3 py-1'>
+                    <p className='text-body-sm text-text-secondary'>{t('shell.messages.empty')}</p>
+                    <p className='text-label text-text-tertiary'>{t('shell.messages.emptyHint')}</p>
+                </div>
+            </nav>
+        </>
+    )
+}
+
 /** SettingsNav (C-27): the five settings pages. */
 function SettingsColumn() {
     const { t } = useTranslation()
@@ -218,6 +255,7 @@ export function ListColumn({ className, id }: { className?: string; id?: string 
             {column === 'server' && <ServerChannelColumn serverId={deepest?.params.serverId} />}
             {column === 'serverSettings' && <ServerSettingsColumn serverId={deepest?.params.serverId} />}
             {column === 'tasks' && <MyTasksColumn />}
+            {column === 'messages' && <MessagesColumn />}
             <div className='mt-auto flex flex-col'>
                 <RoomDock shape='column' />
                 <SoloDockSlot shape='column' />

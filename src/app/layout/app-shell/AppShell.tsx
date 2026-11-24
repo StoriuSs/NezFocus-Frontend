@@ -18,6 +18,8 @@ import { useRemovedWhileAway } from '@/features/servers/hooks/useRemovedWhileAwa
 import { useServerGoneWatch } from '@/features/servers/hooks/useServerGoneWatch'
 import { serverOwnership } from '@/features/servers/api/serverOwnership'
 import { connectServerOwnership } from '@/features/auth'
+import { friendsPath, relationshipsQuery, useRelationships } from '@/features/social'
+import { connectBlockList } from '@/features/users'
 import { useConnectionBanner, useRealtimeConnection } from '@/features/realtime'
 import { useMentionTotal } from '@/features/messaging'
 import { JoinedSessionCues, RoomDock, useJoinedSession, useServers, useVoiceRooms } from '@/features/servers'
@@ -56,6 +58,9 @@ const TaskDetailRoute = lazy(() => import('@/features/servers/components/TaskDet
 // (S-ME-03 `delete-blocked-owner`). Connected here, not in main.tsx: every page
 // that deletes is inside this shell, and the servers code stays out of the first download.
 connectServerOwnership(serverOwnership)
+// The Privacy page's "Block list" row (users) counts the people blocked in the
+// social feature's list (S-ME-05, D-131), which users cannot import.
+connectBlockList({ query: relationshipsQuery, path: friendsPath('blocked') })
 
 /**
  * The frame of every page after sign-in (02 S-SHELL-01): rail 72, list
@@ -102,6 +107,9 @@ export default function AppShell() {
     )
     // The account's theme and language, here and in this browser's other tabs (REQ-AUTH-08).
     useAccountSettings()
+    // Friends, requests and blocks, read as the app opens and kept live (D-242): the Badge of
+    // the "Friends" row and the Friends page from the cache (REQ-SOCIAL-02).
+    useRelationships()
     // The servers kept live by the socket; one no longer in leaves the rail, with a dialog or a Toast (D-178).
     useServerGoneWatch()
     // Put out of or banned from one while away: a Toast from the inbox's unread item, "Xem" opening it (H1, D-187).

@@ -1,0 +1,112 @@
+{
+    "friends": {
+        "title": "Bạn bè",
+        "addFriend": "Thêm bạn",
+        "tabsLabel": "Danh sách bạn bè",
+        "tabs": {
+            "online": "Trực tuyến",
+            "all": "Tất cả",
+            "pending": "Đang chờ",
+            "blocked": "Đã chặn"
+        },
+        "incoming_one": "{{count}} lời mời đến",
+        "incoming_other": "{{count}} lời mời đến",
+        "search": "Tìm theo tên hoặc username",
+        "pendingSides": "Lời mời",
+        "sides": {
+            "incoming": "Lời mời đến · {{count}}",
+            "outgoing": "Đã gửi · {{count}}"
+        },
+        "groups": {
+            "online": "Trực tuyến — {{count}}",
+            "offline": "Ngoại tuyến — {{count}}",
+            "incoming": "Lời mời đến — {{count}}",
+            "outgoing": "Đã gửi — {{count}}",
+            "blocked": "Đã chặn — {{count}}"
+        },
+        "presence": {
+            "online": "Trực tuyến",
+            "idle": "Vắng mặt",
+            "dnd": "Không làm phiền",
+            "offline": "Ngoại tuyến"
+        },
+        "note": "“{{note}}”",
+        "noNote": "Không có lời nhắn",
+        "blockedLine": "Đã chặn",
+        "deleted": "Tài khoản đã bị xóa",
+        "yesterday": "Hôm qua",
+        "more": "Thêm",
+        "accept": "Chấp nhận",
+        "decline": "Từ chối",
+        "cancel": "Hủy lời mời",
+        "unblock": "Bỏ chặn",
+        "unfriend": "Hủy kết bạn",
+        "block": "Chặn",
+        "offline": "Cần kết nối mạng",
+        "empty": {
+            "online": "Chưa bạn nào trực tuyến",
+            "all": "Chưa có bạn bè",
+            "incoming": "Không có lời mời nào đến",
+            "outgoing": "Bạn chưa gửi lời mời nào",
+            "blocked": "Bạn chưa chặn ai",
+            "noMatch": "Không có ai khớp “{{query}}”"
+        },
+        "emptyPage": {
+            "title": "Chưa có bạn bè",
+            "body": "Kết bạn bằng username, hoặc từ hồ sơ của thành viên cùng server."
+        }
+    },
+    "unfriend": {
+        "title": "Hủy kết bạn với {{name}}?",
+        "body": "Tin nhắn cũ vẫn còn. {{name}} không được báo.",
+        "keep": "Giữ lại",
+        "confirm": "Hủy kết bạn"
+    },
+    "block": {
+        "title": "Chặn {{name}}?",
+        "body": "{{name}} sẽ không nhắn tin, gọi hay gửi lời mời kết bạn cho bạn được, và không được báo. Trong server, tin của {{name}} được thu gọn.",
+        "cancel": "Hủy",
+        "confirm": "Chặn"
+    },
+    "toasts": {
+        "declined": "Đã từ chối lời mời của {{name}}",
+        "friends": "Bạn và {{name}} đã là bạn bè",
+        "cancelled": "Đã hủy lời mời gửi {{name}}",
+        "unblocked": "Đã bỏ chặn {{name}}",
+        "sent": "Đã gửi lời mời kết bạn cho {{name}}",
+        "gone": "Lời mời không còn hiệu lực"
+    },
+    "add": {
+        "title": "Thêm bạn",
+        "description": "Nhập username của người bạn muốn kết bạn.",
+        "username": "Username",
+        "placeholder": "vd. binh.tran",
+        "note": "Lời nhắn (không bắt buộc)",
+        "cancel": "Hủy",
+        "find": "Tìm",
+        "send": "Gửi lời mời",
+        "accept": "Chấp nhận",
+        "card": {
+            "friends": "Hai bạn đã là bạn bè",
+            "outgoing": "Bạn đã gửi lời mời cho {{name}}",
+            "incoming": "{{name}} đã gửi lời mời cho bạn",
+            "sharedOne": "Cùng ở {{first}}",
+            "sharedTwo": "Cùng ở {{first}} và {{second}}",
+            "sharedMore_one": "Cùng ở {{first}}, {{second}} và {{count}} server khác",
+            "sharedMore_other": "Cùng ở {{first}}, {{second}} và {{count}} server khác",
+            "noShared": "Chưa ở chung server nào"
+        },
+        "problems": {
+            "empty": "Nhập username",
+            "own": "Đây là username của bạn",
+            "notFound": "Không tìm thấy username này",
+            "cannot": "Không thể gửi lời mời cho người dùng này",
+            "dailyLimit": "Bạn đã gửi 50 lời mời hôm nay. Gửi tiếp được từ 00:00 ngày mai. Người cùng server vẫn nhắn tin được mà không cần kết bạn.",
+            "lookupLimit_one": "Bạn tra cứu nhanh quá. Thử lại sau {{count}} giây.",
+            "lookupLimit_other": "Bạn tra cứu nhanh quá. Thử lại sau {{count}} giây.",
+            "pending": "Bạn đã gửi lời mời cho {{username}} rồi",
+            "alreadyFriends": "Bạn và {{name}} đã là bạn bè",
+            "offline": "Cần kết nối mạng"
+        }
+    }
+}

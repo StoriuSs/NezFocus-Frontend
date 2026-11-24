@@ -23,10 +23,19 @@ const FONT_SIZES = [
     'mono-code'
 ]
 
+/**
+ * The radii of DESIGN.md (tailwind.config.js `borderRadius`): tailwind-merge
+ * must know `rounded-input` is a radius, so a `rounded-full` handed to
+ * IconButton (`rounded-input`) takes its place instead of losing to it in
+ * the stylesheet's order (FriendRow's round ⋯, C-30).
+ */
+const RADII = ['badge', 'input', 'button', 'server', 'sheet']
+
 const twMerge = extendTailwindMerge({
     extend: {
         classGroups: {
-            'font-size': [{ text: FONT_SIZES }]
+            'font-size': [{ text: FONT_SIZES }],
+            rounded: [{ rounded: RADII }]
         }
     }
 })

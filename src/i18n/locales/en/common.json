@@ -46,7 +46,6 @@
       "offline": "You are offline",
       "offlineWithComposer": "You are offline · Messages will send when you are back online"
     },
-    "comingSoon": "{{name}} · coming soon",
     "openNav": "Open navigation",
     "closePanel": "Close",
     "rail": {
@@ -61,6 +60,14 @@
       "notificationsUnread_other": "{{name}}, {{count}} unread",
       "tasksDue_one": "{{name}}, {{count}} task overdue or due today",
       "tasksDue_other": "{{name}}, {{count}} tasks overdue or due today"
+    },
+    "messages": {
+      "title": "Messages",
+      "friends": "Friends",
+      "friendsWaiting_one": "{{name}}, {{count}} incoming request",
+      "friendsWaiting_other": "{{name}}, {{count}} incoming requests",
+      "empty": "No messages yet",
+      "emptyHint": "Message someone from the Friends page or the profile of someone in your servers."
     },
     "channels": {
       "label": "Channels of {{name}}",

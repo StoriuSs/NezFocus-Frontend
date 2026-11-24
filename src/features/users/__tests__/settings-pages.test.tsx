@@ -24,6 +24,13 @@ const { default: Appearance } = await import('@/features/users/pages/Appearance'
 const { default: Notifications } = await import('@/features/users/pages/Notifications')
 const { default: Privacy } = await import('@/features/users/pages/Privacy')
 const { useAccountSettings } = await import('@/features/users/hooks/useAccountSettings')
+const { connectBlockList } = await import('@/features/users/lib/block-list')
+// The people blocked, as the AppShell lends them (D-248): one, unless a test says otherwise.
+const readRelationships = vi.fn(async () => [{ type: 'friend' }, { type: 'blocked' }])
+connectBlockList({
+    query: { queryKey: ['social', 'relationships'], queryFn: () => readRelationships() },
+    path: '/friends?tab=blocked'
+})
 
 const saved: UserSettings = {
     timezone: 'Asia/Ho_Chi_Minh',
@@ -330,6 +337,17 @@ describe('Privacy (S-ME-05)', () => {
     it('has no accessibility problems', async () => {
         renderPage(<Privacy />)
         await screen.findByRole('switch', { name: 'Show study activity' })
+        await expectNoA11yViolations()
+    })
+
+    it('leads to the people blocked, counting them from the list the app connected (D-131, D-248)', async () => {
+        readRelationships.mockResolvedValueOnce([{ type: 'friend' }, { type: 'blocked' }, { type: 'blocked' }])
+        renderPage(<Privacy />)
+
+        const row = await screen.findByRole('link', { name: /Block list/ })
+        await waitFor(() => expect(row).toHaveTextContent('2 people'))
+        expect(row).toHaveAttribute('href', '/friends?tab=blocked')
+        expect(screen.getByRole('heading', { name: 'Blocking' })).toBeInTheDocument()
         await expectNoA11yViolations()
     })
 })

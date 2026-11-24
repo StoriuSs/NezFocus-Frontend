@@ -72,6 +72,17 @@ const notificationsApi = vi.hoisted(() => ({
     markNotificationsRead: vi.fn(async (..._: unknown[]) => 0)
 }))
 vi.mock('@/features/notifications/api/notifications.api', () => notificationsApi)
+// Friends, requests and blocks (S-DM-02, D-242): none, unless a test says otherwise.
+const socialApi = vi.hoisted(() => ({
+    fetchRelationships: vi.fn(async (): Promise<unknown[]> => []),
+    lookUpPerson: vi.fn(),
+    sendFriendRequest: vi.fn(),
+    acceptFriendRequest: vi.fn(),
+    removeRelationship: vi.fn(),
+    blockPerson: vi.fn(),
+    unblockPerson: vi.fn()
+}))
+vi.mock('@/features/social/api/social.api', () => socialApi)
 // The member panel's lists: nobody, unless a test says otherwise.
 vi.mock('@/features/servers/api/roles.api', async (original) => ({
     ...(await original<typeof import('@/features/servers/api/roles.api')>()),
@@ -221,6 +232,7 @@ function renderAt(path: string | { pathname: string; state: unknown }) {
                     },
                     { path: '/panel', element: <PanelPage />, handle: { column: 'study' } },
                     { path: '/tasks', element: <MyTasksRoute />, handle: { column: 'tasks' } },
+                    { path: '/friends', element: <h1>Friends page</h1>, handle: { column: 'messages' } },
                     { path: '/settings/account', element: <h1>Settings page</h1>, handle: { column: 'settings' } },
                     { path: '/settings/profile', element: <h1>Profile page</h1>, handle: { column: 'settings' } }
                 ]
@@ -288,12 +300,33 @@ describe('AppShell (S-SHELL-01)', () => {
             expect(within(rail()).queryByRole('link', { current: 'page' })).not.toBeInTheDocument()
         })
 
-        it('says which rail items arrive later, and they lead nowhere', async () => {
+        it('opens the Friends page from 💬, lit there, its column counting the requests waiting (S-DM-01, D-248)', async () => {
+            socialApi.fetchRelationships.mockResolvedValueOnce([
+                {
+                    type: 'incoming',
+                    since: '2026-11-25T12:48:00.000Z',
+                    presence: null,
+                    activity: null,
+                    note: null,
+                    user: { id: 'giang', username: 'giang.vo', displayName: 'Giang', avatarUrl: null }
+                }
+            ])
             const router = renderAt('/study')
-            const dm = await screen.findByRole('button', { name: 'Direct messages · coming soon' })
-            expect(dm).toHaveAttribute('aria-disabled', 'true')
-            await userEvent.click(dm)
-            expect(router.state.location.pathname).toBe('/study')
+
+            await userEvent.click(await within(rail()).findByRole('link', { name: 'Direct messages' }))
+
+            expect(router.state.location.pathname).toBe('/friends')
+            expect(within(rail()).getByRole('link', { name: 'Direct messages' })).toHaveAttribute(
+                'aria-current',
+                'page'
+            )
+            const column = screen.getByRole('navigation', { name: 'Messages' })
+            expect(await within(column).findByRole('link', { name: 'Friends, 1 incoming request' })).toHaveAttribute(
+                'aria-current',
+                'page'
+            )
+            expect(within(column).getByText('No messages yet')).toBeInTheDocument()
+            await expectNoA11yViolations()
         })
 
         it('closes the inbox with the shell: the next sign-in in this tab starts with it closed', async () => {

@@ -3,9 +3,9 @@ import '@/i18n/notifications'
 import { plainMessage, type MentionWords } from '@/features/messaging'
 import type { InboxPlace, InboxPlaces, Notification } from '../types'
 import { dueDate, timeoutEnd } from './inbox-time'
-import { isRemoval, isServerItem, isTaskItem } from './notification-kinds'
+import { isFriendItem, isRemoval, isServerItem, isTaskItem } from './notification-kinds'
 
-export { isRemoval, isServerItem, isTaskItem }
+export { isFriendItem, isRemoval, isServerItem, isTaskItem }
 
 /** What a row says (C-29): its title, the message's words, and where it is. */
 export interface NotificationText {
@@ -134,9 +134,34 @@ function serverWords(item: Notification, { t, now, timeZone }: TextSources): { t
     }
 }
 
-/** The words of an item (06 › Nội dung chữ): a mention, a reply, a task item, a server item. */
-export function notificationText(item: Notification, sources: TextSources): NotificationText {
+/**
+ * The words of a friend item (06 › Nội dung chữ, D-110, D-111): who wants to
+ * be friends and their note; who accepted mine; or, accepted here, that we
+ * are friends now (D-248). The username under it.
+ */
+function friendWords(item: Notification, t: TFunction<'notifications'>, accepted: boolean): NotificationText {
+    const name = actorName(item, t)
+    const title = accepted
+        ? t('row.friendsNow', { name })
+        : item.type === 'friend_accepted'
+          ? t('row.friendAccepted', { name })
+          : t('row.friendRequest', { name })
+    return {
+        title,
+        content: !accepted && item.note ? t('row.note', { note: item.note }) : null,
+        source: item.actor?.username ?? null,
+        place: null
+    }
+}
+
+/**
+ * The words of an item (06 › Nội dung chữ): a mention, a reply, a task item,
+ * a server item, a friend item; `accepted`, a request accepted in this
+ * opening of the inbox (D-248).
+ */
+export function notificationText(item: Notification, sources: TextSources, accepted = false): NotificationText {
     const { t, places } = sources
+    if (isFriendItem(item)) return friendWords(item, t, accepted)
     if (isServerItem(item))
         return {
             ...serverWords(item, sources),

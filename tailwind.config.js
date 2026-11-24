@@ -55,7 +55,8 @@ export default {
         '!./src/features/tasks/**',
         '!./src/features/notifications/**',
         '!./src/features/voice/**',
-        '!./src/features/study/**'
+        '!./src/features/study/**',
+        '!./src/features/social/**'
     ],
     // Words of the code read as classes the app never uses: `element.blur()` (useRemovedWhileAway).
     blocklist: ['blur'],

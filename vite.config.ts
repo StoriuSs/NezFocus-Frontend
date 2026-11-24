@@ -80,7 +80,8 @@ const FEATURE_STYLES: Record<string, RegExp> = {
     TaskStyles: /\/src\/features\/tasks\/tasks\.css(\?|$)/,
     NotificationStyles: /\/src\/features\/notifications\/notifications\.css(\?|$)/,
     VoiceStyles: /\/src\/features\/voice\/voice\.css(\?|$)/,
-    StudyStyles: /\/src\/features\/study\/study\.css(\?|$)/
+    StudyStyles: /\/src\/features\/study\/study\.css(\?|$)/,
+    SocialStyles: /\/src\/features\/social\/social\.css(\?|$)/
 }
 
 function chunkOf(id: string): string | undefined {

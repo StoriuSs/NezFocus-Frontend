@@ -34,7 +34,11 @@
     "activity": "Activity",
     "showStudyActivity": "Show study activity",
     "showStudyActivityOn": "Friends and people in your servers see which room you're in or that you're studying alone. People in a room still see you in its list.",
-    "showStudyActivityOff": "No one sees that you're studying or which room you're in. People in a room still see you in its list."
+    "showStudyActivityOff": "No one sees that you're studying or which room you're in. People in a room still see you in its list.",
+    "blocking": "Blocking",
+    "blockList": "Block list",
+    "blockedCount_one": "{{count}} person",
+    "blockedCount_other": "{{count}} people"
   },
   "toasts": {
     "notSaved": "Couldn't save your change",

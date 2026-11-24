@@ -15,6 +15,7 @@ import {
     serversSettingsRoutes,
     serversTasksRoutes
 } from '@/features/servers/routes'
+import { socialRoutes } from '@/features/social/routes'
 import { usersRoutes } from '@/features/users/routes'
 
 // The two layouts load lazily, each with its own pages: a visitor on the
@@ -84,6 +85,7 @@ export const router = createBrowserRouter([
                     ...column('server')(serversChannelRoutes),
                     ...column('serverSettings')(serversSettingsRoutes),
                     ...column('tasks')(serversTasksRoutes),
+                    ...column('messages')(socialRoutes),
                     ...column('settings')([...authAppRoutes, ...usersRoutes])
                 ]
             },

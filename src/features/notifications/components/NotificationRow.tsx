@@ -1,6 +1,17 @@
-import type { KeyboardEvent, MouseEvent } from 'react'
+import type { KeyboardEvent, MouseEvent, ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { AlarmClock, AtSign, Check, Crown, ListChecks, Reply, ShieldAlert, UserX } from 'lucide-react'
+import {
+    AlarmClock,
+    AtSign,
+    Check,
+    Crown,
+    ListChecks,
+    Reply,
+    ShieldAlert,
+    UserCheck,
+    UserPlus,
+    UserX
+} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import '@/i18n/notifications'
 import { Avatar, AvatarFallback, AvatarImage, AvatarInitial } from '@/components/ui/avatar'
@@ -10,8 +21,14 @@ import { cn } from '@/lib/utils'
 import { isRemoval, isServerItem, sentences, type NotificationText } from '../lib/notification-text'
 import type { Notification } from '../types'
 
-/** The small round of the item's type at the avatar's corner (C-29): `at-sign`, `reply`, `list-checks`. */
-const TYPE_ICONS = { mention: AtSign, reply: Reply, task_assigned: ListChecks } as const
+/** The small round of the item's type at the avatar's corner (C-29): `at-sign`, `reply`, `list-checks`, `user-plus`, `user-check`. */
+const TYPE_ICONS = {
+    mention: AtSign,
+    reply: Reply,
+    task_assigned: ListChecks,
+    friend_request: UserPlus,
+    friend_accepted: UserCheck
+} as const
 /** An item no person is the subject of: its type's square in place of an avatar (C-29, 06 `types`). */
 const SYSTEM_ICONS = {
     task_reminder: AlarmClock,
@@ -44,6 +61,10 @@ export interface NotificationRowProps {
     /** Its place in the feed, from 1; how many there are, -1 while more may come. */
     position: number
     setSize: number
+    /** Buttons under the words, above the row's link: a friend request's Accept / Decline (06). */
+    actions?: ReactNode
+    /** A friend accepted in this opening of the inbox: its icon says so (06 `friend-accepted`). */
+    accepted?: boolean
 }
 
 /**
@@ -73,11 +94,13 @@ export function NotificationRow({
     onFocus,
     onKeyDown,
     position,
-    setSize
+    setSize,
+    actions,
+    accepted = false
 }: NotificationRowProps) {
     const { t } = useTranslation('notifications')
     const unread = !item.readAt
-    const TypeIcon = TYPE_ICONS[item.type as keyof typeof TYPE_ICONS] ?? AtSign
+    const TypeIcon = accepted ? UserCheck : (TYPE_ICONS[item.type as keyof typeof TYPE_ICONS] ?? AtSign)
     const SystemIcon = SYSTEM_ICONS[item.type as keyof typeof SYSTEM_ICONS]
     const name = item.actor?.displayName ?? item.actor?.username
     // A server item's words are sentences of their own; a message's follow who said it.
@@ -151,24 +174,29 @@ export function NotificationRow({
                     </span>
                 </span>
             )}
-            <span aria-hidden='true' className='flex min-w-0 flex-1 flex-col gap-0.5'>
-                <span className={cn('line-clamp-2 text-body text-text-primary', unread && 'font-semibold')}>
-                    {text.title}
-                </span>
-                {text.content ? (
-                    <span className='line-clamp-2 break-words text-body-sm text-text-secondary'>{text.content}</span>
-                ) : null}
-                {text.place ? (
-                    <span className='flex min-w-0 items-center text-label text-text-tertiary'>
-                        {text.place.icon ? (
-                            <text.place.icon className='mr-1 size-3 shrink-0' aria-hidden='true' />
-                        ) : null}
-                        <span className='min-w-0 shrink-0 truncate'>{where}</span>
-                        <span className='min-w-0 truncate'>&nbsp;· {text.place.serverName}</span>
+            <span className='flex min-w-0 flex-1 flex-col'>
+                <span aria-hidden='true' className='flex min-w-0 flex-col gap-0.5'>
+                    <span className={cn('line-clamp-2 text-body text-text-primary', unread && 'font-semibold')}>
+                        {text.title}
                     </span>
-                ) : text.source ? (
-                    <span className='truncate text-label text-text-tertiary'>{text.source}</span>
-                ) : null}
+                    {text.content ? (
+                        <span className='line-clamp-2 break-words text-body-sm text-text-secondary'>
+                            {text.content}
+                        </span>
+                    ) : null}
+                    {text.place ? (
+                        <span className='flex min-w-0 items-center text-label text-text-tertiary'>
+                            {text.place.icon ? (
+                                <text.place.icon className='mr-1 size-3 shrink-0' aria-hidden='true' />
+                            ) : null}
+                            <span className='min-w-0 shrink-0 truncate'>{where}</span>
+                            <span className='min-w-0 truncate'>&nbsp;· {text.place.serverName}</span>
+                        </span>
+                    ) : text.source ? (
+                        <span className='truncate text-label text-text-tertiary'>{text.source}</span>
+                    ) : null}
+                </span>
+                {actions ? <span className='relative z-[2] mt-2 flex gap-2'>{actions}</span> : null}
             </span>
             <span className='flex shrink-0 flex-col items-end gap-1.5'>
                 <WithTooltip label={fullTime}>

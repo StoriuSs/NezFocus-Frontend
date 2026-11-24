@@ -26,5 +26,5 @@ export const SHELL_RAIL_ID = 'shell-rail'
 
 /** What a route tells the AppShell, in its `handle`: which list column to show. */
 export interface ShellHandle {
-    column: 'study' | 'server' | 'settings' | 'serverSettings' | 'tasks'
+    column: 'study' | 'server' | 'settings' | 'serverSettings' | 'tasks' | 'messages'
 }

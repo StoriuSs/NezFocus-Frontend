@@ -136,3 +136,16 @@ export function withChannelHidden(pages: InboxPages, channelId: string): InboxPa
         (old) => old - unread
     )
 }
+
+/**
+ * The items to show: those held, and those kept by this opening of the
+ * inbox in their place among them (newest first: ids sort as time does),
+ * a kept one in place of its held copy. A request accepted here is deleted
+ * by the API (D-242) but stays, as "now friends", until the inbox closes
+ * (06 `friend-accepted`, D-248).
+ */
+export function withKept(items: Notification[], kept: ReadonlyMap<string, Notification>): Notification[] {
+    if (kept.size === 0) return items
+    const held = items.filter((item) => !kept.has(item.id))
+    return [...held, ...kept.values()].sort((a, b) => b.id.localeCompare(a.id))
+}

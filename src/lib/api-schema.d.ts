@@ -1602,6 +1602,297 @@ export interface paths {
         patch?: never
         trace?: never
     }
+    '/api/v1/me/relationships': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        /** Everyone in my list, all at once (D-242): friends with their presence, requests both ways, people I blocked. */
+        get: operations['RelationshipsController_list_v1']
+        put?: never
+        /**
+         * Ask someone by username, with an optional note (REQ-SOCIAL-01, D-110).
+         *     They asked me first: friends. Not found: no such username, oneself,
+         *     an account deleted or waiting to be. CANNOT_MESSAGE_USER: a block
+         *     either way. FRIEND_REQUEST_PENDING, ALREADY_FRIENDS. 50 a day of my
+         *     time zone: RATE_LIMIT_EXCEEDED with `reason: friend_requests`.
+         */
+        post: operations['RelationshipsController_requestByUsername_v1']
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/me/relationships/{userId}': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        /**
+         * Ask someone from their profile, no note (D-237): they asked me first,
+         *     friends; asked already or friends already, nothing changes. Refused as
+         *     the request by username is.
+         */
+        put: operations['RelationshipsController_request_v1']
+        post?: never
+        /**
+         * Decline their request, cancel mine, or unfriend (D-237): whatever
+         *     stands between us goes; with nothing there, nothing changes. A block
+         *     stays (`DELETE /me/blocks/{user_id}` takes it off).
+         */
+        delete: operations['RelationshipsController_remove_v1']
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/me/relationships/{userId}/accept': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        /**
+         * Accept their request (D-237). Friends already: nothing changes. No
+         *     request of theirs (cancelled meanwhile): NOT_FOUND_ERROR, which the
+         *     client says as an invitation no longer valid.
+         */
+        post: operations['RelationshipsController_accept_v1']
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/me/blocks/{userId}': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        /**
+         * Block someone: the friendship or request between us goes; neither can
+         *     ask, write or call the other (D-242). Blocked already: nothing changes.
+         *     Not found: oneself, an account deleted or waiting to be (D-243).
+         */
+        put: operations['BlocksController_block_v1']
+        post?: never
+        /** Unblock them: strangers again, their inbox items back (D-242). Not blocked: nothing changes. */
+        delete: operations['BlocksController_unblock_v1']
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/users/lookup': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        /**
+         * Someone's card by username (D-110), 30 lookups a minute
+         *     (RATE_LIMIT_EXCEEDED with `reason: user_lookup`). Not found: no such
+         *     username, oneself, an account deleted or waiting to be. One who
+         *     blocked me is found as anyone (REQ-SOCIAL-01).
+         */
+        get: operations['PeopleController_lookUp_v1']
+        put?: never
+        post?: never
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/users/{userId}/profile': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        /** Someone's profile (D-109, D-111); an account waiting to be deleted shows as deleted (D-182). */
+        get: operations['PeopleController_profile_v1']
+        put?: never
+        post?: never
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/me/dms': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        /** My DMs shown in my list, the latest active first: never closed, or a message after I closed it (D-244). */
+        get: operations['DmsController_list_v1']
+        put?: never
+        /**
+         * Open my DM with someone (D-242): the one there is, whatever stands
+         *     between us now, open again on my side; or a new one, for someone I
+         *     may message. Not found: oneself, no such account, one deleted or
+         *     waiting to be. CANNOT_MESSAGE_USER: every other reason, the same.
+         */
+        post: operations['DmsController_open_v1']
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/me/dms/{dmId}': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        post?: never
+        /** Close a DM on my side (D-244): it leaves my list until a message comes; closed already, nothing changes. */
+        delete: operations['DmsController_close_v1']
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/dms/{dmId}/calls': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        /**
+         * Call the other one of my DM: ringing, or `missed` at once (`busy`)
+         *     when they are in a call, ringing out, or rung by two already; the call
+         *     they make to me in this DM is answered (two calling each other meet in
+         *     one). CANNOT_MESSAGE_USER: someone I may not message, every reason the
+         *     same. CALL_IN_PROGRESS: me in another call already.
+         */
+        post: operations['CallsController_start_v1']
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/calls/{callId}/accept': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        /** Answer a call ringing to me: the others ringing to me are missed as busy (D-120). */
+        post: operations['CallsController_accept_v1']
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/calls/{callId}/decline': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        /** Decline a call ringing to me: no inbox item for me (REQ-SOCIAL-06). */
+        post: operations['CallsController_decline_v1']
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/calls/{callId}/end': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        /** Hang up: ringing, its caller cancels and its callee declines; active, it ends (D-242). */
+        post: operations['CallsController_end_v1']
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/calls/{callId}/join': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        get?: never
+        put?: never
+        /**
+         * A token to join the call's room at LiveKit (D-239, D-246), sending the
+         *     microphone and the camera: its callee after answering, its caller once
+         *     it is active, either again on a reload. Being in a voice room puts one
+         *     out of it first (D-210). `media` exactly when the answer's call is
+         *     active: ringing or over, it is null and `call.status` says what became
+         *     of it (joinAnswer reads the call first). Not one
+         *     of its two: NOT_FOUND. LiveKit not reached to leave a voice room:
+         *     SERVICE_UNAVAILABLE_ERROR. Not `@Idempotent()`: a retry is simply
+         *     another token. The token carries this request's sign-in session, whose
+         *     end puts the connection out (D-214).
+         */
+        post: operations['CallsController_join_v1']
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
+    '/api/v1/me/call': {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        /** My open calls (D-245): the one I make or am in, and up to two ringing to me. */
+        get: operations['CallsController_mine_v1']
+        put?: never
+        post?: never
+        delete?: never
+        options?: never
+        head?: never
+        patch?: never
+        trace?: never
+    }
 }
 export type webhooks = Record<string, never>
 export interface components {
@@ -2299,12 +2590,33 @@ export interface components {
         GrantRoleRequestDto: {
             user_ids: string[]
         }
+        MemberSoloActivityResponseDto: {
+            /** @enum {string} */
+            status: 'running' | 'paused' | 'waiting'
+            /** @enum {string} */
+            phase: 'focus' | 'short_break' | 'long_break'
+            /**
+             * Format: date-time
+             * @description While running only: the client shows "còn N phút" from it.
+             */
+            phase_ends_at: string | null
+        }
+        MemberActivityResponseDto: {
+            /**
+             * @description The kind of room they are in: a study room, with a session or not, or another voice room.
+             * @enum {string|null}
+             */
+            room: 'study' | 'voice' | null
+            solo: components['schemas']['MemberSoloActivityResponseDto'] | null
+        }
         MemberResponseDto: {
             /**
              * @description What others see of them now (REQ-AUTH-07): someone invisible is offline.
              * @enum {string}
              */
             status: 'online' | 'idle' | 'dnd' | 'offline'
+            /** @description What they are studying now (D-108, D-240); null when they show nothing: hidden, in a call, nowhere (D-247). */
+            activity: components['schemas']['MemberActivityResponseDto'] | null
             user_id: string
             username: string | null
             display_name: string | null
@@ -2452,7 +2764,7 @@ export interface components {
             mention_roles: components['schemas']['MentionedRoleResponseDto'][]
             /**
              * @description What a system message reports (`member_joined`, `message_pinned`, `task_due`,
-             *     `study_session_started`, `study_session_ended`); null on a regular one.
+             *     `study_session_started`, `study_session_ended`, `call_ended`); null on a regular one.
              */
             system_event: string | null
             /**
@@ -2516,7 +2828,7 @@ export interface components {
             mention_roles: components['schemas']['MentionedRoleResponseDto'][]
             /**
              * @description What a system message reports (`member_joined`, `message_pinned`, `task_due`,
-             *     `study_session_started`, `study_session_ended`); null on a regular one.
+             *     `study_session_started`, `study_session_ended`, `call_ended`); null on a regular one.
              */
             system_event: string | null
             /**
@@ -2608,7 +2920,7 @@ export interface components {
             mention_roles: components['schemas']['MentionedRoleResponseDto'][]
             /**
              * @description What a system message reports (`member_joined`, `message_pinned`, `task_due`,
-             *     `study_session_started`, `study_session_ended`); null on a regular one.
+             *     `study_session_started`, `study_session_ended`, `call_ended`); null on a regular one.
              */
             system_event: string | null
             /**
@@ -2655,7 +2967,8 @@ export interface components {
             items: components['schemas']['PinnedMessageResponseDto'][]
         }
         ReadStateResponseDto: {
-            server_id: string
+            /** @description The channel's server, for the rail's sums (C-05); null for a DM, which the 💬 badge counts (D-244). */
+            server_id: string | null
             channel_id: string
             /**
              * @description The last message read: an id to compare others with, or to open the
@@ -2935,6 +3248,9 @@ export interface components {
                 | 'task_unassigned'
                 | 'owner_transferred'
                 | 'moderation'
+                | 'friend_request'
+                | 'friend_accepted'
+                | 'missed_call'
             actor: components['schemas']['NotificationActorResponseDto'] | null
             /**
              * @description A mention: by name, a role, @everyone or @here; null for a reply.
@@ -2955,6 +3271,8 @@ export interface components {
             message_id: string | null
             task_id: string | null
             role_id: string | null
+            /** @description A friend request's note, at most 150 characters; null for every other item (REQ-SOCIAL-01). */
+            note: string | null
             /** Format: date-time */
             created_at: string
         }
@@ -3197,6 +3515,182 @@ export interface components {
         StudySessionPageResponseDto: {
             items: components['schemas']['StudySessionLineResponseDto'][]
             has_more: boolean
+        }
+        SoloActivityResponseDto: {
+            /** @enum {string} */
+            status: 'running' | 'paused' | 'waiting'
+            /** @enum {string} */
+            phase: 'focus' | 'short_break' | 'long_break'
+            /**
+             * Format: date-time
+             * @description While running only: the client shows "còn N phút" from it.
+             */
+            phase_ends_at: string | null
+        }
+        ActivityResponseDto: {
+            /**
+             * @description The kind of room they are in: a study room, with a session or not, or another voice room.
+             * @enum {string|null}
+             */
+            room: 'study' | 'voice' | null
+            solo: components['schemas']['SoloActivityResponseDto'] | null
+        }
+        SocialPersonResponseDto: {
+            id: string
+            username: string | null
+            display_name: string | null
+            avatar_url: string | null
+        }
+        RelationshipResponseDto: {
+            /** @enum {string} */
+            type: 'friend' | 'incoming' | 'outgoing' | 'blocked' | 'none'
+            /**
+             * Format: date-time
+             * @description When the request was sent, the friendship accepted or the block made; null for `none`.
+             */
+            since: string | null
+            /**
+             * @description What I see of a friend (D-242); null for anyone else.
+             * @enum {string|null}
+             */
+            presence: 'online' | 'idle' | 'dnd' | 'offline' | null
+            /** @description What a friend studies now (D-240, D-247); null for anyone else, and for a friend who shows nothing. */
+            activity: components['schemas']['ActivityResponseDto'] | null
+            user: components['schemas']['SocialPersonResponseDto']
+            /** @description A request's note: theirs to me, or mine to them (REQ-SOCIAL-01, D-248); null otherwise. */
+            note: string | null
+        }
+        RelationshipListResponseDto: {
+            relationships: components['schemas']['RelationshipResponseDto'][]
+        }
+        SendFriendRequestRequestDto: {
+            /** @description As typed: trimmed, a leading "@" taken off and lower-cased here as the dialog does. */
+            username: string
+            /** @description Seen only by the one asked (tab Đang chờ, inbox); trimmed, empty is none. */
+            note?: string | null
+        }
+        MutualServerResponseDto: {
+            id: string
+            name: string
+        }
+        PersonProfileResponseDto: {
+            /**
+             * @description Only when we are friends or share a server; null otherwise.
+             * @enum {string|null}
+             */
+            presence: 'online' | 'idle' | 'dnd' | 'offline' | null
+            /** @description What they study now, the ProfilePopover's block (D-79, D-240): only when we are friends or share a server; null otherwise. */
+            activity: components['schemas']['ActivityResponseDto'] | null
+            /**
+             * @description Where we stand, as RelationshipResponseDto's `type`.
+             * @enum {string}
+             */
+            relationship: 'friend' | 'incoming' | 'outgoing' | 'blocked' | 'none'
+            user: components['schemas']['SocialPersonResponseDto']
+            bio: string | null
+            mutual_servers: components['schemas']['MutualServerResponseDto'][]
+        }
+        DmMentionedUserResponseDto: {
+            id: string
+            username: string | null
+            display_name: string | null
+        }
+        DmMessageFilesResponseDto: {
+            count: number
+            images: number
+        }
+        DmLastMessageResponseDto: {
+            /** @enum {string} */
+            type: 'regular' | 'system'
+            /** @description What a system message says happened (`call_ended` from M6 L4); null on a regular one. */
+            system_event: string | null
+            /** @description Who wrote it; null on a system message. */
+            author_id: string | null
+            id: string
+            /** @description As written, its tokens (`<@id>`) named by `mention_users`. */
+            content: string
+            mention_users: components['schemas']['DmMentionedUserResponseDto'][]
+            files: components['schemas']['DmMessageFilesResponseDto']
+            /** Format: date-time */
+            created_at: string
+        }
+        DmResponseDto: {
+            /**
+             * @description What I see of them: a friend, or someone I share a server with (D-242); null for anyone else or an account gone.
+             * @enum {string|null}
+             */
+            presence: 'online' | 'idle' | 'dnd' | 'offline' | null
+            /** @description What they study now, where their presence is given (D-240, D-247); null when they show nothing. */
+            activity: components['schemas']['ActivityResponseDto'] | null
+            /** @description Null in a DM with no message left. */
+            last_message: components['schemas']['DmLastMessageResponseDto'] | null
+            /** @description The DM's channel id: its messages, pins, reads go through the channel routes (D-238). */
+            id: string
+            /** @description Nulls for an account deleted or waiting to be: the client says "Tài khoản đã bị xóa" (D-182). */
+            user: components['schemas']['SocialPersonResponseDto']
+            /** @description Whether I may message them now (REQ-SOCIAL-04): false shows the locked composer, no call button. */
+            can_message: boolean
+            /** Format: date-time */
+            created_at: string
+        }
+        DmListResponseDto: {
+            dms: components['schemas']['DmResponseDto'][]
+        }
+        OpenDmRequestDto: {
+            /** Format: uuid */
+            user_id: string
+        }
+        CallResponseDto: {
+            /** @enum {string} */
+            status: 'ringing' | 'active' | 'ended' | 'declined' | 'missed' | 'failed'
+            /**
+             * @description Why a call was missed: `no_answer` (45 seconds), `cancelled` (its caller hung up), `busy`; null otherwise.
+             * @enum {string|null}
+             */
+            end_reason: 'no_answer' | 'cancelled' | 'busy' | null
+            id: string
+            /** @description The DM it belongs to: its chat sits beside the call. */
+            dm_id: string
+            caller_id: string
+            callee_id: string
+            /** @description Started as a video call; either camera turns on or off at any time. */
+            video: boolean
+            /** @description The other one of the two, as I see them; nulls for an account deleted or waiting to be (D-182). */
+            user: components['schemas']['SocialPersonResponseDto']
+            /**
+             * Format: date-time
+             * @description When it started ringing.
+             */
+            created_at: string
+            /**
+             * Format: date-time
+             * @description When it was answered: the call's clock counts from here (spec 09).
+             */
+            accepted_at: string | null
+            /** Format: date-time */
+            ended_at: string | null
+        }
+        StartCallRequestDto: {
+            /** @description A video call: the camera on from the start. Either camera turns on or off at any time. */
+            video: boolean
+        }
+        CallMediaResponseDto: {
+            /** @description Good for the first connection within 10 minutes; LiveKit renews it itself once in. */
+            token: string
+            /** @description LiveKit's address: ws://localhost:7880 in development, wss:// in production. */
+            url: string
+        }
+        JoinCallResponseDto: {
+            /** @description The token to join its room; null unless the call is `active`. */
+            media: components['schemas']['CallMediaResponseDto'] | null
+            /** @description The call now: a call ringing or over has no token, and its `status` says what became of it. */
+            call: components['schemas']['CallResponseDto']
+        }
+        MyCallResponseDto: {
+            /** @description The call I make (ringing) or am in (active): the call page and the `call` dock; null for none. */
+            current: components['schemas']['CallResponseDto'] | null
+            /** @description The calls ringing to me, oldest first, at most two (the cards). */
+            incoming: components['schemas']['CallResponseDto'][]
         }
     }
     responses: never
@@ -6210,6 +6704,459 @@ export interface operations {
                     'application/json': {
                         meta: components['schemas']['ApiResponseMetaDto']
                         data: components['schemas']['StudySessionPageResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    RelationshipsController_list_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['RelationshipListResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    RelationshipsController_requestByUsername_v1: {
+        parameters: {
+            query?: never
+            header: {
+                /** @description UUID identifying one user intent */
+                'Idempotency-Key': string
+            }
+            path?: never
+            cookie?: never
+        }
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['SendFriendRequestRequestDto']
+            }
+        }
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['RelationshipResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    RelationshipsController_request_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                userId: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['RelationshipResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    RelationshipsController_remove_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                userId: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['RelationshipResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    RelationshipsController_accept_v1: {
+        parameters: {
+            query?: never
+            header: {
+                /** @description UUID identifying one user intent */
+                'Idempotency-Key': string
+            }
+            path: {
+                userId: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['RelationshipResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    BlocksController_block_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                userId: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['RelationshipResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    BlocksController_unblock_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                userId: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['RelationshipResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    PeopleController_lookUp_v1: {
+        parameters: {
+            query: {
+                /** @description As typed: trimmed, a leading "@" taken off and lower-cased here as the dialog does. */
+                username: string
+            }
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['PersonProfileResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    PeopleController_profile_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                userId: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['PersonProfileResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    DmsController_list_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['DmListResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    DmsController_open_v1: {
+        parameters: {
+            query?: never
+            header: {
+                /** @description UUID identifying one user intent */
+                'Idempotency-Key': string
+            }
+            path?: never
+            cookie?: never
+        }
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['OpenDmRequestDto']
+            }
+        }
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['DmResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    DmsController_close_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                /** @description The DM's channel id: its messages go through the channel routes (D-238). */
+                dmId: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: null
+                    }
+                }
+            }
+        }
+    }
+    CallsController_start_v1: {
+        parameters: {
+            query?: never
+            header: {
+                /** @description UUID identifying one user intent */
+                'Idempotency-Key': string
+            }
+            path: {
+                /** @description The DM's channel id: its messages go through the channel routes (D-238). */
+                dmId: string
+            }
+            cookie?: never
+        }
+        requestBody: {
+            content: {
+                'application/json': components['schemas']['StartCallRequestDto']
+            }
+        }
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['CallResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    CallsController_accept_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                /** @description A call of mine: one of two others is not found, as none (NFR-SEC-05). */
+                callId: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['CallResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    CallsController_decline_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                /** @description A call of mine: one of two others is not found, as none (NFR-SEC-05). */
+                callId: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['CallResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    CallsController_end_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                /** @description A call of mine: one of two others is not found, as none (NFR-SEC-05). */
+                callId: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['CallResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    CallsController_join_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                /** @description A call of mine: one of two others is not found, as none (NFR-SEC-05). */
+                callId: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['JoinCallResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    CallsController_mine_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path?: never
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['MyCallResponseDto']
                     }
                 }
             }

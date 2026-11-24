@@ -1,0 +1,9 @@
+/*
+ * The classes of the Friends page (tailwind.social.config.js, D-193): only
+ * the utilities the social feature's files use that the main stylesheet
+ * lacks, loaded with the page's chunk. The base styles and the design
+ * tokens come from src/index.css, loaded first.
+ */
+@config "../../../tailwind.social.config.js";
+
+@tailwind utilities;

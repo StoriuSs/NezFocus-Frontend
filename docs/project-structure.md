@@ -462,7 +462,7 @@ Habits worth keeping:
   room but what it is handed (`StudyRoomView`, and the room's round control
   as a prop), the servers feature keeps each room's session in its list from
   what study hears (`listenForSessions`, a port: study declares the sink,
-  `liveServers.ts` hands one, D-231); `users, realtime ← voice ← servers`: the channel page shows a room's page
+  `liveServers.ts` hands one, D-231); `users, realtime ← social ← notifications`: the inbox answers a friend request with the social feature's hooks, and the Privacy page (users) counts the people blocked through the `BlockList` port the AppShell connects (D-248); `users, realtime ← voice ← servers`: the channel page shows a room's page
   and the channel list the people in each room, the servers feature handing
   voice each room as a `VoiceRoom` (`servers/lib/voice-room.ts`), what one
   may do there read from the bits and whom one outranks there (D-208), and keeping who is in it in its own list

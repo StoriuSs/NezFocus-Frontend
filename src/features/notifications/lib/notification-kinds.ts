@@ -16,3 +16,6 @@ export const isServerItem = (item: Notification) => item.type === 'owner_transfe
 /** A kick or a ban: nothing to open, read once the inbox shows it (06 › Luật hộp thư, H1). */
 export const isRemoval = (item: Notification) =>
     item.type === 'moderation' && (item.server?.action === 'kick' || item.server?.action === 'ban')
+
+/** A friend request to me, or mine accepted (D-111): about a person, no server. */
+export const isFriendItem = (item: Notification) => item.type === 'friend_request' || item.type === 'friend_accepted'

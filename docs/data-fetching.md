@@ -538,6 +538,29 @@ list takes that channel's items out at once (`hideChannelItems`). The open
 inbox marks the kicks and bans it holds read (they have nowhere to open, 06 ›
 Luật hộp thư), unless offline.
 
+## Friends, kept live
+
+Friends, requests both ways and the people one blocked (S-DM-02, D-242) are
+one query, `socialKeys.relationships()` (`useRelationships`,
+`src/features/social/api/`), read once as the AppShell opens (`GET
+/me/relationships`, no pages) and never again on its own (`staleTime:
+Infinity`): the Friends page lists, sorts and searches it in place, and the
+messages column counts the requests waiting from it. `liveRelationships.ts`
+puts `relationship.added` / `relationship.updated` in place, takes the person
+of `relationship.removed` out and moves a friend's dot on `presence.updated`
+(presence is held for friends only); each `ready` reads it again. The
+changes are pure functions (`lib/relationship-cache.ts`).
+
+Every change goes through the hooks of `useRelationshipActions.ts`, from the
+Friends page and the inbox alike: each puts the answer in the list (`none`
+takes the person out), the event of the same change coming after changes
+nothing more. Sending (by username) and accepting are `@Idempotent`
+(`useIdempotentMutation`); an accept answered `NOT_FOUND_ERROR` (the request
+gone meanwhile) takes the request out too. The words each screen says once
+done (a Toast) are the screen's: the hooks are in the AppShell's download.
+The Privacy page counts the people blocked from the same query, lent through
+the `BlockList` port the AppShell connects (users cannot import social).
+
 ## The servers, kept live
 
 Socket events about a server (`server.*`, `channel.*`, `category.*`,

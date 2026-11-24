@@ -44,6 +44,7 @@ const member = (userId: string, roleIds: string[] = [], extra: Partial<ServerMem
     joinedAt: NOW.toISOString(),
     timeoutUntil: null,
     timeoutReason: null,
+    activity: null,
     ...extra
 })
 

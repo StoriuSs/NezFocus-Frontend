@@ -479,6 +479,18 @@ in the start and cycle dialogs (S-ROOM-03, S-ROOM-04). `variant='view'` is
 the Header's (D-55): 32 high, a segment with an `icon` before its label and
 a `suffix` after it (the cameras on, "📹1"), for a study room's Ring / Grid.
 
+### `Tabs`
+
+`src/components/ui/tabs.tsx` (C-26b, D-248): parts of one page side by side,
+the one shown underlined (`id`, `value`, `onValueChange`, `tabs`,
+`aria-label`). Unlike `SegmentedControl` (a value in a form), a tab changes
+the content below: the page draws it with `tabPanelProps(id, value)`. ← →
+choose at once, going round, Home / End the first and last; Tab reaches the
+chosen one only. A tab may carry a number to act on (`badge`, the Badge
+count, with `badgeLabel` saying it in words: the tab's name becomes "Đang
+chờ, 1 lời mời đến"). Used by the role editor (Permissions / Members) and
+the Friends page (S-DM-02); the page keeps the tab in its URL itself.
+
 ### `Select`
 
 `src/components/ui/select.tsx` (C-25 `select`): a 40-high field with
