@@ -26,8 +26,9 @@ export function useStudyHistory(period: StatsPeriod) {
             // Today's counted seconds as the lines were read: the line one is in grows by what today gains after.
             const day = client.getQueryData<StudyToday>(studyKeys.today())
             const now = serverNow()
-            const countedToday = day ? todaySecondsAt(day, null, now, dayStartOf(now, accountTimeZone())) : null
-            return { ...page, countedToday }
+            const readDay = dayStartOf(now, accountTimeZone())
+            const countedToday = day ? todaySecondsAt(day, null, now, readDay) : null
+            return { ...page, countedToday, readDay }
         },
         initialPageParam: null as string | null,
         getNextPageParam: (last: StudyHistoryRead) => (last.hasMore ? (last.items.at(-1)?.sessionId ?? null) : null)

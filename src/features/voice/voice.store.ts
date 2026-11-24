@@ -28,7 +28,10 @@ export interface Call {
     channelId: string
     name: string
     phase: CallPhase
-    /** Joined again by reloading the tab (D-51): one never left the room for the API (D-215). */
+    /**
+     * Joined by one already in the room: a reload (D-51), or "Vào lại ở đây"
+     * from another tab or device (D-236). One never left it for the API (D-215).
+     */
     rejoined?: boolean
 }
 

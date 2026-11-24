@@ -4,7 +4,7 @@ import '@/i18n/study'
 import { cycleName, cycleSummary } from '../lib/cycle-words'
 import { studiedText } from '../lib/durations'
 import { sessionLineText, tabText } from '../lib/phase-words'
-import { DAY_CAP_SECONDS, dayStartOf, streakShown, todaySecondsAt } from '../lib/today'
+import { DAY_CAP_SECONDS, dayStartOf, runningBeforeDay, streakShown, todaySecondsAt } from '../lib/today'
 import {
     clockText,
     isLater,
@@ -119,6 +119,20 @@ describe("one's minutes today (D-224, D-231)", () => {
         })
         const at = Date.parse('2026-11-21T17:10:00.000Z')
         expect(todaySecondsAt(today('2026-11-21T16:55:00.000Z', 5 * 3600), late, at, DAY)).toBe(600)
+    })
+
+    it('keeps the focus run to midnight, not counted yet, for yesterday until a count writes it (D-236)', () => {
+        // Focus from 23:50 yesterday, counted to 23:55; at 00:10 today: 5 minutes of yesterday not counted yet.
+        const late = session({
+            phaseStartedAt: '2026-11-21T16:50:00.000Z',
+            stretchStartedAt: '2026-11-21T16:50:00.000Z',
+            phaseEndsAt: '2026-11-21T17:15:00.000Z'
+        })
+        expect(runningBeforeDay(today('2026-11-21T16:55:00.000Z'), late, DAY)).toBe(300)
+        // A count since midnight wrote it; paused or in none, nothing runs.
+        expect(runningBeforeDay(today('2026-11-21T17:05:00.000Z'), late, DAY)).toBe(0)
+        expect(runningBeforeDay(today('2026-11-21T16:55:00.000Z'), null, DAY)).toBe(0)
+        expect(runningBeforeDay(today(null), late, DAY)).toBe(0)
     })
 
     it('shows the streak one more once today reaches 15 minutes before a count wrote it (STUDY-07)', () => {

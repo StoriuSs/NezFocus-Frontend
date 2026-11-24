@@ -18,7 +18,7 @@ vi.mock('@/features/users/api/useProfile', () => ({
 const serversApi = { fetchServers: vi.fn<() => Promise<Server[]>>() }
 vi.mock('../api/servers.api', () => serversApi)
 
-const { compareRooms, keptOrder, liveRoomsOf, orderOf } = await import('../lib/live-rooms')
+const { compareRooms, keptOrder, liveRoomsOf, orderOf, studyingRoomOf } = await import('../lib/live-rooms')
 const { AWAY_REORDER_MS, LEAVING_MS } = await import('../hooks/useLiveRooms')
 const { serverKeys } = await import('../api/keys')
 const { default: LiveRooms } = await import('../components/live-rooms/LiveRooms')
@@ -158,6 +158,33 @@ function page() {
     )
 }
 const rows = () => within(screen.getByRole('list')).getAllByRole('link')
+
+describe('the session one takes part in, whichever tab is in its room (studyingRoomOf, A3-a)', () => {
+    const servers = () => [
+        server('ot', 'Ôn thi', [room('im-lang', people(3, 'binh')), room('thao-luan', people(2, 'an'))]),
+        server('np', 'Nhóm', [room('goc', people(1, 'chi'))])
+    ]
+
+    it("is this tab's room's, as soon as it is in one", () => {
+        const found = studyingRoomOf(servers(), 'an', { channelId: 'im-lang' })
+        expect(found).toMatchObject({ name: 'im-lang', session: { id: 's-im-lang' } })
+    })
+
+    it("in another tab's or device's room, the one the servers list one in", () => {
+        expect(studyingRoomOf(servers(), 'an', null)).toMatchObject({
+            name: 'thao-luan',
+            session: { id: 's-thao-luan' }
+        })
+    })
+
+    it('is none in a room with no session, or listed in none', () => {
+        const quiet = [server('ot', 'Ôn thi', [channel('im-lang', { isStudyRoom: true, voiceStates: [person('an')] })])]
+        expect(studyingRoomOf(quiet, 'an', null)).toBeNull()
+        expect(studyingRoomOf(quiet, 'an', { channelId: 'im-lang' })).toBeNull()
+        expect(studyingRoomOf(servers(), 'dung', null)).toBeNull()
+        expect(studyingRoomOf(servers(), undefined, null)).toBeNull()
+    })
+})
 
 describe("the Study page's rooms (08 S-STUDY-01, C-44)", () => {
     beforeAll(async () => {

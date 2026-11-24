@@ -48,6 +48,18 @@ export function todaySecondsAt(today: StudyToday, session: AnySession | null, no
 }
 
 /**
+ * The focus that ran from the last count to the start of today, when that
+ * count was of yesterday (D-236): yesterday's seconds no count has written
+ * yet, which the Stats page and the week chart add to yesterday until one
+ * does. 0 once a count since midnight wrote them, or with nothing running.
+ */
+export function runningBeforeDay(today: StudyToday, session: AnySession | null, dayStart: number): number {
+    const counted = today.countedUntil ? Date.parse(today.countedUntil) : null
+    if (counted === null || counted >= dayStart) return 0
+    return runningBetween(session, counted, dayStart)
+}
+
+/**
  * The streak to show at `now` (STUDY-07, D-224): the last count's, one more
  * once today reaches 15 minutes before a count has written it (the backend
  * writes it at the next count). A last count from before today began was of

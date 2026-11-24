@@ -121,6 +121,13 @@ describe('the week chart’s rules (C-45)', () => {
         expect(weekTotal(bars) / MIN).toBe(110)
     })
 
+    it('adds the focus run to midnight, not counted yet, to yesterday’s column (D-236)', () => {
+        const midweek = week({ today: '2026-11-19' })
+        const bars = weekBars(midweek, 20 * MIN, 15 * MIN)
+        expect(bars.map((bar) => bar.seconds / MIN).slice(0, 4)).toEqual([0, 50, 55, 20])
+        expect(weekTotal(bars) / MIN).toBe(125)
+    })
+
     it('scales to the week’s most, 60 minutes at least; a day with seconds 4 high at least, none a line of 2', () => {
         const bars = weekBars(week(), 0)
         expect(chartScale(bars)).toBe(3600)

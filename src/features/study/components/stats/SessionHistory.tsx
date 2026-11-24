@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useBrowserOnline } from '@/hooks/useBrowserOnline'
 import { useStudyHistory } from '../../api/useStudyHistory'
 import { lineSecondsAt } from '../../lib/history'
+import { dayStartOf, runningBeforeDay } from '../../lib/today'
 import type { StatsPeriod } from '../../lib/periods'
 import type { AnySession, StudyHistoryLine, StudyToday } from '../../types'
 import { SECTION_TITLE } from '../StreakBlock'
@@ -45,6 +46,9 @@ export function SessionHistory({
     for (const line of history.data?.pages.flatMap((page) => page.items) ?? []) byId.set(line.sessionId, line)
     const lines = [...byId.values()]
     const countedToday = history.data?.pages[0]?.countedToday ?? null
+    const readDay = history.data?.pages[0]?.readDay ?? null
+    const dayStart = dayStartOf(now, timeZone)
+    const before = day ? runningBeforeDay(day, session, dayStart) : 0
 
     let body
     if (history.isError && !history.data) {
@@ -77,7 +81,16 @@ export function SessionHistory({
                         <SessionRow
                             key={line.sessionId}
                             line={line}
-                            seconds={lineSecondsAt(line, { countedToday, todaySeconds, session, today: day, now })}
+                            seconds={lineSecondsAt(line, {
+                                countedToday,
+                                todaySeconds,
+                                session,
+                                today: day,
+                                now,
+                                readDay,
+                                dayStart,
+                                before
+                            })}
                             today={today}
                             timeZone={timeZone}
                         />

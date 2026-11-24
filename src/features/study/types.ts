@@ -103,6 +103,8 @@ export type StudyHistoryPage = ApiModel<'StudySessionPageResponseDto'>
  */
 export interface StudyHistoryRead extends StudyHistoryPage {
     countedToday: number | null
+    /** The start of the day it was read on (D-236). */
+    readDay: number
 }
 
 /** A study room as its page hands it to the session's parts (the voice feature's `VoiceRoom`, its study fields). */

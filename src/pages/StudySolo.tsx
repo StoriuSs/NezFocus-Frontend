@@ -3,9 +3,9 @@ import { Timer } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { PageLoader } from '@/components/PageLoader'
 import { ShellPage } from '@/components/shell/ShellPage'
-import { useJoinedSession } from '@/features/servers'
+import { useStudyingRoom } from '@/features/servers'
 import { SoloStage, useSoloSession } from '@/features/study'
-import { RoomControl, useVoiceStore } from '@/features/voice'
+import { RoomControl } from '@/features/voice'
 import { PHASE_ROOM } from '@/lib/phase-colors'
 
 /**
@@ -19,8 +19,8 @@ import { PHASE_ROOM } from '@/lib/phase-colors'
 export default function StudySolo() {
     const { t } = useTranslation()
     const session = useSoloSession().data?.session ?? null
-    const joined = useJoinedSession()
-    const room = useVoiceStore((state) => state.call?.name ?? null)
+    // A room's session, in this tab or another (D-236): no Solo starts.
+    const studying = useStudyingRoom()
     const ground = session && session.status !== 'waiting' ? PHASE_ROOM[session.phase] : null
     return (
         <ShellPage
@@ -34,7 +34,7 @@ export default function StudySolo() {
             }
         >
             <Suspense fallback={<PageLoader className='min-h-0 flex-1' />}>
-                <SoloStage Control={RoomControl} inRoom={joined ? room : null} />
+                <SoloStage Control={RoomControl} inRoom={studying?.name ?? null} />
             </Suspense>
         </ShellPage>
     )

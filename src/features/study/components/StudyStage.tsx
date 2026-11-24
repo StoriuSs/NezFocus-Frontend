@@ -92,7 +92,7 @@ export default function StudyStage({
     me: string
     /** When one joined the room this time: a summary of a session ended before is not one's own. */
     joinedAt: string | null
-    /** This tab joined again by reloading (D-51): no word on when one is counted from, one was all along (D-215). */
+    /** Joined by one already in the room (a reload, here instead of elsewhere, D-236): counted all along, no word of since when. */
     rejoined?: boolean
     /** Everyone in the room, in the order shown, oneself first, with the names to say. */
     people: { id: string; name: string }[]

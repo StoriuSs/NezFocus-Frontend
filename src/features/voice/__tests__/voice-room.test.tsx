@@ -401,6 +401,12 @@ describe("a voice room's preview page (S-ROOM-01 voice-preview)", () => {
         await expectNoA11yViolations()
     })
 
+    it('joins here as one already in the room: counted all along, no word of since when (D-236)', async () => {
+        show(room({ people: [person(AN, 'An'), TUAN] }))
+        await userEvent.click(screen.getByRole('button', { name: 'Join here instead' }))
+        await waitFor(() => expect(useVoiceStore.getState().call).toMatchObject({ rejoined: true }))
+    })
+
     it('shows the mic blocked with how to fix it; the room may still be joined to listen (mic-blocked)', async () => {
         useVoiceStore.setState({ mic: 'blocked' })
         show(room())

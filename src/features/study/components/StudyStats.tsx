@@ -12,7 +12,7 @@ import { useStudyWeek } from '../api/useStudyWeek'
 import { useNewDay } from '../hooks/useNewDay'
 import { useSessionClock } from '../hooks/useSessionClock'
 import { studiedText } from '../lib/durations'
-import { dayStartOf, streakShown, todaySecondsAt } from '../lib/today'
+import { dayStartOf, runningBeforeDay, streakShown, todaySecondsAt } from '../lib/today'
 import { dateKeyAt, isMilestoneDay, weekBars, weekTotal } from '../lib/week'
 import type { AnySession } from '../types'
 import { ALWAYS, CheerBlock } from './CheerBlock'
@@ -92,7 +92,8 @@ export default function StudyStats({ session }: { session: AnySession | null }) 
 
     const streak = streakShown(today.data, session, now, dayStart)
     const longest = Math.max(week.data.longest, streak)
-    const bars = weekBars(week.data, todaySeconds)
+    // Yesterday's column gains the focus run to midnight no count has written yet (D-236).
+    const bars = weekBars(week.data, todaySeconds, runningBeforeDay(today.data, session, dayStart))
     return (
         <section className='flex flex-col'>
             {isMilestoneDay(streak, todaySeconds) ? (

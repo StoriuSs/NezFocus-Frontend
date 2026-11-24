@@ -70,16 +70,28 @@ export function lineSecondsAt(
         todaySeconds,
         session,
         today,
-        now
+        now,
+        readDay = null,
+        dayStart = null,
+        before = 0
     }: {
         countedToday: number | null
         todaySeconds: number
         session: AnySession | null
         today: StudyToday | undefined
         now: number
+        /** The start of the day the history was read on (`countedToday`'s day). */
+        readDay?: number | null
+        /** The start of today. */
+        dayStart?: number | null
+        /** The focus run to midnight no count has written yet (`runningBeforeDay`). */
+        before?: number
     }
 ): number {
     if (line.lastLeftAt !== null) return line.seconds
+    // Read on a day gone by, no count since (D-236): the focus run since then is the run to midnight and today's.
+    if (countedToday !== null && readDay !== null && dayStart !== null && readDay !== dayStart && before > 0)
+        return line.seconds + before + todaySeconds
     if (countedToday !== null) return line.seconds + Math.max(0, todaySeconds - countedToday)
     if (session?.id !== line.sessionId || !today?.countedUntil) return line.seconds
     return line.seconds + runningBetween(session, Date.parse(today.countedUntil), now)

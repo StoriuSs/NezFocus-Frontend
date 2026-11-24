@@ -328,6 +328,21 @@ describe('the numbers as they stand now (D-235)', () => {
         expect(yesterday.total).toBe(275 * MIN)
     })
 
+    it('puts the focus run to midnight, not counted yet, on yesterday, and on every total (D-236)', () => {
+        const base = periodNumbers(statsOf(thisWeek), thisWeek, '2026-11-22', 63 * MIN, 'solo')
+        const late = periodNumbers(statsOf(thisWeek), thisWeek, '2026-11-22', 63 * MIN, 'solo', {
+            date: '2026-11-21',
+            seconds: 15 * MIN
+        })
+        expect(late.days.at(-2)?.seconds).toBe((base.days.at(-2)?.seconds ?? 0) + 15 * MIN)
+        expect(late.days.at(-1)?.seconds).toBe(base.days.at(-1)?.seconds)
+        expect(late.total).toBe(base.total + 15 * MIN)
+        expect(late.solo).toBe(base.solo + 15 * MIN)
+        expect(late.room).toBe(base.room)
+        expect(late.allTime).toBe(base.allTime + 15 * MIN)
+        expect(late.grid?.at(-2)?.seconds).toBe((base.grid?.at(-2)?.seconds ?? 0) + 15 * MIN)
+    })
+
     it('is one’s best week once its total now passes every other week’s', () => {
         expect(periodNumbers(statsOf(thisWeek), thisWeek, '2026-11-22', 45 * MIN, null).best).toBe(false)
         const close = statsOf(thisWeek, { bestOtherWeekSeconds: 280 * MIN })
@@ -385,6 +400,29 @@ describe('a line of the history (C-47, D-230)', () => {
         // Read before today was: the focus running after today's count.
         expect(lineSecondsAt(open, { ...at, countedToday: null, todaySeconds: 0 })).toBe(11 * MIN + 7 * MIN + 18)
         expect(lineSecondsAt(open, { ...at, countedToday: null, todaySeconds: 0, session: null })).toBe(11 * MIN)
+    })
+
+    it('grows the line one is in past midnight by the focus run since the last count, read the day before (D-236)', () => {
+        const running = solo()
+        const now = Date.parse(READ_AT)
+        /** 22/11 began at 00:00 in Hồ Chí Minh. */
+        const DAY = Date.parse('2026-11-21T17:00:00.000Z')
+        const open = line({ sessionId: running.id, lastLeftAt: null, seconds: 11 * MIN })
+        const at = { session: running, today: today({ countedUntil: '2026-11-21T16:47:00.000Z' }), now }
+        // Read yesterday (45 counted then); today 2 minutes so far, 13 more before midnight not counted yet.
+        const since = { readDay: DAY - 24 * 3600_000, dayStart: DAY, before: 13 * MIN }
+        expect(lineSecondsAt(open, { ...at, ...since, countedToday: 45 * MIN, todaySeconds: 2 * MIN })).toBe(26 * MIN)
+        // Read today: as before.
+        expect(
+            lineSecondsAt(open, {
+                ...at,
+                readDay: DAY,
+                dayStart: DAY,
+                before: 0,
+                countedToday: 45 * MIN,
+                todaySeconds: 52 * MIN
+            })
+        ).toBe(18 * MIN)
     })
 })
 

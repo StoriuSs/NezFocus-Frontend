@@ -2,10 +2,9 @@ import { Suspense, useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ShellPage } from '@/components/shell/ShellPage'
-import { LiveRooms, NoServers, useJoinedSession, useServers } from '@/features/servers'
+import { LiveRooms, NoServers, useServers, useStudyingRoom } from '@/features/servers'
 import { SoloCard, StudyStats, useSoloSession } from '@/features/study'
 import { useProfile } from '@/features/users'
-import { useVoiceStore } from '@/features/voice'
 
 /** Set by the welcome page when the account has just been completed (01 S-ONB-01). */
 export interface StudyPageState {
@@ -32,8 +31,8 @@ export default function Study() {
     const [first] = useState(state?.firstVisit === true)
     const servers = useServers()
     const profile = useProfile()
-    const joined = useJoinedSession()
-    const room = useVoiceStore((store) => store.call?.name ?? null)
+    // In this tab's room or another's (D-236).
+    const studying = useStudyingRoom()
     const solo = useSoloSession().data?.session ?? null
 
     useEffect(() => {
@@ -59,10 +58,10 @@ export default function Study() {
                 </div>
                 <div className='flex min-w-0 flex-col gap-8'>
                     <Suspense fallback={null}>
-                        <SoloCard inRoom={joined ? room : null} />
+                        <SoloCard inRoom={studying?.name ?? null} />
                     </Suspense>
                     <Suspense fallback={null}>
-                        <StudyStats session={joined ?? solo} />
+                        <StudyStats session={studying?.session ?? solo} />
                     </Suspense>
                 </div>
             </div>

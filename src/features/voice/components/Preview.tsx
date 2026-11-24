@@ -129,7 +129,12 @@ export function Preview({
     const solo = useSoloSession().data?.session ?? null
     const askYield = useSoloYield((state) => state.ask)
     const join = () => {
-        const go = () => void joinRoom({ serverId: room.serverId, channelId: room.channelId, name: room.name })
+        // Here instead of elsewhere: one never left the room for the API, counted all along (D-236).
+        const go = () =>
+            void joinRoom(
+                { serverId: room.serverId, channelId: room.channelId, name: room.name },
+                elsewhere ? { rejoin: true } : {}
+            )
         // A room with a session ends one's Solo: asked first (08 `join-room-confirm`, D-103); none without one.
         if (solo && room.session) {
             askYield({ kind: 'join', room: room.name, confirm: go })

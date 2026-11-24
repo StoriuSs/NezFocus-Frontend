@@ -36,6 +36,35 @@ export function studyRowOf(state: unknown): StudyRow | null {
         : null
 }
 
+/** The session one takes part in and its room's name (`studyingRoomOf`). */
+export interface StudyingRoom {
+    session: RoomSession
+    name: string
+}
+
+/**
+ * The room session one takes part in, as the servers held say (D-236):
+ * the room this tab is in (`call`, once joined), else the one whose people
+ * list oneself, joined in another tab or device. What the Study pages count
+ * today's minutes with and why they start no Solo (REQ-STUDY-05); null in
+ * no room, or in one with no session.
+ */
+export function studyingRoomOf(
+    servers: Server[],
+    me: string | undefined,
+    call: { channelId: string } | null
+): StudyingRoom | null {
+    const channels = servers.flatMap((server) => server.channels)
+    const found = call
+        ? channels.find((channel) => channel.id === call.channelId)
+        : me === undefined
+          ? undefined
+          : channels.find(
+                (channel) => channel.focusSession && (channel.voiceStates ?? []).some((one) => one.user.id === me)
+            )
+    return found?.focusSession ? { session: found.focusSession, name: found.name } : null
+}
+
 /**
  * Every room with a session, running or paused, in one's servers that one
  * sees and may join (REQ-STUDY-09: CONNECT; a channel held is one seen; a

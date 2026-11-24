@@ -3,7 +3,7 @@ import { useStudyPeriod } from '../api/useStudyPeriod'
 import { useStudyToday } from '../api/useStudyToday'
 import { periodNumbers } from '../lib/period-stats'
 import type { StatsPeriod } from '../lib/periods'
-import { dayStartOf, streakShown, todaySecondsAt } from '../lib/today'
+import { dayStartOf, runningBeforeDay, streakShown, todaySecondsAt } from '../lib/today'
 import { dateKeyAt } from '../lib/week'
 import type { AnySession } from '../types'
 import { useNewDay } from './useNewDay'
@@ -34,6 +34,8 @@ export function useStatsView(
     const dayStart = dayStartOf(now, zone)
     const todaySeconds = todaySecondsAt(day.data, session, now, dayStart)
     const streak = streakShown(day.data, session, now, dayStart)
+    // Yesterday's focus run to midnight, no count has written yet (D-236).
+    const before = { date: dateKeyAt(dayStart - 1, zone), seconds: runningBeforeDay(day.data, session, dayStart) }
     return {
         now,
         zone,
@@ -47,7 +49,14 @@ export function useStatsView(
             longest: Math.max(stats.data.streak.longest, streak),
             firstDate: stats.data.firstDate,
             empty: stats.data.firstDate === null && todaySeconds === 0 && session === null,
-            numbers: periodNumbers(stats.data, period, today, todaySeconds, joined ? 'room' : solo ? 'solo' : null)
+            numbers: periodNumbers(
+                stats.data,
+                period,
+                today,
+                todaySeconds,
+                joined ? 'room' : solo ? 'solo' : null,
+                before.seconds > 0 ? before : null
+            )
         }
     }
 }

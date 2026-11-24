@@ -131,7 +131,8 @@ function ended(id: number, room: RoomToJoin) {
 /**
  * Joins `room`, the microphone and camera as the preview page left them
  * (REQ-VC-03); `devicesOff` (a reload, D-51) joins with both off; `rejoin`:
- * the reload's own join, which the call keeps (`rejoined`). True once
+ * one already in the room joins (a reload, or here instead of elsewhere,
+ * D-236), which the call keeps (`rejoined`). True once
  * in; false when it failed (the store holds why) or another join or a leave
  * came first. The preview's picture stays until LiveKit has the camera.
  */

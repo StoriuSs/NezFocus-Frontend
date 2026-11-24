@@ -35,24 +35,30 @@ export interface PeriodNumbers {
  * falls in, to the side of the session one is in (`kind`; a room's when in
  * none: a count since the read, soon read again), and to the lifetime total.
  * A read from another day (just past midnight, the new day's read coming)
- * adds nothing.
+ * adds nothing. `before`: the focus run to midnight no count has written
+ * yet (D-236), yesterday's: to its day, its period, its side and the
+ * lifetime the same way.
  */
 export function periodNumbers(
     stats: StudyPeriodStats,
     period: StatsPeriod,
     today: string,
     todaySeconds: number,
-    kind: 'room' | 'solo' | null
+    kind: 'room' | 'solo' | null,
+    before: { date: string; seconds: number } | null = null
 ): PeriodNumbers {
-    const gained = stats.today === today ? Math.max(0, todaySeconds - stats.todaySeconds) : 0
-    const inPeriod = period.start <= today && today <= period.end
+    const read = stats.today === today
+    const gained = read ? Math.max(0, todaySeconds - stats.todaySeconds) : 0
+    const late = read && before ? before : null
+    const inPeriod = (date: string) => period.start <= date && date <= period.end
     const dayOf = ({ date, focusedSeconds }: { date: string; focusedSeconds: number }): PeriodDay => ({
         date,
-        seconds: date === today ? focusedSeconds + gained : focusedSeconds,
+        seconds:
+            date === today ? focusedSeconds + gained : focusedSeconds + (late && date === late.date ? late.seconds : 0),
         today: date === today,
         ahead: date > today
     })
-    const added = inPeriod ? gained : 0
+    const added = (inPeriod(today) ? gained : 0) + (late && inPeriod(late.date) ? late.seconds : 0)
     const total = stats.totalSeconds + added
     const gone = daysGoneBy(period, today)
     return {
@@ -63,7 +69,7 @@ export function periodNumbers(
         difference: stats.previousSeconds === null ? null : total - stats.previousSeconds,
         nothingBefore: stats.previousPeriodSeconds === 0,
         average: gone === 0 ? 0 : Math.floor(total / gone),
-        allTime: stats.allTimeSeconds + gained,
+        allTime: stats.allTimeSeconds + gained + (late?.seconds ?? 0),
         grid: stats.grid ? stats.grid.map(dayOf) : null,
         best: stats.bestOtherWeekSeconds !== null && total > stats.bestOtherWeekSeconds
     }

@@ -32,10 +32,12 @@ export function dateKeyAt(now: number, timeZone?: string): string {
  * as it stands now (`todaySeconds`, the running focus in: it grows each
  * minute), the days after today ahead.
  */
-export function weekBars(week: StudyWeek, todaySeconds: number): WeekBar[] {
+export function weekBars(week: StudyWeek, todaySeconds: number, beforeToday = 0): WeekBar[] {
+    const yesterday = week.days[week.days.findIndex((day) => day.date === week.today) - 1]?.date
     return week.days.map((day) => ({
         date: day.date,
-        seconds: day.date === week.today ? todaySeconds : day.seconds,
+        // Yesterday gains the focus run to midnight no count has written yet (D-236).
+        seconds: day.date === week.today ? todaySeconds : day.seconds + (day.date === yesterday ? beforeToday : 0),
         today: day.date === week.today,
         ahead: day.date > week.today
     }))

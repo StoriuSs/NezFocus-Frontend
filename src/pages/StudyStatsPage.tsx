@@ -1,7 +1,7 @@
 import { Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ShellPage } from '@/components/shell/ShellPage'
-import { useJoinedSession } from '@/features/servers'
+import { useStudyingRoom } from '@/features/servers'
 import { PeriodPicker, StatsBody, useSoloSession, useStatsPeriod } from '@/features/study'
 
 /**
@@ -9,12 +9,12 @@ import { PeriodPicker, StatsBody, useSoloSession, useStatsPeriod } from '@/featu
  * as the Study page. The period is the URL's (`?view=week&date=…`,
  * `?view=month&month=…`, this week with none); its picker sits in the
  * Header from 1024 up and under it below. The numbers grow with the session
- * one is in: this tab's room's, else one's Solo.
+ * one is in: a room's, in this tab or another (D-236), else one's Solo.
  */
 export default function StudyStatsPage() {
     const { t } = useTranslation()
     const { period, show } = useStatsPeriod()
-    const joined = useJoinedSession()
+    const joined = useStudyingRoom()?.session ?? null
     const solo = useSoloSession().data?.session ?? null
     const picker = (className: string) => (
         <Suspense fallback={null}>
