@@ -20,6 +20,7 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { getApiErrorType } from '@/lib/api-error'
 import { useRelationships } from '../api/useRelationships'
 import { useAcceptFriendRequest, useRemoveRelationship, useUnblockPerson } from '../api/useRelationshipActions'
+import { useMessagePerson } from '../api/useDmActions'
 import { AddFriendDialog } from '../components/AddFriendDialog'
 import { ConfirmRelationshipDialog, type ConfirmKind } from '../components/ConfirmRelationshipDialog'
 import { FriendRow, type FriendRowActions } from '../components/FriendRow'
@@ -202,6 +203,7 @@ function FriendGroups({
     const accept = useAcceptFriendRequest()
     const remove = useRemoveRelationship()
     const unblock = useUnblockPerson()
+    const { message } = useMessagePerson()
     const [confirming, setConfirming] = useState<{ kind: ConfirmKind; entry: Relationship } | null>(null)
     // Held for the list as it was shown: another tab, side or search shows its own at once.
     const view = `${tab}|${side}|${query}`
@@ -212,6 +214,7 @@ function FriendGroups({
     const nameIn = (entry: Relationship) => nameOf(entry.user) ?? t('friends.deleted')
 
     const actions: FriendRowActions = {
+        onMessage: (entry) => message(entry.user.id),
         onAccept: (entry) =>
             accept.mutate(entry.user.id, {
                 onSuccess: () => toast(t('toasts.friends', { name: nameIn(entry) })),
@@ -244,6 +247,7 @@ function FriendGroups({
                 </p>
             ) : (
                 <div
+                    data-friend-list
                     className='flex flex-col gap-4'
                     onPointerEnter={() => setHeld({ view, groups: live })}
                     onPointerLeave={() => setHeld(null)}

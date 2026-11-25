@@ -54,7 +54,8 @@
         "emptyPage": {
             "title": "No friends yet",
             "body": "Add friends by username, or from the profile of someone in your servers."
-        }
+        },
+        "message": "Message"
     },
     "unfriend": {
         "title": "Remove {{name}} as a friend?",
@@ -108,5 +109,12 @@
             "alreadyFriends": "You and {{name}} are already friends",
             "offline": "You need a connection"
         }
+    },
+    "dm": {
+        "deleted": "Deleted account",
+        "intro": "This is the beginning of your conversation with {{name}}.",
+        "introGone": "This is the beginning of your conversation with this account.",
+        "blocked": "You blocked {{name}}",
+        "pins": "Pinned messages"
     }
 }

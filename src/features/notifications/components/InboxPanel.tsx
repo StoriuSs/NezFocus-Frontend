@@ -25,7 +25,7 @@ import { IconButton } from '@/components/ui/icon-button'
 import { PopoverContent } from '@/components/ui/popover'
 import { WithTooltip } from '@/components/ui/tooltip'
 import { useMentionWords } from '@/features/messaging'
-import { friendsPath, useAcceptFriendRequest, useRemoveRelationship } from '@/features/social'
+import { friendsPath, useAcceptFriendRequest, useMessagePerson, useRemoveRelationship } from '@/features/social'
 import { settingsCache, USERS_PATHS } from '@/features/users'
 import { useMinuteClock } from '@/hooks/useMinuteClock'
 import { getApiErrorType } from '@/lib/api-error'
@@ -198,6 +198,7 @@ export default function InboxPanel({ places, onClose }: { places: InboxPlaces; o
         all[to]?.focus()
     }
 
+    const { message: messagePerson } = useMessagePerson()
     const open = (item: Notification) => (event: MouseEvent<HTMLAnchorElement>) => {
         const place = item.serverId && item.channelId ? places.placeOf(item.serverId, item.channelId) : undefined
         if (place === null && item.channelId) {
@@ -212,11 +213,16 @@ export default function InboxPanel({ places, onClose }: { places: InboxPlaces; o
         if (!item.readAt && !offline) markRead.mutate({ ids: [item.id] })
         // Ctrl / ⌘ / Shift: a new tab or window, the inbox stays open.
         if (event.ctrlKey || event.metaKey || event.shiftKey) return
+        // A friend now: the DM with them (09 S-DM-03 › Mở từ), opened first when there is none yet.
+        if (item.type === 'friend_accepted' && item.actor) {
+            event.preventDefault()
+            messagePerson(item.actor.id)
+        }
         onClose()
     }
 
     const pathOf = (item: Notification): string | null => {
-        // A request: the Friends page's Pending tab; a friend now: its All tab (the DM in M6 L7).
+        // A request: the Friends page's Pending tab; a friend now: its All tab, where the click opens the DM.
         if (item.type === 'friend_request') return friendsPath(accepted.has(item.id) ? 'all' : 'pending')
         if (item.type === 'friend_accepted') return friendsPath('all')
         // A server's: its settings, a timeout its first text channel; a kick, a ban, a server left: nowhere.

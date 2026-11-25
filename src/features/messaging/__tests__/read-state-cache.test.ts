@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+    dmChannelIds,
+    dmUnread,
     hearDeleted,
     hearEdited,
     hearMessage,
@@ -253,5 +255,24 @@ describe('Totals', () => {
     it('counts only the channels still listed: a server left, a channel deleted, no longer count (owner, 14/11/2026)', () => {
         expect(serverState(held, 'nd', ['chung'])).toEqual({ unread: true, mentions: 0 })
         expect(mentionTotal(held, ['hoi-dap', 'cg-chung'])).toBe(2)
+    })
+})
+
+describe("The DMs' share of the read states (D-244, 09 › luật 6)", () => {
+    const states = [
+        state('hoi-dap', { unreadCount: 4, mentionCount: 1 }),
+        state('dm-tuan', { serverId: null, unreadCount: 1 }),
+        state('dm-binh', { serverId: null }),
+        state('dm-chi', { serverId: null, unreadCount: 100 })
+    ]
+
+    it('counts the DMs with unread messages for the 💬 Badge, and their messages for the tab title', () => {
+        expect(dmUnread(states)).toEqual({ dms: 2, messages: 101 })
+        expect(dmUnread(undefined)).toEqual({ dms: 0, messages: 0 })
+    })
+
+    it("lists the DMs' channels, none of a server", () => {
+        expect(dmChannelIds(states)).toBe('dm-tuan,dm-binh,dm-chi')
+        expect(dmChannelIds(undefined)).toBe('')
     })
 })

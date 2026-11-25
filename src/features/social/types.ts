@@ -39,3 +39,24 @@ export interface PresenceUpdated {
     userId: string
     status: Presence
 }
+
+/**
+ * A DM in my list (S-DM-01, D-242, D-244): its channel id (`id`: the
+ * messages, pins and reads go through the channel routes), the other one,
+ * the last message, whether I may message them now, and their presence and
+ * activity where I see them. Unread counts are the read states' (messaging).
+ */
+export type Dm = ApiModel<'DmResponseDto'>
+export type DmLastMessage = ApiModel<'DmLastMessageResponseDto'>
+export type DmList = ApiModel<'DmListResponseDto'>
+
+/** `dm.created` (SRS 5.2): a DM I just opened, as my list shows it. */
+export interface DmCreated {
+    dm: Dm
+}
+
+/** `dm.updated`: my side changed (opened again, closed in another tab); `shown`, whether it is in my list now. */
+export interface DmUpdated {
+    dm: Dm
+    shown: boolean
+}

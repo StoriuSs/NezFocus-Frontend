@@ -83,6 +83,14 @@ const socialApi = vi.hoisted(() => ({
     unblockPerson: vi.fn()
 }))
 vi.mock('@/features/social/api/social.api', () => socialApi)
+// No DM, unless a test says otherwise.
+const dmsApi = vi.hoisted(() => ({
+    fetchDms: vi.fn(async (): Promise<unknown[]> => []),
+    openDm: vi.fn(),
+    closeDm: vi.fn()
+}))
+vi.mock('@/features/social/api/dms.api', () => dmsApi)
+const { forgetMessagesPlace } = await import('@/features/social/lib/messages-place')
 // The member panel's lists: nobody, unless a test says otherwise.
 vi.mock('@/features/servers/api/roles.api', async (original) => ({
     ...(await original<typeof import('@/features/servers/api/roles.api')>()),
@@ -233,6 +241,7 @@ function renderAt(path: string | { pathname: string; state: unknown }) {
                     { path: '/panel', element: <PanelPage />, handle: { column: 'study' } },
                     { path: '/tasks', element: <MyTasksRoute />, handle: { column: 'tasks' } },
                     { path: '/friends', element: <h1>Friends page</h1>, handle: { column: 'messages' } },
+                    { path: '/dm/:dmId', element: <h1>DM page</h1>, handle: { column: 'messages' } },
                     { path: '/settings/account', element: <h1>Settings page</h1>, handle: { column: 'settings' } },
                     { path: '/settings/profile', element: <h1>Profile page</h1>, handle: { column: 'settings' } }
                 ]
@@ -256,6 +265,7 @@ describe('AppShell (S-SHELL-01)', () => {
         await i18n.changeLanguage('en')
         authState.logout.mockReset()
         localStorage.clear()
+        dmsApi.fetchDms.mockResolvedValue([])
         serversApi.fetchServers.mockResolvedValue([OT, ND])
         // Nothing unread, unless a test says otherwise.
         readStatesApi.fetchReadStates.mockResolvedValue([])
@@ -325,8 +335,43 @@ describe('AppShell (S-SHELL-01)', () => {
                 'aria-current',
                 'page'
             )
-            expect(within(column).getByText('No messages yet')).toBeInTheDocument()
+            expect(await within(column).findByText('No messages yet')).toBeInTheDocument()
             await expectNoA11yViolations()
+        })
+
+        it('comes back with 💬 to the last DM opened, its row lit in the column (09 Q6, D-249 L7-e)', async () => {
+            dmsApi.fetchDms.mockResolvedValue([
+                {
+                    id: 'dm-binh',
+                    user: { id: 'binh', username: 'binh.tran', displayName: 'Bình', avatarUrl: null },
+                    presence: 'online',
+                    activity: null,
+                    lastMessage: {
+                        id: '0190a000-0000-7000-8000-000000000004',
+                        type: 'regular',
+                        systemEvent: null,
+                        authorId: 'binh',
+                        content: 'Mình vào Phòng học im lặng trước nhé',
+                        mentionUsers: [],
+                        files: { count: 0, images: 0 },
+                        createdAt: '2026-10-18T14:08:00.000Z'
+                    },
+                    canMessage: true,
+                    createdAt: '2026-10-01T00:00:00.000Z'
+                }
+            ])
+            const router = renderAt('/dm/dm-binh')
+            expect(await screen.findByRole('heading', { level: 1, name: 'DM page' })).toBeInTheDocument()
+            const column = screen.getByRole('navigation', { name: 'Messages' })
+            expect(await within(column).findByRole('link', { name: /Bình/ })).toHaveAttribute('aria-current', 'page')
+
+            await userEvent.click(
+                within(screen.getByRole('navigation', { name: 'Pages' })).getByRole('link', { name: 'Study' })
+            )
+            await userEvent.click(within(rail()).getByRole('link', { name: 'Direct messages' }))
+
+            expect(router.state.location.pathname).toBe('/dm/dm-binh')
+            forgetMessagesPlace('/dm/dm-binh')
         })
 
         it('closes the inbox with the shell: the next sign-in in this tab starts with it closed', async () => {
@@ -1117,6 +1162,20 @@ describe('AppShell (S-SHELL-01)', () => {
         it('starts the tab title with every mention still unread', async () => {
             renderAt('/channels/ot/ban-can-su')
             await waitFor(() => expect(document.title).toBe('(2) NezFocus'))
+        })
+
+        it('counts the DMs with unread messages on 💬, and adds their messages to the tab title (09 › luật 6, D-244)', async () => {
+            readStatesApi.fetchReadStates.mockResolvedValue([
+                readState('ot', 'hoi-dap', 3, 2),
+                { ...readState('ot', 'dm-tuan', 1, 0), serverId: null },
+                { ...readState('ot', 'dm-chi', 3, 1), serverId: null },
+                { ...readState('ot', 'dm-binh', 0, 0), serverId: null }
+            ])
+            renderAt('/channels/ot/ban-can-su')
+            const dm = await within(rail()).findByRole('link', { name: 'Direct messages, 2 unread conversations' })
+            expect(within(dm.closest('li')!).getByText('2')).toBeInTheDocument()
+            // 2 mentions in the servers + 4 DM messages.
+            await waitFor(() => expect(document.title).toBe('(6) NezFocus'))
         })
 
         it('counts only channels still listed: one deleted, or of a server left, no longer counts (owner, 14/11/2026)', async () => {

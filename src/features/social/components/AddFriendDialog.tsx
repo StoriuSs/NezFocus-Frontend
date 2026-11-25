@@ -23,6 +23,7 @@ import { getApiErrorType } from '@/lib/api-error'
 import { notifyMutationError } from '@/lib/query-client'
 import { cn } from '@/lib/utils'
 import { useAcceptFriendRequest, useLookUpPerson, useSendFriendRequest } from '../api/useRelationshipActions'
+import { useMessagePerson } from '../api/useDmActions'
 import { addFriendProblem, normalizedUsername, NOTE_MAX, type AddFriendProblem } from '../lib/add-friend'
 import { nameOf } from '../lib/friends-list'
 import type { PersonProfile, Relationship } from '../types'
@@ -49,6 +50,8 @@ export function AddFriendDialog({ onClose, onDone }: { onClose: () => void; onDo
     const lookUp = useLookUpPerson()
     const send = useSendFriendRequest()
     const accept = useAcceptFriendRequest()
+    // The dialog closes with the Friends page as the DM opens; a failure leaves it open, with the Toast.
+    const { message: messagePerson } = useMessagePerson()
     const [card, setCard] = useState<PersonProfile | null>(null)
     const [problem, setProblem] = useState<AddFriendProblem | null>(null)
     const [lookupUntil, setLookupUntil] = useState<number | null>(null)
@@ -144,7 +147,9 @@ export function AddFriendDialog({ onClose, onDone }: { onClose: () => void; onDo
                                 />
                             )}
                         </FormField>
-                        {card ? <PersonCard profile={card} name={shownName} /> : null}
+                        {card ? (
+                            <PersonCard profile={card} name={shownName} onMessage={() => messagePerson(card.user.id)} />
+                        ) : null}
                         {card ? (
                             <FormField
                                 label={t('add.note')}
@@ -213,7 +218,7 @@ function problemText(
  * the bio (two lines at most), a line, then the servers we share (two
  * named, then how many more) and where we stand when there is something.
  */
-function PersonCard({ profile, name }: { profile: PersonProfile; name: string }) {
+function PersonCard({ profile, name, onMessage }: { profile: PersonProfile; name: string; onMessage: () => void }) {
     const { t } = useTranslation('social')
     const [first, second] = profile.mutualServers
     const shared = !first
@@ -254,7 +259,16 @@ function PersonCard({ profile, name }: { profile: PersonProfile; name: string })
                 {profile.bio ? <p className='line-clamp-2 text-body-sm text-text-primary'>{profile.bio}</p> : null}
                 <hr className='my-1 border-border' />
                 <p className='line-clamp-2 text-label text-text-secondary'>{shared}</p>
-                {standing ? <p className='text-label font-semibold text-text-primary'>{standing}</p> : null}
+                {standing ? (
+                    <p className='flex items-center gap-2 text-label font-semibold text-text-primary'>
+                        {standing}
+                        {profile.relationship === 'friend' ? (
+                            <Button type='button' variant='text' size='sm' onClick={onMessage}>
+                                {t('friends.message')}
+                            </Button>
+                        ) : null}
+                    </p>
+                ) : null}
             </div>
         </section>
     )

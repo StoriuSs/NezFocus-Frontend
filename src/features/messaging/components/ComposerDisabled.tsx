@@ -5,6 +5,7 @@ import '@/i18n/messaging'
 import { useToastEdge } from '@/hooks/useToastArea'
 import { endsAtText } from '@/lib/time-zones'
 import { cn } from '@/lib/utils'
+import { LOCK_WORDS } from '../lib/send-block'
 import type { SendBlock } from '../types'
 
 /**
@@ -12,8 +13,9 @@ import type { SendBlock } from '../types'
  * the box, its icon and why. `timer` "Timed out until 22:30 · you can't
  * send messages yet" (the day too when it ends on another, D-54); `lock` for
  * a channel only moderators post in, or a server that gives no
- * SEND_MESSAGES. The draft, the reply and the tray are kept, and come back
- * when one may send again.
+ * SEND_MESSAGES, and in a DM one may not message that person or their account
+ * is deleted (S-DM-03 `cannot-message`, `deleted-account`). The draft, the
+ * reply and the tray are kept, and come back when one may send again.
  *
  * A status, which takes the focus the box had when it shut under someone
  * typing (the box gone, focus would fall to the page): a screen reader says
@@ -54,11 +56,7 @@ export function ComposerDisabled({
                     ? t('composer.disabled.timedOut', {
                           time: endsAtText(new Date(blocked.until), now, i18n.language, timeZone)
                       })
-                    : t(
-                          blocked.reason === 'managers-only'
-                              ? 'composer.disabled.managersOnly'
-                              : 'composer.disabled.noPermission'
-                      )}
+                    : t(LOCK_WORDS[blocked.reason])}
             </p>
         </div>
     )

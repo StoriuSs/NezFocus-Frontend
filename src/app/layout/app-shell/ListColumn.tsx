@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { KeyboardEvent, ReactNode } from 'react'
 import { NavLink, useMatches } from 'react-router-dom'
 import {
     Ban,
@@ -29,9 +29,10 @@ import {
     useServers,
     type SettingsSection
 } from '@/features/servers'
-import { SOCIAL_PATHS, useIncomingRequestCount } from '@/features/social'
+import { DmList, SOCIAL_PATHS, useIncomingRequestCount } from '@/features/social'
 import { SOLO_PATH, SoloDockSlot, STATS_PATH } from '@/features/study'
 import { USERS_PATHS } from '@/features/users'
+import { moveFocusInList } from '@/lib/arrow-focus'
 import { cn } from '@/lib/utils'
 
 /** The column's 48-high title row, level with the page Header's bottom rule. */
@@ -66,7 +67,8 @@ function RowLink({
     muted,
     trailing,
     rounded = 'rounded-input',
-    label
+    label,
+    onKeyDown
 }: {
     to: string
     end?: boolean
@@ -79,12 +81,14 @@ function RowLink({
     trailing?: ReactNode
     rounded?: string
     label?: string
+    onKeyDown?: (event: KeyboardEvent<HTMLAnchorElement>) => void
 }) {
     return (
         <NavLink
             to={to}
             end={end}
             aria-label={label}
+            onKeyDown={onKeyDown}
             className={({ isActive }) =>
                 cn(
                     ROW,
@@ -136,8 +140,9 @@ function StudyColumn() {
 
 /**
  * The messages column (09 S-DM-01): "Messages", the "Friends" row with the
- * requests waiting for me (Badge, 09 › luật 4), a line, then the DMs; none
- * yet: "No messages yet" with where to start one. The DMs come in M6 L7.
+ * requests waiting for me (Badge, 09 › luật 4), a line, then the DMs
+ * (`DmList`); none yet: "No messages yet" with where to start one. The
+ * arrow keys move between the rows, the "Friends" row with them.
  */
 function MessagesColumn() {
     const { t } = useTranslation()
@@ -146,7 +151,7 @@ function MessagesColumn() {
     return (
         <>
             <ColumnTitle>{t('shell.messages.title')}</ColumnTitle>
-            <nav aria-label={t('shell.messages.title')} className='flex flex-col gap-0.5 p-2'>
+            <nav aria-label={t('shell.messages.title')} className='flex min-h-0 flex-col gap-0.5 overflow-y-auto p-2'>
                 <RowLink
                     to={SOCIAL_PATHS.friends}
                     icon={Users}
@@ -156,14 +161,12 @@ function MessagesColumn() {
                             : undefined
                     }
                     trailing={<CountBadge count={incoming} />}
+                    onKeyDown={(event) => moveFocusInList(event, event.currentTarget.closest('nav'), 'a[href]')}
                 >
                     {friends}
                 </RowLink>
                 <div aria-hidden='true' className='my-1 border-t' />
-                <div className='px-3 py-1'>
-                    <p className='text-body-sm text-text-secondary'>{t('shell.messages.empty')}</p>
-                    <p className='text-label text-text-tertiary'>{t('shell.messages.emptyHint')}</p>
-                </div>
+                <DmList />
             </nav>
         </>
     )

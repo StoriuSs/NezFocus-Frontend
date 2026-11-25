@@ -561,6 +561,29 @@ done (a Toast) are the screen's: the hooks are in the AppShell's download.
 The Privacy page counts the people blocked from the same query, lent through
 the `BlockList` port the AppShell connects (users cannot import social).
 
+## DMs, kept live
+
+My DMs (S-DM-01, D-244) are one query too, `socialKeys.dms()` (`useDms`,
+read as the AppShell opens: `GET /me/dms`, `staleTime: Infinity`), the
+messages column's rows and each DM's page reading their share
+(`useDmList(select)`). `liveDms.ts` puts `dm.created` / `dm.updated` from
+my other tabs in place (`shown: false` takes the DM out, its read state
+too), makes a message in a DM held its last one (an edit of the last one
+changes its words, a deletion of it reads the list again), moves the dot on
+`presence.updated`, and reads the list again on `relationship.*` (whether I
+may message someone may change) and each `ready`. Unread counts are not in
+it: they are the read states' (`GET /me/read-states`, a DM's with no
+server), which the rail's 💬 Badge and the tab title read
+(`useDmUnread`). A DM coming back to the list (a message after I closed
+it, or someone new writing first) is first heard by the read states (a
+channel they do not hold reads them again); `useDms` reads the DM list
+again when they hold a DM it has not, once per DM while they hold it.
+Closing a DM (`useCloseDm`) takes its row and its read state out at once,
+so its next message brings it back. Opening one (`POST /me/dms`,
+`@Idempotent`) puts the answer in the list; "Message" goes straight to a
+DM held (`useMessagePerson`). The changes are pure functions
+(`lib/dm-list.ts`).
+
 ## The servers, kept live
 
 Socket events about a server (`server.*`, `channel.*`, `category.*`,

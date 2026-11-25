@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -28,6 +29,13 @@ const socialApi = vi.hoisted(() => ({
     removeRelationship: vi.fn<(userId: string) => Promise<unknown>>()
 }))
 vi.mock('@/features/social/api/social.api', () => socialApi)
+// "Message" from a friend item opens the DM (M6 L7).
+const dmsApi = vi.hoisted(() => ({
+    fetchDms: vi.fn(async (): Promise<unknown[]> => []),
+    openDm: vi.fn<(userId: string, key: string) => Promise<unknown>>(),
+    closeDm: vi.fn()
+}))
+vi.mock('@/features/social/api/dms.api', () => dmsApi)
 
 const { default: InboxPanel } = await import('../components/InboxPanel')
 const { unreadCountOf } = await import('../lib/inbox-cache')
@@ -206,11 +214,22 @@ function WhereAmI() {
     )
 }
 
+/** As the rail: the panel mounted only while open, gone once it closes (`closes`). */
+function Inbox({ places, onClose, closes }: { places: InboxPlaces; onClose: () => void; closes: boolean }) {
+    const [open, setOpen] = useState(true)
+    const close = () => {
+        onClose()
+        if (closes) setOpen(false)
+    }
+    return open ? <InboxPanel places={places} onClose={close} /> : null
+}
+
 function renderInbox({
     places = PLACES,
     connection = null,
-    at = '/tasks'
-}: { places?: InboxPlaces; connection?: ConnectionNotice | null; at?: string } = {}) {
+    at = '/tasks',
+    closes = false
+}: { places?: InboxPlaces; connection?: ConnectionNotice | null; at?: string; closes?: boolean } = {}) {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
     client.setQueryData(userKeys.profile(), { id: AN, username: 'an.x', displayName: 'An', avatarUrl: null })
     client.setQueryData(userKeys.settings(), { timezone: ZONE })
@@ -222,7 +241,7 @@ function renderInbox({
                     <TooltipProvider>
                         <Popover open>
                             <PopoverAnchor />
-                            <InboxPanel places={places} onClose={onClose} />
+                            <Inbox places={places} onClose={onClose} closes={closes} />
                         </Popover>
                         <Toaster />
                         <WhereAmI />
@@ -790,6 +809,26 @@ describe('Lời mời kết bạn trong hộp thư (06 C-29, D-110, D-111, D-248
         socialApi.acceptFriendRequest.mockRejectedValue(apiError(404, 'NOT_FOUND_ERROR'))
         await userEvent.click(within(item).getByRole('button', { name: 'Chấp nhận' }))
         expect(await screen.findByText('Lời mời không còn hiệu lực')).toBeInTheDocument()
+    })
+
+    it('opens the DM with a new friend from the body of "accepted" (09 S-DM-03 › Mở từ, D-249)', async () => {
+        dmsApi.openDm.mockResolvedValue({
+            id: 'dm-giang',
+            user: giang,
+            presence: 'online',
+            activity: null,
+            lastMessage: null,
+            canMessage: true,
+            createdAt: today('19:51')
+        })
+        // The inbox goes as it closes: the DM still opens once the API answers.
+        const { onClose } = renderInbox({ closes: true })
+
+        await userEvent.click(await screen.findByRole('link', { name: /Giang đã chấp nhận lời mời kết bạn/ }))
+
+        expect(dmsApi.openDm).toHaveBeenCalledWith('giang', expect.any(String))
+        await waitFor(() => expect(where()).toBe('/dm/dm-giang'))
+        expect(onClose).toHaveBeenCalled()
     })
 
     it('turns Accept and Decline off while offline', async () => {

@@ -9,6 +9,7 @@ import { settingsCache } from '@/features/users'
 import { addToTray } from '../../api/attachmentUploads'
 import { useUploads } from '../../attachment-tray.store'
 import { useChooseFiles } from '../../hooks/useChooseFiles'
+import { LOCK_WORDS } from '../../lib/send-block'
 import type { ChatPermissions } from '../../types'
 
 const carriesFiles = (event: DragEvent) => event.dataTransfer?.types.includes('Files') ?? false
@@ -32,18 +33,21 @@ const carriesFiles = (event: DragEvent) => event.dataTransfer?.types.includes('F
  * no ATTACH_FILES.
  *
  * A voice room's chat (`room`, S-ROOM-08) draws it over its panel, and
- * names the room with no "#".
+ * names the room with no "#"; a DM's page names the person (`dm`).
  */
 export function ChatDropZone({
     channelId,
     channelName,
     room = false,
+    dm = false,
     permissions
 }: {
     channelId: string
     channelName: string
     /** A voice room's chat: the room named with no "#". */
     room?: boolean
+    /** A DM (S-DM-03): "to {name}". */
+    dm?: boolean
     permissions: Pick<ChatPermissions, 'sendBlocked' | 'attachFiles'>
 }) {
     const { t, i18n } = useTranslation('messaging')
@@ -120,7 +124,9 @@ export function ChatDropZone({
                     <>
                         <Upload className='text-primary' style={ICON} aria-hidden='true' />
                         <p className='text-title-2 font-semibold text-text-primary'>
-                            {t(room ? 'attach.roomDropTitle' : 'attach.dropTitle', { channel: channelName })}
+                            {t(dm ? 'attach.dmDropTitle' : room ? 'attach.roomDropTitle' : 'attach.dropTitle', {
+                                channel: channelName
+                            })}
                         </p>
                         <p className='text-body-sm text-text-secondary'>{t('attach.dropLimits')}</p>
                     </>
@@ -138,11 +144,7 @@ export function ChatDropZone({
                     <>
                         <Lock className='text-text-secondary' style={ICON} aria-hidden='true' />
                         <p className='text-title-2 font-semibold text-text-secondary'>
-                            {!blocked
-                                ? t('attach.notAllowed')
-                                : blocked.reason === 'managers-only'
-                                  ? t('composer.disabled.managersOnly')
-                                  : t('composer.disabled.noPermission')}
+                            {blocked ? t(LOCK_WORDS[blocked.reason]) : t('attach.notAllowed')}
                         </p>
                     </>
                 )}

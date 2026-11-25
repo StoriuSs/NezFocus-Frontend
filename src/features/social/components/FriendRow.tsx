@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { EllipsisVertical } from 'lucide-react'
+import { EllipsisVertical, MessageCircle } from 'lucide-react'
 import '@/i18n/social'
 import { Avatar, AvatarFallback, AvatarImage, AvatarInitial } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -8,10 +8,13 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { IconButton } from '@/components/ui/icon-button'
 import { PresenceDot } from '@/components/ui/presence-dot'
 import { WithTooltip } from '@/components/ui/tooltip'
+import { moveFocusInList } from '@/lib/arrow-focus'
 import { nameOf } from '../lib/friends-list'
 import type { Relationship } from '../types'
 
 export interface FriendRowActions {
+    /** To the DM with a friend (09 S-DM-02 › Đi tới): the row, or its 💬. */
+    onMessage: (entry: Relationship) => void
     onAccept: (entry: Relationship) => void
     onDecline: (entry: Relationship) => void
     onCancel: (entry: Relationship) => void
@@ -23,12 +26,16 @@ export interface FriendRowActions {
 /**
  * FriendRow (C-30): avatar 40 with a friend's dot, the name (`body` 600)
  * and the username, the second line, and the actions, always shown (09 Q7):
- * a friend's ⋯ (Remove friend · Block); a request to me Accept / Decline;
- * mine Cancel request with its time column; someone blocked Unblock.
- * "Message" and the calls of ⋯ come with the DM and the calls (D-248).
- * Offline, the actions are off with "You need a connection" (S-DM-02).
- * Rows are 60 high, a `border` line between them, gone around the row
- * hovered.
+ * a friend's 💬 "Message" and ⋯ (Remove friend · Block); a request to me
+ * Accept / Decline; mine Cancel request with its time column; someone
+ * blocked Unblock. The calls of ⋯ come with the calls (D-248). Offline, the
+ * actions are off with "You need a connection" (S-DM-02), but Message still
+ * opens the DM. Rows are 60 high, a `border` line between them, gone around
+ * the row hovered.
+ *
+ * A friend's whole row opens the DM (C-30): its name part is a button
+ * stretched over the row, under the actions, out of the Tab order (the 💬
+ * is the keyboard's way, and the arrow keys move between rows' 💬).
  */
 export function FriendRow({
     entry,
@@ -47,7 +54,16 @@ export function FriendRow({
     const shownName = name ?? t('friends.deleted')
 
     return (
-        <li className='flex h-[60px] items-center gap-3 rounded-input border-t px-3 first:border-t-0 hover:border-transparent hover:bg-surface-2 [&:hover+li]:border-transparent'>
+        <li className='relative flex h-[60px] items-center gap-3 rounded-input border-t px-3 first:border-t-0 hover:border-transparent hover:bg-surface-2 [&:hover+li]:border-transparent'>
+            {entry.type === 'friend' ? (
+                <button
+                    type='button'
+                    tabIndex={-1}
+                    aria-hidden='true'
+                    onClick={() => actions.onMessage(entry)}
+                    className='absolute inset-0 rounded-input'
+                />
+            ) : null}
             <span className='relative shrink-0'>
                 <Avatar className='size-10'>
                     <AvatarImage src={entry.user.avatarUrl ?? undefined} alt='' className='object-cover' />
@@ -78,7 +94,7 @@ export function FriendRow({
             {time === undefined ? null : (
                 <span className='w-[84px] shrink-0 text-right text-label text-text-tertiary'>{time}</span>
             )}
-            <span className='flex shrink-0 items-center gap-2'>
+            <span className='relative flex shrink-0 items-center gap-2'>
                 <Actions entry={entry} name={shownName} offline={offline} actions={actions} />
             </span>
         </li>
@@ -135,12 +151,7 @@ function Actions({
                         </Button>
                     </Gated>
                     <Gated offline={offline}>
-                        <Button
-                            size='sm'
-                            variant='secondary'
-                            disabled={offline}
-                            onClick={() => actions.onDecline(entry)}
-                        >
+                        <Button size='sm' variant='outline' disabled={offline} onClick={() => actions.onDecline(entry)}>
                             {t('friends.decline')}
                         </Button>
                     </Gated>
@@ -157,37 +168,57 @@ function Actions({
         case 'blocked':
             return (
                 <Gated offline={offline}>
-                    <Button size='sm' variant='secondary' disabled={offline} onClick={() => actions.onUnblock(entry)}>
+                    <Button size='sm' variant='outline' disabled={offline} onClick={() => actions.onUnblock(entry)}>
                         {t('friends.unblock')}
                     </Button>
                 </Gated>
             )
         case 'friend':
             return (
-                <DropdownMenu>
-                    <WithTooltip label={t('friends.more')}>
-                        <DropdownMenuTrigger asChild>
-                            <IconButton
-                                label={`${t('friends.more')}: ${name}`}
-                                className='size-9 rounded-full bg-surface-2 hover:bg-surface-3'
-                            >
-                                <EllipsisVertical />
-                            </IconButton>
-                        </DropdownMenuTrigger>
-                    </WithTooltip>
-                    <DropdownMenuContent align='end'>
-                        <DropdownMenuItem disabled={offline} onSelect={() => actions.onUnfriend(entry)}>
-                            {t('friends.unfriend')}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                            disabled={offline}
-                            onSelect={() => actions.onBlock(entry)}
-                            className='text-danger focus:text-danger'
+                <>
+                    <WithTooltip label={t('friends.message')}>
+                        <IconButton
+                            label={`${t('friends.message')}: ${name}`}
+                            data-row-key
+                            onClick={() => actions.onMessage(entry)}
+                            // Up and down: the 💬 of the friend above or below, across the groups (Online, Offline).
+                            onKeyDown={(event) =>
+                                moveFocusInList(
+                                    event,
+                                    event.currentTarget.closest('[data-friend-list]'),
+                                    '[data-row-key]'
+                                )
+                            }
+                            className='size-9 rounded-full bg-surface-2 hover:bg-surface-3'
                         >
-                            {t('friends.block')}
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                            <MessageCircle />
+                        </IconButton>
+                    </WithTooltip>
+                    <DropdownMenu>
+                        <WithTooltip label={t('friends.more')}>
+                            <DropdownMenuTrigger asChild>
+                                <IconButton
+                                    label={`${t('friends.more')}: ${name}`}
+                                    className='size-9 rounded-full bg-surface-2 hover:bg-surface-3'
+                                >
+                                    <EllipsisVertical />
+                                </IconButton>
+                            </DropdownMenuTrigger>
+                        </WithTooltip>
+                        <DropdownMenuContent align='end'>
+                            <DropdownMenuItem disabled={offline} onSelect={() => actions.onUnfriend(entry)}>
+                                {t('friends.unfriend')}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                                disabled={offline}
+                                onSelect={() => actions.onBlock(entry)}
+                                className='text-danger focus:text-danger'
+                            >
+                                {t('friends.block')}
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </>
             )
         default:
             return null

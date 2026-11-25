@@ -18,11 +18,18 @@ import { useRemovedWhileAway } from '@/features/servers/hooks/useRemovedWhileAwa
 import { useServerGoneWatch } from '@/features/servers/hooks/useServerGoneWatch'
 import { serverOwnership } from '@/features/servers/api/serverOwnership'
 import { connectServerOwnership } from '@/features/auth'
-import { friendsPath, relationshipsQuery, useRelationships } from '@/features/social'
+import { connectChatLinks, friendsPath, relationshipsQuery, useDms, useRelationships } from '@/features/social'
 import { connectBlockList } from '@/features/users'
 import { useConnectionBanner, useRealtimeConnection } from '@/features/realtime'
-import { useMentionTotal } from '@/features/messaging'
-import { JoinedSessionCues, RoomDock, useJoinedSession, useServers, useVoiceRooms } from '@/features/servers'
+import { useDmUnread, useMentionTotal } from '@/features/messaging'
+import {
+    JoinedSessionCues,
+    RoomDock,
+    useChatLinks,
+    useJoinedSession,
+    useServers,
+    useVoiceRooms
+} from '@/features/servers'
 import { SoloDockSlot, SoloWatch } from '@/features/study'
 import { useTitleCount } from '@/hooks/useDocumentTitle'
 import { useRefuseFileDrops } from '@/hooks/useRefuseFileDrops'
@@ -61,6 +68,9 @@ connectServerOwnership(serverOwnership)
 // The Privacy page's "Block list" row (users) counts the people blocked in the
 // social feature's list (S-ME-05, D-131), which users cannot import.
 connectBlockList({ query: relationshipsQuery, path: friendsPath('blocked') })
+// A DM's chat (social) reads links and channel tokens from the servers one is in
+// (D-249), which the social feature cannot import: servers answers, connected here.
+connectChatLinks(useChatLinks)
 
 /**
  * The frame of every page after sign-in (02 S-SHELL-01): rail 72, list
@@ -110,6 +120,8 @@ export default function AppShell() {
     // Friends, requests and blocks, read as the app opens and kept live (D-242): the Badge of
     // the "Friends" row and the Friends page from the cache (REQ-SOCIAL-02).
     useRelationships()
+    // My DMs, read as the app opens and kept live (D-244): the messages column and the 💬 Badge.
+    useDms()
     // The servers kept live by the socket; one no longer in leaves the rail, with a dialog or a Toast (D-178).
     useServerGoneWatch()
     // Put out of or banned from one while away: a Toast from the inbox's unread item, "Xem" opening it (H1, D-187).
@@ -123,10 +135,11 @@ export default function AppShell() {
     useRefuseFileDrops()
     const connection = useConnectionBanner()
     // The tab title starts with every mention still unread, whatever the page (REQ-MSG-09, X-01):
-    // in the channels the server list shows (a server left, a channel deleted, no longer counts).
+    // in the channels the server list shows (a server left, a channel deleted, no longer counts),
+    // and every DM message unread (09 › luật 6).
     const servers = useServers().data
     const listed = useMemo(() => servers?.flatMap((server) => server.channels.map((channel) => channel.id)), [servers])
-    useTitleCount(useMentionTotal(listed ?? []))
+    useTitleCount(useMentionTotal(listed ?? []) + useDmUnread().messages)
 
     const toggleNav = useCallback(() => setNavOpen((open) => !open), [])
     const shell = useMemo<ShellContextValue>(

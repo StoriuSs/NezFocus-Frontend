@@ -18,9 +18,10 @@ import {
     useServers,
     type Server
 } from '@/features/servers'
-import { useServerReadState } from '@/features/messaging'
+import { useDmUnread, useServerReadState } from '@/features/messaging'
 import { InboxPanel, useInboxStore, useUnreadNotificationCount } from '@/features/notifications'
-import { friendsPath, isMessagesPath } from '@/features/social'
+import { friendsPath, isMessagesPath, messagesPlace, messagesPlaceOf, rememberMessagesPlace } from '@/features/social'
+import { useProfile } from '@/features/users'
 import { useDueTaskCount } from '@/features/tasks'
 import { cn } from '@/lib/utils'
 import { MeMenu } from './MeMenu'
@@ -136,27 +137,37 @@ function AddServerItem() {
 
 /**
  * 💬 (C-05 `dm`): the messages area, a squircle on `surface-2` like a
- * server, lit while one of its pages is open. It opens the Friends page,
- * whose tab is the page's choice (09 Q6; the last DM opened comes with the
- * DMs, D-248). The Badge of DMs unread comes with them too.
+ * server, lit while one of its pages is open. The first time in a sign-in it
+ * opens the Friends page, whose tab is the page's choice; then the last place
+ * of the area, a DM or the Friends page (09 Q6, D-249 L7-e). Its Badge counts
+ * the DMs with unread messages (09 › luật 6), on the lower right as a
+ * server's mentions.
  */
 function MessagesItem() {
     const { t } = useTranslation()
-    const isActive = isMessagesPath(useLocation().pathname)
+    const { pathname } = useLocation()
+    const isActive = isMessagesPath(pathname)
+    const me = useProfile().data?.id
+    const here = messagesPlaceOf(pathname)
+    useEffect(() => {
+        if (me && here) rememberMessagesPlace(me, here)
+    }, [me, here])
+    const unread = useDmUnread().dms
     const name = t('shell.rail.dm')
     return (
         <li className='relative flex w-full justify-center'>
             <Indicator kind={isActive ? 'selected' : undefined} />
             <WithTooltip label={name} side='right'>
                 <Link
-                    to={friendsPath()}
-                    aria-label={name}
+                    to={messagesPlace(me) ?? friendsPath()}
+                    aria-label={unread > 0 ? t('shell.rail.dmUnread', { name, count: unread }) : name}
                     aria-current={isActive ? 'page' : undefined}
                     className={cn(SQUIRCLE, isActive ? 'bg-surface-3 text-text-primary' : 'text-text-primary')}
                 >
                     <MessageCircle className='size-[22px]' aria-hidden='true' />
                 </Link>
             </WithTooltip>
+            <CountBadge count={unread} cutout='ring-bg' className='pointer-events-none absolute bottom-0 right-4' />
         </li>
     )
 }

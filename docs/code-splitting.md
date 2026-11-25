@@ -254,6 +254,15 @@ has it (the server's menu), so a room opened from the list fetches nothing
 more, but "Voice JS" counts it, as it counts every chunk a room's page
 imports.
 
+The social feature (M6) has two lazy routes, the Friends page and a DM's
+page (with the messaging feature's chat chunk), and one stylesheet,
+`social.css` (`SocialStyles-<hash>.css`, "Social CSS"). The DM rows of the
+messages column (`DmList`) are drawn before a page's chunk comes, so
+`DmList` imports `social.css` too: the stylesheet comes with the AppShell,
+as `voice.css` comes with the dock (D-249). The column's words are in
+`common` (`shell.messages`), in the first download with the rest of the
+shell's words.
+
 The pins panel (S-CHAT-02) is in the same chunk: `index.ts` exports
 `PinsPanel` as `lazy(() => import('./components/ChannelChat').then((chat) =>
 ({ default: chat.PinsPanel })))`, and `ChannelChat.tsx` re-exports it, so it

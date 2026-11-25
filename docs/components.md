@@ -211,7 +211,9 @@ after sign-in, behind `ProtectedRoute`:
   one opened from inside the page and never kept, a room's "Người trong
   phòng" from its "+N" seat, with `closable` on its `RightPanel` (the close
   button as a column too: no header button toggles it); `bodyClassName` for a
-  body that does not scroll or pad, a voice room's chat). A menu opened from
+  body that does not scroll or pad, a voice room's chat; `leading` and
+  `subtitle` for a person's page, C-07 `dm`: their avatar in the icon's place,
+  their username after the title, cut first when short of room). A menu opened from
   a panel shown as a sheet counts as inside it. Under the header, the connection
   Banner when the AppShell has one (`ConnectionBanner`, C-16 `reconnecting`
   / `offline`); a page with a message box passes `composer`, so offline adds

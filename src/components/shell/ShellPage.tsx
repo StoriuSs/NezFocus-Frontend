@@ -28,6 +28,10 @@ import { IconButton } from '@/components/ui/icon-button'
  * `afterTitle`: right after the title, which gives way to it (a study room's
  * Host chip, C-07 `room`). `className`: the content column's ground, the
  * Header in (a room's phase colour, 07 › Quy ước).
+ *
+ * A person's page (C-07 `dm`): `leading` in the icon's place (their avatar),
+ * `subtitle` after the title (their username, `label` `text-tertiary`), cut
+ * before the title when short of room (D-108).
  */
 export function ShellPage({
     title,
@@ -41,6 +45,8 @@ export function ShellPage({
     bare = false,
     overlay,
     afterTitle,
+    leading,
+    subtitle,
     className
 }: {
     title: string
@@ -54,6 +60,8 @@ export function ShellPage({
     bare?: boolean
     overlay?: ReactNode
     afterTitle?: ReactNode
+    leading?: ReactNode
+    subtitle?: string
     className?: string
 }) {
     const { t } = useTranslation()
@@ -85,17 +93,27 @@ export function ShellPage({
                             </IconButton>
                         </WithTooltip>
                     ) : null}
-                    {Icon ? <Icon className='size-5 shrink-0 text-text-tertiary' aria-hidden='true' /> : null}
+                    {leading ??
+                        (Icon ? <Icon className='size-5 shrink-0 text-text-tertiary' aria-hidden='true' /> : null)}
                     <h1
                         className={cn(
                             'min-w-0 truncate text-headline text-text-primary',
-                            !afterTitle && 'flex-1',
+                            !afterTitle && !subtitle && 'flex-1',
                             bare && 'sr-only'
                         )}
                         title={title}
                     >
                         {title}
                     </h1>
+                    {subtitle ? (
+                        // Shrinks 999 times faster than the title: the username goes first.
+                        <span
+                            style={{ flexShrink: 999 }}
+                            className='min-w-0 flex-1 truncate text-label text-text-tertiary'
+                        >
+                            {subtitle}
+                        </span>
+                    ) : null}
                     {afterTitle ? <div className='flex shrink-0 grow items-center'>{afterTitle}</div> : null}
                     {actions ? <div className='flex shrink-0 items-center gap-1'>{actions}</div> : null}
                 </header>

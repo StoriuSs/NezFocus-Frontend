@@ -59,6 +59,7 @@ export function Composer({
     channelId,
     channelName,
     room = false,
+    dm = false,
     replyingTo,
     onCancelReply,
     onEditLast,
@@ -75,6 +76,8 @@ export function Composer({
     channelName: string
     /** A voice room's chat: "Message {room}", and the panel's narrower edges. */
     room?: boolean
+    /** A DM (S-DM-03): "Message {name}", with no "#". */
+    dm?: boolean
     /** The message the next one answers (S-CHAT-01 `reply-mode`). */
     replyingTo: RepliedMessage | null
     onCancelReply: () => void
@@ -95,7 +98,7 @@ export function Composer({
     attachFiles: boolean
 }) {
     const { t } = useTranslation('messaging')
-    const placeholder = t(room ? 'composer.roomPlaceholder' : 'composer.placeholder', { channel: channelName })
+    const placeholder = t(room || dm ? 'composer.roomPlaceholder' : 'composer.placeholder', { channel: channelName })
     const [draft, setDraft] = useDraft(userId, channelId)
     const { text, names } = draft
     const reportTyping = useReportTyping(channelId, useQuery(settingsCache).data?.presence === 'invisible')

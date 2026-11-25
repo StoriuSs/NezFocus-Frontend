@@ -1,12 +1,13 @@
 import { useCallback, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { keepList, mentionTotal, serverState } from '../lib/read-state-cache'
+import { dmChannelIds, dmUnread, keepList, mentionTotal, serverState } from '../lib/read-state-cache'
 import type { ReadState } from '../types'
 import { messageKeys } from './keys'
 import { listenForReadStates } from './liveReadStates'
 import { fetchReadStates } from './readStates.api'
 
 const NOTHING_UNREAD = { unread: false, mentions: 0 }
+const NO_DM_UNREAD = { dms: 0, messages: 0 }
 const NONE: string[] = []
 
 /**
@@ -80,4 +81,21 @@ export function useMentionTotal(channelIds?: readonly string[]): number {
         [ids]
     )
     return useReadStates(select).data ?? 0
+}
+
+/**
+ * The DMs with unread messages (the rail's 💬 Badge) and how many messages
+ * they hold (added to the tab title's number), D-244, 09 › luật 6.
+ */
+export function useDmUnread(): { dms: number; messages: number } {
+    return useReadStates(dmUnread).data ?? NO_DM_UNREAD
+}
+
+/**
+ * The DM channels the read states hold, as text: the social feature reads
+ * its DM list again when one it does not have comes (a DM shown again by a
+ * message, or a first message from someone new; D-244).
+ */
+export function useDmChannelIds(): string {
+    return useReadStates(dmChannelIds).data ?? ''
 }

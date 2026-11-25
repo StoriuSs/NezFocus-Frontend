@@ -54,7 +54,8 @@
         "emptyPage": {
             "title": "Chưa có bạn bè",
             "body": "Kết bạn bằng username, hoặc từ hồ sơ của thành viên cùng server."
-        }
+        },
+        "message": "Nhắn tin"
     },
     "unfriend": {
         "title": "Hủy kết bạn với {{name}}?",
@@ -108,5 +109,12 @@
             "alreadyFriends": "Bạn và {{name}} đã là bạn bè",
             "offline": "Cần kết nối mạng"
         }
+    },
+    "dm": {
+        "deleted": "Tài khoản đã bị xóa",
+        "intro": "Đây là khởi đầu cuộc trò chuyện của bạn và {{name}}.",
+        "introGone": "Đây là khởi đầu cuộc trò chuyện của bạn và tài khoản này.",
+        "blocked": "Bạn đã chặn {{name}}",
+        "pins": "Tin đã ghim"
     }
 }

@@ -15,6 +15,7 @@
   "list": {
     "label": "Messages in #{{channel}}",
     "roomLabel": "Messages in {{channel}}",
+    "dmLabel": "Messages with {{channel}}",
     "loading": "Loading messages",
     "loadError": "Couldn't load messages",
     "retry": "Try again",
@@ -57,7 +58,9 @@
     "disabled": {
       "timedOut": "You're timed out until {{time}} · you can't send messages yet",
       "managersOnly": "Only moderators can send messages in this channel",
-      "noPermission": "You don't have permission to send messages in this server"
+      "noPermission": "You don't have permission to send messages in this server",
+      "cannotMessage": "You can't send messages to this user",
+      "deletedAccount": "You can't send messages to a deleted account"
     }
   },
   "actions": {
@@ -232,6 +235,7 @@
     "offline": "Waiting for network",
     "dropTitle": "Drop files to send to #{{channel}}",
     "roomDropTitle": "Drop files to send to {{channel}}",
+    "dmDropTitle": "Drop files to send to {{channel}}",
     "dropLimits": "Up to 10 files, 25 MB each",
     "view": "View",
     "unplayable": "This browser can't play this video",

@@ -15,6 +15,7 @@
   "list": {
     "label": "Tin nhắn trong #{{channel}}",
     "roomLabel": "Tin nhắn trong {{channel}}",
+    "dmLabel": "Tin nhắn với {{channel}}",
     "loading": "Đang tải tin nhắn",
     "loadError": "Không tải được tin nhắn",
     "retry": "Thử lại",
@@ -57,7 +58,9 @@
     "disabled": {
       "timedOut": "Bạn đang bị tạm khóa tới {{time}} · chưa gửi tin được",
       "managersOnly": "Chỉ người quản lý được gửi tin trong kênh này",
-      "noPermission": "Bạn chưa có quyền gửi tin trong server này"
+      "noPermission": "Bạn chưa có quyền gửi tin trong server này",
+      "cannotMessage": "Không thể gửi tin nhắn cho người dùng này",
+      "deletedAccount": "Không thể gửi tin nhắn cho tài khoản đã bị xóa"
     }
   },
   "actions": {
@@ -232,6 +235,7 @@
     "offline": "Chờ có mạng",
     "dropTitle": "Thả tệp để gửi vào #{{channel}}",
     "roomDropTitle": "Thả tệp để gửi vào {{channel}}",
+    "dmDropTitle": "Thả tệp để gửi cho {{channel}}",
     "dropLimits": "Tối đa 10 tệp, mỗi tệp 25 MB",
     "view": "Xem",
     "unplayable": "Trình duyệt không phát được video này",

@@ -142,8 +142,32 @@ export function serverState(
 }
 
 /**
- * The tab title's number (REQ-MSG-09): every mention of the reader still
- * unread, in the channels listed (direct messages join it later).
+ * The DMs' share of the states (D-244: a DM's state has no server; a DM not
+ * in one's list has none): how many DMs have unread messages, the rail's 💬
+ * Badge, and how many messages, which the tab title adds (09 › luật 6).
+ */
+export function dmUnread(states: ReadState[] | undefined): { dms: number; messages: number } {
+    let dms = 0
+    let messages = 0
+    for (const state of states ?? []) {
+        if (state.serverId !== null || state.unreadCount === 0) continue
+        dms += 1
+        messages += state.unreadCount
+    }
+    return { dms, messages }
+}
+
+/** The channels of the DMs the states hold, as text (the same text, the same DMs). */
+export const dmChannelIds = (states: ReadState[] | undefined): string =>
+    (states ?? [])
+        .filter((state) => state.serverId === null)
+        .map((state) => state.channelId)
+        .join(',')
+
+/**
+ * The servers' share of the tab title's number (REQ-MSG-09): every mention of
+ * the reader still unread, in the channels listed; the AppShell adds the DMs'
+ * unread messages (`dmUnread`).
  */
 export function mentionTotal(states: ReadState[] | undefined, channelIds?: readonly string[]): number {
     return (states ?? []).reduce((total, state) => total + (listed(state, channelIds) ? state.mentionCount : 0), 0)

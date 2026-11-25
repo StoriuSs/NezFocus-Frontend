@@ -1,7 +1,8 @@
 /*
- * The classes of the Friends page (tailwind.social.config.js, D-193): only
- * the utilities the social feature's files use that the main stylesheet
- * lacks, loaded with the page's chunk. The base styles and the design
+ * The classes of the Friends page, a DM's page and the DM rows of the
+ * messages column (tailwind.social.config.js, D-193): only the utilities the
+ * social feature's files use that the main stylesheet lacks, loaded with
+ * those pages' chunks and with the AppShell (DmList, D-249). The base styles and the design
  * tokens come from src/index.css, loaded first.
  */
 @config "../../../tailwind.social.config.js";

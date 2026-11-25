@@ -28,13 +28,16 @@ import { messageTime } from '../lib/message-time'
 import type {
     AppLink,
     ChannelMessages,
+    ChatMessage,
     ChatPermissions,
     ChatTarget,
+    DmChatParts,
     MentionSource,
     Message,
     MessageHandlers,
     RepliedMessage
 } from '../types'
+import { isOutgoing } from '../types'
 import { Composer } from './Composer'
 import { ComposerDisabled } from './ComposerDisabled'
 import { TypingLine } from './TypingLine'
@@ -50,6 +53,11 @@ export { ChatDropZone } from './attachments/ChatDropZone'
 
 /** The viewer (C-42): fetched the first time a file is opened. */
 const MediaViewer = lazy(() => import('./attachments/MediaViewer'))
+
+/** Theirs, or a system message about them (a call they made): what a DM does not show of someone one blocked. */
+const isAbout = (message: ChatMessage, userId: string) =>
+    !isOutgoing(message) &&
+    (message.author?.id === userId || (message.type === 'system' && message.systemData?.userId === userId))
 
 const quote = (message: Message): RepliedMessage => ({
     id: message.id,
@@ -100,6 +108,12 @@ const quote = (message: Message): RepliedMessage => ({
  * A voice room's chat (S-ROOM-08) is the same chat in the room page's right
  * panel: `roomIcon` puts the room's icon and name where a channel has "#",
  * and the page gives no pins (`permissions.pins`, D-213).
+ *
+ * A DM's chat (S-DM-03, D-249) is the same chat too, `dm` handing what it
+ * has of its own: the person named with no "#", its beginning, what stands
+ * in the composer's place for someone one blocked, and whose messages it
+ * does not show (that person's, and system ones about them: they still count
+ * where the list counts, for the mark and "New").
  */
 export default function ChannelChat({
     channelId,
@@ -110,7 +124,8 @@ export default function ChannelChat({
     readLink,
     mentions,
     target,
-    showTask
+    showTask,
+    dm
 }: {
     channelId: string
     channelName: string
@@ -128,6 +143,8 @@ export default function ChannelChat({
     target?: ChatTarget
     /** A task's detail opened over the page (`?task=`), from "Xem việc" on its reminder (05 S-TASK-01). */
     showTask?: (taskId: string) => void
+    /** A DM's chat (S-DM-03): its parts the social feature hands (D-249). */
+    dm?: DmChatParts
 }) {
     const { t } = useTranslation('messaging')
     const words = useMentionWords()
@@ -175,7 +192,11 @@ export default function ChannelChat({
         linked: !!target,
         jump
     })
-    const rows = useMemo(() => chatRows(messages, timeZone), [messages, timeZone])
+    const hidden = dm?.hidden
+    const rows = useMemo(
+        () => chatRows(hidden ? messages.filter((message) => !isAbout(message, hidden)) : messages, timeZone),
+        [messages, hidden, timeZone]
+    )
     const saved = useMemo(
         () => new Map(pages?.flatMap((page) => page.items.map((item) => [item.id, item] as const))),
         [pages]
@@ -342,6 +363,7 @@ export default function ChannelChat({
             <MessageList
                 channelName={channelName}
                 roomIcon={roomIcon}
+                intro={dm?.intro}
                 rows={rows}
                 status={pages ? 'ready' : history.isError ? 'error' : 'loading'}
                 older={older}
@@ -364,7 +386,9 @@ export default function ChannelChat({
                 onSeen={canSee && unread.unreadHeld > 0 ? unread.seen : undefined}
             />
             <TypingLine names={typing} />
-            {permissions.sendBlocked ? (
+            {dm?.footer ? (
+                dm.footer
+            ) : permissions.sendBlocked ? (
                 <ComposerDisabled blocked={permissions.sendBlocked} now={now} timeZone={timeZone} room={!!roomIcon} />
             ) : (
                 <Composer
@@ -373,6 +397,7 @@ export default function ChannelChat({
                     channelId={channelId}
                     channelName={channelName}
                     room={!!roomIcon}
+                    dm={!!dm}
                     replyingTo={replyQuote}
                     onCancelReply={() => setReplyingTo(null)}
                     onEditLast={editLast}

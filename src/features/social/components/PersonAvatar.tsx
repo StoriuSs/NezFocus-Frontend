@@ -1,0 +1,57 @@
+import { UserRound } from 'lucide-react'
+import { Avatar, AvatarFallback, AvatarImage, AvatarInitial } from '@/components/ui/avatar'
+import { PresenceDot } from '@/components/ui/presence-dot'
+import { cn } from '@/lib/utils'
+import { isGone } from '../lib/dm-chat'
+import { nameOf } from '../lib/friends-list'
+import type { Presence, SocialPerson } from '../types'
+
+/**
+ * Someone's avatar (C-03): their picture, else their initial; an account
+ * deleted is the `deleted` avatar (`user-round` on `surface-2`), never a dot.
+ * The dot only where it is given, cut out of the ground behind (`cutout`).
+ */
+export function PersonAvatar({
+    person,
+    presence,
+    className,
+    initialClassName,
+    iconClassName = 'size-4',
+    dot = 10,
+    cutout = 'ring-bg'
+}: {
+    person: SocialPerson
+    presence?: Presence | null
+    /** The size (`size-8`…). */
+    className: string
+    /** The initial's type. */
+    initialClassName: string
+    /** The deleted avatar's icon, about half the avatar. */
+    iconClassName?: string
+    dot?: 8 | 10 | 14
+    cutout?: string
+}) {
+    const gone = isGone(person)
+    return (
+        <span className='relative shrink-0'>
+            <Avatar className={className}>
+                {gone ? null : <AvatarImage src={person.avatarUrl ?? undefined} alt='' className='object-cover' />}
+                <AvatarFallback className={cn('bg-surface-3 font-semibold text-text-primary', initialClassName)}>
+                    {gone ? (
+                        <UserRound className={cn('text-text-secondary', iconClassName)} aria-hidden='true' />
+                    ) : (
+                        <AvatarInitial name={nameOf(person)} />
+                    )}
+                </AvatarFallback>
+            </Avatar>
+            {presence && !gone ? (
+                <PresenceDot
+                    presence={presence}
+                    size={dot}
+                    cutout={cutout}
+                    className='absolute -bottom-0.5 -right-0.5'
+                />
+            ) : null}
+        </span>
+    )
+}

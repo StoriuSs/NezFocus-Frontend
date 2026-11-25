@@ -10,6 +10,7 @@ export { useChannelDialogs } from './channel-dialogs.store'
 export { ServerChannelColumn } from './components/channel-list/ServerChannelColumn'
 export { MyTasksColumn } from './components/MyTasksColumn'
 export { useInboxPlaces } from './hooks/useInboxPlaces'
+export { useChatLinks } from './hooks/useChatLinks'
 export { NoServers } from './components/NoServers'
 /** The Study page's rooms studying now (08 S-STUDY-01), lazy: it brings the `study` words; shown inside a Suspense. */
 export const LiveRooms = lazy(() => import('./components/live-rooms/LiveRooms'))

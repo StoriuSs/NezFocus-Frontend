@@ -1,4 +1,4 @@
-import { useRef, useState, type FocusEvent } from 'react'
+import { useRef, useState, type FocusEvent, type ReactNode } from 'react'
 import { ArrowDown, CloudOff, type LucideIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import '@/i18n/messaging'
@@ -20,6 +20,8 @@ interface MessageListProps {
     channelName: string
     /** A voice room's chat (S-ROOM-08): the room's icon, in place of "#". */
     roomIcon?: LucideIcon
+    /** A DM's beginning (C-10 `dm`), in place of ChannelIntro; the list is then "Messages with {name}". */
+    intro?: ReactNode
     rows: ChatRow[]
     /** Nothing to show yet: first load (`loading`), or it failed (`error`). */
     status: 'ready' | 'loading' | 'error'
@@ -72,6 +74,7 @@ interface MessageListProps {
 export function MessageList({
     channelName,
     roomIcon,
+    intro,
     rows,
     status,
     older,
@@ -139,7 +142,9 @@ export function MessageList({
                 onScroll={onScroll}
                 onFocus={focusIn}
                 role='log'
-                aria-label={t(roomIcon ? 'list.roomLabel' : 'list.label', { channel: channelName })}
+                aria-label={t(intro ? 'list.dmLabel' : roomIcon ? 'list.roomLabel' : 'list.label', {
+                    channel: channelName
+                })}
                 aria-busy={status === 'loading' || older.loading || newer.loading || undefined}
                 // Positioned: a message's offsetTop is measured from the list's top (useChatScroll).
                 className='relative h-full overflow-y-auto'
@@ -158,7 +163,9 @@ export function MessageList({
                     ) : (
                         <>
                             {older.loading ? <MessageSkeletons count={2} /> : null}
-                            {older.has ? null : <ChannelIntro channelName={channelName} roomIcon={roomIcon} />}
+                            {older.has
+                                ? null
+                                : (intro ?? <ChannelIntro channelName={channelName} roomIcon={roomIcon} />)}
                             {rows.flatMap((row, index) => {
                                 if (row.kind === 'date') {
                                     const day = dayLabel(row.at, now, timeZone, t)

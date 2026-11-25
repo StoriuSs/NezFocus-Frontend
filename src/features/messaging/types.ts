@@ -1,5 +1,6 @@
 import type { Presence } from '@/components/ui/presence-dot'
 import type { InfiniteData } from '@tanstack/react-query'
+import type { ReactNode } from 'react'
 import type { ApiModel } from '@/lib/api-types'
 
 /**
@@ -100,12 +101,29 @@ export type ChatMessage = Message | OutgoingMessage
 /**
  * Why one may not send in a channel, said in place of the composer (C-12
  * `disabled`): timed out, until when (D-54); a channel only moderators post
- * in (REQ-ROLE-03); else the server gives no SEND_MESSAGES.
+ * in (REQ-ROLE-03); else the server gives no SEND_MESSAGES. In a DM (S-DM-03,
+ * D-249): one may not message that person (`cannot-message`, the one line for
+ * every reason, D-23), or their account is deleted.
  */
 export type SendBlock =
     | { reason: 'timed-out'; until: string }
     | { reason: 'managers-only' }
     | { reason: 'no-permission' }
+    | { reason: 'cannot-message' }
+    | { reason: 'deleted-account' }
+
+/**
+ * What a DM's chat has that a channel's has not (S-DM-03, D-249), handed by
+ * the social feature: the person in place of "#" (the list's name, the
+ * composer's "Message {name}"), its beginning (C-10 `dm`), what stands in the
+ * composer's place for someone one blocked, and whose messages are not shown
+ * (that person's, system ones about them too: no "N blocked messages" in a DM).
+ */
+export interface DmChatParts {
+    intro: ReactNode
+    footer?: ReactNode
+    hidden?: string | null
+}
 
 export interface ChatPermissions {
     /** SEND_MESSAGES: reply, and edit one's own messages. */

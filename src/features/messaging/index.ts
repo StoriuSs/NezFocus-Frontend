@@ -17,8 +17,16 @@ export const PinsPanel = lazy(() => import('./components/ChannelChat').then((cha
 export const ChatDropZone = lazy(() =>
     import('./components/ChannelChat').then((chat) => ({ default: chat.ChatDropZone }))
 )
-export { useChannelReadState, useMentionedChannels, useMentionTotal, useServerReadState } from './api/useReadStates'
-export { forgetChannels } from './api/forgetChannels'
+export {
+    useChannelReadState,
+    useDmChannelIds,
+    useDmUnread,
+    useMentionedChannels,
+    useMentionTotal,
+    useServerReadState
+} from './api/useReadStates'
+export { useMarkChannelRead } from './api/useMarkChannelRead'
+export { forgetChannels, forgetReadState, readStatesAgain } from './api/forgetChannels'
 // A message's words without markers, mentions by name: the inbox's rows (06 S-NOTI-01).
 export { plainMessage, type MentionNames, type MentionWords } from './lib/mentions'
 export { useMentionWords } from './hooks/useMentionWords'
@@ -29,6 +37,7 @@ export type {
     MentionChannel,
     MentionPerson,
     MentionRole,
+    DmChatParts,
     MentionSource,
     SendBlock
 } from './types'
