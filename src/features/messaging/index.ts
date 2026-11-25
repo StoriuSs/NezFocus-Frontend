@@ -29,6 +29,7 @@ export { useMarkChannelRead } from './api/useMarkChannelRead'
 export { forgetChannels, forgetReadState, readStatesAgain } from './api/forgetChannels'
 // A message's words without markers, mentions by name: the inbox's rows (06 S-NOTI-01).
 export { plainMessage, type MentionNames, type MentionWords } from './lib/mentions'
+export { callEndedOf, callResultWords, callRowWords, type CallEnded } from './lib/call-ended'
 export { useMentionWords } from './hooks/useMentionWords'
 export type {
     AppLink,

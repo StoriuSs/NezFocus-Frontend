@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
-import { userKeys } from '@/features/users'
+import { connectBlockList, userKeys } from '@/features/users'
 import type { BareMessage, ReadState } from '../types'
 
 const fetchReadStates = vi.fn<() => Promise<ReadState[]>>()
@@ -47,6 +47,10 @@ const message = (n: number, more: Partial<BareMessage> = {}): BareMessage => ({
 })
 const an = { id: 'an', username: 'an.nguyen', displayName: 'An', avatarUrl: null }
 
+// Whom the reader blocked, as the AppShell lends them through the users feature (D-250).
+const RELATIONSHIPS = ['social', 'relationships']
+connectBlockList({ query: { queryKey: RELATIONSHIPS, queryFn: async () => [] }, path: '/friends?tab=blocked' })
+
 let client: QueryClient
 const held = () => client.getQueryData<ReadState[]>(messageKeys.readStates())
 const wrapper = ({ children }: { children: ReactNode }) => (
@@ -76,6 +80,12 @@ describe('Read states kept live by the socket (REQ-MSG-09)', () => {
     it('counts a message heard from someone else, and a mention of the reader', () => {
         emitRealtimeEvent('message.created', { message: message(11, { mentionUsers: [an] }), nonce: null })
         expect(held()?.[0]).toMatchObject({ unreadCount: 1, mentionCount: 1 })
+    })
+
+    it('counts nothing from someone the reader blocked (D-250)', () => {
+        client.setQueryData(RELATIONSHIPS, [{ type: 'blocked', user: { id: 'binh' } }])
+        emitRealtimeEvent('message.created', { message: message(11, { mentionUsers: [an] }), nonce: null })
+        expect(held()?.[0]).toMatchObject({ unreadCount: 0, mentionCount: 0 })
     })
 
     it('counts nothing for the reader’s own message', () => {

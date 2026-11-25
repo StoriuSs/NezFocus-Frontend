@@ -144,6 +144,15 @@ describe('A message heard on the socket', () => {
         expect(hearMessage(held, message(9), 'an').states).toBe(held)
     })
 
+    it('counts nothing from someone the reader blocked, a mention of them neither (D-250)', () => {
+        const blocked = (userId: string) => userId === 'binh'
+        const heard = hearMessage(held, message(11, { mentionUsers: [an] }), 'an', blocked)
+        expect(heard).toEqual({ states: held, refetch: false })
+        // A system message has no author: it counts as before.
+        const system = message(12, { type: 'system', author: null, systemEvent: 'member_joined' })
+        expect(hearMessage(held, system, 'an', blocked).states?.[0]).toMatchObject({ unreadCount: 1 })
+    })
+
     it('asks for the list again when it mentions a role: whose roles are those is the server’s to say', () => {
         const role = hearMessage(held, message(11, { mentionRoles: [{ id: 'r1', name: 'Trưởng nhóm' }] }), 'an')
         expect(role.refetch).toBe(true)

@@ -26,7 +26,8 @@ const { default: Privacy } = await import('@/features/users/pages/Privacy')
 const { useAccountSettings } = await import('@/features/users/hooks/useAccountSettings')
 const { connectBlockList } = await import('@/features/users/lib/block-list')
 // The people blocked, as the AppShell lends them (D-248): one, unless a test says otherwise.
-const readRelationships = vi.fn(async () => [{ type: 'friend' }, { type: 'blocked' }])
+const entry = (type: string, id: string) => ({ type, user: { id } })
+const readRelationships = vi.fn(async () => [entry('friend', 'binh'), entry('blocked', 'khanh')])
 connectBlockList({
     query: { queryKey: ['social', 'relationships'], queryFn: () => readRelationships() },
     path: '/friends?tab=blocked'
@@ -341,7 +342,11 @@ describe('Privacy (S-ME-05)', () => {
     })
 
     it('leads to the people blocked, counting them from the list the app connected (D-131, D-248)', async () => {
-        readRelationships.mockResolvedValueOnce([{ type: 'friend' }, { type: 'blocked' }, { type: 'blocked' }])
+        readRelationships.mockResolvedValueOnce([
+            entry('friend', 'binh'),
+            entry('blocked', 'khanh'),
+            entry('blocked', 'lan')
+        ])
         renderPage(<Privacy />)
 
         const row = await screen.findByRole('link', { name: /Block list/ })

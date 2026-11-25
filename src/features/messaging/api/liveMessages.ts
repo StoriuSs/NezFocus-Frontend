@@ -160,7 +160,11 @@ export function listenForMessages(client: QueryClient): () => void {
         listenToWindow('beforeunload', (event) => {
             const onItsWay = client
                 .getQueriesData<ChannelMessages>({ queryKey: [...messageKeys.all, 'channel'] })
-                .some(([, history]) => history?.pages.at(-1)?.outgoing?.some((message) => message.state !== 'failed'))
+                .some(([, history]) =>
+                    history?.pages
+                        .at(-1)
+                        ?.outgoing?.some((message) => message.state !== 'failed' && message.state !== 'refused')
+                )
             if (onItsWay || uploadsOnTheWay()) event.preventDefault()
         }),
         client.getQueryCache().subscribe((event) => {

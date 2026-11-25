@@ -52,9 +52,12 @@ export type MessageCursor = { before: string } | { after: string } | { around: s
  *   `waiting` while the browser is offline;
  * - `waiting`: no network; sent again when the browser is back online;
  * - `rate-limited`: sent too fast; sent again by itself at `retryAt`;
- * - `failed`: refused or lost; "Try again" or "Discard".
+ * - `failed`: refused or lost; "Try again" or "Discard";
+ * - `refused`: in a DM, the other one may no longer be written to
+ *   (CANNOT_MESSAGE_USER, 09 DM-EDGE `lost-permission`, D-250): trying again
+ *   fails again, so "Discard" only.
  */
-export type OutgoingState = 'sending' | 'queued' | 'waiting' | 'rate-limited' | 'failed'
+export type OutgoingState = 'sending' | 'queued' | 'waiting' | 'rate-limited' | 'failed' | 'refused'
 
 /** A message typed here and not saved yet, kept with the channel's history until it is. */
 export interface OutgoingMessage {
@@ -117,12 +120,15 @@ export type SendBlock =
  * the social feature: the person in place of "#" (the list's name, the
  * composer's "Message {name}"), its beginning (C-10 `dm`), what stands in the
  * composer's place for someone one blocked, and whose messages are not shown
- * (that person's, system ones about them too: no "N blocked messages" in a DM).
+ * (that person's, system ones about them too: no "N blocked messages" in a DM);
+ * told when a message is refused for the other one may no longer be written
+ * to (`onRefused`, D-250), so the page reads where the DM stands again.
  */
 export interface DmChatParts {
     intro: ReactNode
     footer?: ReactNode
     hidden?: string | null
+    onRefused?: () => void
 }
 
 export interface ChatPermissions {

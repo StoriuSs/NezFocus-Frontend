@@ -559,7 +559,11 @@ nothing more. Sending (by username) and accepting are `@Idempotent`
 gone meanwhile) takes the request out too. The words each screen says once
 done (a Toast) are the screen's: the hooks are in the AppShell's download.
 The Privacy page counts the people blocked from the same query, lent through
-the `BlockList` port the AppShell connects (users cannot import social).
+the `BlockList` port the AppShell connects (users cannot import social); the
+read states (messaging, outside React) ask it too (`isBlockedIn`): a message
+heard from someone I blocked is never unread, as `GET /me/read-states` counts
+it (D-250). A server's chat folds their messages: the channel page hands the
+chat whom I blocked (`useBlockedIds`, a set kept the same while they are).
 
 ## DMs, kept live
 
@@ -581,8 +585,11 @@ again when they hold a DM it has not, once per DM while they hold it.
 Closing a DM (`useCloseDm`) takes its row and its read state out at once,
 so its next message brings it back. Opening one (`POST /me/dms`,
 `@Idempotent`) puts the answer in the list; "Message" goes straight to a
-DM held (`useMessagePerson`). The changes are pure functions
-(`lib/dm-list.ts`).
+DM held (`useMessagePerson`). The last message keeps a system message's
+`systemData`, so a call's row says how it went (messaging's `callEndedOf`,
+D-250). A message refused in a DM (CANNOT_MESSAGE_USER) is `refused`, not
+`failed`: the chat tells the page (`dm.onRefused`), which reads the list
+again. The changes are pure functions (`lib/dm-list.ts`).
 
 ## The servers, kept live
 

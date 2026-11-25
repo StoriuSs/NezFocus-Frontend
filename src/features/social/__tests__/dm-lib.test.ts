@@ -11,7 +11,8 @@ import {
     withEdited,
     withMessage,
     withoutDm,
-    type HeardMessage
+    type HeardMessage,
+    type PreviewWords
 } from '../lib/dm-list'
 import { forgetMessagesPlace, messagesPlace, rememberMessagesPlace } from '../lib/messages-place'
 import { dmMessageLink, dmPath, isMessagesPath, messagesPlaceOf } from '../lib/paths'
@@ -24,6 +25,7 @@ const last = (n: number, at: string, more: Partial<DmLastMessage> = {}): DmLastM
     id: id(n),
     type: 'regular',
     systemEvent: null,
+    systemData: null,
     authorId: 'binh',
     content: 'Ok',
     mentionUsers: [],
@@ -46,6 +48,7 @@ const heard = (n: number, channelId: string, more: Partial<HeardMessage> = {}): 
     channelId,
     type: 'regular',
     systemEvent: null,
+    systemData: null,
     author: { id: 'tuan' },
     content: 'An ơi rảnh không',
     mentionUsers: [],
@@ -99,6 +102,7 @@ describe('The DM column (S-DM-01, Q5)', () => {
             id: id(8),
             type: 'regular',
             systemEvent: null,
+            systemData: null,
             authorId: 'tuan',
             content: 'An ơi rảnh không',
             mentionUsers: [],
@@ -125,12 +129,12 @@ describe('The DM column (S-DM-01, Q5)', () => {
         expect(withDmPresence(list, 'phong', 'online')).toBe(list)
     })
 
-    it('says the last message on one line: "Bạn: …" for mine, files alone, a call', () => {
-        const words = {
+    it('says the last message on one line: "Bạn: …" for mine, files alone, a call as it went', () => {
+        const words: PreviewWords = {
             mine: (text: string) => `Bạn: ${text}`,
             image: 'Đã gửi một ảnh',
             file: 'Đã gửi một tệp',
-            call: 'Cuộc gọi'
+            call: (call) => (call ? `${call.outcome} ${call.seconds ?? '-'}` : 'Cuộc gọi')
         }
         const plain = (message: DmLastMessage) => message.content
         expect(previewOf(last(1, 'x', { content: 'Đi,\n8h nhé' }), 'binh', plain, words)).toBe('Bạn: Đi, 8h nhé')
@@ -154,6 +158,18 @@ describe('The DM column (S-DM-01, Q5)', () => {
         expect(
             previewOf(last(1, 'x', { type: 'system', authorId: null, systemEvent: 'call_ended' }), 'binh', plain, words)
         ).toBe('Cuộc gọi')
+        const call = (status: string, durationSeconds: number | null) =>
+            last(1, 'x', {
+                type: 'system',
+                authorId: null,
+                systemEvent: 'call_ended',
+                systemData: { userId: 'tuan', callId: 'c1', status, endReason: null, video: false, durationSeconds }
+            })
+        expect(previewOf(call('missed', null), 'binh', plain, words)).toBe('missed -')
+        expect(previewOf(call('ended', 754), 'binh', plain, words)).toBe('ended 754')
+        // A pin in a DM is a system message too, but no call (C-30 has no words for it).
+        const pin = last(1, 'x', { type: 'system', authorId: null, systemEvent: 'message_pinned' })
+        expect(previewOf(pin, 'binh', plain, words)).toBe('')
         expect(previewOf(null, 'binh', plain, words)).toBe('')
     })
 })

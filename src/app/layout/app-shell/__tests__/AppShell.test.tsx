@@ -1366,6 +1366,61 @@ describe('AppShell (S-SHELL-01)', () => {
         })
     })
 
+    describe('someone I blocked in a text channel (02 S-CHAT-01 `blocked`, D-250)', () => {
+        afterEach(() => {
+            messagesApi.fetchMessages.mockImplementation(async (..._: unknown[]) => ({
+                items: [],
+                hasMoreBefore: false,
+                hasMoreAfter: false
+            }))
+        })
+
+        it('folds their messages: the channel page hands the chat whom I blocked', async () => {
+            const khanh = { id: 'khanh', username: 'khanh.le', displayName: 'Khánh', avatarUrl: null }
+            socialApi.fetchRelationships.mockResolvedValueOnce([
+                {
+                    type: 'blocked',
+                    since: '2026-11-25T12:48:00.000Z',
+                    presence: null,
+                    activity: null,
+                    note: null,
+                    user: khanh
+                }
+            ])
+            messagesApi.fetchMessages.mockImplementation(async (..._: unknown[]) => ({
+                items: [
+                    {
+                        id: '0190a0b0-0000-7000-8000-000000000009',
+                        channelId: 'hoi-dap',
+                        type: 'regular',
+                        author: khanh,
+                        content: 'Đề có đáp án nè, 50k',
+                        mentionUsers: [],
+                        mentionRoles: [],
+                        mentionEveryone: false,
+                        mentionHereUserIds: [],
+                        attachments: [],
+                        systemEvent: null,
+                        systemData: null,
+                        systemUser: null,
+                        systemUsers: [],
+                        replyTo: null,
+                        editedAt: null,
+                        pinned: false,
+                        reactions: [],
+                        createdAt: '2026-10-16T16:59:00.000Z'
+                    }
+                ] as never[],
+                hasMoreBefore: false,
+                hasMoreAfter: false
+            }))
+            renderAt('/channels/ot/hoi-dap')
+
+            expect(await screen.findByText('1 blocked message ·', {}, { timeout: 5000 })).toBeInTheDocument()
+            expect(screen.queryByText('Đề có đáp án nè, 50k')).toBeNull()
+        })
+    })
+
     describe("a voice room's chat (S-ROOM-08)", () => {
         const QUIET_READ = (unreadCount: number, mentionCount: number) => ({
             serverId: 'ot',

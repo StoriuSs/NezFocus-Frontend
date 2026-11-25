@@ -1,6 +1,6 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { incomingCountOf } from '../lib/relationship-cache'
+import { blockedIdsOf, incomingCountOf } from '../lib/relationship-cache'
 import { socialKeys } from './keys'
 import { listenForRelationships } from './liveRelationships'
 import { fetchRelationships } from './social.api'
@@ -37,4 +37,21 @@ export function useIncomingRequestCount(): number {
         listenForRelationships(client)
     }, [client])
     return useQuery({ ...relationshipsQuery, select: incomingCountOf }).data ?? 0
+}
+
+const NOBODY: ReadonlySet<string> = new Set()
+
+/**
+ * Whom I blocked, as a set the same from one render to the next while they
+ * stay the same (the query's answer is shared structurally): a server's chat
+ * and a room's fold their messages (02 S-CHAT-01 `blocked`, D-250). Nobody
+ * until read.
+ */
+export function useBlockedIds(): ReadonlySet<string> {
+    const client = useQueryClient()
+    useEffect(() => {
+        listenForRelationships(client)
+    }, [client])
+    const ids = useQuery({ ...relationshipsQuery, select: blockedIdsOf }).data
+    return useMemo(() => (ids?.length ? new Set(ids) : NOBODY), [ids])
 }

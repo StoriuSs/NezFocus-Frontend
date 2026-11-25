@@ -1,6 +1,6 @@
 import type { QueryClient } from '@tanstack/react-query'
 import { onRealtimeEvent } from '@/features/realtime'
-import { userKeys, type UserProfile } from '@/features/users'
+import { isBlockedIn, userKeys, type UserProfile } from '@/features/users'
 import { hearDeleted, hearEdited, hearMessage, keepState, type Heard } from '../lib/read-state-cache'
 import type { BareMessage, ReadState } from '../types'
 import { messageKeys } from './keys'
@@ -44,7 +44,8 @@ export function listenForReadStates(client: QueryClient): () => void {
         onRealtimeEvent('message.created', (data) => {
             const { message } = data as { message: BareMessage }
             const me = client.getQueryData<UserProfile>(userKeys.profile())?.id
-            apply(hearMessage(client.getQueryData<ReadState[]>(key), message, me))
+            // Whom the reader blocked, through the users feature's port (D-250): never unread.
+            apply(hearMessage(client.getQueryData<ReadState[]>(key), message, me, (id) => isBlockedIn(client, id)))
         }),
         onRealtimeEvent('message.updated', (data) => {
             const { message } = data as { message: BareMessage }

@@ -1,5 +1,5 @@
 import { useRef, useState, type FocusEvent, type ReactNode } from 'react'
-import { ArrowDown, CloudOff, type LucideIcon } from 'lucide-react'
+import { ArrowDown, Ban, CloudOff, type LucideIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import '@/i18n/messaging'
 import { Button } from '@/components/ui/button'
@@ -52,6 +52,8 @@ interface MessageListProps {
     holdNew?: boolean
     /** Told the newest message in view while the reader can see the page (D-46); left out otherwise. */
     onSeen?: (messageId: string) => void
+    /** A folded run of a blocked person's messages shown ("Hiện") or folded back ("Ẩn"), by its messages' keys (D-250). */
+    onFold?: (keys: readonly string[], show: boolean) => void
 }
 
 /**
@@ -70,6 +72,11 @@ interface MessageListProps {
  *
  * "New" stands above the first unread message, which starts a group of its
  * own; where a day begins there too, one line says both (C-10).
+ *
+ * Messages in a row from people one blocked are one line (C-10 `blocked`,
+ * D-250): `ban` 14 and "1 tin nhắn bị chặn · Hiện" in the message column,
+ * `body-sm` `text-tertiary`, "Hiện" a `text` button in `primary` 600 showing
+ * them there (frame S-CHAT-01 `blocked`).
  */
 export function MessageList({
     channelName,
@@ -94,7 +101,8 @@ export function MessageList({
     newFrom,
     unreadHeld = 0,
     holdNew = false,
-    onSeen
+    onSeen,
+    onFold
 }: MessageListProps) {
     const { t } = useTranslation('messaging')
     const newKey =
@@ -175,6 +183,37 @@ export function MessageList({
                                         <DateDivider key={row.key} label={day} />
                                     )
                                 }
+                                if (row.kind === 'blocked') {
+                                    return (
+                                        <div key={row.key} className='mt-2 flex gap-3 px-4 py-1.5'>
+                                            <div className='w-10 shrink-0' />
+                                            <p className='flex min-w-0 flex-1 items-center gap-1.5 text-body-sm text-text-tertiary'>
+                                                <Ban className='size-3.5 shrink-0' aria-hidden='true' />
+                                                {t('blocked.count', { count: row.count })} ·
+                                                <button
+                                                    type='button'
+                                                    aria-label={t('blocked.showLabel', { count: row.count })}
+                                                    data-fold={row.messageIds[0]}
+                                                    onClick={(event) => {
+                                                        const log = event.currentTarget.closest('[role=log]')
+                                                        onFold?.(row.messageIds, true)
+                                                        // Focus to the first message shown, where the button was (it goes).
+                                                        requestAnimationFrame(() =>
+                                                            log
+                                                                ?.querySelector<HTMLElement>(
+                                                                    `[data-row-key="${row.messageIds[0]}"]`
+                                                                )
+                                                                ?.focus()
+                                                        )
+                                                    }}
+                                                    className='font-semibold text-primary hover:underline'
+                                                >
+                                                    {t('blocked.show')}
+                                                </button>
+                                            </p>
+                                        </div>
+                                    )
+                                }
                                 const first = row.key === newKey
                                 const drawn =
                                     !isOutgoing(row.message) && row.message.type === 'system' ? (
@@ -205,6 +244,8 @@ export function MessageList({
                                             tabbable={row.key === tabbable}
                                             highlighted={row.key === highlighted}
                                             onHighlightEnd={onHighlightEnd}
+                                            hides={row.hides}
+                                            onFold={onFold}
                                         />
                                     )
                                 return first && rows[index - 1]?.kind !== 'date'

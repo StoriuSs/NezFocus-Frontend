@@ -159,7 +159,10 @@
     "viewTaskLabel": "View task {{title}}",
     "sessionStarted": "<0>{{name}}</0> started a {{cycle}} study session",
     "sessionEnded": "The study session ended",
-    "label": "{{text}}, {{time}}"
+    "label": "{{text}}, {{time}}",
+    "call": "<0>{{name}}</0> called",
+    "videoCall": "<0>{{name}}</0> made a video call",
+    "you": "You"
   },
   "mention": {
     "unknownUser": "@unknown user",
@@ -254,5 +257,14 @@
     "file": "File {{name}} from {{author}}",
     "noPdf": "This browser can't show this file",
     "deleted": "This message was deleted"
+  },
+  "blocked": {
+    "count_one": "{{count}} blocked message",
+    "count_other": "{{count}} blocked messages",
+    "show": "Show",
+    "showLabel_one": "Show {{count}} blocked message",
+    "showLabel_other": "Show {{count}} blocked messages",
+    "hide": "Hide",
+    "hideLabel": "Hide blocked messages"
   }
 }

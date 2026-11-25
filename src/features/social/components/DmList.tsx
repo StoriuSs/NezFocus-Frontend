@@ -12,7 +12,13 @@ import {
     DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
 import { WithTooltip } from '@/components/ui/tooltip'
-import { plainMessage, useChannelReadState, useMarkChannelRead, useMentionWords } from '@/features/messaging'
+import {
+    callRowWords,
+    plainMessage,
+    useChannelReadState,
+    useMarkChannelRead,
+    useMentionWords
+} from '@/features/messaging'
 import { useProfile } from '@/features/users'
 import { moveFocusInList } from '@/lib/arrow-focus'
 import { cn } from '@/lib/utils'
@@ -146,7 +152,7 @@ function DmRow({
               mine: (text) => t('shell.messages.mine', { text }),
               image: t('shell.messages.image'),
               file: t('shell.messages.file'),
-              call: t('shell.messages.call')
+              call: (call) => callRowWords(call, t)
           })
     const closeDm = () => {
         close.mutate(dm.id)

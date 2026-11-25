@@ -159,7 +159,10 @@
     "viewTaskLabel": "Xem việc {{title}}",
     "sessionStarted": "<0>{{name}}</0> đã bắt đầu phiên học {{cycle}}",
     "sessionEnded": "Phiên học đã kết thúc",
-    "label": "{{text}}, {{time}}"
+    "label": "{{text}}, {{time}}",
+    "call": "<0>{{name}}</0> đã gọi",
+    "videoCall": "<0>{{name}}</0> đã gọi video",
+    "you": "Bạn"
   },
   "mention": {
     "unknownUser": "@người dùng không rõ",
@@ -254,5 +257,14 @@
     "file": "Tệp {{name}} của {{author}}",
     "noPdf": "Trình duyệt không xem được tệp này",
     "deleted": "Tin nhắn này đã bị xóa"
+  },
+  "blocked": {
+    "count_one": "{{count}} tin nhắn bị chặn",
+    "count_other": "{{count}} tin nhắn bị chặn",
+    "show": "Hiện",
+    "showLabel_one": "Hiện {{count}} tin nhắn bị chặn",
+    "showLabel_other": "Hiện {{count}} tin nhắn bị chặn",
+    "hide": "Ẩn",
+    "hideLabel": "Ẩn tin nhắn bị chặn"
   }
 }

@@ -8,7 +8,7 @@ import { userKeys } from '@/features/users'
 import { messageKeys } from '../api/keys'
 import { expectNoA11yViolations } from '@/test/a11y'
 import { apiError } from '@/test/helpers'
-import type { MentionSource, Message, MessageCursor, MessagePage } from '../types'
+import type { ChatTarget, MentionSource, Message, MessageCursor, MessagePage } from '../types'
 
 /** No one to suggest, no roles held: these tests are not about mentions (REQ-MSG-03). */
 const NO_MENTIONS: MentionSource = {
@@ -63,7 +63,9 @@ const page = (items: Message[]): MessagePage => ({ items, hasMoreBefore: false, 
 function renderChat(
     channelId = 'hoi-dap',
     client = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
-    me = 'an'
+    me = 'an',
+    blocked?: ReadonlySet<string>,
+    target?: ChatTarget
 ) {
     client.setQueryData(userKeys.profile(), { id: me, username: `${me}.nguyen`, displayName: me, avatarUrl: null })
     client.setQueryData(userKeys.settings(), { timezone: ZONE })
@@ -79,6 +81,8 @@ function renderChat(
                         mentions={NO_MENTIONS}
                         channelId={channelId}
                         channelName={channelId}
+                        blocked={blocked}
+                        target={target}
                         permissions={{
                             attachFiles: true,
                             send: true,
@@ -124,6 +128,56 @@ describe('A text channel chat (S-CHAT-01)', () => {
         expect(within(log).getByText('Đề giữa kỳ năm ngoái')).toBeInTheDocument()
         expect(messagesApi.fetchMessages).toHaveBeenCalledWith('hoi-dap', null)
         await expectNoA11yViolations(container)
+    })
+
+    it('folds the messages of someone I blocked into one row, shown with "Hiện", folded back with "Ẩn" (C-10 `blocked`, D-250)', async () => {
+        const KHANH = person('khanh', 'Khánh')
+        messagesApi.fetchMessages.mockResolvedValue(
+            page([
+                message('m1', BINH, 'Câu 3 giải thế nào?', today('20:02')),
+                message('m2', KHANH, 'Đề có đáp án nè, 50k', today('20:05')),
+                message('m3', KHANH, 'Ib mình nhé', today('20:06')),
+                message('m4', AN, 'Mình làm rồi', today('20:11'))
+            ])
+        )
+        const { container } = renderChat('hoi-dap', undefined, 'an', new Set(['khanh']))
+
+        const log = await screen.findByRole('log', { name: 'Tin nhắn trong #hoi-dap' })
+        expect(await within(log).findByText('2 tin nhắn bị chặn ·')).toBeInTheDocument()
+        expect(within(log).queryByText('Đề có đáp án nè, 50k')).toBeNull()
+        await expectNoA11yViolations(container)
+
+        await userEvent.click(within(log).getByRole('button', { name: 'Hiện 2 tin nhắn bị chặn' }))
+
+        expect(within(log).getByText('Đề có đáp án nè, 50k')).toBeInTheDocument()
+        expect(within(log).getByText('Ib mình nhé')).toBeInTheDocument()
+        // Focus to the first message shown, where the button was.
+        await waitFor(() => expect(document.activeElement).toBe(log.querySelector('[data-row-key="m2"]')))
+        // As any messages: one name for the two, "Ẩn" beside its heading.
+        expect(within(log).getAllByText('Khánh')).toHaveLength(1)
+        await userEvent.click(within(log).getByRole('button', { name: 'Ẩn tin nhắn bị chặn' }))
+        expect(within(log).queryByText('Đề có đáp án nè, 50k')).toBeNull()
+        expect(within(log).getByText('2 tin nhắn bị chặn ·')).toBeInTheDocument()
+        await waitFor(() =>
+            expect(document.activeElement).toBe(within(log).getByRole('button', { name: 'Hiện 2 tin nhắn bị chặn' }))
+        )
+    })
+
+    it('shows the run of a folded message a link goes to, lit up (D-48, D-250)', async () => {
+        const KHANH = person('khanh', 'Khánh')
+        messagesApi.fetchMessages.mockResolvedValue(
+            page([
+                message('m1', BINH, 'Câu 3 giải thế nào?', today('20:02')),
+                message('m2', KHANH, 'Đề có đáp án nè, 50k', today('20:05')),
+                message('m3', AN, 'Mình làm rồi', today('20:11'))
+            ])
+        )
+        renderChat('hoi-dap', undefined, 'an', new Set(['khanh']), { messageId: 'm2', key: 'k1', focus: false })
+
+        const log = await screen.findByRole('log', { name: 'Tin nhắn trong #hoi-dap' })
+        expect(await within(log).findByText('Đề có đáp án nè, 50k')).toBeInTheDocument()
+        expect(within(log).queryByText('1 tin nhắn bị chặn ·')).toBeNull()
+        expect(within(log).getByRole('button', { name: 'Ẩn tin nhắn bị chặn' })).toBeInTheDocument()
     })
 
     it('shows an account others see as deleted with the default person, not a letter (C-03, D-182)', async () => {

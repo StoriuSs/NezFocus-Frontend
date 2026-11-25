@@ -44,8 +44,11 @@ const isId = (id: string | undefined): id is string =>
  * composer (`cannot-message`, one line for every reason, D-23) and no dot in
  * the Header (09 Q10); a deleted account "Deleted account" and its own line;
  * someone I blocked has the strip with Unblock in the composer's place, and
- * their messages hidden (`blocked-by-me`). The profile panel (C-50) and the
- * `not-friend` strip come with L7b, the activity line with L8, the calls with L9.
+ * their messages hidden (`blocked-by-me`). A message refused because I may
+ * no longer write to them (09 DM-EDGE `lost-permission`, D-250) reads the
+ * list again, so the page turns `cannot-message`. The profile panel (C-50)
+ * and the `not-friend` strip come with L7c, the activity line with L8, the
+ * calls with L9.
  */
 export default function DirectMessage() {
     const { dmId = '', messageId } = useParams()
@@ -80,6 +83,7 @@ function DmVisit({ dmId, messageId }: { dmId: string; messageId?: string }) {
 
 function DmChat({ dm, messageId }: { dm: Dm; messageId?: string }) {
     const { t } = useTranslation('social')
+    const client = useQueryClient()
     const navigate = useNavigate()
     const { key, state } = useLocation()
     const offline = useContext(ShellContext)?.connection === 'offline'
@@ -129,6 +133,8 @@ function DmChat({ dm, messageId }: { dm: Dm; messageId?: string }) {
         void navigate(dmMessagePath(dm.id, pinnedId), { state: { focusMessage: !pins.docked } })
         if (!pins.docked) pins.close()
     }
+    // The same from one render to the next: the chat tells it once per refused message, not on each new `parts`.
+    const onRefused = useCallback(() => void client.refetchQueries({ queryKey: socialKeys.dms() }), [client])
     const parts = useMemo(
         () => ({
             intro: <DmIntro person={person} />,
@@ -141,9 +147,10 @@ function DmChat({ dm, messageId }: { dm: Dm; messageId?: string }) {
                         onUnblock={() => unblockPerson(person.id)}
                     />
                 ) : undefined,
-            hidden: standing === 'blocked-by-me' ? person.id : null
+            hidden: standing === 'blocked-by-me' ? person.id : null,
+            onRefused
         }),
-        [person, standing, name, offline, unblocking, unblockPerson]
+        [person, standing, name, offline, unblocking, unblockPerson, onRefused]
     )
 
     return (

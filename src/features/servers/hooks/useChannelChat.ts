@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react'
 import { useLocation } from 'react-router-dom'
 import type { AppLink, ChatPermissions, ChatTarget, MentionSource } from '@/features/messaging'
+import { useBlockedIds } from '@/features/social'
 import { useMentionSource } from '../api/useMentionSource'
 import { useServers } from '../api/useServers'
 import { linkedServers, readAppLink, type LinkedServer } from '../lib/app-links'
@@ -16,6 +17,8 @@ export interface ChannelChatProps {
     readLink: (href: string) => AppLink | null
     mentions: MentionSource
     target?: ChatTarget
+    /** Whom one blocked: their messages fold (the social feature's, D-250). */
+    blocked: ReadonlySet<string>
 }
 
 /**
@@ -24,8 +27,9 @@ export interface ChannelChatProps {
  * there (read from the permission bits here, as the chat reads none), how to
  * link to one of them, how links in messages show (this feature's paths and
  * the servers one is in), and the server's side of mentions
- * (`useMentionSource`). All kept from one render to the next while they stay
- * the same, so the chat's rows do not draw again.
+ * (`useMentionSource`), and whom one blocked (the social feature's
+ * `useBlockedIds`: their messages fold, D-250). All kept from one render to
+ * the next while they stay the same, so the chat's rows do not draw again.
  *
  * Opened at a message (`messageId`), the chat goes to it, again each time a
  * link to it is opened; from the pins sheet, which closes with the focus in
@@ -51,5 +55,6 @@ export function useChannelChat(server: Server, channel: ServerChannel, messageId
     // A link followed again jumps again; a task's detail opened over the page (`?task=`) does not.
     const visit = useVisitKey()
     const target = useMemo(() => (messageId ? { messageId, key: visit, focus } : undefined), [messageId, visit, focus])
-    return { permissions, linkTo, readLink, mentions, target }
+    const blocked = useBlockedIds()
+    return { permissions, linkTo, readLink, mentions, target, blocked }
 }

@@ -1,3 +1,4 @@
+import { callEndedOf, type CallEnded } from '@/features/messaging'
 import type { Dm, DmLastMessage, Presence } from '../types'
 
 /** What the DM list reads of a `message.created` / `message.updated` (the messaging feature's message, as the socket gives it). */
@@ -6,6 +7,7 @@ export interface HeardMessage {
     channelId: string
     type: 'regular' | 'system'
     systemEvent: string | null
+    systemData: Record<string, unknown> | null
     author: { id: string } | null
     content: string
     mentionUsers: ReadonlyArray<{ id: string; username: string | null; displayName: string | null }>
@@ -56,6 +58,7 @@ export function lastMessageOf(message: HeardMessage): DmLastMessage {
         id: message.id,
         type: message.type,
         systemEvent: message.systemEvent,
+        systemData: message.systemData,
         authorId: message.author?.id ?? null,
         content: message.content,
         mentionUsers: message.mentionUsers.map(({ id, username, displayName }) => ({ id, username, displayName })),
@@ -101,14 +104,16 @@ export interface PreviewWords {
     mine: (text: string) => string
     image: string
     file: string
-    /** A call's system message (its result comes with L7b). */
-    call: string
+    /** A call's system message (`call_ended`): how it went (C-30, D-250); null when it cannot be read as one. */
+    call: (call: CallEnded | null) => string
 }
 
 /**
  * A DMRow's second line without a study activity (C-30): the last message on
  * one line, "Bạn: …" when mine; files alone "Đã gửi một ảnh" / "Đã gửi một
- * tệp"; a call. `plain` gives the words with mentions by name.
+ * tệp"; a call, as it went ("Cuộc gọi nhỡ", "Cuộc gọi · 12 phút"); any other
+ * system message (a pin) nothing, C-30 having no words for it. `plain` gives
+ * the words with mentions by name.
  */
 export function previewOf(
     last: DmLastMessage | null,
@@ -117,7 +122,8 @@ export function previewOf(
     words: PreviewWords
 ): string {
     if (!last) return ''
-    if (last.type === 'system') return words.call
+    if (last.type === 'system')
+        return last.systemEvent === 'call_ended' ? words.call(callEndedOf(last.systemEvent, last.systemData)) : ''
     const said = plain(last).replace(/\s+/g, ' ').trim()
     const { count, images } = last.files
     const text = said || (count === 0 ? '' : count === images ? words.image : words.file)

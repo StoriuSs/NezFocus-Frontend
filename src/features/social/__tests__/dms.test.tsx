@@ -73,6 +73,7 @@ const last = (n: number, at: string, more: Partial<DmLastMessage> = {}): DmLastM
     id: id(n),
     type: 'regular',
     systemEvent: null,
+    systemData: null,
     authorId: 'binh',
     content: 'Ok 👍',
     mentionUsers: [],
@@ -212,6 +213,27 @@ describe('Cột Tin nhắn (S-DM-01)', () => {
         expect(within(chi).getByText('Chi')).toHaveClass('font-medium', 'text-text-secondary')
         expect(within(chi).getByText('Bạn: Đi, 8h nhé')).toBeInTheDocument()
         await expectNoA11yViolations()
+    })
+
+    it('says how a call went on its row: missed, or "Cuộc gọi · 12 phút" (C-30, D-250)', async () => {
+        const call = (n: number, status: string, durationSeconds: number | null) =>
+            last(n, `2026-10-18T1${n}:00:00.000Z`, {
+                type: 'system',
+                authorId: null,
+                systemEvent: 'call_ended',
+                systemData: { userId: 'binh', callId: `c${n}`, status, endReason: null, video: false, durationSeconds }
+            })
+        dmsApi.fetchDms.mockResolvedValue([
+            dm('dm-binh', BINH, call(4, 'missed', null)),
+            dm('dm-chi', CHI, call(3, 'ended', 12 * 60 + 5))
+        ])
+        renderAt('/study')
+
+        const binh = await within(column()).findByRole('link', { name: /Bình/ })
+        expect(within(binh).getByText('Cuộc gọi nhỡ')).toBeInTheDocument()
+        expect(
+            within(within(column()).getByRole('link', { name: /Chi/ })).getByText('Cuộc gọi · 12 phút')
+        ).toBeInTheDocument()
     })
 
     it('says "No messages yet" with where to start one when there is none, a DM with no message hidden', async () => {
@@ -367,6 +389,24 @@ describe('Trang DM (S-DM-03)', () => {
         const header = screen.getByRole('heading', { level: 1, name: 'Phong' }).closest('header')!
         expect(header.querySelector('svg circle')).toBeNull()
         expect(screen.queryByPlaceholderText('Nhắn Phong')).toBeNull()
+    })
+
+    it('says "Không gửi được" with no "Thử lại" when I may no longer write to them, then locks the composer (lost-permission, D-250)', async () => {
+        messagesApi.sendMessage.mockRejectedValue(apiError(403, 'CANNOT_MESSAGE_USER'))
+        renderAt('/dm/dm-binh')
+        const composer = await screen.findByPlaceholderText('Nhắn Bình', {}, { timeout: 5000 })
+        // Where the DM stands, read again: no longer to be written to.
+        dmsApi.fetchDms.mockResolvedValue(
+            DMS.map((one) => (one.id === 'dm-binh' ? { ...one, canMessage: false } : one))
+        )
+
+        await userEvent.type(composer, 'Chào{Enter}')
+
+        expect(await screen.findByRole('alert')).toHaveTextContent('Không gửi được')
+        expect(screen.queryByRole('button', { name: 'Thử lại' })).toBeNull()
+        expect(screen.getByRole('button', { name: 'Bỏ' })).toBeInTheDocument()
+        expect(await screen.findByRole('status')).toHaveTextContent('Không thể gửi tin nhắn cho người dùng này')
+        expect(screen.queryByPlaceholderText('Nhắn Bình')).toBeNull()
     })
 
     it('says "Tài khoản đã bị xóa" for a deleted account, with its own locked line (deleted-account)', async () => {

@@ -210,7 +210,7 @@ function VoiceChannel({ server, channel, messageId }: { server: Server; channel:
         roster.close()
         if (!chat.open) chat.toggle()
     }
-    const { permissions, linkTo, readLink, mentions, target } = useChannelChat(server, channel, messageId)
+    const { permissions, linkTo, readLink, mentions, target, blocked } = useChannelChat(server, channel, messageId)
     const icon = channelIcon(channel)
     // A message link or an inbox item: the chat open at it, once per visit.
     const [openedAt, setOpenedAt] = useState<string | null>(null)
@@ -359,6 +359,7 @@ function VoiceChannel({ server, channel, messageId }: { server: Server; channel:
                                 readLink={readLink}
                                 mentions={mentions}
                                 target={chatTarget}
+                                blocked={blocked}
                             />
                         </Suspense>
                     </RightPanel>
@@ -429,7 +430,7 @@ function TextChannel({ server, channel, messageId }: { server: Server; channel: 
     const place = useTaskBoardPlace(server, channel, openSettings)
     const { id: serverId } = server
     const { id: channelId } = channel
-    const { permissions, linkTo, readLink, mentions, target } = useChannelChat(server, channel, messageId)
+    const { permissions, linkTo, readLink, mentions, target, blocked } = useChannelChat(server, channel, messageId)
     // "Xem việc" on a due-date reminder: the task's detail over this page, no step in the history (05 Q6).
     const [, setParams] = useSearchParams()
     const showTask = useCallback(
@@ -550,6 +551,7 @@ function TextChannel({ server, channel, messageId }: { server: Server; channel: 
                     mentions={mentions}
                     target={target}
                     showTask={showTask}
+                    blocked={blocked}
                 />
             </Suspense>
         </ShellPage>

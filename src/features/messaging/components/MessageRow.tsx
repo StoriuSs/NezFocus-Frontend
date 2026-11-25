@@ -56,6 +56,9 @@ interface MessageRowProps {
     /** Opened by a link or from a reply: lit up for a moment (C-10 `highlight`, D-48). */
     highlighted?: boolean
     onHighlightEnd?: () => void
+    /** Heading a run of a blocked person's messages shown again: its messages' keys, and the way to fold it back ("Ẩn"). */
+    hides?: readonly string[]
+    onFold?: (keys: readonly string[], show: boolean) => void
 }
 
 /**
@@ -76,6 +79,10 @@ interface MessageRowProps {
  * a role they hold, @everyone, or answers them; never their own) sits on
  * `surface-1` with a 2-wide `primary` rule at its left, and reads "mentions
  * you".
+ *
+ * The first of a blocked person's messages shown again ("Hiện", 02 S-CHAT-01
+ * `blocked`, D-250) has a `text` button "Ẩn" on its time line, folding them
+ * back.
  */
 export const MessageRow = memo(function MessageRow({
     rowKey,
@@ -90,7 +97,9 @@ export const MessageRow = memo(function MessageRow({
     editor,
     tabbable,
     highlighted = false,
-    onHighlightEnd
+    onHighlightEnd,
+    hides,
+    onFold
 }: MessageRowProps) {
     const { t } = useTranslation('messaging')
     const words = useMentionWords()
@@ -110,6 +119,12 @@ export const MessageRow = memo(function MessageRow({
                 {shownTime}
             </time>
         </WithTooltip>
+    )
+    const heading = (
+        <h3 className='flex min-w-0 items-center gap-2'>
+            <span className='truncate text-body font-semibold text-text-primary'>{name}</span>
+            {time}
+        </h3>
     )
     const outgoing = isOutgoing(message) ? message : undefined
     const saved = isOutgoing(message) ? undefined : message
@@ -232,11 +247,28 @@ export const MessageRow = memo(function MessageRow({
                 {message.replyTo ? (
                     <ReplyLine quoted={message.replyTo} onShow={handlers.show} source={source} words={words} />
                 ) : null}
-                {grouped ? null : (
-                    <h3 className='flex items-center gap-2'>
-                        <span className='truncate text-body font-semibold text-text-primary'>{name}</span>
-                        {time}
-                    </h3>
+                {grouped ? null : hides && onFold ? (
+                    // "Ẩn" beside the heading, not in it: the heading reads "who, when" as on any message.
+                    <div className='flex items-center gap-2'>
+                        {heading}
+                        <button
+                            type='button'
+                            aria-label={t('blocked.hideLabel')}
+                            onClick={(event) => {
+                                const log = event.currentTarget.closest('[role=log]')
+                                onFold(hides, false)
+                                // Focus back to the folded row's "Hiện" (these messages go).
+                                requestAnimationFrame(() =>
+                                    log?.querySelector<HTMLElement>(`[data-fold="${hides[0]}"]`)?.focus()
+                                )
+                            }}
+                            className='text-label text-primary hover:underline'
+                        >
+                            {t('blocked.hide')}
+                        </button>
+                    </div>
+                ) : (
+                    heading
                 )}
                 {saved && editor ? (
                     <MessageEditor
@@ -406,17 +438,21 @@ function OutgoingLine({
     const { t } = useTranslation('messaging')
     const seconds = useCountdown(message.state === 'rate-limited' ? message.retryAt : null)
 
-    if (message.state === 'failed') {
-        // Text buttons, primary like the frame's (C-10 `failed`).
+    if (message.state === 'failed' || message.state === 'refused') {
+        // Text buttons, primary like the frame's (C-10 `failed`). Refused: no "Try again", it would fail again (D-250).
         const action = 'font-semibold text-primary hover:underline'
         return (
             <p role='alert' className='mt-1 flex items-center gap-1.5 text-label text-danger'>
                 <CircleAlert className='size-4 shrink-0' aria-hidden='true' />
                 {t('message.failed')} ·
-                <button type='button' className={action} onClick={() => void onRetry(message.nonce)}>
-                    {t('message.retry')}
-                </button>
-                ·
+                {message.state === 'failed' ? (
+                    <>
+                        <button type='button' className={action} onClick={() => void onRetry(message.nonce)}>
+                            {t('message.retry')}
+                        </button>
+                        ·
+                    </>
+                ) : null}
                 <button type='button' className={action} onClick={() => onDiscard(message.nonce)}>
                     {t('message.discard')}
                 </button>

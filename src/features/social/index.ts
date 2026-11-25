@@ -9,7 +9,7 @@
  * with "Message" (`useMessagePerson`). Keep page-only modules out: this
  * index is in the AppShell's download.
  */
-export { relationshipsQuery, useIncomingRequestCount, useRelationships } from './api/useRelationships'
+export { relationshipsQuery, useBlockedIds, useIncomingRequestCount, useRelationships } from './api/useRelationships'
 export { useAcceptFriendRequest, useRemoveRelationship } from './api/useRelationshipActions'
 export { useDms } from './api/useDms'
 export { useMessagePerson } from './api/useDmActions'

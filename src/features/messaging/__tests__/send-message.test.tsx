@@ -535,3 +535,22 @@ describe('A send that breaks in the app itself', () => {
         expect(reportError).toHaveBeenCalledWith(bug, expect.anything())
     })
 })
+
+describe('A send in a DM to someone I may no longer write to (09 DM-EDGE `lost-permission`, D-250)', () => {
+    beforeEach(() => {
+        sendMessage.mockReset()
+        reportError.mockReset()
+        setOnline(true)
+    })
+
+    it('refuses the message, not reported, and "Try again" sends nothing', async () => {
+        sendMessage.mockRejectedValue(apiError(403, 'CANNOT_MESSAGE_USER'))
+        const hook = setUp()
+        act(() => void hook.current.send('Chào Tuấn'))
+
+        await waitFor(() => expect(outgoing()[0]?.state).toBe('refused'))
+        expect(reportError).not.toHaveBeenCalled()
+        await act(async () => hook.current.retry(outgoing()[0]!.nonce))
+        expect(sendMessage).toHaveBeenCalledTimes(1)
+    })
+})

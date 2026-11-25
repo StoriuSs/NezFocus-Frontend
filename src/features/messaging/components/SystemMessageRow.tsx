@@ -1,10 +1,11 @@
 import { memo, type KeyboardEvent } from 'react'
-import { AlarmClock, LampDesk, Pin, UserPlus, type LucideIcon } from 'lucide-react'
+import { AlarmClock, LampDesk, Phone, PhoneMissed, PhoneOff, Pin, UserPlus, Video, type LucideIcon } from 'lucide-react'
 import { Trans, useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import '@/i18n/messaging'
 import { Button } from '@/components/ui/button'
 import { WithTooltip } from '@/components/ui/tooltip'
+import { callEndedOf, callResultWords, type CallEnded } from '../lib/call-ended'
 import { messageTime, messageTimeInFull } from '../lib/message-time'
 import { reminderPeople, shortTaskTitle } from '../lib/task-due'
 import type { Message } from '../types'
@@ -16,6 +17,8 @@ type SystemKey =
     | 'system.taskDue2h'
     | 'system.sessionStarted'
     | 'system.sessionEnded'
+    | 'system.call'
+    | 'system.videoCall'
 
 /** The system messages the chat draws, with their icon and words (REQ-MSG-08, D-168). */
 const SYSTEM_EVENTS: Record<string, { icon: LucideIcon; key: SystemKey }> = {
@@ -24,7 +27,16 @@ const SYSTEM_EVENTS: Record<string, { icon: LucideIcon; key: SystemKey }> = {
     task_due: { icon: AlarmClock, key: 'system.taskDue24h' },
     // A study room's session, in its chat (D-222), with the room's icon (07 S-ROOM-08): who started it and its cycle then; that it ended.
     study_session_started: { icon: LampDesk, key: 'system.sessionStarted' },
-    study_session_ended: { icon: LampDesk, key: 'system.sessionEnded' }
+    study_session_ended: { icon: LampDesk, key: 'system.sessionEnded' },
+    // A DM's call (09 Q4, D-250): its icon and words by how it went (`callIcon`).
+    call_ended: { icon: Phone, key: 'system.call' }
+}
+
+/** A call's icon (09 › Tin hệ thống cuộc gọi): missed in `danger`, refused or failed, answered by its kind. */
+function callIcon(call: CallEnded): { icon: LucideIcon; className: string } {
+    if (call.outcome === 'missed') return { icon: PhoneMissed, className: 'text-danger' }
+    if (call.outcome !== 'ended') return { icon: PhoneOff, className: 'text-text-tertiary' }
+    return { icon: call.video ? Video : Phone, className: 'text-text-tertiary' }
 }
 
 /** "25/5": the cycle a session started with, as kept in its message (focus and short break minutes). */
@@ -76,6 +88,11 @@ export const isShownSystem = (message: Message) =>
  * A study room's session (07, REQ-MSG-08): "An đã bắt đầu phiên học 25/5",
  * "Phiên học đã kết thúc" (no one named: it may end by itself).
  *
+ * A DM's call (09 Q4, D-250): "**Bình** đã gọi · Cuộc gọi nhỡ", "**Bạn** đã
+ * gọi video · 12 phút"; "phone-missed" in `danger` for a missed one,
+ * "phone-off" refused or failed, "phone" / "video" answered. "Gọi lại" comes
+ * with the calls (L9).
+ *
  * A due-date reminder (05 S-TASK-01 › Tin nhắc hạn): "Còn 24 giờ tới hạn:
  * {task} · An, Chi · Hôm qua 23:59" and Button `text · S` "Xem việc", which
  * opens the task (`onShowTask`; none where no task can open). The task's
@@ -107,19 +124,28 @@ export const SystemMessageRow = memo(function SystemMessageRow({
     onShowTask?: (taskId: string) => void
 }) {
     const { t } = useTranslation('messaging')
+    const { t: common } = useTranslation()
     const event = SYSTEM_EVENTS[message.systemEvent ?? '']
     if (!event) return null
-    const { icon: Icon } = event
     const task = taskDueOf(message)
-    const key = task?.key ?? event.key
+    const call = callEndedOf(message.systemEvent, message.systemData)
+    const look = call ? callIcon(call) : { icon: event.icon, className: 'text-text-tertiary' }
+    const Icon = look.icon
+    const key = task?.key ?? (call?.video ? 'system.videoCall' : event.key)
     const at = new Date(message.createdAt)
     const time = messageTime(at, now, timeZone, t)
-    const name = message.systemUser?.displayName ?? message.systemUser?.username ?? t('message.deletedAccount')
+    const name =
+        call?.callerId && call.callerId === me
+            ? t('system.you')
+            : (message.systemUser?.displayName ?? message.systemUser?.username ?? t('message.deletedAccount'))
     const pinnedId = message.systemEvent === 'message_pinned' ? message.systemData?.messageId : undefined
     const people = task ? peopleWords(message, me, t) : ''
+    const result = call ? callResultWords(call, common) : ''
     const said = task
         ? [t(key, { title: task.title }).replace(/<\/?0>/g, ''), people].filter(Boolean).join(' · ')
-        : t(key, { name, cycle: sessionCycleWords(message) }).replace(/<\/?0>/g, '')
+        : [t(key, { name, cycle: sessionCycleWords(message) }).replace(/<\/?0>/g, ''), result]
+              .filter(Boolean)
+              .join(' · ')
     const moment = (className?: string) => (
         <WithTooltip label={messageTimeInFull(at, timeZone, t)}>
             <time dateTime={message.createdAt} className={className}>
@@ -147,7 +173,7 @@ export const SystemMessageRow = memo(function SystemMessageRow({
             className='group mt-2 flex gap-3 px-4 py-1 hover:bg-surface-1 focus-visible:bg-surface-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary'
         >
             <div className={`flex ${task ? 'h-7' : 'h-5'} w-10 shrink-0 items-center justify-center`}>
-                <Icon className='size-4 text-text-tertiary' aria-hidden='true' />
+                <Icon className={`size-4 ${look.className}`} aria-hidden='true' />
             </div>
             {task ? (
                 <p className='min-w-0 flex-1 text-body-sm leading-7 text-text-secondary'>
@@ -185,6 +211,7 @@ export const SystemMessageRow = memo(function SystemMessageRow({
                         values={{ name, cycle: sessionCycleWords(message) }}
                         components={[<span key='name' className='font-semibold text-text-primary' />]}
                     />
+                    {result ? ` · ${result}` : null}
                     {typeof pinnedId === 'string' ? (
                         <>
                             {' · '}

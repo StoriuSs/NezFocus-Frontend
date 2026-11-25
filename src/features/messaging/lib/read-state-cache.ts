@@ -57,11 +57,18 @@ const capped = (count: number) => Math.min(count + 1, READ_COUNT_CAP)
  * and a channel with no state yet, are the server's to say: the list is read
  * again.
  */
-export function hearMessage(states: ReadState[] | undefined, message: BareMessage, me: string | undefined): Heard {
+export function hearMessage(
+    states: ReadState[] | undefined,
+    message: BareMessage,
+    me: string | undefined,
+    isBlocked: (userId: string) => boolean = () => false
+): Heard {
     if (!states) return { states, refetch: false }
     const held = states.find((state) => state.channelId === message.channelId)
     if (!held) return { states, refetch: true }
     if (!me || !isAfter(message.id, held.lastReadId) || isFromReader(message, me)) return { states, refetch: false }
+    // Someone the reader blocked: never unread, never about them (D-250).
+    if (message.author && isBlocked(message.author.id)) return { states, refetch: false }
     const related = isRelated(message, { id: me, roleIds: [] })
     const next = {
         ...held,

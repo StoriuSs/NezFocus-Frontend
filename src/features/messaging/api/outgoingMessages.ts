@@ -23,6 +23,8 @@ import { sendMessage } from './messages.api'
  * - too fast (429): `rate-limited`, sent again by itself after Retry-After;
  * - not found: the message was saved, then deleted before this answer came
  *   (a retry of its nonce, REQ-MSG-10), so the copy leaves without a word;
+ * - in a DM, the other one no longer to be written to (CANNOT_MESSAGE_USER):
+ *   `refused`, "Discard" only (D-250), not reported: the API's answer;
  * - anything else: `failed`, until "Try again" (the same nonce, so never
  *   twice, REQ-MSG-10) or "Discard".
  * One at a time per channel, in the order typed: a message typed while an
@@ -38,7 +40,7 @@ import { sendMessage } from './messages.api'
 
 type OutgoingMentions = Pick<OutgoingMessage, 'mentionUsers' | 'mentionRoles' | 'mentionEveryone'>
 
-/** Still on its way: a message typed after one of these waits behind it. A failed one holds nothing back. */
+/** Still on its way: a message typed after one of these waits behind it. A failed or refused one holds nothing back. */
 const ON_ITS_WAY = new Set<OutgoingState>(['sending', 'queued', 'waiting', 'rate-limited'])
 
 /** Being sent right now, by nonce: "Thử lại" clicked twice sends it once. */
@@ -173,7 +175,7 @@ export function untilHistory(client: QueryClient, channelId: string): Promise<Ch
 /** "Try again" on a failed message: the same nonce; only the files that failed upload again. */
 export async function retryMessage(client: QueryClient, channelId: string, nonce: string): Promise<void> {
     const message = outgoingOf(client, channelId).find((item) => item.nonce === nonce)
-    if (!message) return
+    if (!message || message.state === 'refused') return
     // A file refused for its content can never be sent: it leaves the message (D-93).
     const { uploads } = useUploads.getState()
     const files = (message.files ?? []).filter((id) => uploads[id] && uploads[id].state !== 'rejected')
@@ -257,6 +259,11 @@ function failed(
         for (const id of files ?? []) removeUpload(id)
         keys.delete(nonce)
         return update(client, channelId, (history) => dropOutgoing(history, nonce))
+    }
+    if (type === 'CANNOT_MESSAGE_USER') {
+        // Sending again would be refused again (09 DM-EDGE `lost-permission`).
+        keys.delete(nonce)
+        return set('refused')
     }
     if (type === 'UPLOAD_FILE_NOT_FOUND') {
         // Gone after 24 hours: those files upload again on "Try again".

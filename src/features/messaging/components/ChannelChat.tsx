@@ -112,8 +112,14 @@ const quote = (message: Message): RepliedMessage => ({
  * A DM's chat (S-DM-03, D-249) is the same chat too, `dm` handing what it
  * has of its own: the person named with no "#", its beginning, what stands
  * in the composer's place for someone one blocked, and whose messages it
- * does not show (that person's, and system ones about them: they still count
- * where the list counts, for the mark and "New").
+ * does not show (that person's, and system ones about them; what that person
+ * wrote is not unread either, as the server counts it, D-250).
+ *
+ * In a server's channel and a room's chat, the messages of people one
+ * blocked (`blocked`, handed by the page) fold into one row per run, shown
+ * again in place with "Hiện" and folded back with "Ẩn" (02 S-CHAT-01
+ * `blocked`, D-250); a link or a reply going to one shows its run. What they
+ * write is never unread: "New" and the new messages bar pass over it.
  */
 export default function ChannelChat({
     channelId,
@@ -125,7 +131,8 @@ export default function ChannelChat({
     mentions,
     target,
     showTask,
-    dm
+    dm,
+    blocked
 }: {
     channelId: string
     channelName: string
@@ -145,6 +152,8 @@ export default function ChannelChat({
     showTask?: (taskId: string) => void
     /** A DM's chat (S-DM-03): its parts the social feature hands (D-249). */
     dm?: DmChatParts
+    /** Whom one blocked (the social feature's): their messages fold, "N tin nhắn bị chặn · Hiện" (D-250). */
+    blocked?: ReadonlySet<string>
 }) {
     const { t } = useTranslation('messaging')
     const words = useMentionWords()
@@ -182,21 +191,62 @@ export default function ChannelChat({
 
     const pages = history.data?.pages
     const messages = useMemo(() => chatMessages(pages), [pages])
+    const hidden = dm?.hidden
+    // What makes the channel unread, as the server counts it: never what someone one blocked writes (D-250).
+    const counted = useMemo(() => {
+        const skipped = new Set(blocked)
+        if (hidden) skipped.add(hidden)
+        return skipped.size
+            ? messages.filter((message) => isOutgoing(message) || !message.author || !skipped.has(message.author.id))
+            : messages
+    }, [messages, blocked, hidden])
     const unread = useUnreadMarker({
         channelId,
         state: readState,
         history: history.data,
-        messages,
+        messages: counted,
         me: profile?.id,
         canSee,
         linked: !!target,
         jump
     })
-    const hidden = dm?.hidden
+    // Blocked people's messages shown again ("Hiện"), by key; folded again on leaving (a new mount per channel).
+    const [shownFolds, setShownFolds] = useState<ReadonlySet<string>>(new Set())
     const rows = useMemo(
-        () => chatRows(hidden ? messages.filter((message) => !isAbout(message, hidden)) : messages, timeZone),
-        [messages, hidden, timeZone]
+        () =>
+            chatRows(
+                hidden ? messages.filter((message) => !isAbout(message, hidden)) : messages,
+                timeZone,
+                blocked?.size ? { blocked, shown: shownFolds } : undefined
+            ),
+        [messages, hidden, timeZone, blocked, shownFolds]
     )
+    const onFold = useCallback((keys: readonly string[], show: boolean) => {
+        setShownFolds((shown) => {
+            const next = new Set(shown)
+            for (const key of keys) {
+                if (show) next.add(key)
+                else next.delete(key)
+            }
+            return next
+        })
+    }, [])
+    // A message refused in a DM (CANNOT_MESSAGE_USER): the page reads where the DM stands again (D-250).
+    const refused = messages.some((message) => isOutgoing(message) && message.state === 'refused')
+    const onRefused = dm?.onRefused
+    useEffect(() => {
+        if (refused) onRefused?.()
+    }, [refused, onRefused])
+    // Gone to a message folded (a link, a reply line): its run shows, so it can be lit up; once per jump, "Ẩn" still folds it.
+    const [openedFor, setOpenedFor] = useState<string | null>(null)
+    const highlighted = jump.highlighted ?? null
+    if (openedFor !== highlighted) {
+        setOpenedFor(highlighted)
+        const folding = rows.find(
+            (row) => row.kind === 'blocked' && highlighted !== null && row.messageIds.includes(highlighted)
+        )
+        if (folding?.kind === 'blocked') onFold(folding.messageIds, true)
+    }
     const saved = useMemo(
         () => new Map(pages?.flatMap((page) => page.items.map((item) => [item.id, item] as const))),
         [pages]
@@ -384,6 +434,7 @@ export default function ChannelChat({
                 unreadHeld={unread.unreadHeld}
                 holdNew={!canSee}
                 onSeen={canSee && unread.unreadHeld > 0 ? unread.seen : undefined}
+                onFold={onFold}
             />
             <TypingLine names={typing} />
             {dm?.footer ? (

@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import i18n from '@/i18n'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import { userKeys } from '@/features/users'
+import { connectBlockList, userKeys } from '@/features/users'
 import { expectNoA11yViolations } from '@/test/a11y'
 import type { MentionSource, Message, MessageCursor, MessagePage, ReadState } from '../types'
 
@@ -30,6 +30,12 @@ vi.mock('../api/readStates.api', () => readStatesApi)
 const { default: ChannelChat } = await import('../components/ChannelChat')
 const { emitRealtimeEvent } = await import('@/features/realtime/lib/realtime-events')
 const { messageKeys } = await import('../api/keys')
+
+// Whom the reader blocked (nobody here), as the AppShell lends them to the unread counts (D-250).
+connectBlockList({
+    query: { queryKey: ['social', 'relationships'], queryFn: async () => [] },
+    path: '/friends?tab=blocked'
+})
 
 const ZONE = 'Asia/Ho_Chi_Minh'
 const BINH = { id: 'binh', username: 'binh.tran', displayName: 'Bình', avatarUrl: null }
@@ -77,7 +83,11 @@ const readState = (lastReadId: string, unreadCount: number, mentionCount = 0): R
 let focused = false
 let visibility: DocumentVisibilityState = 'visible'
 
-function renderChat(state: ReadState, client = new QueryClient({ defaultOptions: { queries: { retry: false } } })) {
+function renderChat(
+    state: ReadState,
+    client = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+    blocked?: ReadonlySet<string>
+) {
     client.setQueryData(userKeys.profile(), { id: 'an', username: 'an.nguyen', displayName: 'An', avatarUrl: null })
     client.setQueryData(userKeys.settings(), { timezone: ZONE })
     client.setQueryData(messageKeys.readStates(), [state])
@@ -91,6 +101,7 @@ function renderChat(state: ReadState, client = new QueryClient({ defaultOptions:
                         mentions={NO_MENTIONS}
                         channelId='hoi-dap'
                         channelName='hoi-dap'
+                        blocked={blocked}
                         permissions={{
                             attachFiles: true,
                             send: true,
@@ -350,6 +361,33 @@ describe('Unread messages in an open channel (REQ-MSG-09, D-46, C-10)', () => {
         await within(await log()).findByText('Tin 3')
         expect(screen.queryByRole('separator', { name: 'New' })).not.toBeInTheDocument()
         expect(readStatesApi.ackChannel).not.toHaveBeenCalled()
+    })
+
+    it('puts "New" past what someone I blocked wrote, and counts none of it (D-250)', async () => {
+        const KHANH = { id: 'khanh', username: 'khanh.le', displayName: 'Khánh', avatarUrl: null }
+        messagesApi.fetchMessages.mockResolvedValue(
+            page([message(1), message(2), message(3, KHANH), message(4, KHANH), message(5)])
+        )
+        renderChat(readState('m02', 1), undefined, new Set(['khanh']))
+
+        const list = await log()
+        const divider = await within(list).findByRole('separator', { name: 'New' })
+        const fold = within(list).getByText('2 blocked messages ·')
+        expect(fold.compareDocumentPosition(divider) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+        expect(screen.getByRole('button', { name: '1 new message since 20:05' })).toBeInTheDocument()
+    })
+
+    it('says no new messages for what someone I blocked writes while I read older ones (D-250)', async () => {
+        const KHANH = { id: 'khanh', username: 'khanh.le', displayName: 'Khánh', avatarUrl: null }
+        messagesApi.fetchMessages.mockResolvedValue(page([1, 2, 3].map((n) => message(n))))
+        renderChat(readState('m03', 0), undefined, new Set(['khanh']))
+        await within(await log()).findByText('Tin 3')
+
+        act(() => emitRealtimeEvent('message.created', { message: message(4, KHANH), nonce: null }))
+
+        expect(await screen.findByText('1 blocked message ·')).toBeInTheDocument()
+        expect(screen.queryByRole('separator', { name: 'New' })).toBeNull()
+        expect(screen.queryByRole('button', { name: /new message/ })).toBeNull()
     })
 
     it('a message that comes while the reader cannot see it gets "New", and stays unread', async () => {

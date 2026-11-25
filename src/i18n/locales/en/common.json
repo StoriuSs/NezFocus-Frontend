@@ -282,5 +282,17 @@
     "zoomIn": "Zoom in",
     "cancel": "Cancel",
     "failed": "This image could not be read. Choose another one."
+  },
+  "call": {
+    "missed": "Missed call",
+    "declined": "Declined call",
+    "failed": "Couldn't connect",
+    "length": "Call · {{length}}",
+    "underAMinute": "under a minute",
+    "minutes_one": "{{count}} minute",
+    "minutes_other": "{{count}} minutes",
+    "hours_one": "{{count}} hour",
+    "hours_other": "{{count}} hours",
+    "hoursMinutes": "{{hours}} h {{minutes}} min"
   }
 }

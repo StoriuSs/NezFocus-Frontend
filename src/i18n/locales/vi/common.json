@@ -282,5 +282,17 @@
     "zoomIn": "Phóng to",
     "cancel": "Hủy",
     "failed": "Không đọc được ảnh này. Chọn ảnh khác."
+  },
+  "call": {
+    "missed": "Cuộc gọi nhỡ",
+    "declined": "Cuộc gọi bị từ chối",
+    "failed": "Không kết nối được",
+    "length": "Cuộc gọi · {{length}}",
+    "underAMinute": "dưới 1 phút",
+    "minutes_one": "{{count}} phút",
+    "minutes_other": "{{count}} phút",
+    "hours_one": "{{count}} giờ",
+    "hours_other": "{{count}} giờ",
+    "hoursMinutes": "{{hours}} giờ {{minutes}} phút"
   }
 }

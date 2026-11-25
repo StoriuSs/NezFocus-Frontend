@@ -29,3 +29,7 @@ export function withPresence(list: Relationship[], userId: string, status: Prese
 /** How many requests to me wait (the Badge of the "Friends" row and the Pending tab, 09 › luật 4). */
 export const incomingCountOf = (list: Relationship[] | undefined): number =>
     list?.filter((entry) => entry.type === 'incoming').length ?? 0
+
+/** Whom I blocked, by id (a server's chat folds their messages, D-250). */
+export const blockedIdsOf = (list: Relationship[] | undefined): string[] =>
+    list?.filter((entry) => entry.type === 'blocked').map((entry) => entry.user.id) ?? []

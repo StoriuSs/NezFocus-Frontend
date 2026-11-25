@@ -3604,6 +3604,14 @@ export interface components {
             type: 'regular' | 'system'
             /** @description What a system message says happened (`call_ended` from M6 L4); null on a regular one. */
             system_event: string | null
+            /**
+             * @description What a system message says, as the chat's message has it: a call
+             *     `{ user_id, call_id, status, end_reason, video, duration_seconds }`
+             *     (D-250); null on a regular one.
+             */
+            system_data: {
+                [key: string]: unknown
+            } | null
             /** @description Who wrote it; null on a system message. */
             author_id: string | null
             id: string
