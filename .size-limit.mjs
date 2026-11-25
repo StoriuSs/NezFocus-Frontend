@@ -117,6 +117,12 @@
 // shares); Social CSS raised to 418 B (415 B: the profile panel C-50 and the
 // `not-friend` strip). Voice JS raised to 216.35 kB (216.16 kB here, 95 B
 // under the limit: CI measured about 100 B more than here after L7b).
+// M6 L8a (25/11/2026, D-252): Initial JS raised to 247.35 kB (247.29 kB: the
+// activity line's words in the `common` catalogue the DM column and the
+// member panel read); Social CSS raised to 440 B (437 B: the line and the
+// profile's activity block, which the member panel shows too); Voice JS
+// raised to 216.95 kB (216.80 kB here: the line, its rules and Tooltip in a
+// chunk the room's page shares; about 100 B kept for CI's own measure).
 // Raise them
 // only as CONSTRAINTS.md says: the owner decides, in a commit of its own.
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
@@ -222,13 +228,13 @@ for (const [name, paths] of [
 }
 
 export default [
-    { name: 'Initial JS (gzip)', path: js, gzip: true, limit: '247.20 kB' },
+    { name: 'Initial JS (gzip)', path: js, gzip: true, limit: '247.35 kB' },
     { name: 'Initial CSS (gzip)', path: css, gzip: true, limit: '9.98 kB' },
     { name: 'Chat CSS (gzip)', path: chatCss, gzip: true, limit: '647 B' },
     { name: 'Tasks CSS (gzip)', path: tasksCss, gzip: true, limit: '880 B' },
     { name: 'Notifications CSS (gzip)', path: notificationsCss, gzip: true, limit: '508 B' },
     { name: 'Voice CSS (gzip)', path: voiceCss, gzip: true, limit: '286 B' },
-    { name: 'Voice JS (gzip)', path: voiceJs, gzip: true, limit: '216.35 kB' },
+    { name: 'Voice JS (gzip)', path: voiceJs, gzip: true, limit: '216.95 kB' },
     { name: 'Study CSS (gzip)', path: studyCss, gzip: true, limit: '713 B' },
-    { name: 'Social CSS (gzip)', path: socialCss, gzip: true, limit: '418 B' }
+    { name: 'Social CSS (gzip)', path: socialCss, gzip: true, limit: '440 B' }
 ]
