@@ -123,6 +123,10 @@
 // profile's activity block, which the member panel shows too); Voice JS
 // raised to 216.95 kB (216.80 kB here: the line, its rules and Tooltip in a
 // chunk the room's page shares; about 100 B kept for CI's own measure).
+// M6 L8b1 (26/11/2026, D-253): Initial JS raised to 247.40 kB (247.36 kB:
+// the profile popover's port in the users index the first download reads,
+// and the host of the dialogs it hands off, which must outlive the avatar
+// or name that opened it; the popover itself loads only when first opened).
 // Raise them
 // only as CONSTRAINTS.md says: the owner decides, in a commit of its own.
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
@@ -228,7 +232,7 @@ for (const [name, paths] of [
 }
 
 export default [
-    { name: 'Initial JS (gzip)', path: js, gzip: true, limit: '247.35 kB' },
+    { name: 'Initial JS (gzip)', path: js, gzip: true, limit: '247.40 kB' },
     { name: 'Initial CSS (gzip)', path: css, gzip: true, limit: '9.98 kB' },
     { name: 'Chat CSS (gzip)', path: chatCss, gzip: true, limit: '647 B' },
     { name: 'Tasks CSS (gzip)', path: tasksCss, gzip: true, limit: '880 B' },
