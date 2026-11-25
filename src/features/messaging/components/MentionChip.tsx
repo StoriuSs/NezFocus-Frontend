@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import '@/i18n/messaging'
 import { cn } from '@/lib/utils'
+import { ProfileTrigger } from '@/features/users'
 import { useMentionWords } from '../hooks/useMentionWords'
 import type { MentionPart } from '../lib/markdown'
 import { mentionName, type MentionNames } from '../lib/mentions'
@@ -18,6 +19,8 @@ export interface ContentMentions {
     here: readonly string[]
     me: string | undefined
     roleIds: readonly string[]
+    /** Where a person's chip opens their profile (S-CHAT-05): the channel's server, null in a DM. */
+    serverId: string | null
 }
 
 const MENTION = 'rounded-badge px-1 font-semibold'
@@ -33,7 +36,7 @@ const MINE = 'bg-surface-3 text-text-primary'
  * leading to it, the server named first when it is another one, or the
  * message link's "Can't view" chip that says so on a click. A token naming no one is words in
  * `text-secondary`, and @everyone without effect plain words (owner,
- * 14/11/2026). Not buttons: profiles come later (C-15).
+ * 14/11/2026). A person's chip opens their profile (S-CHAT-05, D-253).
  */
 export function MentionChip({ part, mentions }: { part: MentionPart; mentions: ContentMentions }) {
     const { t } = useTranslation('messaging')
@@ -82,5 +85,19 @@ export function MentionChip({ part, mentions }: { part: MentionPart; mentions: C
             : names.roles.some((role) => role.id === part.id)
     if (!known) return <span className='text-text-secondary'>{name}</span>
     const mine = part.kind === 'user' ? part.id === me : roleIds.includes(part.id)
+    if (part.kind === 'user') {
+        const person = names.users.find((user) => user.id === part.id)
+        return (
+            <ProfileTrigger
+                userId={part.id}
+                serverId={mentions.serverId}
+                name={person?.displayName ?? person?.username ?? name}
+                avatarUrl={null}
+                className={cn(MENTION, mine ? MINE : THEIRS, 'hover:underline')}
+            >
+                {name}
+            </ProfileTrigger>
+        )
+    }
     return <span className={cn(MENTION, mine ? MINE : THEIRS)}>{name}</span>
 }

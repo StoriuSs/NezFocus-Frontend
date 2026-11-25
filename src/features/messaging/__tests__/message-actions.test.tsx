@@ -113,6 +113,7 @@ function renderChat(permissions: ChatPermissions = MEMBER) {
                 <div className='flex h-[600px] flex-col'>
                     <ChannelChat
                         channelId='hoi-dap'
+                        serverId={null}
                         channelName='hoi-dap'
                         permissions={permissions}
                         linkTo={(id) => `${window.location.origin}/channels/ot/hoi-dap/${id}`}
@@ -606,6 +607,7 @@ describe('The composer when one may not send (C-12 disabled, 02 timed-out / mana
                 <div className='flex h-[600px] flex-col'>
                     <ChannelChat
                         channelId='hoi-dap'
+                        serverId={null}
                         channelName='hoi-dap'
                         permissions={permissions}
                         linkTo={(id) => `${window.location.origin}/channels/ot/hoi-dap/${id}`}

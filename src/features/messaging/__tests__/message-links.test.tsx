@@ -102,6 +102,7 @@ function renderChat({ target, client = newClient() }: { target?: ChatTarget; cli
                                 <div className='flex h-[600px] flex-col'>
                                     <ChannelChat
                                         channelId='hoi-dap'
+                                        serverId={null}
                                         channelName='hoi-dap'
                                         permissions={{
                                             attachFiles: true,

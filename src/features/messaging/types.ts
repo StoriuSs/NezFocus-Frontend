@@ -233,6 +233,8 @@ export const isOutgoing = (message: ChatMessage): message is OutgoingMessage => 
 export interface MessageHandlers {
     /** Whose messages are "one's own". */
     me: string | undefined
+    /** Where a person's profile opens from (S-CHAT-05, D-253): the channel's server; null in a DM. */
+    serverId: string | null
     permissions: ChatPermissions
     reply: (message: Message) => void
     edit: (message: Message) => void

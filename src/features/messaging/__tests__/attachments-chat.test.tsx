@@ -109,6 +109,7 @@ function renderChat({ attachFiles = true, history = [] as Message[] } = {}) {
                         readLink={() => null}
                         mentions={NO_MENTIONS}
                         channelId='hoi-dap'
+                        serverId={null}
                         channelName='hoi-dap'
                         permissions={{
                             send: true,

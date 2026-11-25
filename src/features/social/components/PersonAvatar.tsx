@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import { UserRound } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage, AvatarInitial } from '@/components/ui/avatar'
 import { PresenceDot } from '@/components/ui/presence-dot'
@@ -15,6 +16,7 @@ export function PersonAvatar({
     person,
     presence,
     className,
+    style,
     initialClassName,
     iconClassName = 'size-4',
     dot = 10,
@@ -25,6 +27,8 @@ export function PersonAvatar({
     presence?: Presence | null
     /** The size (`size-8`…). */
     className: string
+    /** A one-off size kept inline (the profile popover's 56), out of the main stylesheet. */
+    style?: CSSProperties
     /** The initial's type. */
     initialClassName: string
     /** The deleted avatar's icon, about half the avatar. */
@@ -37,7 +41,7 @@ export function PersonAvatar({
     const gone = isGone(person)
     return (
         <span className='relative shrink-0'>
-            <Avatar className={className}>
+            <Avatar className={className} style={style}>
                 {gone ? null : <AvatarImage src={person.avatarUrl ?? undefined} alt='' className='object-cover' />}
                 <AvatarFallback className={cn('bg-surface-3 font-semibold text-text-primary', initialClassName)}>
                     {gone ? (

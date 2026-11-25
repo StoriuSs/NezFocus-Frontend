@@ -1,6 +1,6 @@
 import api from '@/lib/api'
 import type { ApiEnvelope } from '@/lib/api-types'
-import type { MemberPage, MentionableRole, Role, UpdateRoleRequest } from '../types'
+import type { MemberPage, MentionableRole, Role, ServerMember, UpdateRoleRequest } from '../types'
 
 /** GET /servers/{id}/roles (MANAGE_ROLES): highest first, @everyone last. */
 export async function fetchRoles(serverId: string): Promise<Role[]> {
@@ -64,6 +64,12 @@ export interface MemberQuery {
     transferable?: boolean
     /** Only those who view this channel (D-192): whom a task there may be given to. */
     channelId?: string
+}
+
+/** One member as the list shows them (D-252): the profile popover in a server. NOT_FOUND once they left. */
+export async function fetchMember(serverId: string, userId: string): Promise<ServerMember> {
+    const response = await api.get<ApiEnvelope<ServerMember>>(`/servers/${serverId}/members/${userId}`)
+    return response.data.data
 }
 
 /** GET /servers/{id}/members (D-152): anyone in the server. */

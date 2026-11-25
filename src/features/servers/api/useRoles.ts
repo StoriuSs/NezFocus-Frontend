@@ -8,6 +8,7 @@ import { getApiErrorType } from '@/lib/api-error'
 import {
     createRole,
     deleteRole,
+    fetchMember,
     fetchMembers,
     fetchRoles,
     grantRole,
@@ -252,5 +253,20 @@ export function useServerMembers(serverId: string, query: MemberQuery, enabled =
         queryFn: () => fetchMembers(serverId, query),
         placeholderData: keepPreviousData,
         enabled
+    })
+}
+
+/**
+ * One member, for the profile popover opened in a server (D-252): read each
+ * time it opens, as the profile is (`staleTime: 0`); none to read outside a
+ * server. NOT_FOUND (they left, or their account is gone; never tried
+ * again, as any 4xx) is an answer: the popover shows them as outside it.
+ */
+export function useServerMember(serverId: string | null, userId: string) {
+    return useQuery({
+        queryKey: serverKeys.member(serverId ?? '', userId),
+        queryFn: () => fetchMember(serverId ?? '', userId),
+        enabled: serverId !== null,
+        staleTime: 0
     })
 }

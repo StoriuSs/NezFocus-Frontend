@@ -132,7 +132,8 @@ export default function ChannelChat({
     target,
     showTask,
     dm,
-    blocked
+    blocked,
+    serverId
 }: {
     channelId: string
     channelName: string
@@ -154,6 +155,8 @@ export default function ChannelChat({
     dm?: DmChatParts
     /** Whom one blocked (the social feature's): their messages fold, "N tin nhắn bị chặn · Hiện" (D-250). */
     blocked?: ReadonlySet<string>
+    /** The channel's server, where a profile opens "in a server" (S-CHAT-05, D-252 4e); none in a DM. */
+    serverId: string | null
 }) {
     const { t } = useTranslation('messaging')
     const words = useMentionWords()
@@ -308,6 +311,7 @@ export default function ChannelChat({
     const handlers = useMemo<MessageHandlers>(
         () => ({
             me,
+            serverId,
             permissions,
             reply: (message) => {
                 setEditingId(null)
@@ -336,6 +340,7 @@ export default function ChannelChat({
         }),
         [
             me,
+            serverId,
             permissions,
             backToComposer,
             copy,

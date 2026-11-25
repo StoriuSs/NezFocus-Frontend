@@ -41,6 +41,7 @@
     "signOut": "Đăng xuất"
   },
   "shell": {
+    "profileOf": "Hồ sơ của {{name}}",
     "connection": {
       "reconnecting": "Đang kết nối lại…",
       "offline": "Bạn đang mất kết nối",

@@ -74,6 +74,7 @@ function renderDm(dm: DmChatParts, permissions: ChatPermissions = OPEN) {
                 <div className='flex h-[600px] flex-col'>
                     <ChannelChat
                         channelId='dm-khanh'
+                        serverId={null}
                         channelName='Khánh'
                         linkTo={(id) => `/dm/dm-khanh/${id}`}
                         readLink={() => null}

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import '@/i18n'
 import { TooltipProvider } from '@/components/ui/tooltip'
@@ -14,6 +15,7 @@ vi.mock('../api/roles.api', () => ({ fetchMembers }))
 const { emitRealtimeEvent } = await import('@/features/realtime/lib/realtime-events')
 const { MemberPanel } = await import('../components/member-panel/MemberPanel')
 const { connectRoomLookup, relationshipsQuery } = await import('@/features/social')
+const { connectProfilePopover } = await import('@/features/users')
 
 // Where people are, as the servers feature would answer (D-252): set by a test, nobody by default.
 const rooms = new Map<string, SeenRoom>()
@@ -275,5 +277,33 @@ describe('MemberRow’s activity line (C-13, C-30, D-252)', () => {
         act(() => emitRealtimeEvent('activity.updated', { userId: 'binh', activity: null }))
         await waitFor(() => expect(rowOf('Bình')).not.toHaveTextContent('Focus'))
         expect(fetchMembers).not.toHaveBeenCalled()
+    })
+})
+
+// Last: the popover's body, once connected, stays so for the rest of the file.
+describe("A row opens the member's profile (S-CHAT-05, D-253)", () => {
+    beforeEach(() => {
+        online = [member('binh', 'Bình', 'online')]
+        offline = []
+        fetchMembers.mockReset()
+        fetchMembers.mockImplementation(async (_serverId, query) =>
+            query.presence === 'online' ? page(online, online.length) : page(offline, offline.length)
+        )
+    })
+
+    it("opens it on the row's left, in this server", async () => {
+        const opened: { userId: string; serverId: string | null; side: string }[] = []
+        connectProfilePopover(({ userId, serverId, side }) => {
+            opened.push({ userId, serverId, side })
+            return <p>profile</p>
+        })
+        renderPanel()
+        const row = await screen.findByRole('button', { name: /Bình/ })
+
+        await userEvent.setup().click(row)
+        expect(await screen.findByText('profile')).toBeInTheDocument()
+        expect(row).toHaveAttribute('aria-expanded', 'true')
+        expect(opened.at(-1)).toEqual({ userId: 'binh', serverId: 'ot', side: 'left' })
+        await expectNoA11yViolations()
     })
 })

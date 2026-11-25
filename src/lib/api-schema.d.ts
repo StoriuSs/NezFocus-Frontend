@@ -833,7 +833,11 @@ export interface paths {
             path?: never
             cookie?: never
         }
-        get?: never
+        /**
+         * One member as the list shows them (D-252): the profile popover's roles
+         *     and day joined. Anyone in the server; NOT_FOUND for someone no longer in it.
+         */
+        get: operations['RolesController_member_v1']
         put?: never
         post?: never
         /** Out of the server, back in with a new invite (KICK_MEMBERS). */
@@ -5374,6 +5378,31 @@ export interface operations {
                     'application/json': {
                         meta: components['schemas']['ApiResponseMetaDto']
                         data: components['schemas']['MemberPageResponseDto']
+                    }
+                }
+            }
+        }
+    }
+    RolesController_member_v1: {
+        parameters: {
+            query?: never
+            header?: never
+            path: {
+                serverId: string
+                userId: string
+            }
+            cookie?: never
+        }
+        requestBody?: never
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown
+                }
+                content: {
+                    'application/json': {
+                        meta: components['schemas']['ApiResponseMetaDto']
+                        data: components['schemas']['MemberResponseDto']
                     }
                 }
             }

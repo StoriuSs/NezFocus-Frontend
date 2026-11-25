@@ -1,9 +1,8 @@
 import { Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { Pin, UserRound, UserX } from 'lucide-react'
+import { Pin, UserRound } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { toast } from 'sonner'
 import '@/i18n/social'
 import { PageLoader } from '@/components/PageLoader'
 import { RightPanel, usePanel } from '@/components/shell/RightPanel'
@@ -13,32 +12,25 @@ import { ShellPage } from '@/components/shell/ShellPage'
 import { IconButton } from '@/components/ui/icon-button'
 import { WithTooltip } from '@/components/ui/tooltip'
 import { ChannelChat, ChatDropZone, PinsPanel, type MentionSource } from '@/features/messaging'
+import { ProfileTrigger } from '@/features/users'
 import { useDmList } from '../api/useDms'
-import { getApiErrorType } from '@/lib/api-error'
-import { notifyMutationError } from '@/lib/query-client'
 import { useRelationships } from '../api/useRelationships'
-import {
-    useAcceptFriendRequest,
-    useRemoveRelationship,
-    useRequestFriend,
-    useUnblockPerson
-} from '../api/useRelationshipActions'
 import { socialKeys } from '../api/keys'
 import { ActivityLine } from '../components/ActivityLine'
 import { BlockedStrip } from '../components/BlockedStrip'
 import { ConfirmRelationshipDialog, type ConfirmKind } from '../components/ConfirmRelationshipDialog'
 import { DmIntro } from '../components/DmIntro'
-import { DmProfile, type PersonMoves } from '../components/DmProfile'
+import { DmProfile } from '../components/DmProfile'
 import { FriendStrip } from '../components/FriendStrip'
+import { usePersonMoves } from '../hooks/usePersonMoves'
 import { PersonAvatar } from '../components/PersonAvatar'
-import { addFriendProblem } from '../lib/add-friend'
 import { useConnectedChatLinks } from '../lib/chat-links'
 import { activityShown } from '../lib/activity-line'
 import { dmChatPermissions, dmStanding, isGone, showsPresence } from '../lib/dm-chat'
 import { friendStrip, relationshipWith } from '../lib/dm-profile'
 import { nameOf } from '../lib/friends-list'
 import { dmMessageLink, dmMessagePath, friendsPath } from '../lib/paths'
-import type { Dm, SocialPerson } from '../types'
+import type { Dm } from '../types'
 import '../social.css'
 
 /** A message id is a UUID: anything else in `/dm/{id}/{…}` is no page. */
@@ -101,6 +93,7 @@ function DmVisit({ dmId, messageId }: { dmId: string; messageId?: string }) {
 
 function DmChat({ dm, messageId }: { dm: Dm; messageId?: string }) {
     const { t } = useTranslation('social')
+    const { t: tc } = useTranslation()
     const client = useQueryClient()
     const navigate = useNavigate()
     const { key, state } = useLocation()
@@ -197,14 +190,25 @@ function DmChat({ dm, messageId }: { dm: Dm; messageId?: string }) {
                 ) : undefined
             }
             leading={
-                <PersonAvatar
-                    person={person}
-                    presence={showsPresence(standing) ? dm.presence : null}
-                    dot={8}
-                    className='size-6'
-                    initialClassName='text-micro'
-                    iconClassName='size-3.5'
-                />
+                // Their profile, outside a server (S-CHAT-05, D-252 4e); the panel's [👤] shows it in full.
+                <ProfileTrigger
+                    userId={person.id}
+                    serverId={null}
+                    name={name}
+                    avatarUrl={person.avatarUrl}
+                    label={tc('shell.profileOf', { name })}
+                    side='bottom'
+                    className='shrink-0 rounded-full'
+                >
+                    <PersonAvatar
+                        person={person}
+                        presence={showsPresence(standing) ? dm.presence : null}
+                        dot={8}
+                        className='size-6'
+                        initialClassName='text-micro'
+                        iconClassName='size-3.5'
+                    />
+                </ProfileTrigger>
             }
             composer={standing === 'open'}
             bodyClassName='flex flex-col overflow-y-hidden'
@@ -273,6 +277,7 @@ function DmChat({ dm, messageId }: { dm: Dm; messageId?: string }) {
                 <Suspense fallback={<PageLoader className='min-h-0 flex-1' />}>
                     <ChannelChat
                         channelId={dm.id}
+                        serverId={null}
                         channelName={name}
                         permissions={permissions}
                         linkTo={linkTo}
@@ -284,62 +289,5 @@ function DmChat({ dm, messageId }: { dm: Dm; messageId?: string }) {
                 </Suspense>
             </div>
         </ShellPage>
-    )
-}
-
-/**
- * What the profile panel and the strip do about the other one (D-251), with
- * the Friends page's words: a request from their profile (no note, D-237),
- * refused with the Add friend dialog's words in a Toast; accept, decline,
- * cancel with a Toast; unblock with none (the composer coming back says it,
- * as with the blocked strip's Unblock); unfriend and block ask first (`ask`);
- * copy the username.
- */
-function usePersonMoves(person: SocialPerson, name: string, ask: (kind: ConfirmKind) => void): PersonMoves {
-    const { t } = useTranslation('social')
-    const { mutate: request, isPending: requesting } = useRequestFriend()
-    const { mutate: accept, isPending: accepting } = useAcceptFriendRequest()
-    const { mutate: remove, isPending: removing } = useRemoveRelationship()
-    const { mutate: unblock, isPending: unblocking } = useUnblockPerson()
-    const { id, username } = person
-    const busy = requesting || accepting || removing || unblocking
-    // The same object while nothing changes: the chat's DM parts hold `unblock`.
-    return useMemo(
-        () => ({
-            request: () =>
-                request(id, {
-                    onSuccess: (entry) =>
-                        toast(entry.type === 'friend' ? t('toasts.friends', { name }) : t('toasts.sent', { name })),
-                    onError: (error) => {
-                        const problem = addFriendProblem(error)
-                        if (problem.kind === 'cannot' || problem.kind === 'dailyLimit' || problem.kind === 'offline')
-                            toast.error(t(`add.problems.${problem.kind}`))
-                        else notifyMutationError(error)
-                    }
-                }),
-            accept: () =>
-                accept(id, {
-                    onSuccess: () => toast(t('toasts.friends', { name })),
-                    onError: (error) => {
-                        // Any other failure is the hook's Toast.
-                        if (getApiErrorType(error) === 'NOT_FOUND_ERROR')
-                            toast(t('toasts.gone'), { icon: <UserX className='size-4' aria-hidden='true' /> })
-                    }
-                }),
-            decline: () => remove(id, { onSuccess: () => toast(t('toasts.declined', { name })) }),
-            cancel: () => remove(id, { onSuccess: () => toast(t('toasts.cancelled', { name })) }),
-            unblock: () => unblock(id),
-            unfriend: () => ask('unfriend'),
-            block: () => ask('block'),
-            copyUsername: () => {
-                if (!username) return
-                void navigator.clipboard.writeText(username).then(
-                    () => toast(t('profile.copied')),
-                    () => toast.error(t('profile.copyFailed'))
-                )
-            },
-            busy
-        }),
-        [t, name, id, username, ask, request, accept, remove, unblock, busy]
     )
 }

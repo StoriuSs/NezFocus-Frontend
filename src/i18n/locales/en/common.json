@@ -41,6 +41,7 @@
     "signOut": "Sign out"
   },
   "shell": {
+    "profileOf": "{{name}}'s profile",
     "connection": {
       "reconnecting": "Reconnecting…",
       "offline": "You are offline",

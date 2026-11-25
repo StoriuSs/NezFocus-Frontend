@@ -1,47 +1,18 @@
-import { useEffect, useId, useRef } from 'react'
+import { useId } from 'react'
 import { Link } from 'react-router-dom'
-import { Ban, Copy, Ellipsis, Send, UserCheck, UserPlus, UserX } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import '@/i18n/social'
 import { Button } from '@/components/ui/button'
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu'
-import { IconButton } from '@/components/ui/icon-button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { WithTooltip } from '@/components/ui/tooltip'
 import { usePersonProfile } from '../api/usePersonProfile'
+import type { PersonMoves } from '../hooks/usePersonMoves'
 import type { Activity } from '../lib/activity-line'
 import type { ChatLinks } from '../lib/chat-links'
 import { isGone } from '../lib/dm-chat'
-import { profileAction, profileMenu } from '../lib/dm-profile'
 import type { Presence, RelationshipType, SocialPerson } from '../types'
 import { ActivityBlock } from './ActivityLine'
-import { Gated } from './Gated'
 import { PersonAvatar } from './PersonAvatar'
-
-/**
- * What one can do about someone from their DM (C-50 and the `not-friend`
- * strip, D-251): the page's, which says how each went (a Toast) and asks
- * before unfriending or blocking. `busy` while one is on its way.
- */
-export interface PersonMoves {
-    request: () => void
-    accept: () => void
-    decline: () => void
-    cancel: () => void
-    unblock: () => void
-    unfriend: () => void
-    block: () => void
-    copyUsername: () => void
-    busy: boolean
-}
-
-const TAG_ICON = { friend: UserCheck, outgoing: Send, blocked: Ban } as const
+import { ProfileActions } from './ProfileActions'
 
 /**
  * The profile panel of a DM (C-50, D-109, D-251), in the RightPanel's body:
@@ -205,117 +176,5 @@ function ProfileBody({
                 )}
             </section>
         </>
-    )
-}
-
-/**
- * Where we stand and ⋯ (C-50, D-110). The button pressed turns into a Tag
- * (or the other way round): the focus, left on nothing, goes to ⋯.
- */
-function ProfileActions({
-    person,
-    name,
-    relationship,
-    offline,
-    moves
-}: {
-    person: SocialPerson
-    name: string
-    relationship: RelationshipType
-    offline: boolean
-    moves: PersonMoves
-}) {
-    const { t } = useTranslation('social')
-    const action = profileAction(relationship)
-    const menu = profileMenu(relationship)
-    const off = offline || moves.busy
-    const more = useRef<HTMLButtonElement>(null)
-    const shown = 'tag' in action ? action.tag : action.button
-    const was = useRef(shown)
-    useEffect(() => {
-        if (was.current === shown) return
-        was.current = shown
-        const focused = document.activeElement
-        if (!focused || focused === document.body) more.current?.focus()
-    }, [shown])
-    const undo = menu.undo
-        ? {
-              unfriend: { label: t('friends.unfriend'), run: moves.unfriend },
-              cancel: { label: t('friends.cancel'), run: moves.cancel },
-              decline: { label: t('friends.decline'), run: moves.decline },
-              unblock: { label: t('friends.unblock'), run: moves.unblock }
-          }[menu.undo]
-        : null
-
-    return (
-        <div className='flex items-center gap-2'>
-            {'tag' in action ? (
-                <Tag kind={action.tag} label={t(`profile.${action.tag}`)} />
-            ) : (
-                <Gated offline={offline}>
-                    <Button
-                        size='sm'
-                        variant='outline'
-                        disabled={off}
-                        aria-busy={moves.busy || undefined}
-                        onClick={action.button === 'request' ? moves.request : moves.accept}
-                    >
-                        {action.button === 'request' ? (
-                            <UserPlus aria-hidden='true' />
-                        ) : (
-                            <UserCheck aria-hidden='true' />
-                        )}
-                        {t(`profile.${action.button}`)}
-                    </Button>
-                </Gated>
-            )}
-            <DropdownMenu>
-                <WithTooltip label={t('profile.more')}>
-                    <DropdownMenuTrigger asChild>
-                        <IconButton
-                            ref={more}
-                            label={`${t('profile.more')}: ${name}`}
-                            className='rounded-button border border-border-input'
-                        >
-                            <Ellipsis />
-                        </IconButton>
-                    </DropdownMenuTrigger>
-                </WithTooltip>
-                <DropdownMenuContent align='end'>
-                    <DropdownMenuItem disabled={!person.username} onSelect={moves.copyUsername}>
-                        <Copy aria-hidden='true' />
-                        {t('profile.copyUsername')}
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    {undo ? (
-                        <DropdownMenuItem disabled={off} onSelect={undo.run}>
-                            <UserX aria-hidden='true' />
-                            {undo.label}
-                        </DropdownMenuItem>
-                    ) : null}
-                    {menu.block ? (
-                        <DropdownMenuItem
-                            disabled={off}
-                            onSelect={moves.block}
-                            className='text-danger focus:text-danger'
-                        >
-                            <Ban aria-hidden='true' />
-                            {t('friends.block')}
-                        </DropdownMenuItem>
-                    ) : null}
-                </DropdownMenuContent>
-            </DropdownMenu>
-        </div>
-    )
-}
-
-/** Where we stand, not a button (D-110 R13): as high as the buttons beside it, on `surface-2`, icon 14. */
-function Tag({ kind, label }: { kind: keyof typeof TAG_ICON; label: string }) {
-    const Icon = TAG_ICON[kind]
-    return (
-        <span className='inline-flex h-8 items-center gap-1.5 rounded-badge bg-surface-2 px-3 text-label font-medium text-text-secondary'>
-            <Icon className='size-3.5 shrink-0' aria-hidden='true' />
-            {label}
-        </span>
     )
 }

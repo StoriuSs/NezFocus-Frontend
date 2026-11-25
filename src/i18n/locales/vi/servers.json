@@ -719,5 +719,14 @@
     "banAfter": "Bạn không thể tham gia lại server này.",
     "ok": "Đã hiểu"
   },
-  "lostRoom": "Bạn không còn quyền vào {{name}}"
+  "lostRoom": "Bạn không còn quyền vào {{name}}",
+  "profile": {
+    "memberSince": "Thành viên từ {{date}}",
+    "roles": "Vai trò",
+    "moreServers_one": "+{{count}} server khác",
+    "moreServers_other": "+{{count}} server khác",
+    "message": "Nhắn tin",
+    "edit": "Sửa hồ sơ",
+    "deleted": "Tài khoản đã bị xóa"
+  }
 }

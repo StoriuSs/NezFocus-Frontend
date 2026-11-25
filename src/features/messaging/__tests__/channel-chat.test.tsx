@@ -80,6 +80,7 @@ function renderChat(
                         readLink={() => null}
                         mentions={NO_MENTIONS}
                         channelId={channelId}
+                        serverId={null}
                         channelName={channelId}
                         blocked={blocked}
                         target={target}

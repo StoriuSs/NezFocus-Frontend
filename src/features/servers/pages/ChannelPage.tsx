@@ -360,6 +360,7 @@ function VoiceChannel({ server, channel, messageId }: { server: Server; channel:
                                 mentions={mentions}
                                 target={chatTarget}
                                 blocked={blocked}
+                                serverId={server.id}
                             />
                         </Suspense>
                     </RightPanel>
@@ -552,6 +553,7 @@ function TextChannel({ server, channel, messageId }: { server: Server; channel: 
                     target={target}
                     showTask={showTask}
                     blocked={blocked}
+                    serverId={server.id}
                 />
             </Suspense>
         </ShellPage>

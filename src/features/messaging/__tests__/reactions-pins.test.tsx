@@ -158,6 +158,7 @@ function renderChat(permissions: ChatPermissions = MEMBER) {
                 <div className='flex h-[600px] flex-col'>
                     <ChannelChat
                         channelId='hoi-dap'
+                        serverId={null}
                         channelName='hoi-dap'
                         permissions={permissions}
                         linkTo={(id) => `${window.location.origin}/channels/ot/hoi-dap/${id}`}

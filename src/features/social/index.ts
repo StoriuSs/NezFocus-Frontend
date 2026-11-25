@@ -19,6 +19,18 @@ export { connectChatLinks, type ChatLinks } from './lib/chat-links'
 export { ActivityBlock, ActivityLine } from './components/ActivityLine'
 export { activityShown, type Activity } from './lib/activity-line'
 export { connectRoomLookup, type RoomLookup, type SeenRoom } from './lib/room-lookup'
+/**
+ * The profile popover's parts (S-CHAT-05, D-253), drawn by the servers
+ * feature: someone's profile, where one stands with them and what one can
+ * do about it (the DM's profile panel's row, its questions), their avatar.
+ */
+export { usePersonProfile } from './api/usePersonProfile'
+export { usePersonMoves } from './hooks/usePersonMoves'
+export { ProfileActions } from './components/ProfileActions'
+export { ConfirmRelationshipDialog, type ConfirmKind } from './components/ConfirmRelationshipDialog'
+export { PersonAvatar } from './components/PersonAvatar'
+export { relationshipWith } from './lib/dm-profile'
+export { isGone } from './lib/dm-chat'
 export { messagesPlace, rememberMessagesPlace } from './lib/messages-place'
 export { dmPath, friendsPath, isMessagesPath, messagesPlaceOf, SOCIAL_PATHS } from './lib/paths'
-export type { ActivityUpdated, FriendsTab, Relationship } from './types'
+export type { ActivityUpdated, FriendsTab, PersonProfile, Relationship, SocialPerson } from './types'

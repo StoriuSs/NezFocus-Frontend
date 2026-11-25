@@ -719,5 +719,14 @@
     "banAfter": "You cannot join this server again.",
     "ok": "Got it"
   },
-  "lostRoom": "You no longer have access to {{name}}"
+  "lostRoom": "You no longer have access to {{name}}",
+  "profile": {
+    "memberSince": "Member since {{date}}",
+    "roles": "Roles",
+    "moreServers_one": "+{{count}} more server",
+    "moreServers_other": "+{{count}} more servers",
+    "message": "Message",
+    "edit": "Edit profile",
+    "deleted": "Deleted account"
+  }
 }

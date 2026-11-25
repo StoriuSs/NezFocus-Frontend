@@ -85,7 +85,9 @@ react-starter/
     │   │   │                  #   invites/, membership/ (leave, hand over, delete;
     │   │   │                  #   RemovedDialog: kicked or banned, 11 S-MOD-02),
     │   │   │                  #   settings/ (ServerNameForm, ServerIconSetting, WelcomeChannelSetting, OwnerSettings,
-    │   │   │                  #   InvitesSettings, Pagination; members/, roles/)
+    │   │   │                  #   InvitesSettings, Pagination; members/, roles/),
+    │   │   │                  #   profile/ (the profile popover, S-CHAT-05, D-253: ProfilePopover, lazy from the
+    │   │   │                  #   AppShell, and its body ProfileCard)
     │   │   ├── hooks/         # useFoldedCategories (the categories folded, kept in this browser), useMoveAwayFrom,
     │   │   │                  #   useServerGoneWatch (D-143, D-178: starts liveServers, run by the AppShell),
     │   │   │                  #   useGoneServerPath (where a page of a server gone goes),
@@ -217,10 +219,12 @@ react-starter/
     │       ├── api/           # users.api.ts (fetchProfile, removeAvatar),
     │       │                  #   settings.api.ts (fetchSettings, settingsQuery, updateSettings), hooks, keys
     │       ├── components/    # AvatarSection, AvatarCropDialog, ProfileForm, ProfileSkeleton,
-    │       │                  #   SettingsLoader, TimeZoneSetting
+    │       │                  #   SettingsLoader, TimeZoneSetting; ProfileTrigger (an avatar or a name opening
+    │       │                  #   the profile popover) and ProfileDialogs (what it hands off), D-253
     │       ├── hooks/         # useAvatarErrorRefresh, useAccountSettings (the AppShell applies
     │       │                  #   the account's theme and language)
-    │       ├── lib/           # USERS_PATHS, profile-text (the API's name and bio rules),
+    │       ├── lib/           # USERS_PATHS, profile-text (the API's name and bio rules), profile-popover
+    │       │                  #   (the ProfilePopover port, D-253), block-list (the BlockList port),
     │       │                  #   avatar-removal (Undo, then DELETE) and its pending flag,
     │       │                  #   settings-sync (the other tabs)
     │       ├── pages/         # Profile.tsx (/settings/profile); Appearance, Notifications, Privacy
@@ -473,6 +477,22 @@ Habits worth keeping:
   (`auth/lib/server-ownership.ts`), the servers feature answers
   (`servers/api/serverOwnership.ts`), and the AppShell connects the two
   ([auth/account-settings.md](./auth/account-settings.md#an-owner-of-servers)).
+  Someone's profile popover (02 S-CHAT-05, D-253) opens from features that
+  cannot import the one drawing it: users, which they all import, declares
+  the `ProfilePopover` port (`users/lib/profile-popover.ts`) and
+  `ProfileTrigger` (their avatar or name as the button opening it, with the
+  server of the place or none); the servers feature draws the popover
+  (`servers/components/profile/ProfilePopover.tsx`, Radix's Popover hung
+  on the button, and its body `ProfileCard.tsx`: a server's roles and
+  moderation, with the social feature's profile, row of actions and
+  questions), and the AppShell connects it as a lazy component, loaded the
+  first time one opens: the Popover's code stays out of the first download,
+  where the users index is (a Radix module, which has side effects, would
+  come with any module the index names). A question or a moderation dialog
+  the popover hands off is drawn by the AppShell's `ProfileDialogs`, so it
+  outlives its opener (the messages of someone just blocked fold away). Not
+  connected (a feature's own tests), the avatar or name is drawn as before,
+  with nothing to open.
   A port can also be handed down as a prop by the page that shows the
   other feature: the chat's mentions need the server's members, roles and
   channels (`MentionSource` in `messaging/types.ts`), and the channel page

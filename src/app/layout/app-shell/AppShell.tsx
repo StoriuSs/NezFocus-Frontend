@@ -26,7 +26,7 @@ import {
     useDms,
     useRelationships
 } from '@/features/social'
-import { connectBlockList } from '@/features/users'
+import { connectBlockList, connectProfilePopover, ProfileDialogs } from '@/features/users'
 import { useConnectionBanner, useRealtimeConnection } from '@/features/realtime'
 import { useDmUnread, useMentionTotal } from '@/features/messaging'
 import {
@@ -81,6 +81,11 @@ connectBlockList({ query: relationshipsQuery, path: friendsPath('blocked') })
 connectChatLinks(useChatLinks)
 // Someone's activity line (social) names the room they are in when one sees it (D-252): servers answers.
 connectRoomLookup(useRoomLookup)
+// Someone's avatar or name opens their profile popover (D-253): its body is the servers
+// feature's (roles, moderation), opened from features that cannot import it, through users.
+// Loaded the first time one opens, so the first download does not carry it.
+const ProfilePopover = lazy(() => import('@/features/servers/components/profile/ProfilePopover'))
+connectProfilePopover((props) => <ProfilePopover {...props} />)
 
 /**
  * The frame of every page after sign-in (02 S-SHELL-01): rail 72, list
@@ -226,6 +231,8 @@ export default function AppShell() {
             </div>
             {/* The tab's title, the phase sound and the streak toast of the session one is in, on every page (07 S-ROOM-05). */}
             <JoinedSessionCues />
+            {/* A question or a moderation dialog a profile popover handed off: it outlives its opener (D-253). */}
+            <ProfileDialogs />
             {/* One's Solo: its title, sound and streak toast while it runs, its toast as it ends (08 S-STUDY-02). */}
             <SoloWatch />
             {creatingServer ? (

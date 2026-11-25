@@ -120,6 +120,7 @@ function renderChat({
                     <div className='flex h-[600px] flex-col'>
                         <ChannelChat
                             channelId={HOI_DAP}
+                            serverId={null}
                             channelName='hoi-dap'
                             permissions={permissions}
                             linkTo={(id) => `/channels/ot/${HOI_DAP}/${id}`}

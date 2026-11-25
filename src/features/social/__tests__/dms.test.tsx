@@ -7,7 +7,7 @@ import { toast, Toaster } from 'sonner'
 import i18n from '@/i18n'
 import { ShellContext } from '@/components/shell/shell-context'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import { userKeys } from '@/features/users'
+import { connectProfilePopover, userKeys } from '@/features/users'
 import { expectNoA11yViolations } from '@/test/a11y'
 import { apiError } from '@/test/helpers'
 import type { SeenRoom } from '../lib/room-lookup'
@@ -1035,5 +1035,17 @@ describe('Dòng hoạt động học (C-30, C-07 dm, C-50, D-252)', () => {
         act(() => emitRealtimeEvent('activity.updated', { userId: 'binh', activity: null }))
         await waitFor(() => expect(binh).toHaveTextContent('Ok 👍'))
         expect(dmsApi.fetchDms).toHaveBeenCalledTimes(1)
+    })
+})
+
+// Last: the popover's body, once connected, stays so for the rest of the file.
+describe('Hồ sơ từ header DM (S-CHAT-05, D-252 4e)', () => {
+    it('opens their profile from the Header avatar, outside any server', async () => {
+        connectProfilePopover(({ userId, serverId }) => <p>{`hồ sơ ${userId} ${serverId ?? 'ngoài server'}`}</p>)
+        renderAt('/dm/dm-binh')
+        await screen.findByRole('heading', { level: 1, name: 'Bình' })
+
+        await userEvent.setup().click(screen.getByRole('button', { name: 'Hồ sơ của Bình' }))
+        expect(await screen.findByText('hồ sơ binh ngoài server')).toBeInTheDocument()
     })
 })

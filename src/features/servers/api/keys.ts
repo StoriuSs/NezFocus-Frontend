@@ -14,6 +14,8 @@ export const serverKeys = {
     mentionableRoles: (serverId: string) => [...serverKeys.roles(serverId), 'mentionable'] as const,
     /** Members of one server, any search (D-152). */
     members: (serverId: string) => [...serverKeys.all, 'members', serverId] as const,
+    /** One member, for the profile popover (D-252): read again with the lists after a change of roles or a moderation. */
+    member: (serverId: string, userId: string) => [...serverKeys.members(serverId), 'one', userId] as const,
     /** One page of one search. */
     memberPage: (serverId: string, query: MemberQuery) => [...serverKeys.members(serverId), query] as const,
     /** The member panel of one server (D-175): its two groups. */

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import '@/i18n/social'
 import { Button } from '@/components/ui/button'
 import type { FriendStripKind } from '../lib/dm-profile'
-import type { PersonMoves } from './DmProfile'
+import type { PersonMoves } from '../hooks/usePersonMoves'
 import { Gated } from './Gated'
 
 /**

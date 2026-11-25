@@ -100,6 +100,7 @@ function renderChat(
                         readLink={() => null}
                         mentions={NO_MENTIONS}
                         channelId='hoi-dap'
+                        serverId={null}
                         channelName='hoi-dap'
                         blocked={blocked}
                         permissions={{

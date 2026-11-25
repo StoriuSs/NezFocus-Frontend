@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage, AvatarInitial } from '@/components
 import { PopoverAnchor } from '@/components/ui/popover'
 import { WithTooltip } from '@/components/ui/tooltip'
 import { useCountdown } from '@/hooks/useCountdown'
+import { ProfileTrigger } from '@/features/users'
 import { cn } from '@/lib/utils'
 import { useMentionWords } from '../hooks/useMentionWords'
 import { plainText, type MentionPart } from '../lib/markdown'
@@ -102,6 +103,7 @@ export const MessageRow = memo(function MessageRow({
     onFold
 }: MessageRowProps) {
     const { t } = useTranslation('messaging')
+    const { t: tc } = useTranslation()
     const words = useMentionWords()
     const [menu, setMenu] = useState<{ anchor: MenuAnchor } | null>(null)
     const [picker, setPicker] = useState<{ anchor: MenuAnchor } | null>(null)
@@ -120,9 +122,28 @@ export const MessageRow = memo(function MessageRow({
             </time>
         </WithTooltip>
     )
+    // Their name and avatar open their profile (S-CHAT-05, D-253); the name is the keyboard's way in.
+    const profile = author && { userId: author.id, serverId: handlers.serverId, name, avatarUrl: author.avatarUrl }
+    const avatar = (
+        <Avatar className='size-10'>
+            <AvatarImage src={author?.avatarUrl ?? undefined} alt='' className='object-cover' />
+            <AvatarFallback className='bg-surface-3 text-body-sm font-semibold text-text-primary'>
+                <AvatarInitial name={author?.displayName ?? author?.username} />
+            </AvatarFallback>
+        </Avatar>
+    )
     const heading = (
         <h3 className='flex min-w-0 items-center gap-2'>
-            <span className='truncate text-body font-semibold text-text-primary'>{name}</span>
+            {profile ? (
+                <ProfileTrigger
+                    {...profile}
+                    className='min-w-0 truncate text-body font-semibold text-text-primary hover:underline'
+                >
+                    {name}
+                </ProfileTrigger>
+            ) : (
+                <span className='truncate text-body font-semibold text-text-primary'>{name}</span>
+            )}
             {time}
         </h3>
     )
@@ -134,7 +155,8 @@ export const MessageRow = memo(function MessageRow({
         everyone: message.mentionEveryone ?? false,
         here: saved?.mentionHereUserIds ?? [],
         me: handlers.me,
-        roleIds: source.roleIds
+        roleIds: source.roleIds,
+        serverId: handlers.serverId
     }
     const related = saved !== undefined && isRelated(saved, { id: handlers.me, roleIds: source.roleIds })
     // Read as "who, when[, answering whom][, mentions you]: what[ (edited)]" (C-10 › Accessibility).
@@ -180,6 +202,8 @@ export const MessageRow = memo(function MessageRow({
         }
     }
     const contextMenu = (event: MouseEvent<HTMLElement>) => {
+        // From a portal drawn inside it (the profile popover, its dialogs): the browser's menu.
+        if (!event.currentTarget.contains(event.target as Node)) return
         if (!saved || editor) return
         event.preventDefault()
         const box = event.currentTarget.getBoundingClientRect()
@@ -234,13 +258,17 @@ export const MessageRow = memo(function MessageRow({
                     <span className='pt-1 text-micro opacity-0 group-hover:opacity-100 group-has-[:focus-visible]:opacity-100'>
                         {time}
                     </span>
+                ) : profile ? (
+                    <ProfileTrigger
+                        {...profile}
+                        label={tc('shell.profileOf', { name })}
+                        tabbable={false}
+                        className='h-10 rounded-full'
+                    >
+                        {avatar}
+                    </ProfileTrigger>
                 ) : (
-                    <Avatar className='size-10'>
-                        <AvatarImage src={author?.avatarUrl ?? undefined} alt='' className='object-cover' />
-                        <AvatarFallback className='bg-surface-3 text-body-sm font-semibold text-text-primary'>
-                            <AvatarInitial name={author?.displayName ?? author?.username} />
-                        </AvatarFallback>
-                    </Avatar>
+                    avatar
                 )}
             </div>
             <div className='min-w-0 flex-1'>

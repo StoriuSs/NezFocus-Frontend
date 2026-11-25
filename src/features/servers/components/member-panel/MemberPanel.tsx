@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { PresenceDot } from '@/components/ui/presence-dot'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ActivityLine, activityShown, useBlockedIds } from '@/features/social'
+import { ProfileTrigger } from '@/features/users'
 import { cn } from '@/lib/utils'
 import { useMemberPanel } from '../../api/useMemberPanel'
 import { useWhenSeen } from '../../hooks/useWhenSeen'
@@ -25,7 +26,7 @@ const ROW = { height: 44, gap: 10 }
  * What others see of each member, and of oneself: someone invisible is in
  * OFFLINE (S-ME-01 › Tương tác). Under the name, what they study now, as
  * one sees it (C-13, D-108): none for someone offline or blocked (D-252).
- * Opening a profile comes with S-CHAT-05.
+ * A row opens the member's profile on its left (S-CHAT-05, D-253).
  */
 export function MemberPanel({ serverId }: { serverId: string }) {
     const { t } = useTranslation()
@@ -71,12 +72,14 @@ export function MemberPanel({ serverId }: { serverId: string }) {
     return (
         <div className='grid grid-cols-1 gap-4'>
             <Group
+                serverId={serverId}
                 title={t('shell.members.online', { count: online.data.total })}
                 members={online.data.items}
                 blocked={blocked}
             />
             {awayTotal > 0 ? (
                 <Group
+                    serverId={serverId}
                     title={t('shell.members.offline', { count: awayTotal })}
                     members={away}
                     blocked={blocked}
@@ -101,12 +104,14 @@ export function MemberPanel({ serverId }: { serverId: string }) {
 }
 
 function Group({
+    serverId,
     title,
     members,
     blocked,
     offline = false,
     children
 }: {
+    serverId: string
     title: string
     members: ServerMember[]
     blocked: ReadonlySet<string>
@@ -123,6 +128,7 @@ function Group({
                 {members.map((member) => (
                     <MemberRow
                         key={member.userId}
+                        serverId={serverId}
                         member={member}
                         offline={offline}
                         blocked={blocked.has(member.userId)}
@@ -139,54 +145,77 @@ function Group({
  * activity line under them (short form, C-30); one line, centred, with none;
  * the owner's crown at the end.
  */
-function MemberRow({ member, offline, blocked }: { member: ServerMember; offline: boolean; blocked: boolean }) {
+function MemberRow({
+    serverId,
+    member,
+    offline,
+    blocked
+}: {
+    serverId: string
+    member: ServerMember
+    offline: boolean
+    blocked: boolean
+}) {
     const { t } = useTranslation()
     const name = useMemberName()(member)
     return (
-        <li style={ROW} className='flex items-center rounded-input px-2 hover:bg-surface-2'>
-            <span className='relative shrink-0'>
-                <Avatar className='size-8'>
-                    <AvatarImage src={member.avatarUrl ?? undefined} alt='' className='object-cover' />
-                    <AvatarFallback className='bg-surface-3 text-label font-semibold text-text-primary'>
-                        <AvatarInitial name={member.displayName ?? member.username} />
-                    </AvatarFallback>
-                </Avatar>
-                <PresenceDot
-                    presence={member.status}
-                    cutout='ring-surface-1'
-                    className='absolute -bottom-0.5 -right-0.5'
-                />
-            </span>
-            <span className='flex min-w-0 flex-1 flex-col'>
-                {/* Short of room, the username goes first (D-108): it shrinks 999 times faster than the name. */}
-                <span className='flex min-w-0 items-center gap-1.5'>
-                    <span
-                        className={cn(
-                            'min-w-0 truncate text-body-sm font-medium',
-                            offline ? 'text-text-tertiary' : 'text-text-secondary'
-                        )}
-                    >
-                        {name}
-                    </span>
-                    {member.username && member.displayName ? (
-                        <span style={{ flexShrink: 999 }} className='min-w-0 truncate text-label text-text-tertiary'>
-                            {member.username}
-                        </span>
-                    ) : null}
+        <li className='rounded-input hover:bg-surface-2'>
+            <ProfileTrigger
+                userId={member.userId}
+                serverId={serverId}
+                name={name}
+                avatarUrl={member.avatarUrl}
+                side='left'
+                style={ROW}
+                className='flex w-full items-center rounded-input px-2'
+            >
+                <span className='relative shrink-0'>
+                    <Avatar className='size-8'>
+                        <AvatarImage src={member.avatarUrl ?? undefined} alt='' className='object-cover' />
+                        <AvatarFallback className='bg-surface-3 text-label font-semibold text-text-primary'>
+                            <AvatarInitial name={member.displayName ?? member.username} />
+                        </AvatarFallback>
+                    </Avatar>
+                    <PresenceDot
+                        presence={member.status}
+                        cutout='ring-surface-1'
+                        className='absolute -bottom-0.5 -right-0.5'
+                    />
                 </span>
-                <ActivityLine
-                    userId={member.userId}
-                    activity={member.activity}
-                    form='short'
-                    shown={activityShown(member.status, !blocked)}
-                />
-            </span>
-            {member.isOwner ? (
-                <>
-                    <Crown className='size-3.5 shrink-0 text-text-tertiary' aria-hidden='true' />
-                    <span className='sr-only'>{t('shell.members.owner')}</span>
-                </>
-            ) : null}
+                <span className='flex min-w-0 flex-1 flex-col'>
+                    {/* Short of room, the username goes first (D-108): it shrinks 999 times faster than the name. */}
+                    <span className='flex min-w-0 items-center gap-1.5'>
+                        <span
+                            className={cn(
+                                'min-w-0 truncate text-body-sm font-medium',
+                                offline ? 'text-text-tertiary' : 'text-text-secondary'
+                            )}
+                        >
+                            {name}
+                        </span>
+                        {member.username && member.displayName ? (
+                            <span
+                                style={{ flexShrink: 999 }}
+                                className='min-w-0 truncate text-label text-text-tertiary'
+                            >
+                                {member.username}
+                            </span>
+                        ) : null}
+                    </span>
+                    <ActivityLine
+                        userId={member.userId}
+                        activity={member.activity}
+                        form='short'
+                        shown={activityShown(member.status, !blocked)}
+                    />
+                </span>
+                {member.isOwner ? (
+                    <>
+                        <Crown className='size-3.5 shrink-0 text-text-tertiary' aria-hidden='true' />
+                        <span className='sr-only'>{t('shell.members.owner')}</span>
+                    </>
+                ) : null}
+            </ProfileTrigger>
         </li>
     )
 }

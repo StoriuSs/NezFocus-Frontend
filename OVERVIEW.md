@@ -229,13 +229,13 @@ src/
 ├── config/         # Settings, validated with zod
 ├── features/       # ← most new code goes here
 │   ├── auth/       # Session store, the auth pages, Google, route and role guards
-│   ├── servers/    # Servers, channels, invites, server settings: api/ · components/ · hooks/ · lib/ · pages/ · routes.tsx
+│   ├── servers/    # Servers, channels, invites, server settings, the profile popover's body (S-CHAT-05, D-253): api/ · components/ · hooks/ · lib/ · pages/ · routes.tsx
 │   ├── realtime/   # The tab's socket, its connection Banner, signals (typing, presence): api/ · hooks/ · lib/ · realtime.store.ts
 │   ├── messaging/  # A text channel's chat (mentions included) and its pins, and a voice room's chat (no pins), lazy; how far the reader has read (unread, mentions, marking read): api/ · components/ · hooks/ · lib/ · types.ts
 │   ├── tasks/      # A text channel's Task Board (S-TASK-01), its form (S-TASK-03), a task's detail (S-TASK-02, `?task=` on any page) and the To-do page `/tasks` (S-TASK-04, D-197), lazy, with its own stylesheet (D-193): api/ · components/ · hooks/ · lib/ · held-tasks.store.ts · types.ts
 │   ├── notifications/ # The inbox (S-NOTI-01), the Popover of the rail's "Thông báo" with its badge, lazy, with its own stylesheet (D-193): api/ · components/ · lib/ · types.ts · inbox.store.ts (open or not: the rail and the Toast of H1)
-│   ├── social/     # Friends, requests, blocks and DMs (M6): the Friends page `/friends?tab=` (S-DM-02, D-248) and a DM `/dm/{id}` (S-DM-03, the messaging feature's chat with the DM's parts, D-249; the profile panel C-50 and the `not-friend` strip, D-251), lazy, with their own stylesheet (loaded with the AppShell too, for the DM rows of the messages column); the relationships and the DMs read as the app opens and kept live, the hooks the inbox answers a request and opens a DM with, someone's study activity line and block (`ActivityLine`, `ActivityBlock`, C-30, D-252), the `ChatLinks` and `RoomLookup` ports: api/ · components/ · lib/ · pages/ · routes.tsx · types.ts
-│   └── users/      # api/ · components/ · hooks/ · lib/ · pages/ · routes.tsx · types.ts
+│   ├── social/     # Friends, requests, blocks and DMs (M6): the Friends page `/friends?tab=` (S-DM-02, D-248) and a DM `/dm/{id}` (S-DM-03, the messaging feature's chat with the DM's parts, D-249; the profile panel C-50 and the `not-friend` strip, D-251), lazy, with their own stylesheet (loaded with the AppShell too, for the DM rows of the messages column); the relationships and the DMs read as the app opens and kept live, the hooks the inbox answers a request and opens a DM with, someone's study activity line and block (`ActivityLine`, `ActivityBlock`, C-30, D-252), the `ChatLinks` and `RoomLookup` ports, and the parts of the profile popover the servers feature draws (the profile, `ProfileActions`, `usePersonMoves`, the confirm dialog, D-253): api/ · components/ · hooks/ · lib/ · pages/ · routes.tsx · types.ts
+│   └── users/      # The account's pages and settings, and the `ProfilePopover` port (`ProfileTrigger`, D-253): api/ · components/ · hooks/ · lib/ · pages/ · routes.tsx · types.ts
 ├── hooks/          # Shared hooks
 ├── i18n/           # Translations
 ├── lib/            # The API client and friends
