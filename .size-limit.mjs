@@ -97,6 +97,12 @@
 // after M6 L6 (25/11/2026, 216.05 kB): ChevronRight, now used by the Privacy
 // page's "Block list" row too, is a chunk of its own the room's page shares,
 // and the shell's chunks carry the relationships read as the app opens.
+// M6 L7a (25/11/2026, D-249): Initial JS raised to 246.95 kB (246.91 kB: the
+// messages column's and the rail's new words, in both languages, are in the
+// `common` catalogue of the first download, with the rest of the shell's
+// words); Social CSS raised to 377 B (375 B: the DM rows of the messages
+// column, 44 high with a gap of 10 and their × on hover or focus, and a DM's
+// page; the stylesheet now loads with the AppShell too, for those rows).
 // Raise them
 // only as CONSTRAINTS.md says: the owner decides, in a commit of its own.
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
@@ -202,7 +208,7 @@ for (const [name, paths] of [
 }
 
 export default [
-    { name: 'Initial JS (gzip)', path: js, gzip: true, limit: '246.75 kB' },
+    { name: 'Initial JS (gzip)', path: js, gzip: true, limit: '246.95 kB' },
     { name: 'Initial CSS (gzip)', path: css, gzip: true, limit: '9.98 kB' },
     { name: 'Chat CSS (gzip)', path: chatCss, gzip: true, limit: '647 B' },
     { name: 'Tasks CSS (gzip)', path: tasksCss, gzip: true, limit: '880 B' },
@@ -210,5 +216,5 @@ export default [
     { name: 'Voice CSS (gzip)', path: voiceCss, gzip: true, limit: '286 B' },
     { name: 'Voice JS (gzip)', path: voiceJs, gzip: true, limit: '216.10 kB' },
     { name: 'Study CSS (gzip)', path: studyCss, gzip: true, limit: '713 B' },
-    { name: 'Social CSS (gzip)', path: socialCss, gzip: true, limit: '274 B' }
+    { name: 'Social CSS (gzip)', path: socialCss, gzip: true, limit: '377 B' }
 ]
