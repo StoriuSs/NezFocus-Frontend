@@ -454,7 +454,8 @@ history holds (`isGoneFrom`), not when the list went elsewhere.
 The member panel (`useMemberPanel`, `src/features/servers/api/`, D-175)
 reads two lists: everyone online, page after page in one query, and the
 offline ones as an infinite query of 100. `presence.updated` patches a dot
-in place while the member stays online; one moving between the groups (or
+in place while the member stays online, `activity.updated` the activity
+line in whichever group holds them (D-252); one moving between the groups (or
 not listed yet) has both read again, once, a second after the first change
 of a burst, and so does each `ready` and each opening of the panel
 (`staleTime: 0`: it heard nothing while closed). One's own presence
@@ -548,7 +549,9 @@ Infinity`): the Friends page lists, sorts and searches it in place, and the
 messages column counts the requests waiting from it. `liveRelationships.ts`
 puts `relationship.added` / `relationship.updated` in place, takes the person
 of `relationship.removed` out and moves a friend's dot on `presence.updated`
-(presence is held for friends only); each `ready` reads it again. The
+(presence is held for friends only), and a friend's study activity on
+`activity.updated`, in the profile held of them too (D-252); each `ready`
+reads it again. The
 changes are pure functions (`lib/relationship-cache.ts`).
 
 Every change goes through the hooks of `useRelationshipActions.ts`, from the
@@ -574,7 +577,7 @@ messages column's rows and each DM's page reading their share
 my other tabs in place (`shown: false` takes the DM out, its read state
 too), makes a message in a DM held its last one (an edit of the last one
 changes its words, a deletion of it reads the list again), moves the dot on
-`presence.updated`, and reads the list again on `relationship.*` (whether I
+`presence.updated`, changes the activity line on `activity.updated`, and reads the list again on `relationship.*` (whether I
 may message someone may change) and each `ready`. Unread counts are not in
 it: they are the read states' (`GET /me/read-states`, a DM's with no
 server), which the rail's 💬 Badge and the tab title read

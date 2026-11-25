@@ -7,9 +7,11 @@ import type { AnySession } from '../types'
  * The server's time now (D-18), again each time the minutes left of a
  * running phase say another number ("còn 18 phút" → "còn 17 phút", C-19
  * `list`): a row of the channel list re-renders once a minute, not each
- * second. Still while paused, or with no session.
+ * second. Still while paused, or with no session. Only the phase's state
+ * and end are read: a Solo seen in someone's activity line (`activity.solo`,
+ * D-240) is enough.
  */
-export function useListClock(session: AnySession | null | undefined): number {
+export function useListClock(session: Pick<AnySession, 'status' | 'phaseEndsAt'> | null | undefined): number {
     const [now, setNow] = useState(serverNow)
     const running = session?.status === 'running' ? session.phaseEndsAt : null
 

@@ -8,8 +8,10 @@ import { IconButton } from '@/components/ui/icon-button'
 import { PresenceDot } from '@/components/ui/presence-dot'
 import { WithTooltip } from '@/components/ui/tooltip'
 import { moveFocusInList } from '@/lib/arrow-focus'
+import { activityShown } from '../lib/activity-line'
 import { nameOf } from '../lib/friends-list'
 import type { Relationship } from '../types'
+import { ActivityLine } from './ActivityLine'
 import { Gated } from './Gated'
 
 export interface FriendRowActions {
@@ -101,7 +103,7 @@ export function FriendRow({
     )
 }
 
-/** The second line (C-30): the presence in words, the note of a request, or "Blocked". */
+/** The second line (C-30): a friend's study activity or else their presence in words, the note of a request, or "Blocked". */
 function SecondLine({ entry }: { entry: Relationship }) {
     const { t } = useTranslation('social')
     if (entry.type === 'incoming' || entry.type === 'outgoing') {
@@ -115,7 +117,18 @@ function SecondLine({ entry }: { entry: Relationship }) {
     }
     const line =
         entry.type === 'blocked' ? t('friends.blockedLine') : t(`friends.presence.${entry.presence ?? 'offline'}`)
-    return <span className='truncate text-label text-text-secondary'>{line}</span>
+    const words = <span className='truncate text-label text-text-secondary'>{line}</span>
+    if (entry.type !== 'friend') return words
+    // A friend studying: the full activity line instead of the presence (C-30, D-252); none while offline.
+    return (
+        <ActivityLine
+            userId={entry.user.id}
+            activity={entry.activity}
+            form='full'
+            shown={activityShown(entry.presence, true)}
+            fallback={words}
+        />
+    )
 }
 
 /** One action, off with its Tooltip while offline (the Tooltip needs a live element around it, as the inbox's ✓). */

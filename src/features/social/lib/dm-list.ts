@@ -98,6 +98,12 @@ export function withDmPresence(dms: readonly Dm[], userId: string, status: Prese
     return dms.map((dm) => (dm.user.id === userId && dm.presence !== null ? { ...dm, presence: status } : dm))
 }
 
+/** `activity.updated`: the study activity of the one I talk with (it reaches me only where I may see it, D-240). */
+export function withDmActivity(dms: readonly Dm[], userId: string, activity: Dm['activity']): readonly Dm[] {
+    if (!dms.some((dm) => dm.user.id === userId)) return dms
+    return dms.map((dm) => (dm.user.id === userId ? { ...dm, activity } : dm))
+}
+
 /** What the second line says of the last message (C-30), in the screen's words. */
 export interface PreviewWords {
     /** "Bạn: {text}" (mine). */

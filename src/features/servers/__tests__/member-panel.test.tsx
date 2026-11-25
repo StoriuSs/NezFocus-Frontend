@@ -1,9 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, render, screen, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import '@/i18n'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { expectNoA11yViolations } from '@/test/a11y'
 import type { MemberQuery } from '../api/roles.api'
+import type { SeenRoom } from '@/features/social'
 import type { MemberPage, ServerMember } from '../types'
 
 const fetchMembers = vi.fn<(serverId: string, query: MemberQuery) => Promise<MemberPage>>()
@@ -11,6 +13,11 @@ vi.mock('../api/roles.api', () => ({ fetchMembers }))
 
 const { emitRealtimeEvent } = await import('@/features/realtime/lib/realtime-events')
 const { MemberPanel } = await import('../components/member-panel/MemberPanel')
+const { connectRoomLookup, relationshipsQuery } = await import('@/features/social')
+
+// Where people are, as the servers feature would answer (D-252): set by a test, nobody by default.
+const rooms = new Map<string, SeenRoom>()
+connectRoomLookup(() => ({ roomOf: (userId) => rooms.get(userId) ?? null }))
 
 const member = (
     userId: string,
@@ -49,15 +56,22 @@ const page = (items: ServerMember[], total: number, current = 1): MemberPage => 
 let online: ServerMember[]
 let offline: ServerMember[]
 
-function renderPanel() {
+function renderPanel(relationships: unknown[] = []) {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    // My relationships read: nobody blocked.
+    client.setQueryData(relationshipsQuery.queryKey, relationships as never)
     return render(
         <QueryClientProvider client={client}>
-            <MemberPanel serverId='ot' />
+            <TooltipProvider>
+                <MemberPanel serverId='ot' />
+            </TooltipProvider>
         </QueryClientProvider>
     )
 }
 const group = (name: RegExp) => screen.getByRole('region', { name })
+/** What an activity line draws (screen readers read its whole sentence instead, `sr-only`). */
+const drawn = (element: HTMLElement) =>
+    [...element.querySelectorAll('[aria-hidden="true"]')].map((part) => part.textContent).join('')
 /** A row as read: its name, username and the owner's mark. */
 const said = (row: HTMLElement) =>
     [...row.querySelectorAll('.truncate, .sr-only')].map((part) => part.textContent).join(' ')
@@ -188,5 +202,78 @@ describe('The Members panel (S-SHELL-01, C-13, D-175)', () => {
         renderPanel()
         expect(await screen.findByText('Could not load the members')).toBeInTheDocument()
         expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
+    })
+})
+
+describe('MemberRow’s activity line (C-13, C-30, D-252)', () => {
+    beforeEach(() => {
+        online = [
+            member('binh', 'Bình', 'online', { activity: { room: 'study', solo: null } }),
+            member('chi', 'Chi', 'online', {
+                activity: {
+                    room: null,
+                    solo: {
+                        status: 'running',
+                        phase: 'focus',
+                        phaseEndsAt: new Date(Date.now() + 105.5 * 60_000).toISOString()
+                    }
+                }
+            }),
+            member('giang', 'Giang', 'online')
+        ]
+        offline = [member('dung', 'Dũng', 'offline', { activity: { room: 'voice', solo: null } })]
+        fetchMembers.mockReset()
+        fetchMembers.mockImplementation(async (_serverId, query) =>
+            query.presence === 'online' ? page(online, online.length) : page(offline, offline.length)
+        )
+        rooms.set('binh', {
+            name: 'Phòng học im lặng',
+            isStudyRoom: true,
+            session: {
+                status: 'running',
+                phase: 'focus',
+                phaseEndsAt: new Date(Date.now() + 18.5 * 60_000).toISOString(),
+                pausedRemainingMs: null
+            } as SeenRoom['session']
+        })
+    })
+    afterEach(() => rooms.clear())
+
+    const rowOf = (name: string) =>
+        within(screen.getByRole('region', { name: /^Online/ }))
+            .getAllByRole('listitem')
+            .find((row) => said(row).startsWith(`${name} `))!
+
+    it('says the short form under the name: the phase and the minutes in a room one sees, "Solo" for a Solo; none offline', async () => {
+        renderPanel()
+        await screen.findByRole('region', { name: 'Online — 3' })
+
+        expect(rowOf('Bình')).toHaveTextContent('Focus · 18 min left')
+        expect(drawn(rowOf('Bình'))).toBe('Focus · 18 min left')
+        expect(rowOf('Chi')).toHaveTextContent('Solo · 105 min left')
+        expect(names(group(/^Offline — 1$/))).toEqual(['Dũng dung.tran'])
+        await expectNoA11yViolations()
+    })
+
+    it('shows no line for someone I blocked (D-252)', async () => {
+        renderPanel([
+            { type: 'blocked', since: null, presence: null, activity: null, note: null, user: { id: 'binh' } }
+        ])
+        await screen.findByRole('region', { name: 'Online — 3' })
+
+        expect(rowOf('Bình')).not.toHaveTextContent('Focus')
+        expect(rowOf('Chi')).toHaveTextContent('Solo · 105 min left')
+    })
+
+    it('changes the line in place on activity.updated, without reading again', async () => {
+        renderPanel()
+        await screen.findByRole('region', { name: 'Online — 3' })
+        fetchMembers.mockClear()
+
+        act(() => emitRealtimeEvent('activity.updated', { userId: 'giang', activity: { room: 'voice', solo: null } }))
+        await waitFor(() => expect(rowOf('Giang')).toHaveTextContent('In a voice room'))
+        act(() => emitRealtimeEvent('activity.updated', { userId: 'binh', activity: null }))
+        await waitFor(() => expect(rowOf('Bình')).not.toHaveTextContent('Focus'))
+        expect(fetchMembers).not.toHaveBeenCalled()
     })
 })

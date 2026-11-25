@@ -90,6 +90,14 @@
       "private": "Kênh riêng tư",
       "noConnect": "Bạn không có quyền vào phòng này"
     },
+    "activity": {
+      "solo": "Một mình",
+      "soloFull": "Đang học một mình",
+      "waitingShort": "hết giờ nghỉ",
+      "inRoom": "Đang ở {{room}}",
+      "unseenStudy": "Đang học cùng nhóm",
+      "unseenVoice": "Đang ở một phòng voice"
+    },
     "study": {
       "title": "Học",
       "overview": "Tổng quan",

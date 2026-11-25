@@ -1,4 +1,5 @@
 import { cycleOf } from '@/features/study'
+import type { RoomLookup } from '@/features/social'
 import type { VoiceDirectory, VoiceRoom } from '@/features/voice'
 import { isBelow } from './moderation'
 import { can } from './permissions'
@@ -47,4 +48,28 @@ export function voiceDirectory(servers: Server[]): VoiceDirectory {
         room: (channelId) => rooms.find((room) => room.channelId === channelId),
         roomOf: (userId) => rooms.find((room) => room.people.some((person) => person.user.id === userId))
     }
+}
+
+/** One answer per list of servers held: every activity line on screen reads the same one. */
+const lookups = new WeakMap<Server[], RoomLookup>()
+
+/**
+ * The social feature's `RoomLookup` (D-252): the voice room someone is in
+ * among the rooms of my servers I see (`GET /servers` holds only the
+ * channels I view, with who is in each and its session), its name, kind and
+ * session; worked out once per list held (`voiceDirectory`), every row on
+ * screen reading the same answer.
+ */
+export function seenRooms(servers: Server[]): RoomLookup {
+    const held = lookups.get(servers)
+    if (held) return held
+    const directory = voiceDirectory(servers)
+    const lookup: RoomLookup = {
+        roomOf: (userId) => {
+            const room = directory.roomOf(userId)
+            return room ? { name: room.name, isStudyRoom: room.isStudyRoom, session: room.session } : null
+        }
+    }
+    lookups.set(servers, lookup)
+    return lookup
 }

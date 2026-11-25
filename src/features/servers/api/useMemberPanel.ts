@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useInfiniteQuery, useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query'
 import type { Presence } from '@/components/ui/presence-dot'
 import { onRealtimeEvent } from '@/features/realtime'
+import type { ActivityUpdated } from '@/features/social'
 import type { MemberPage, ServerMember } from '../types'
 import { serverKeys } from './keys'
 import { fetchMembers } from './roles.api'
@@ -29,7 +30,8 @@ async function everyoneOnline(serverId: string): Promise<{ items: ServerMember[]
  * to others (away and do not disturb included), and those offline a page of
  * 100 at a time, both by name. Kept live by `presence.updated` while shown:
  * a member staying in their group changes dot at once; one changing group
- * has the groups read again (once, a second after the first change). The
+ * has the groups read again (once, a second after the first change);
+ * `activity.updated` changes someone's activity line in place (D-252). The
  * event says no server: someone listed in neither group is of this server
  * only while the offline group has pages not read yet. Read again each time
  * the socket is back (not while the first reading is on its way), and each
@@ -86,6 +88,23 @@ export function useMemberPanel(serverId: string) {
                 const unread = offlinePages?.pages.at(-1)?.meta.hasNextPage ?? true
                 // Gone offline, or come online from the offline group (perhaps a page not read yet).
                 if (isOnline || isOffline || (status !== 'offline' && unread)) readAgain()
+            }),
+            onRealtimeEvent('activity.updated', (data) => {
+                // In place, in whichever group holds them (D-252); the event says no server.
+                const { userId, activity } = data as ActivityUpdated
+                const changed = (member: ServerMember) => (member.userId === userId ? { ...member, activity } : member)
+                queryClient.setQueryData<{ items: ServerMember[]; total: number }>(
+                    serverKeys.memberPanel(serverId, 'online'),
+                    (held) => held && { ...held, items: held.items.map(changed) }
+                )
+                queryClient.setQueryData<InfiniteData<MemberPage>>(
+                    serverKeys.memberPanel(serverId, 'offline'),
+                    (held) =>
+                        held && {
+                            ...held,
+                            pages: held.pages.map((page) => ({ ...page, items: page.items.map(changed) }))
+                        }
+                )
             }),
             onRealtimeEvent('ready', () => {
                 // Not while the first reading is on its way: it answers for now.

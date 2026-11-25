@@ -10,6 +10,7 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { userKeys } from '@/features/users'
 import { expectNoA11yViolations } from '@/test/a11y'
 import { apiError } from '@/test/helpers'
+import type { SeenRoom } from '../lib/room-lookup'
 import type { Dm, DmLastMessage, PersonProfile, Relationship } from '../types'
 
 const socialApi = {
@@ -56,6 +57,7 @@ const { default: Friends } = await import('../pages/Friends')
 const { DmList } = await import('../components/DmList')
 const { useDms } = await import('../api/useDms')
 const { connectChatLinks } = await import('../lib/chat-links')
+const { connectRoomLookup } = await import('../lib/room-lookup')
 const { messagesPlace, rememberMessagesPlace } = await import('../lib/messages-place')
 const { emitRealtimeEvent } = await import('@/features/realtime/lib/realtime-events')
 
@@ -69,6 +71,10 @@ connectChatLinks(() => ({
         path: `/channels/${serverId}`
     })
 }))
+
+// Where people are, as the servers feature would answer (D-252): set by a test, nobody by default.
+const rooms = new Map<string, SeenRoom>()
+connectRoomLookup(() => ({ roomOf: (userId) => rooms.get(userId) ?? null }))
 
 // UUIDv7-like ids: newer is greater as text.
 function id(n: number) {
@@ -189,6 +195,9 @@ function renderAt(at: string, connection: 'offline' | null = null) {
 }
 
 const column = () => screen.getByRole('navigation', { name: 'Tin nhắn' })
+/** What an activity line draws (screen readers read its whole sentence instead, `sr-only`). */
+const drawn = (element: HTMLElement) =>
+    [...element.querySelectorAll('[aria-hidden="true"]')].map((part) => part.textContent).join('')
 const rowNames = () =>
     within(column())
         .getAllByRole('listitem')
@@ -858,5 +867,173 @@ describe('Panel Hồ sơ và dải not-friend (C-50, S-DM-03, D-251)', () => {
 
         expect(await screen.findByRole('status')).toHaveTextContent('Không thể gửi tin nhắn cho người dùng này')
         expect(screen.queryByText('Bạn và Tuấn chưa là bạn bè')).toBeNull()
+    })
+})
+
+describe('Dòng hoạt động học (C-30, C-07 dm, C-50, D-252)', () => {
+    const minutesFromNow = (minutes: number) => new Date(Date.now() + minutes * 60_000).toISOString()
+    const studyRoom = (): SeenRoom => ({
+        name: 'Phòng học im lặng',
+        isStudyRoom: true,
+        session: {
+            status: 'running',
+            phase: 'focus',
+            phaseEndsAt: minutesFromNow(18.5),
+            pausedRemainingMs: null
+        } as SeenRoom['session']
+    })
+    const studying = { activity: { room: 'study', solo: null } } as const
+    const row = (name: RegExp) => within(column()).findByRole('link', { name })
+
+    afterEach(() => {
+        rooms.clear()
+        vi.mocked(window.matchMedia).mockImplementation(
+            (query: string) =>
+                ({ matches: false, media: query, addEventListener: vi.fn(), removeEventListener: vi.fn() }) as never
+        )
+    })
+
+    it('says what a friend studies in a room I see instead of their last message: short on the row, full in the Header, a block in the panel', async () => {
+        rooms.set('binh', studyRoom())
+        dmsApi.fetchDms.mockResolvedValue([dm('dm-binh', BINH, last(4, '2026-10-18T14:09:00.000Z'), studying)])
+        socialApi.fetchPersonProfile.mockResolvedValue({
+            user: BINH,
+            bio: null,
+            presence: 'online',
+            activity: studying.activity,
+            relationship: 'friend',
+            mutualServers: []
+        })
+        vi.mocked(window.matchMedia).mockImplementation(
+            (query: string) =>
+                ({ matches: true, media: query, addEventListener: vi.fn(), removeEventListener: vi.fn() }) as never
+        )
+        renderAt('/dm/dm-binh')
+
+        const binh = await row(/Bình/)
+        expect(binh).toHaveTextContent('Tập trung · còn 18 phút')
+        expect(drawn(binh)).toBe('Tập trung · còn 18 phút')
+        // The short form leaves out the room's name: screen readers and the Tooltip have the whole sentence.
+        expect(within(binh).getByText('Tập trung · còn 18 phút · Phòng học im lặng')).toHaveClass('sr-only')
+        expect(binh).not.toHaveTextContent('Ok 👍')
+        const header = screen.getByRole('heading', { level: 1, name: 'Bình' }).closest('header')!
+        expect(header).toHaveTextContent('binh.tran')
+        expect(drawn(header)).toBe('·Tập trung · còn 18 phút · Phòng học im lặng')
+        const profile = await screen.findByRole('complementary', { name: 'Hồ sơ' })
+        expect(within(profile).getByText('Phòng học im lặng')).toBeInTheDocument()
+        expect(profile).toHaveTextContent('Tập trung · còn 18 phút')
+    })
+
+    it('shows the whole sentence in a Tooltip on hovering the short form', async () => {
+        rooms.set('binh', studyRoom())
+        dmsApi.fetchDms.mockResolvedValue([dm('dm-binh', BINH, last(4, '2026-10-18T14:09:00.000Z'), studying)])
+        renderAt('/study')
+        const binh = await row(/Bình/)
+
+        await userEvent.hover(within(binh).getByText('Tập trung'))
+        expect(await screen.findByRole('tooltip')).toHaveTextContent('Tập trung · còn 18 phút · Phòng học im lặng')
+    })
+
+    it('shows no activity in the Header nor the panel for someone offline, or someone I may not message', async () => {
+        rooms.set('binh', studyRoom())
+        rooms.set('tuan', studyRoom())
+        socialApi.fetchPersonProfile.mockImplementation(async (userId) => ({
+            user: userId === 'tuan' ? TUAN : BINH,
+            bio: null,
+            presence: null,
+            activity: studying.activity,
+            relationship: userId === 'tuan' ? 'none' : 'friend',
+            mutualServers: []
+        }))
+        dmsApi.fetchDms.mockResolvedValue([
+            dm('dm-binh', BINH, last(4, '2026-10-18T14:09:00.000Z'), { ...studying, presence: 'offline' }),
+            dm('dm-tuan', TUAN, last(2, '2026-10-18T12:09:00.000Z'), { ...studying, presence: null, canMessage: false })
+        ])
+        vi.mocked(window.matchMedia).mockImplementation(
+            (query: string) =>
+                ({ matches: true, media: query, addEventListener: vi.fn(), removeEventListener: vi.fn() }) as never
+        )
+        const { router } = renderAt('/dm/dm-binh')
+
+        const profile = await screen.findByRole('complementary', { name: 'Hồ sơ' })
+        expect(profile).not.toHaveTextContent('còn 18 phút')
+        expect(screen.getByRole('heading', { level: 1, name: 'Bình' }).closest('header')).not.toHaveTextContent(
+            'còn 18 phút'
+        )
+
+        await act(() => router.navigate('/dm/dm-tuan'))
+        expect(await screen.findByRole('heading', { level: 1, name: 'Tuấn' })).toBeInTheDocument()
+        expect(screen.getByRole('heading', { level: 1, name: 'Tuấn' }).closest('header')).not.toHaveTextContent(
+            'còn 18 phút'
+        )
+        expect(screen.getByRole('complementary', { name: 'Hồ sơ' })).not.toHaveTextContent('còn 18 phút')
+    })
+
+    it('says only "Đang học cùng nhóm" for a room I do not see: no name, no time (D-79)', async () => {
+        dmsApi.fetchDms.mockResolvedValue([dm('dm-binh', BINH, last(4, '2026-10-18T14:09:00.000Z'), studying)])
+        renderAt('/study')
+
+        expect(await row(/Bình/)).toHaveTextContent('Đang học cùng nhóm')
+    })
+
+    it('shows no activity, the last message instead, for someone offline, someone I may not message, or someone I blocked', async () => {
+        rooms.set('binh', studyRoom())
+        rooms.set('chi', studyRoom())
+        rooms.set('tuan', studyRoom())
+        socialApi.fetchRelationships.mockResolvedValue([
+            friend(BINH),
+            { ...friend(CHI), type: 'blocked', presence: null }
+        ])
+        dmsApi.fetchDms.mockResolvedValue([
+            dm('dm-binh', BINH, last(4, '2026-10-18T14:09:00.000Z', { content: 'Bình nói' }), {
+                ...studying,
+                presence: 'offline'
+            }),
+            dm('dm-chi', CHI, last(3, '2026-10-18T13:09:00.000Z', { content: 'Chi nói' }), studying),
+            dm('dm-tuan', TUAN, last(2, '2026-10-18T12:09:00.000Z', { content: 'Tuấn nói' }), {
+                ...studying,
+                presence: null,
+                canMessage: false
+            })
+        ])
+        renderAt('/study')
+
+        expect(await row(/Bình/)).toHaveTextContent('Bình nói')
+        expect(await row(/Tuấn/)).toHaveTextContent('Tuấn nói')
+        // Someone I blocked: neither their activity nor their last message (L7a).
+        await waitFor(() =>
+            expect(within(column()).getByRole('link', { name: /Chi/ })).not.toHaveTextContent('Tập trung')
+        )
+        expect(column()).not.toHaveTextContent('còn 18 phút')
+    })
+
+    it('hears activity.updated: the line comes and goes at once, no reading again', async () => {
+        const { client } = renderAt('/study')
+        client.setQueryData<PersonProfile>(['social', 'profile', 'binh'], {
+            user: BINH,
+            bio: null,
+            presence: 'online',
+            activity: null,
+            relationship: 'friend',
+            mutualServers: []
+        })
+        const binh = await row(/Bình/)
+        expect(binh).toHaveTextContent('Ok 👍')
+
+        act(() =>
+            emitRealtimeEvent('activity.updated', {
+                userId: 'binh',
+                activity: { room: null, solo: { status: 'paused', phase: 'focus', phaseEndsAt: null } }
+            })
+        )
+        await waitFor(() => expect(binh).toHaveTextContent('Một mình · Tạm dừng'))
+
+        // The profile held of them follows too (S-CHAT-05, C-50).
+        expect(client.getQueryData<PersonProfile>(['social', 'profile', 'binh'])?.activity).toMatchObject({
+            room: null
+        })
+        act(() => emitRealtimeEvent('activity.updated', { userId: 'binh', activity: null }))
+        await waitFor(() => expect(binh).toHaveTextContent('Ok 👍'))
+        expect(dmsApi.fetchDms).toHaveBeenCalledTimes(1)
     })
 })

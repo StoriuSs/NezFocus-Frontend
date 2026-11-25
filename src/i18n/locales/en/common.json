@@ -90,6 +90,14 @@
       "private": "Private channel",
       "noConnect": "You may not join this room"
     },
+    "activity": {
+      "solo": "Solo",
+      "soloFull": "Studying solo",
+      "waitingShort": "break over",
+      "inRoom": "In {{room}}",
+      "unseenStudy": "Studying with a group",
+      "unseenVoice": "In a voice room"
+    },
     "study": {
       "title": "Study",
       "overview": "Overview",

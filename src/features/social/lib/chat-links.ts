@@ -6,7 +6,7 @@ import type { AppLink, MentionChannel } from '@/features/messaging'
  * name, as there is no server open; C-10, D-117) and a channel token `<#id>`.
  * The servers feature answers with a hook (`useChatLinks`), the same object
  * while the servers' names and channels stay the same; the social feature
- * cannot import it (servers will import social, M6 L8), so the AppShell
+ * cannot import it (servers imports social), so the AppShell
  * connects the two, as it does `ServerOwnership` and `BlockList`.
  *
  * `server`: a server of the profile panel's "SERVER CHUNG" (C-50, D-251),

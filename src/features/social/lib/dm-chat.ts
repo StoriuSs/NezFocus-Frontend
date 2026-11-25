@@ -42,5 +42,5 @@ export function dmChatPermissions(standing: DmStanding): ChatPermissions {
     }
 }
 
-/** Whether the header shows their dot (and, from L8, activity): never where I may not message them (09 Q10). */
+/** Whether the header shows their dot and activity: never where I may not message them (09 Q10, C-30). */
 export const showsPresence = (standing: DmStanding) => standing === 'open'

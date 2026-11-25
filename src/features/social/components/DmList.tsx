@@ -27,11 +27,13 @@ import { useDmList } from '../api/useDms'
 import { useRelationships } from '../api/useRelationships'
 import { useUnblockPerson } from '../api/useRelationshipActions'
 import { useConnectedChatLinks } from '../lib/chat-links'
+import { activityShown } from '../lib/activity-line'
 import { dmStanding } from '../lib/dm-chat'
 import { heldDms, previewOf, shownDms } from '../lib/dm-list'
 import { nameOf } from '../lib/friends-list'
 import { friendsPath, dmPath, SOCIAL_PATHS } from '../lib/paths'
 import type { Dm, DmLastMessage } from '../types'
+import { ActivityLine } from './ActivityLine'
 import { PersonAvatar } from './PersonAvatar'
 // The column shows with every page of the messages area, drawn before the page's chunk:
 // its classes come with the AppShell (D-193, as the dock brings the voice rooms' stylesheet).
@@ -112,8 +114,8 @@ export function DmList() {
  * DMRow (C-30): avatar 32 with their dot (none where I may not message them,
  * nor for someone I blocked or a deleted account), the name (read: 500
  * `text-secondary`; unread: 600 `text-primary` with the count; open: 600 on
- * `surface-2`), the last message under it (the study activity first, from
- * L8). Hover or keyboard focus shows `x` "Close DM" in the count's place.
+ * `surface-2`), under it their study activity (short form, C-30, D-252) or
+ * else the last message. Hover or keyboard focus shows `x` "Close DM" in the count's place.
  */
 function DmRow({
     dm,
@@ -206,7 +208,17 @@ function DmRow({
                     >
                         {name}
                     </span>
-                    {preview ? <span className='truncate text-label text-text-tertiary'>{preview}</span> : null}
+                    <ActivityLine
+                        userId={dm.user.id}
+                        activity={dm.activity}
+                        form='short'
+                        shown={activityShown(dm.presence, standing === 'open')}
+                        // Room for the × on hover or focus: the minutes left are never cut, they would run under it.
+                        className='group-focus-within:pr-6 group-hover:pr-6'
+                        fallback={
+                            preview ? <span className='truncate text-label text-text-tertiary'>{preview}</span> : null
+                        }
+                    />
                 </span>
                 <CountBadge count={unread} className='shrink-0 group-focus-within:hidden group-hover:hidden' />
             </NavLink>

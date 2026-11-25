@@ -1,7 +1,14 @@
 import type { QueryClient } from '@tanstack/react-query'
 import { onRealtimeEvent } from '@/features/realtime'
-import { withoutPerson, withPresence, withRelationship } from '../lib/relationship-cache'
-import type { PresenceUpdated, Relationship, RelationshipChanged, RelationshipRemoved } from '../types'
+import { withActivity, withoutPerson, withPresence, withRelationship } from '../lib/relationship-cache'
+import type {
+    ActivityUpdated,
+    PersonProfile,
+    PresenceUpdated,
+    Relationship,
+    RelationshipChanged,
+    RelationshipRemoved
+} from '../types'
 import { socialKeys } from './keys'
 
 const listening = new WeakSet<QueryClient>()
@@ -16,7 +23,9 @@ function update(client: QueryClient, change: (list: Relationship[]) => Relations
  * Friends page is open or not, for the Badge of its row:
  * `relationship.added` / `relationship.updated` put the entry in its place
  * (as the other tab, or the other person, changed it), `relationship.removed`
- * takes the person out, `presence.updated` moves a friend's dot. Each `ready`
+ * takes the person out, `presence.updated` moves a friend's dot,
+ * `activity.updated` changes a friend's activity line, and the activity of
+ * the profile held of them (S-CHAT-05, C-50; D-252). Each `ready`
  * (the socket live again) reads the list again: events may have been missed.
  * Once per query client, for the app's life.
  *
@@ -36,6 +45,14 @@ export function listenForRelationships(client: QueryClient): () => void {
         onRealtimeEvent('presence.updated', (data) => {
             const { userId, status } = data as PresenceUpdated
             update(client, (list) => withPresence(list, userId, status))
+        }),
+        onRealtimeEvent('activity.updated', (data) => {
+            const { userId, activity } = data as ActivityUpdated
+            update(client, (list) => withActivity(list, userId, activity))
+            client.setQueryData<PersonProfile>(
+                socialKeys.profile(userId),
+                (profile) => profile && { ...profile, activity }
+            )
         }),
         onRealtimeEvent('ready', () => void client.invalidateQueries({ queryKey: socialKeys.relationships() }))
     ]

@@ -24,6 +24,7 @@ import {
     useUnblockPerson
 } from '../api/useRelationshipActions'
 import { socialKeys } from '../api/keys'
+import { ActivityLine } from '../components/ActivityLine'
 import { BlockedStrip } from '../components/BlockedStrip'
 import { ConfirmRelationshipDialog, type ConfirmKind } from '../components/ConfirmRelationshipDialog'
 import { DmIntro } from '../components/DmIntro'
@@ -32,6 +33,7 @@ import { FriendStrip } from '../components/FriendStrip'
 import { PersonAvatar } from '../components/PersonAvatar'
 import { addFriendProblem } from '../lib/add-friend'
 import { useConnectedChatLinks } from '../lib/chat-links'
+import { activityShown } from '../lib/activity-line'
 import { dmChatPermissions, dmStanding, isGone, showsPresence } from '../lib/dm-chat'
 import { friendStrip, relationshipWith } from '../lib/dm-profile'
 import { nameOf } from '../lib/friends-list'
@@ -62,7 +64,9 @@ const isId = (id: string | undefined): id is string =>
  * no longer write to them (09 DM-EDGE `lost-permission`, D-250) reads the
  * list again, so the page turns `cannot-message`. While I may message
  * them and we are not friends, the `not-friend` strip under the Header
- * (D-251). The activity line comes with L8, the calls with L9.
+ * (D-251). Their study activity after the username and in the panel, where
+ * the dot shows and they are not offline (C-07 `dm`, C-30, D-252); the calls
+ * with L9.
  */
 export default function DirectMessage() {
     const { dmId = '', messageId } = useParams()
@@ -120,6 +124,8 @@ function DmChat({ dm, messageId }: { dm: Dm; messageId?: string }) {
     const moves = usePersonMoves(person, name, setConfirming)
     const { unblock: unblockPerson, busy } = moves
     const strip = friendStrip(standing, relationship)
+    // Their activity where their dot shows, not while offline (C-30, D-252).
+    const studies = activityShown(dm.presence, showsPresence(standing))
     // The strip gone (accepted, declined, blocked) with the focus in it: the focus to the composer, if any.
     const chat = useRef<HTMLDivElement>(null)
     const hadStrip = useRef(strip !== null)
@@ -185,6 +191,11 @@ function DmChat({ dm, messageId }: { dm: Dm; messageId?: string }) {
         <ShellPage
             title={name}
             subtitle={gone ? undefined : (person.username ?? undefined)}
+            status={
+                studies && dm.activity ? (
+                    <ActivityLine userId={person.id} activity={dm.activity} form='full' separated />
+                ) : undefined
+            }
             leading={
                 <PersonAvatar
                     person={person}
@@ -239,6 +250,7 @@ function DmChat({ dm, messageId }: { dm: Dm; messageId?: string }) {
                             person={person}
                             name={name}
                             presence={showsPresence(standing) ? dm.presence : null}
+                            activity={studies ? dm.activity : null}
                             relationship={relationship}
                             offline={offline}
                             moves={moves}

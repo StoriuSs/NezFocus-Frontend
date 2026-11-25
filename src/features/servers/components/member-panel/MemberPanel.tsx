@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage, AvatarInitial } from '@/components
 import { Button } from '@/components/ui/button'
 import { PresenceDot } from '@/components/ui/presence-dot'
 import { Skeleton } from '@/components/ui/skeleton'
+import { ActivityLine, activityShown, useBlockedIds } from '@/features/social'
 import { cn } from '@/lib/utils'
 import { useMemberPanel } from '../../api/useMemberPanel'
 import { useWhenSeen } from '../../hooks/useWhenSeen'
@@ -22,11 +23,14 @@ const ROW = { height: 44, gap: 10 }
  * "ONLINE — N" then "OFFLINE — N", each by name, the counts the server's
  * (D-175). The offline group loads 100 more as its end comes into view.
  * What others see of each member, and of oneself: someone invisible is in
- * OFFLINE (S-ME-01 › Tương tác). Opening a profile comes with S-CHAT-05.
+ * OFFLINE (S-ME-01 › Tương tác). Under the name, what they study now, as
+ * one sees it (C-13, D-108): none for someone offline or blocked (D-252).
+ * Opening a profile comes with S-CHAT-05.
  */
 export function MemberPanel({ serverId }: { serverId: string }) {
     const { t } = useTranslation()
     const { online, offline } = useMemberPanel(serverId)
+    const blocked = useBlockedIds()
 
     if (online.isPending || offline.isPending) {
         return (
@@ -66,9 +70,18 @@ export function MemberPanel({ serverId }: { serverId: string }) {
     // One column no wider than the panel: an auto column would grow to the longest name, past "…" (C-13).
     return (
         <div className='grid grid-cols-1 gap-4'>
-            <Group title={t('shell.members.online', { count: online.data.total })} members={online.data.items} />
+            <Group
+                title={t('shell.members.online', { count: online.data.total })}
+                members={online.data.items}
+                blocked={blocked}
+            />
             {awayTotal > 0 ? (
-                <Group title={t('shell.members.offline', { count: awayTotal })} members={away} offline>
+                <Group
+                    title={t('shell.members.offline', { count: awayTotal })}
+                    members={away}
+                    blocked={blocked}
+                    offline
+                >
                     {offline.isFetchNextPageError ? (
                         <div className='flex justify-center py-2'>
                             <Button variant='secondary' onClick={() => void offline.fetchNextPage()}>
@@ -90,11 +103,13 @@ export function MemberPanel({ serverId }: { serverId: string }) {
 function Group({
     title,
     members,
+    blocked,
     offline = false,
     children
 }: {
     title: string
     members: ServerMember[]
+    blocked: ReadonlySet<string>
     offline?: boolean
     children?: ReactNode
 }) {
@@ -106,7 +121,12 @@ function Group({
             </h3>
             <ul>
                 {members.map((member) => (
-                    <MemberRow key={member.userId} member={member} offline={offline} />
+                    <MemberRow
+                        key={member.userId}
+                        member={member}
+                        offline={offline}
+                        blocked={blocked.has(member.userId)}
+                    />
                 ))}
             </ul>
             {children}
@@ -114,8 +134,12 @@ function Group({
     )
 }
 
-/** MemberRow/panel (C-13): avatar 32 with its dot, name and username; the owner's crown at the end. */
-function MemberRow({ member, offline }: { member: ServerMember; offline: boolean }) {
+/**
+ * MemberRow/panel (C-13): avatar 32 with its dot, name and username, the
+ * activity line under them (short form, C-30); one line, centred, with none;
+ * the owner's crown at the end.
+ */
+function MemberRow({ member, offline, blocked }: { member: ServerMember; offline: boolean; blocked: boolean }) {
     const { t } = useTranslation()
     const name = useMemberName()(member)
     return (
@@ -133,21 +157,29 @@ function MemberRow({ member, offline }: { member: ServerMember; offline: boolean
                     className='absolute -bottom-0.5 -right-0.5'
                 />
             </span>
-            {/* Short of room, the username goes first (D-108): it shrinks 999 times faster than the name. */}
-            <span className='flex min-w-0 flex-1 items-center gap-1.5'>
-                <span
-                    className={cn(
-                        'min-w-0 truncate text-body-sm font-medium',
-                        offline ? 'text-text-tertiary' : 'text-text-secondary'
-                    )}
-                >
-                    {name}
-                </span>
-                {member.username && member.displayName ? (
-                    <span style={{ flexShrink: 999 }} className='min-w-0 truncate text-label text-text-tertiary'>
-                        {member.username}
+            <span className='flex min-w-0 flex-1 flex-col'>
+                {/* Short of room, the username goes first (D-108): it shrinks 999 times faster than the name. */}
+                <span className='flex min-w-0 items-center gap-1.5'>
+                    <span
+                        className={cn(
+                            'min-w-0 truncate text-body-sm font-medium',
+                            offline ? 'text-text-tertiary' : 'text-text-secondary'
+                        )}
+                    >
+                        {name}
                     </span>
-                ) : null}
+                    {member.username && member.displayName ? (
+                        <span style={{ flexShrink: 999 }} className='min-w-0 truncate text-label text-text-tertiary'>
+                            {member.username}
+                        </span>
+                    ) : null}
+                </span>
+                <ActivityLine
+                    userId={member.userId}
+                    activity={member.activity}
+                    form='short'
+                    shown={activityShown(member.status, !blocked)}
+                />
             </span>
             {member.isOwner ? (
                 <>

@@ -11,6 +11,7 @@ import { userKeys } from '@/features/users'
 import { expectNoA11yViolations } from '@/test/a11y'
 import { AxiosError } from 'axios'
 import { apiError } from '@/test/helpers'
+import type { SeenRoom } from '../lib/room-lookup'
 import type { PersonProfile, Presence, Relationship, SendFriendRequest } from '../types'
 
 const socialApi = {
@@ -27,6 +28,11 @@ vi.mock('../api/social.api', () => socialApi)
 const { default: Friends } = await import('../pages/Friends')
 const { socialKeys } = await import('../api/keys')
 const { emitRealtimeEvent } = await import('@/features/realtime/lib/realtime-events')
+const { connectRoomLookup } = await import('../lib/room-lookup')
+
+// Where people are, as the servers feature would answer (D-252): set by a test, nobody by default.
+const rooms = new Map<string, SeenRoom>()
+connectRoomLookup(() => ({ roomOf: (userId) => rooms.get(userId) ?? null }))
 
 const ZONE = 'Asia/Ho_Chi_Minh'
 const person = (id: string, displayName: string | null, username: string | null = `${id}.x`) => ({
@@ -491,5 +497,42 @@ describe('Thêm bạn (S-DM-02 add-friend, D-110)', () => {
         await userEvent.click(within(dialog).getByRole('button', { name: 'Gửi lời mời' }))
 
         await waitFor(() => expect(field).toHaveAccessibleDescription('Bạn đã gửi lời mời cho dung.pham rồi'))
+    })
+})
+
+describe('Dòng hoạt động trên FriendRow (C-30, D-252)', () => {
+    afterEach(() => rooms.clear())
+
+    it('says what a friend studies in full, the room after the minutes; offline, their presence in words; live from activity.updated', async () => {
+        rooms.set('binh', {
+            name: 'Phòng học im lặng',
+            isStudyRoom: true,
+            session: {
+                status: 'running',
+                phase: 'focus',
+                phaseEndsAt: new Date(Date.now() + 18.5 * 60_000).toISOString(),
+                pausedRemainingMs: null
+            } as SeenRoom['session']
+        })
+        socialApi.fetchRelationships.mockResolvedValue([
+            { ...friend('binh', 'Bình', 'online'), activity: { room: 'study', solo: null } },
+            { ...friend('nam', 'Nam', 'offline'), activity: { room: 'study', solo: null } },
+            friend('chi', 'Chi', 'online')
+        ])
+        renderFriends({ at: '/friends?tab=all' })
+
+        expect(await findRow('Bình')).toHaveTextContent('Tập trung · còn 18 phút · Phòng học im lặng')
+        expect(rowOf('Nam')).toHaveTextContent('Ngoại tuyến')
+        expect(rowOf('Nam')).not.toHaveTextContent('Đang học cùng nhóm')
+        expect(rowOf('Chi')).toHaveTextContent('Trực tuyến')
+
+        act(() =>
+            emitRealtimeEvent('activity.updated', {
+                userId: 'chi',
+                activity: { room: null, solo: { status: 'waiting', phase: 'short_break', phaseEndsAt: null } }
+            })
+        )
+        await waitFor(() => expect(rowOf('Chi')).toHaveTextContent('Đang học một mình · Hết giờ nghỉ'))
+        await expectNoA11yViolations()
     })
 })

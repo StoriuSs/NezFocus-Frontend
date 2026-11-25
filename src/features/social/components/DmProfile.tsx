@@ -15,10 +15,12 @@ import { IconButton } from '@/components/ui/icon-button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { WithTooltip } from '@/components/ui/tooltip'
 import { usePersonProfile } from '../api/usePersonProfile'
+import type { Activity } from '../lib/activity-line'
 import type { ChatLinks } from '../lib/chat-links'
 import { isGone } from '../lib/dm-chat'
 import { profileAction, profileMenu } from '../lib/dm-profile'
 import type { Presence, RelationshipType, SocialPerson } from '../types'
+import { ActivityBlock } from './ActivityLine'
 import { Gated } from './Gated'
 import { PersonAvatar } from './PersonAvatar'
 
@@ -51,12 +53,14 @@ const TAG_ICON = { friend: UserCheck, outgoing: Send, blocked: Ban } as const
  *
  * Name, avatar and dot come from the DM (live); where we stand from my
  * relationships (live); the bio and the servers from the profile, read
- * again each time the panel shows. The study activity comes with L8.
+ * again each time the panel shows. The study activity block under the name,
+ * live as the Header's line (S-CHAT-05 › Khối hoạt động, D-252).
  */
 export function DmProfile({
     person,
     name,
     presence,
+    activity,
     relationship,
     offline,
     moves,
@@ -65,6 +69,8 @@ export function DmProfile({
     person: SocialPerson
     name: string
     presence: Presence | null
+    /** What they study now, null where the Header shows none. */
+    activity: Activity | null
     relationship: RelationshipType | null
     offline: boolean
     moves: PersonMoves
@@ -92,6 +98,7 @@ export function DmProfile({
                     <p className='truncate text-label text-text-tertiary'>{person.username}</p>
                 )}
             </div>
+            {gone ? null : <ActivityBlock userId={person.id} activity={activity} />}
             {gone ? null : (
                 <ProfileBody
                     person={person}

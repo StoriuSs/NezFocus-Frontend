@@ -213,7 +213,8 @@ after sign-in, behind `ProtectedRoute`:
   button as a column too: no header button toggles it); `bodyClassName` for a
   body that does not scroll or pad, a voice room's chat; `leading` and
   `subtitle` for a person's page, C-07 `dm`: their avatar in the icon's place,
-  their username after the title, cut first when short of room). A menu opened from
+  their username after the title, cut first when short of room; `status` after
+  it, their study activity line, D-252). A menu opened from
   a panel shown as a sheet counts as inside it. Under the header, the connection
   Banner when the AppShell has one (`ConnectionBanner`, C-16 `reconnecting`
   / `offline`); a page with a message box passes `composer`, so offline adds

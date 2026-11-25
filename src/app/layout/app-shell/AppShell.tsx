@@ -18,7 +18,14 @@ import { useRemovedWhileAway } from '@/features/servers/hooks/useRemovedWhileAwa
 import { useServerGoneWatch } from '@/features/servers/hooks/useServerGoneWatch'
 import { serverOwnership } from '@/features/servers/api/serverOwnership'
 import { connectServerOwnership } from '@/features/auth'
-import { connectChatLinks, friendsPath, relationshipsQuery, useDms, useRelationships } from '@/features/social'
+import {
+    connectChatLinks,
+    connectRoomLookup,
+    friendsPath,
+    relationshipsQuery,
+    useDms,
+    useRelationships
+} from '@/features/social'
 import { connectBlockList } from '@/features/users'
 import { useConnectionBanner, useRealtimeConnection } from '@/features/realtime'
 import { useDmUnread, useMentionTotal } from '@/features/messaging'
@@ -27,6 +34,7 @@ import {
     RoomDock,
     useChatLinks,
     useJoinedSession,
+    useRoomLookup,
     useServers,
     useVoiceRooms
 } from '@/features/servers'
@@ -71,6 +79,8 @@ connectBlockList({ query: relationshipsQuery, path: friendsPath('blocked') })
 // A DM's chat (social) reads links and channel tokens from the servers one is in
 // (D-249), which the social feature cannot import: servers answers, connected here.
 connectChatLinks(useChatLinks)
+// Someone's activity line (social) names the room they are in when one sees it (D-252): servers answers.
+connectRoomLookup(useRoomLookup)
 
 /**
  * The frame of every page after sign-in (02 S-SHELL-01): rail 72, list

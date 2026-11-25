@@ -41,6 +41,16 @@ export interface PresenceUpdated {
 }
 
 /**
+ * `activity.updated` (SRS 5.2, D-240): what someone studies now, the same
+ * for every viewer; null when they show nothing (hidden, the switch off, in a
+ * call, nowhere).
+ */
+export interface ActivityUpdated {
+    userId: string
+    activity: Relationship['activity']
+}
+
+/**
  * A DM in my list (S-DM-01, D-242, D-244): its channel id (`id`: the
  * messages, pins and reads go through the channel routes), the other one,
  * the last message, whether I may message them now, and their presence and

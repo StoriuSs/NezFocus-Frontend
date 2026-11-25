@@ -9,7 +9,8 @@ import type { CycleFields as CycleFieldsComponent } from './components/CycleFiel
  * /servers: the servers feature keeps it there from what this feature hears
  * and the answers to its commands (`listenForSessions`, a port, D-231 L5-b),
  * and voice hands it in with the room. Imports go one way: `users, realtime
- * ← study ← voice ← servers`.
+ * ← study ← voice ← servers`, and `study ← social` (someone's activity line
+ * counts a phase's minutes with `useListClock`, D-252).
  *
  * The parts of a room's page (the ring, the controls, the dialogs, their
  * words) are one lazy chunk, `StudyStage`, which only a joined study room

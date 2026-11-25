@@ -26,6 +26,16 @@ export function withPresence(list: Relationship[], userId: string, status: Prese
     return next
 }
 
+/** A friend's study activity changed (`activity.updated`); nobody else's is held (friends only, D-240). */
+export function withActivity(list: Relationship[], userId: string, activity: Relationship['activity']): Relationship[] {
+    const index = list.findIndex((held) => held.user.id === userId && held.type === 'friend')
+    const held = list[index]
+    if (!held) return list
+    const next = [...list]
+    next[index] = { ...held, activity }
+    return next
+}
+
 /** How many requests to me wait (the Badge of the "Friends" row and the Pending tab, 09 › luật 4). */
 export const incomingCountOf = (list: Relationship[] | undefined): number =>
     list?.filter((entry) => entry.type === 'incoming').length ?? 0

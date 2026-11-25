@@ -31,7 +31,8 @@ import { IconButton } from '@/components/ui/icon-button'
  *
  * A person's page (C-07 `dm`): `leading` in the icon's place (their avatar),
  * `subtitle` after the title (their username, `label` `text-tertiary`), cut
- * before the title when short of room (D-108).
+ * before the title when short of room (D-108); `status` after it (their
+ * activity line, C-07 `dm`, C-30), cut before the buttons.
  */
 export function ShellPage({
     title,
@@ -47,6 +48,7 @@ export function ShellPage({
     afterTitle,
     leading,
     subtitle,
+    status,
     className
 }: {
     title: string
@@ -62,6 +64,7 @@ export function ShellPage({
     afterTitle?: ReactNode
     leading?: ReactNode
     subtitle?: string
+    status?: ReactNode
     className?: string
 }) {
     const { t } = useTranslation()
@@ -109,10 +112,16 @@ export function ShellPage({
                         // Shrinks 999 times faster than the title: the username goes first.
                         <span
                             style={{ flexShrink: 999 }}
-                            className='min-w-0 flex-1 truncate text-label text-text-tertiary'
+                            className={cn('min-w-0 truncate text-label text-text-tertiary', !status && 'flex-1')}
                         >
                             {subtitle}
                         </span>
+                    ) : null}
+                    {/* Grows from its own width (flex 1 1 auto), so the username gives way first. Inline: one use. */}
+                    {status ? (
+                        <div style={{ flex: '1 1 auto' }} className='flex min-w-0 items-center'>
+                            {status}
+                        </div>
                     ) : null}
                     {afterTitle ? <div className='flex shrink-0 grow items-center'>{afterTitle}</div> : null}
                     {actions ? <div className='flex shrink-0 items-center gap-1'>{actions}</div> : null}

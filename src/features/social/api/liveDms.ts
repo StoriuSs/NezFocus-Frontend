@@ -1,8 +1,17 @@
 import type { QueryClient } from '@tanstack/react-query'
 import { forgetReadState } from '@/features/messaging'
 import { onRealtimeEvent } from '@/features/realtime'
-import { isLastOf, withDm, withDmPresence, withEdited, withMessage, withoutDm, type HeardMessage } from '../lib/dm-list'
-import type { Dm, DmCreated, DmUpdated, PresenceUpdated } from '../types'
+import {
+    isLastOf,
+    withDm,
+    withDmActivity,
+    withDmPresence,
+    withEdited,
+    withMessage,
+    withoutDm,
+    type HeardMessage
+} from '../lib/dm-list'
+import type { ActivityUpdated, Dm, DmCreated, DmUpdated, PresenceUpdated } from '../types'
 import { forgetMessagesPlace } from '../lib/messages-place'
 import { dmPath } from '../lib/paths'
 import { socialKeys } from './keys'
@@ -19,7 +28,8 @@ function update(client: QueryClient, change: (list: readonly Dm[]) => readonly D
  * its read state let go as the backend's is, 💬 no longer coming back to it);
  * a message in a DM held makes it the last one, an edit of the last one
  * changes its words, a deletion of it reads the list again (which is last now
- * is the server's to say); `presence.updated` moves the dot; a change of a
+ * is the server's to say); `presence.updated` moves the dot, `activity.updated`
+ * changes the activity line (D-252); a change of a
  * relationship may change whether I may message someone (`can_message`), and
  * each `ready` may follow missed events: the list is read again.
  *
@@ -64,6 +74,10 @@ export function listenForDms(client: QueryClient): () => void {
         onRealtimeEvent('presence.updated', (data) => {
             const { userId, status } = data as PresenceUpdated
             update(client, (list) => withDmPresence(list, userId, status))
+        }),
+        onRealtimeEvent('activity.updated', (data) => {
+            const { userId, activity } = data as ActivityUpdated
+            update(client, (list) => withDmActivity(list, userId, activity))
         }),
         onRealtimeEvent('relationship.added', readAgain),
         onRealtimeEvent('relationship.updated', readAgain),
