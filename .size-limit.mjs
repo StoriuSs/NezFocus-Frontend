@@ -103,6 +103,10 @@
 // words); Social CSS raised to 377 B (375 B: the DM rows of the messages
 // column, 44 high with a gap of 10 and their × on hover or focus, and a DM's
 // page; the stylesheet now loads with the AppShell too, for those rows).
+// M6 L7b (25/11/2026, D-250): Initial JS raised to 247.13 kB (247.09 kB: the
+// words of a call's outcome and length, in both languages, in the `common`
+// catalogue the DM rows and the chat share, and the reading of a call's
+// message the DM rows use).
 // Raise them
 // only as CONSTRAINTS.md says: the owner decides, in a commit of its own.
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
@@ -208,7 +212,7 @@ for (const [name, paths] of [
 }
 
 export default [
-    { name: 'Initial JS (gzip)', path: js, gzip: true, limit: '246.95 kB' },
+    { name: 'Initial JS (gzip)', path: js, gzip: true, limit: '247.13 kB' },
     { name: 'Initial CSS (gzip)', path: css, gzip: true, limit: '9.98 kB' },
     { name: 'Chat CSS (gzip)', path: chatCss, gzip: true, limit: '647 B' },
     { name: 'Tasks CSS (gzip)', path: tasksCss, gzip: true, limit: '880 B' },
