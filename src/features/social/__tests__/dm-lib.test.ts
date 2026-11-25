@@ -14,9 +14,10 @@ import {
     type HeardMessage,
     type PreviewWords
 } from '../lib/dm-list'
+import { friendStrip, profileAction, profileMenu, relationshipWith } from '../lib/dm-profile'
 import { forgetMessagesPlace, messagesPlace, rememberMessagesPlace } from '../lib/messages-place'
 import { dmMessageLink, dmPath, isMessagesPath, messagesPlaceOf } from '../lib/paths'
-import type { Dm, DmLastMessage } from '../types'
+import type { Dm, DmLastMessage, Relationship, RelationshipType } from '../types'
 
 // UUIDv7-like ids: newer is greater as text, as the backend compares them.
 const id = (n: number) => `0190a000-0000-7000-8000-${String(n).padStart(12, '0')}`
@@ -237,5 +238,39 @@ describe('Paths and where 💬 goes (09 › URL, Q6, D-249 L7-e)', () => {
         expect(messagesPlace('an')).toBe('/dm/d1')
         forgetMessagesPlace('/dm/d1')
         expect(messagesPlace('an')).toBeNull()
+    })
+})
+
+describe('The profile panel and the not-friend strip (C-50, S-DM-03, D-251)', () => {
+    it.each<[RelationshipType, ReturnType<typeof profileAction>, ReturnType<typeof profileMenu>]>([
+        ['friend', { tag: 'friend' }, { undo: 'unfriend', block: true }],
+        ['outgoing', { tag: 'outgoing' }, { undo: 'cancel', block: true }],
+        ['incoming', { button: 'accept' }, { undo: 'decline', block: true }],
+        ['blocked', { tag: 'blocked' }, { undo: 'unblock', block: false }],
+        ['none', { button: 'request' }, { undo: null, block: true }]
+    ])('%s: the action beside ⋯ and what ⋯ holds', (type, action, menu) => {
+        expect(profileAction(type)).toEqual(action)
+        expect(profileMenu(type)).toEqual(menu)
+    })
+
+    it.each<[Parameters<typeof friendStrip>[0], RelationshipType | null, ReturnType<typeof friendStrip>]>([
+        ['open', 'none', 'none'],
+        ['open', 'outgoing', 'outgoing'],
+        ['open', 'incoming', 'incoming'],
+        ['open', 'friend', null],
+        ['open', null, null],
+        ['cannot-message', 'none', null],
+        ['cannot-message', 'incoming', null],
+        ['blocked-by-me', 'blocked', null],
+        ['deleted-account', 'none', null]
+    ])('a DM %s with someone %s: strip %s', (standing, type, strip) => {
+        expect(friendStrip(standing, type)).toBe(strip)
+    })
+
+    it('reads where I stand with someone from my relationships: none when not there, null while not read', () => {
+        const entry = { type: 'outgoing', user: { id: 'tuan' } } as Relationship
+        expect(relationshipWith([entry], 'tuan')).toBe('outgoing')
+        expect(relationshipWith([entry], 'binh')).toBe('none')
+        expect(relationshipWith(undefined, 'tuan')).toBeNull()
     })
 })

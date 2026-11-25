@@ -3,13 +3,14 @@ import { useIdempotentMutation } from '@/hooks/useIdempotentMutation'
 import { getApiErrorType } from '@/lib/api-error'
 import { notifyMutationError } from '@/lib/query-client'
 import { withoutPerson, withRelationship } from '../lib/relationship-cache'
-import type { Relationship, SendFriendRequest } from '../types'
+import type { PersonProfile, Relationship, SendFriendRequest } from '../types'
 import { socialKeys } from './keys'
 import {
     acceptFriendRequest,
     blockPerson,
     lookUpPerson,
     removeRelationship,
+    requestFriend,
     sendFriendRequest,
     unblockPerson
 } from './social.api'
@@ -23,9 +24,16 @@ import {
  * (the social index), with no namespace of its own loaded.
  */
 
-/** The answer in its place in the list held; `none` takes the person out. */
+/**
+ * The answer in its place in the list held (`none` takes the person out),
+ * and in their profile if one is held (D-251).
+ */
 function remember(client: QueryClient, entry: Relationship): void {
     client.setQueryData<Relationship[]>(socialKeys.relationships(), (list) => list && withRelationship(list, entry))
+    client.setQueryData<PersonProfile>(
+        socialKeys.profile(entry.user.id),
+        (profile) => profile && { ...profile, relationship: entry.type }
+    )
 }
 
 /**
@@ -52,6 +60,21 @@ export function useSendFriendRequest() {
     const client = useQueryClient()
     return useIdempotentMutation({
         mutationFn: (body: SendFriendRequest, idempotencyKey) => sendFriendRequest(body, idempotencyKey),
+        onSuccess: (entry) => remember(client, entry),
+        meta: { errorToast: false }
+    })
+}
+
+/**
+ * A request from someone's profile or a DM's strip, no note (D-237, D-251):
+ * `outgoing`, or `friend` when they had asked me. A PUT, the same answer
+ * when sent twice. Refusals are the screen's to say (a Toast with the Add
+ * friend dialog's words).
+ */
+export function useRequestFriend() {
+    const client = useQueryClient()
+    return useMutation({
+        mutationFn: (userId: string) => requestFriend(userId),
         onSuccess: (entry) => remember(client, entry),
         meta: { errorToast: false }
     })

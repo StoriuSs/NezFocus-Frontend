@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { EllipsisVertical, MessageCircle } from 'lucide-react'
 import '@/i18n/social'
@@ -11,6 +10,7 @@ import { WithTooltip } from '@/components/ui/tooltip'
 import { moveFocusInList } from '@/lib/arrow-focus'
 import { nameOf } from '../lib/friends-list'
 import type { Relationship } from '../types'
+import { Gated } from './Gated'
 
 export interface FriendRowActions {
     /** To the DM with a friend (09 S-DM-02 › Đi tới): the row, or its 💬. */
@@ -119,16 +119,6 @@ function SecondLine({ entry }: { entry: Relationship }) {
 }
 
 /** One action, off with its Tooltip while offline (the Tooltip needs a live element around it, as the inbox's ✓). */
-function Gated({ offline, children }: { offline: boolean; children: ReactNode }) {
-    const { t } = useTranslation('social')
-    if (!offline) return <>{children}</>
-    return (
-        <WithTooltip label={t('friends.offline')}>
-            <span>{children}</span>
-        </WithTooltip>
-    )
-}
-
 function Actions({
     entry,
     name,

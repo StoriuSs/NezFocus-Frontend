@@ -116,5 +116,28 @@
         "introGone": "This is the beginning of your conversation with this account.",
         "blocked": "You blocked {{name}}",
         "pins": "Pinned messages"
+    },
+    "profile": {
+        "title": "Profile",
+        "friend": "Friends",
+        "outgoing": "Request sent",
+        "blocked": "Blocked",
+        "request": "Add friend",
+        "accept": "Accept",
+        "more": "More",
+        "copyUsername": "Copy username",
+        "copied": "Username copied",
+        "copyFailed": "Couldn't copy",
+        "shared_one": "Mutual server — {{count}}",
+        "shared_other": "Mutual servers — {{count}}",
+        "sharedNone": "Mutual servers",
+        "noShared": "No servers in common",
+        "failed": "Couldn't load the profile",
+        "tryAgain": "Try again"
+    },
+    "strip": {
+        "none": "You and {{name}} aren't friends",
+        "outgoing": "Friend request sent to {{name}}",
+        "incoming": "{{name}} wants to be friends"
     }
 }

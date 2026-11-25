@@ -591,6 +591,18 @@ D-250). A message refused in a DM (CANNOT_MESSAGE_USER) is `refused`, not
 `failed`: the chat tells the page (`dm.onRefused`), which reads the list
 again. The changes are pure functions (`lib/dm-list.ts`).
 
+A DM's profile panel (C-50, D-251) draws the person, their dot and whether
+I may message them from the DM, where we stand from the relationships (so
+its Tag, its button and the `not-friend` strip follow every change), and
+only the bio and the servers we share from `GET /users/{id}/profile`
+(`usePersonProfile`, `socialKeys.profile(id)`, `staleTime: 0` and
+`refetchOnWindowFocus`: nothing keeps them live, so they are read again
+each time the panel shows and when the window comes back, the one held
+showing meanwhile; a change of relationship puts its type in it). While
+the relationships are not read, the panel and the strip offer nothing. "Add friend" there is `PUT
+/me/relationships/{id}` (`useRequestFriend`, no note, the same answer when
+sent twice), its answer in the relationships as the other hooks'.
+
 ## The servers, kept live
 
 Socket events about a server (`server.*`, `channel.*`, `category.*`,

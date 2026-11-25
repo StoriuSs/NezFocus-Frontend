@@ -15,6 +15,25 @@ export async function lookUpPerson(username: string): Promise<PersonProfile> {
 }
 
 /**
+ * GET /users/{id}/profile: their bio, where we stand, the servers we share
+ * in the order of mine (D-109); an account gone for good → NOT_FOUND_ERROR.
+ */
+export async function fetchPersonProfile(userId: string): Promise<PersonProfile> {
+    const response = await api.get<ApiEnvelope<PersonProfile>>(`/users/${userId}/profile`)
+    return response.data.data
+}
+
+/**
+ * PUT /me/relationships/{id}: a request from their profile, no note (D-237);
+ * friends at once when they had asked me; asked or friends already, nothing
+ * changes. Refused as the request by username is.
+ */
+export async function requestFriend(userId: string): Promise<Relationship> {
+    const response = await api.put<ApiEnvelope<Relationship>>(`/me/relationships/${userId}`)
+    return response.data.data
+}
+
+/**
  * POST /me/relationships: a request by username, with a note; friends at
  * once when they had asked me (REQ-SOCIAL-01). `@Idempotent`.
  */

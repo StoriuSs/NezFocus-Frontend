@@ -18,7 +18,8 @@ export function PersonAvatar({
     initialClassName,
     iconClassName = 'size-4',
     dot = 10,
-    cutout = 'ring-bg'
+    cutout = 'ring-bg',
+    dotClassName = '-bottom-0.5 -right-0.5'
 }: {
     person: SocialPerson
     presence?: Presence | null
@@ -30,6 +31,8 @@ export function PersonAvatar({
     iconClassName?: string
     dot?: 8 | 10 | 14
     cutout?: string
+    /** Where the dot sits on the avatar (further in on a large one, C-50). */
+    dotClassName?: string
 }) {
     const gone = isGone(person)
     return (
@@ -45,12 +48,7 @@ export function PersonAvatar({
                 </AvatarFallback>
             </Avatar>
             {presence && !gone ? (
-                <PresenceDot
-                    presence={presence}
-                    size={dot}
-                    cutout={cutout}
-                    className='absolute -bottom-0.5 -right-0.5'
-                />
+                <PresenceDot presence={presence} size={dot} cutout={cutout} className={cn('absolute', dotClassName)} />
             ) : null}
         </span>
     )

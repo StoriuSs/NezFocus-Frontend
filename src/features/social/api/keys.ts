@@ -5,6 +5,8 @@ export const socialKeys = {
     relationships: () => [...socialKeys.all, 'relationships'] as const,
     /** Someone looked up by username in the Add friend dialog (D-110). */
     lookup: (username: string) => [...socialKeys.all, 'lookup', username] as const,
+    /** Someone's profile (D-109): the DM's profile panel (C-50). */
+    profile: (userId: string) => [...socialKeys.all, 'profile', userId] as const,
     /** My DMs shown in my list, read once as the app opens (D-242, D-244). */
     dms: () => [...socialKeys.all, 'dms'] as const,
     /** The people a DM's composer suggests after @: the other one (D-238). */

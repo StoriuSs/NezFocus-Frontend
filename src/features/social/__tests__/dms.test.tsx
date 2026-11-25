@@ -10,7 +10,7 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { userKeys } from '@/features/users'
 import { expectNoA11yViolations } from '@/test/a11y'
 import { apiError } from '@/test/helpers'
-import type { Dm, DmLastMessage, Relationship } from '../types'
+import type { Dm, DmLastMessage, PersonProfile, Relationship } from '../types'
 
 const socialApi = {
     fetchRelationships: vi.fn<() => Promise<Relationship[]>>(),
@@ -18,8 +18,10 @@ const socialApi = {
     sendFriendRequest: vi.fn(),
     acceptFriendRequest: vi.fn(),
     removeRelationship: vi.fn(),
-    blockPerson: vi.fn(),
-    unblockPerson: vi.fn<(userId: string) => Promise<Relationship>>()
+    blockPerson: vi.fn<(userId: string) => Promise<Relationship>>(),
+    unblockPerson: vi.fn<(userId: string) => Promise<Relationship>>(),
+    fetchPersonProfile: vi.fn<(userId: string) => Promise<PersonProfile>>(),
+    requestFriend: vi.fn<(userId: string) => Promise<Relationship>>()
 }
 vi.mock('../api/social.api', () => socialApi)
 const dmsApi = {
@@ -57,7 +59,16 @@ const { connectChatLinks } = await import('../lib/chat-links')
 const { messagesPlace, rememberMessagesPlace } = await import('../lib/messages-place')
 const { emitRealtimeEvent } = await import('@/features/realtime/lib/realtime-events')
 
-connectChatLinks(() => ({ readLink: () => null, channel: () => ({ kind: 'hidden' }) }))
+connectChatLinks(() => ({
+    readLink: () => null,
+    channel: () => ({ kind: 'hidden' }),
+    server: (serverId: string, name: string) => ({
+        name,
+        iconUrl: null,
+        initials: name.slice(0, 2).toUpperCase(),
+        path: `/channels/${serverId}`
+    })
+}))
 
 // UUIDv7-like ids: newer is greater as text.
 function id(n: number) {
@@ -146,7 +157,7 @@ function Shell() {
     )
 }
 
-function renderAt(at: string) {
+function renderAt(at: string, connection: 'offline' | null = null) {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
     client.setQueryData(userKeys.profile(), person('an', 'An', 'an.nguyen'))
     client.setQueryData(userKeys.settings(), { timezone: 'Asia/Ho_Chi_Minh' })
@@ -166,7 +177,7 @@ function renderAt(at: string) {
     )
     render(
         <QueryClientProvider client={client}>
-            <ShellContext.Provider value={{ navOpen: false, toggleNav: () => undefined, connection: null }}>
+            <ShellContext.Provider value={{ navOpen: false, toggleNav: () => undefined, connection }}>
                 <TooltipProvider>
                     <RouterProvider router={router} />
                     <Toaster />
@@ -387,7 +398,8 @@ describe('Trang DM (S-DM-03)', () => {
 
         expect(await screen.findByRole('status')).toHaveTextContent('Không thể gửi tin nhắn cho người dùng này')
         const header = screen.getByRole('heading', { level: 1, name: 'Phong' }).closest('header')!
-        expect(header.querySelector('svg circle')).toBeNull()
+        // The Header's own buttons draw circles too: the dot is the one with a presence.
+        expect(header.querySelector('[data-presence]')).toBeNull()
         expect(screen.queryByPlaceholderText('Nhắn Phong')).toBeNull()
     })
 
@@ -541,5 +553,310 @@ describe('"Nhắn tin" (09 S-DM-02 › Đi tới)', () => {
 
         expect(await screen.findByText('Không thể gửi tin nhắn cho người dùng này')).toBeInTheDocument()
         expect(router.state.location.pathname).toBe('/friends')
+    })
+})
+
+describe('Panel Hồ sơ và dải not-friend (C-50, S-DM-03, D-251)', () => {
+    const related = (type: Relationship['type'], user: ReturnType<typeof person>): Relationship => ({
+        ...friend(user),
+        type,
+        presence: null
+    })
+    const profileOf = (user: ReturnType<typeof person>, more: Partial<PersonProfile> = {}): PersonProfile => ({
+        user,
+        bio: 'Lớp K22 · đang ôn Giải tích 2 mỗi tối',
+        presence: 'online',
+        activity: null,
+        relationship: 'friend',
+        mutualServers: [
+            { id: 'ot', name: 'Ôn thi Giải tích 2' },
+            { id: 'nd', name: 'Nhóm đồ án Mobile' }
+        ],
+        ...more
+    })
+    /** A window at least 1280 wide: the right panel is a column beside the chat. */
+    const wide = (matches: boolean) =>
+        vi
+            .mocked(window.matchMedia)
+            .mockImplementation(
+                (query: string) =>
+                    ({ matches, media: query, addEventListener: vi.fn(), removeEventListener: vi.fn() }) as never
+            )
+    const panel = () => screen.getByRole('complementary', { name: 'Hồ sơ' })
+
+    beforeEach(() => {
+        localStorage.clear()
+        socialApi.fetchPersonProfile.mockImplementation(async (userId) =>
+            profileOf(userId === 'tuan' ? TUAN : BINH, userId === 'tuan' ? { relationship: 'none' } : {})
+        )
+    })
+    afterEach(() => wide(false))
+
+    it('opens at first as a column: the person, the bio, "Bạn bè", the servers we share; the pins take its place while open', async () => {
+        wide(true)
+        renderAt('/dm/dm-binh')
+
+        const profile = await screen.findByRole('complementary', { name: 'Hồ sơ' })
+        expect(within(profile).getByRole('heading', { name: 'Bình' })).toBeInTheDocument()
+        expect(within(profile).getByText('binh.tran')).toBeInTheDocument()
+        expect(await within(profile).findByText('Lớp K22 · đang ôn Giải tích 2 mỗi tối')).toBeInTheDocument()
+        expect(within(profile).getByText('Bạn bè')).toBeInTheDocument()
+        expect(within(profile).getByRole('heading', { name: 'Server chung — 2' })).toBeInTheDocument()
+        expect(within(profile).getByRole('link', { name: 'Ôn thi Giải tích 2' })).toHaveAttribute(
+            'href',
+            '/channels/ot'
+        )
+        expect(within(profile).getByRole('link', { name: 'Nhóm đồ án Mobile' })).toHaveAttribute('href', '/channels/nd')
+        expect(socialApi.fetchPersonProfile).toHaveBeenCalledWith('binh')
+        expect(screen.getByRole('button', { name: 'Hồ sơ' })).toHaveAttribute('aria-pressed', 'true')
+        // Friends: no strip.
+        expect(screen.queryByText(/chưa là bạn bè/)).toBeNull()
+        await expectNoA11yViolations()
+
+        await userEvent.click(screen.getByRole('button', { name: 'Tin đã ghim' }))
+        expect(screen.queryByRole('complementary', { name: 'Hồ sơ' })).toBeNull()
+        expect(screen.getByRole('complementary', { name: 'Tin đã ghim' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Hồ sơ' })).toHaveAttribute('aria-pressed', 'false')
+
+        await userEvent.click(screen.getByRole('button', { name: 'Tin đã ghim' }))
+        expect(await screen.findByRole('complementary', { name: 'Hồ sơ' })).toBeInTheDocument()
+
+        await userEvent.click(screen.getByRole('button', { name: 'Hồ sơ' }))
+        expect(screen.queryByRole('complementary', { name: 'Hồ sơ' })).toBeNull()
+    })
+
+    it('says "Chưa ở chung server nào" with no servers in common, and tries again after a failed read', async () => {
+        socialApi.fetchPersonProfile.mockRejectedValueOnce(apiError(500, 'INTERNAL_SERVER_ERROR'))
+        socialApi.fetchPersonProfile.mockResolvedValueOnce(profileOf(BINH, { mutualServers: [], bio: null }))
+        renderAt('/dm/dm-binh')
+        await userEvent.click(await screen.findByRole('button', { name: 'Hồ sơ' }))
+
+        expect(await within(panel()).findByText('Không tải được hồ sơ')).toBeInTheDocument()
+        await userEvent.click(within(panel()).getByRole('button', { name: 'Thử lại' }))
+
+        expect(await within(panel()).findByText('Chưa ở chung server nào')).toBeInTheDocument()
+        expect(within(panel()).getByRole('heading', { name: 'Server chung' })).toBeInTheDocument()
+    })
+
+    it('⋯ copies the username, asks before unfriending; the Tag follows the relationship as it changes', async () => {
+        const writeText = vi.fn(async () => undefined)
+        Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+        socialApi.removeRelationship.mockResolvedValue(related('none', BINH))
+        renderAt('/dm/dm-binh')
+        await userEvent.click(await screen.findByRole('button', { name: 'Hồ sơ' }))
+
+        await userEvent.click(within(panel()).getByRole('button', { name: 'Thêm: Bình' }))
+        const items = screen.getAllByRole('menuitem').map((item) => item.textContent)
+        expect(items).toEqual(['Sao chép username', 'Hủy kết bạn', 'Chặn'])
+        await userEvent.click(screen.getByRole('menuitem', { name: 'Sao chép username' }))
+        expect(writeText).toHaveBeenCalledWith('binh.tran')
+        expect(await screen.findByText('Đã sao chép username')).toBeInTheDocument()
+
+        await userEvent.click(within(panel()).getByRole('button', { name: 'Thêm: Bình' }))
+        await userEvent.click(screen.getByRole('menuitem', { name: 'Hủy kết bạn' }))
+        const dialog = await screen.findByRole('dialog', { name: 'Hủy kết bạn với Bình?' })
+        await userEvent.click(within(dialog).getByRole('button', { name: 'Hủy kết bạn' }))
+
+        expect(socialApi.removeRelationship).toHaveBeenCalledWith('binh')
+        expect(await within(panel()).findByRole('button', { name: 'Kết bạn' })).toBeInTheDocument()
+        // Not friends now, and I may still message them: the strip.
+        expect(screen.getByText('Bạn và Bình chưa là bạn bè')).toBeInTheDocument()
+    })
+
+    it('shows only the avatar and "Tài khoản đã bị xóa" for a deleted account, reading no profile', async () => {
+        const gone = person('gone', null, null)
+        dmsApi.fetchDms.mockResolvedValue([...DMS, dm('dm-gone', gone, last(2, '2026-10-02T13:15:00.000Z'))])
+        renderAt('/dm/dm-gone')
+        await userEvent.click(await screen.findByRole('button', { name: 'Hồ sơ' }))
+
+        expect(within(panel()).getByRole('heading', { name: 'Tài khoản đã bị xóa' })).toBeInTheDocument()
+        expect(within(panel()).queryByRole('button', { name: /Kết bạn|Thêm/ })).toBeNull()
+        expect(within(panel()).queryByText(/Server chung/)).toBeNull()
+        expect(socialApi.fetchPersonProfile).not.toHaveBeenCalled()
+    })
+
+    it('"Kết bạn" on the strip sends a request from the profile; the strip says it was sent, "Hủy lời mời" takes it back', async () => {
+        socialApi.requestFriend.mockResolvedValue(related('outgoing', TUAN))
+        socialApi.removeRelationship.mockResolvedValue(related('none', TUAN))
+        renderAt('/dm/dm-tuan')
+
+        expect(await screen.findByText('Bạn và Tuấn chưa là bạn bè')).toBeInTheDocument()
+        await expectNoA11yViolations()
+        await userEvent.click(screen.getByRole('button', { name: 'Kết bạn' }))
+
+        expect(socialApi.requestFriend).toHaveBeenCalledWith('tuan')
+        // The strip and the Toast say the same.
+        await waitFor(() => expect(screen.getAllByText('Đã gửi lời mời kết bạn cho Tuấn')).toHaveLength(2))
+        await userEvent.click(screen.getByRole('button', { name: 'Hủy lời mời' }))
+
+        expect(socialApi.removeRelationship).toHaveBeenCalledWith('tuan')
+        expect(await screen.findByText('Bạn và Tuấn chưa là bạn bè')).toBeInTheDocument()
+        expect(await screen.findByText('Đã hủy lời mời gửi Tuấn')).toBeInTheDocument()
+    })
+
+    it('says a refused request with the Add friend words in a Toast', async () => {
+        socialApi.requestFriend.mockRejectedValue(apiError(403, 'CANNOT_MESSAGE_USER'))
+        renderAt('/dm/dm-tuan')
+
+        await userEvent.click(await screen.findByRole('button', { name: 'Kết bạn' }))
+
+        expect(await screen.findByText('Không thể gửi lời mời cho người dùng này')).toBeInTheDocument()
+        expect(screen.getByText('Bạn và Tuấn chưa là bạn bè')).toBeInTheDocument()
+    })
+
+    it('accepts their request from the strip, the strip then gone; "Từ chối" declines it', async () => {
+        socialApi.fetchRelationships.mockResolvedValue([friend(BINH), related('incoming', TUAN)])
+        socialApi.acceptFriendRequest.mockResolvedValue(friend(TUAN))
+        renderAt('/dm/dm-tuan')
+
+        expect(await screen.findByText('Tuấn muốn kết bạn')).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Từ chối' })).toBeInTheDocument()
+        await userEvent.click(screen.getByRole('button', { name: 'Chấp nhận' }))
+
+        expect(socialApi.acceptFriendRequest).toHaveBeenCalledWith('tuan', expect.any(String))
+        expect(await screen.findByText('Bạn và Tuấn đã là bạn bè')).toBeInTheDocument()
+        expect(screen.queryByText('Tuấn muốn kết bạn')).toBeNull()
+    })
+
+    it('"Chặn" on the strip asks first, then the DM is blocked-by-me', async () => {
+        socialApi.blockPerson.mockResolvedValue(related('blocked', TUAN))
+        renderAt('/dm/dm-tuan')
+
+        await userEvent.click(await screen.findByRole('button', { name: 'Chặn' }))
+        const dialog = await screen.findByRole('dialog', { name: 'Chặn Tuấn?' })
+        await userEvent.click(within(dialog).getByRole('button', { name: 'Chặn' }))
+
+        expect(socialApi.blockPerson).toHaveBeenCalledWith('tuan')
+        expect(await screen.findByText('Bạn đã chặn Tuấn')).toBeInTheDocument()
+        expect(screen.queryByText('Bạn và Tuấn chưa là bạn bè')).toBeNull()
+    })
+
+    it('offers nothing about where we stand while my relationships are not read yet (no "Kết bạn" to a friend)', async () => {
+        socialApi.fetchRelationships.mockReturnValue(new Promise(() => undefined))
+        renderAt('/dm/dm-binh')
+        expect(await screen.findByRole('heading', { level: 1, name: 'Bình' })).toBeInTheDocument()
+        await userEvent.click(screen.getByRole('button', { name: 'Hồ sơ' }))
+
+        expect(await within(panel()).findByText('Lớp K22 · đang ôn Giải tích 2 mỗi tối')).toBeInTheDocument()
+        expect(screen.queryByText('Bạn và Bình chưa là bạn bè')).toBeNull()
+        expect(within(panel()).queryByRole('button', { name: 'Kết bạn' })).toBeNull()
+    })
+
+    it('reads the profile again each time the panel shows', async () => {
+        renderAt('/dm/dm-binh')
+        const button = await screen.findByRole('button', { name: 'Hồ sơ' })
+        await userEvent.click(button)
+        expect(await within(panel()).findByText('Lớp K22 · đang ôn Giải tích 2 mỗi tối')).toBeInTheDocument()
+        await userEvent.click(button)
+        expect(screen.queryByRole('complementary', { name: 'Hồ sơ' })).toBeNull()
+        await userEvent.click(button)
+
+        await waitFor(() => expect(socialApi.fetchPersonProfile).toHaveBeenCalledTimes(2))
+    })
+
+    it('[👤] while the pins are open as a column: the pins close, the profile shows', async () => {
+        wide(true)
+        renderAt('/dm/dm-binh')
+        await screen.findByRole('complementary', { name: 'Hồ sơ' })
+        await userEvent.click(screen.getByRole('button', { name: 'Tin đã ghim' }))
+        expect(screen.queryByRole('complementary', { name: 'Hồ sơ' })).toBeNull()
+
+        await userEvent.click(screen.getByRole('button', { name: 'Hồ sơ' }))
+
+        expect(await screen.findByRole('complementary', { name: 'Hồ sơ' })).toBeInTheDocument()
+        expect(screen.queryByRole('complementary', { name: 'Tin đã ghim' })).toBeNull()
+    })
+
+    it('"Chấp nhận" in the panel accepts their request, focus then on ⋯', async () => {
+        socialApi.fetchRelationships.mockResolvedValue([friend(BINH), related('incoming', TUAN)])
+        socialApi.acceptFriendRequest.mockResolvedValue(friend(TUAN))
+        renderAt('/dm/dm-tuan')
+        await userEvent.click(await screen.findByRole('button', { name: 'Hồ sơ' }))
+
+        await userEvent.click(await within(panel()).findByRole('button', { name: 'Chấp nhận' }))
+
+        expect(socialApi.acceptFriendRequest).toHaveBeenCalledWith('tuan', expect.any(String))
+        expect(await within(panel()).findByText('Bạn bè')).toBeInTheDocument()
+        expect(within(panel()).getByRole('button', { name: 'Thêm: Tuấn' })).toHaveFocus()
+        expect(socialApi.requestFriend).not.toHaveBeenCalled()
+    })
+
+    it('"Kết bạn" in the panel sends a request to someone I have nothing with', async () => {
+        socialApi.requestFriend.mockResolvedValue(related('outgoing', TUAN))
+        renderAt('/dm/dm-tuan')
+        await userEvent.click(await screen.findByRole('button', { name: 'Hồ sơ' }))
+
+        await userEvent.click(await within(panel()).findByRole('button', { name: 'Kết bạn' }))
+
+        expect(socialApi.requestFriend).toHaveBeenCalledWith('tuan')
+        expect(await within(panel()).findByText('Đã gửi lời mời')).toBeInTheDocument()
+        expect(socialApi.acceptFriendRequest).not.toHaveBeenCalled()
+    })
+
+    it('has no dot in the panel where I may not message them, nor for someone I blocked', async () => {
+        socialApi.fetchRelationships.mockResolvedValue([friend(BINH), related('blocked', CHI)])
+        dmsApi.fetchDms.mockResolvedValue(
+            DMS.map((one) => (one.id === 'dm-tuan' ? { ...one, canMessage: false, presence: 'online' as const } : one))
+        )
+        const { router } = renderAt('/dm/dm-tuan')
+        await userEvent.click(await screen.findByRole('button', { name: 'Hồ sơ' }))
+        expect(panel().querySelector('[data-presence]')).toBeNull()
+
+        act(() => void router.navigate('/dm/dm-chi'))
+        await userEvent.click(await screen.findByRole('button', { name: 'Hồ sơ' }))
+        expect(await within(panel()).findByText('Đã chặn')).toBeInTheDocument()
+        expect(panel().querySelector('[data-presence]')).toBeNull()
+    })
+
+    it('unblocks from ⋯ (no "Chặn" there for someone blocked), the composer then back', async () => {
+        socialApi.fetchRelationships.mockResolvedValue([friend(BINH), related('blocked', TUAN)])
+        socialApi.unblockPerson.mockResolvedValue(related('none', TUAN))
+        renderAt('/dm/dm-tuan')
+        await userEvent.click(await screen.findByRole('button', { name: 'Hồ sơ' }))
+
+        await userEvent.click(await within(panel()).findByRole('button', { name: 'Thêm: Tuấn' }))
+        expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
+            'Sao chép username',
+            'Bỏ chặn'
+        ])
+        await userEvent.click(screen.getByRole('menuitem', { name: 'Bỏ chặn' }))
+
+        expect(socialApi.unblockPerson).toHaveBeenCalledWith('tuan')
+        expect(await screen.findByPlaceholderText('Nhắn Tuấn')).toBeInTheDocument()
+    })
+
+    it('turns the strip buttons off while offline, saying why', async () => {
+        renderAt('/dm/dm-tuan', 'offline')
+        expect(await screen.findByText('Bạn và Tuấn chưa là bạn bè')).toBeInTheDocument()
+
+        expect(screen.getByRole('button', { name: 'Kết bạn' })).toBeDisabled()
+        expect(screen.getByRole('button', { name: 'Chặn' })).toBeDisabled()
+        await userEvent.hover(screen.getByRole('button', { name: 'Kết bạn' }).parentElement!)
+        expect((await screen.findAllByText('Cần kết nối mạng')).length).toBeGreaterThan(0)
+    })
+
+    it('keeps the focus in the strip as it changes, and gives it to the composer once the strip goes', async () => {
+        socialApi.requestFriend.mockResolvedValue(related('outgoing', TUAN))
+        socialApi.fetchRelationships.mockResolvedValue([friend(BINH), related('incoming', CHI)])
+        socialApi.acceptFriendRequest.mockResolvedValue(friend(CHI))
+        const { router } = renderAt('/dm/dm-tuan')
+
+        await userEvent.click(await screen.findByRole('button', { name: 'Kết bạn' }))
+        expect(await screen.findByRole('button', { name: 'Hủy lời mời' })).toHaveFocus()
+
+        act(() => void router.navigate('/dm/dm-chi'))
+        await userEvent.click(await screen.findByRole('button', { name: 'Chấp nhận' }))
+        await waitFor(() => expect(screen.queryByText('Chi muốn kết bạn')).toBeNull())
+        expect(screen.getByPlaceholderText('Nhắn Chi')).toHaveFocus()
+    })
+
+    it('has no strip where the composer is locked (frame cannot-message)', async () => {
+        dmsApi.fetchDms.mockResolvedValue(
+            DMS.map((one) => (one.id === 'dm-tuan' ? { ...one, canMessage: false } : one))
+        )
+        renderAt('/dm/dm-tuan')
+
+        expect(await screen.findByRole('status')).toHaveTextContent('Không thể gửi tin nhắn cho người dùng này')
+        expect(screen.queryByText('Bạn và Tuấn chưa là bạn bè')).toBeNull()
     })
 })

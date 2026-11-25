@@ -116,5 +116,28 @@
         "introGone": "Đây là khởi đầu cuộc trò chuyện của bạn và tài khoản này.",
         "blocked": "Bạn đã chặn {{name}}",
         "pins": "Tin đã ghim"
+    },
+    "profile": {
+        "title": "Hồ sơ",
+        "friend": "Bạn bè",
+        "outgoing": "Đã gửi lời mời",
+        "blocked": "Đã chặn",
+        "request": "Kết bạn",
+        "accept": "Chấp nhận",
+        "more": "Thêm",
+        "copyUsername": "Sao chép username",
+        "copied": "Đã sao chép username",
+        "copyFailed": "Không sao chép được",
+        "shared_one": "Server chung — {{count}}",
+        "shared_other": "Server chung — {{count}}",
+        "sharedNone": "Server chung",
+        "noShared": "Chưa ở chung server nào",
+        "failed": "Không tải được hồ sơ",
+        "tryAgain": "Thử lại"
+    },
+    "strip": {
+        "none": "Bạn và {{name}} chưa là bạn bè",
+        "outgoing": "Đã gửi lời mời kết bạn cho {{name}}",
+        "incoming": "{{name}} muốn kết bạn"
     }
 }
