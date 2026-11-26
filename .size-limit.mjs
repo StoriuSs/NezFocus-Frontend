@@ -127,6 +127,10 @@
 // the profile popover's port in the users index the first download reads,
 // and the host of the dialogs it hands off, which must outlive the avatar
 // or name that opened it; the popover itself loads only when first opened).
+// M6 L8b2 (26/11/2026, D-253): Voice JS raised to 217.90 kB (217.78 kB here:
+// the seats open the profile popover, so the chunk of its button and port,
+// 660 B, comes with the room's page, and the seats' arrow keys; about 100 B
+// kept for CI's own measure).
 // Raise them
 // only as CONSTRAINTS.md says: the owner decides, in a commit of its own.
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
@@ -238,7 +242,7 @@ export default [
     { name: 'Tasks CSS (gzip)', path: tasksCss, gzip: true, limit: '880 B' },
     { name: 'Notifications CSS (gzip)', path: notificationsCss, gzip: true, limit: '508 B' },
     { name: 'Voice CSS (gzip)', path: voiceCss, gzip: true, limit: '286 B' },
-    { name: 'Voice JS (gzip)', path: voiceJs, gzip: true, limit: '216.95 kB' },
+    { name: 'Voice JS (gzip)', path: voiceJs, gzip: true, limit: '217.90 kB' },
     { name: 'Study CSS (gzip)', path: studyCss, gzip: true, limit: '713 B' },
     { name: 'Social CSS (gzip)', path: socialCss, gzip: true, limit: '440 B' }
 ]
