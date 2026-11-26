@@ -1048,4 +1048,31 @@ describe('Hồ sơ từ header DM (S-CHAT-05, D-252 4e)', () => {
         await userEvent.setup().click(screen.getByRole('button', { name: 'Hồ sơ của Bình' }))
         expect(await screen.findByText('hồ sơ binh ngoài server')).toBeInTheDocument()
     })
+
+    it('opens it from their name too, the Tab stop of the two (09 S-DM-03, L8b2-a)', async () => {
+        connectProfilePopover(({ userId, serverId }) => <p>{`hồ sơ ${userId} ${serverId ?? 'ngoài server'}`}</p>)
+        renderAt('/dm/dm-binh')
+        const title = await screen.findByRole('heading', { level: 1, name: 'Bình' })
+
+        expect(screen.getByRole('button', { name: 'Hồ sơ của Bình' })).toHaveAttribute('tabindex', '-1')
+        const name = within(title).getByRole('button', { name: 'Bình' })
+        expect(name).not.toHaveAttribute('tabindex')
+        await userEvent.setup().click(name)
+        expect(await screen.findByText('hồ sơ binh ngoài server')).toBeInTheDocument()
+    })
+
+    it('a deleted account: only its avatar opens it, the Tab stop; the name stays words', async () => {
+        connectProfilePopover(({ userId, serverId }) => <p>{`hồ sơ ${userId} ${serverId ?? 'ngoài server'}`}</p>)
+        dmsApi.fetchDms.mockResolvedValue([
+            dm('dm-gone', person('gone', null, null), last(2, '2026-10-02T13:15:00.000Z'), {
+                canMessage: false,
+                presence: null
+            })
+        ])
+        renderAt('/dm/dm-gone')
+        const title = await screen.findByRole('heading', { level: 1, name: 'Tài khoản đã bị xóa' })
+
+        expect(within(title).queryByRole('button')).toBeNull()
+        expect(screen.getByRole('button', { name: 'Hồ sơ của Tài khoản đã bị xóa' })).not.toHaveAttribute('tabindex')
+    })
 })

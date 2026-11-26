@@ -23,7 +23,7 @@ import { useMinuteClock } from '@/hooks/useMinuteClock'
 import { endsAt } from '@/lib/time-zones'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/features/auth'
-import { settingsCache } from '@/features/users'
+import { ProfileTrigger, settingsCache } from '@/features/users'
 import { useEndTimeout } from '../../../api/useModeration'
 import { useMembershipDialogs } from '../../../membership-dialogs.store'
 import { useServerMembers, useServerRoles } from '../../../api/useRoles'
@@ -401,7 +401,19 @@ function MemberRow({
     const note = ends
         ? t('members.timedOutUntil', { time: ends.date ? `${ends.time}, ${ends.date}` : ends.time })
         : null
-    const identity = <MemberIdentity member={member} note={note} noteStrong />
+    const name = useMemberName()(member)
+    // The avatar and name open their profile in this server (04 S-SET-03 › Đi tới, D-253).
+    const identity = (
+        <ProfileTrigger
+            userId={member.userId}
+            serverId={server.id}
+            name={name}
+            avatarUrl={member.avatarUrl}
+            className='flex min-w-0 flex-1 rounded-input'
+        >
+            <MemberIdentity member={member} note={note} noteStrong />
+        </ProfileTrigger>
+    )
 
     return (
         <div role='row' className='flex min-h-12 items-center gap-3 border-t border-border py-2'>

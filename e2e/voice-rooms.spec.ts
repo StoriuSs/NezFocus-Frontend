@@ -169,7 +169,7 @@ test('joining, the mic, the dock and leaving show live to everyone who views the
     })
 
     // Bình sees An under the room in the list, then on the preview page.
-    await expect(channelList(binh.page).getByRole('listitem', { name: 'An, camera on' })).toBeVisible({
+    await expect(channelList(binh.page).getByRole('button', { name: 'An, camera on' })).toBeVisible({
         timeout: 15_000
     })
     await binh.page.goto(roomPath)
@@ -194,7 +194,7 @@ test('joining, the mic, the dock and leaving show live to everyone who views the
     await an.page.getByRole('button', { name: 'Unmute (Ctrl Shift M)' }).click()
     await expect(an.page.getByRole('button', { name: 'Mute (Ctrl Shift M)' })).toBeVisible()
     await expect(grid(binh.page).getByRole('button', { name: /^An, mic on/ })).toBeVisible({ timeout: 15_000 })
-    await expect(channelList(binh.page).getByRole('listitem', { name: 'An, camera on, mic on' })).toBeVisible({
+    await expect(channelList(binh.page).getByRole('button', { name: 'An, camera on, mic on' })).toBeVisible({
         timeout: 15_000
     })
 
@@ -266,7 +266,7 @@ test("a moderator mutes, unmutes and disconnects someone, LiveKit taking the mic
     await expect(sounds).toHaveCount(0, { timeout: 15_000 })
     await expect(grid(an.page).getByRole('button', { name: /^Bình,.*speaking/ })).toHaveCount(0, { timeout: 5_000 })
     await expect(grid(binh.page).getByRole('button', { name: /^You,.*speaking/ })).toHaveCount(0, { timeout: 5_000 })
-    await expect(channelList(an.page).getByRole('listitem', { name: 'Bình, muted by a moderator' })).toBeVisible({
+    await expect(channelList(an.page).getByRole('button', { name: 'Bình, muted by a moderator' })).toBeVisible({
         timeout: 15_000
     })
 
@@ -345,7 +345,7 @@ test('a shared screen takes the stage for the others; of two pressed at once, Li
     const strip = grid(binh.page)
     await expect(strip.getByRole('button', { name: /^An, .*sharing their screen/ })).toBeVisible()
     expect((await strip.getByRole('listitem').first().boundingBox())?.width).toBe(146)
-    await expect(channelList(binh.page).getByRole('listitem', { name: /^An, sharing their screen/ })).toBeVisible({
+    await expect(channelList(binh.page).getByRole('button', { name: /^An, sharing their screen/ })).toBeVisible({
         timeout: 15_000
     })
 
@@ -360,7 +360,7 @@ test('a shared screen takes the stage for the others; of two pressed at once, Li
     await expect(shown).toBeHidden({ timeout: 15_000 })
     await expect.poll(() => binh.page.evaluate(() => document.fullscreenElement)).toBeNull()
     await expect(binh.page.getByRole('button', { name: 'Share your screen' })).not.toHaveAttribute('aria-disabled')
-    await expect(channelList(binh.page).getByRole('listitem', { name: /sharing their screen/ })).toHaveCount(0, {
+    await expect(channelList(binh.page).getByRole('button', { name: /sharing their screen/ })).toHaveCount(0, {
         timeout: 15_000
     })
 
@@ -513,11 +513,11 @@ test('three people in one room hear each other, see a camera and a screen; a mod
     }
 
     // Chi closes the tab without leaving: Chi goes from the room and from the list under it (REQ-VC-01).
-    await expect(channelList(an.page).getByRole('listitem', { name: /^Chi,/ })).toHaveCount(1)
+    await expect(channelList(an.page).getByRole('button', { name: /^Chi,/ })).toHaveCount(1)
     await chi.page.close()
     for (const one of [an, binh]) {
         await expect(grid(one.page).getByRole('listitem')).toHaveCount(2, { timeout: 30_000 })
-        await expect(channelList(one.page).getByRole('listitem', { name: /^Chi,/ })).toHaveCount(0, { timeout: 30_000 })
+        await expect(channelList(one.page).getByRole('button', { name: /^Chi,/ })).toHaveCount(0, { timeout: 30_000 })
     }
     await an.page.getByRole('button', { name: 'Leave room' }).click()
     await binh.page.getByRole('button', { name: 'Leave room' }).click()

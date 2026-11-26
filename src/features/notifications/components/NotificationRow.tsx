@@ -17,6 +17,7 @@ import '@/i18n/notifications'
 import { Avatar, AvatarFallback, AvatarImage, AvatarInitial } from '@/components/ui/avatar'
 import { IconButton } from '@/components/ui/icon-button'
 import { WithTooltip } from '@/components/ui/tooltip'
+import { ProfileTrigger } from '@/features/users'
 import { cn } from '@/lib/utils'
 import { isRemoval, isServerItem, sentences, type NotificationText } from '../lib/notification-text'
 import type { Notification } from '../types'
@@ -67,6 +68,34 @@ export interface NotificationRowProps {
     accepted?: boolean
 }
 
+/** The avatar of who did it (C-29), the round of the item's type at its corner. */
+function ActorAvatar({
+    avatarUrl,
+    name,
+    type: TypeIcon
+}: {
+    avatarUrl: string | null
+    name: string | null | undefined
+    type: typeof AtSign
+}) {
+    return (
+        <>
+            <Avatar className='size-10'>
+                <AvatarImage src={avatarUrl ?? undefined} alt='' className='object-cover' />
+                <AvatarFallback className='bg-surface-3 text-body font-semibold text-text-primary'>
+                    <AvatarInitial name={name} />
+                </AvatarFallback>
+            </Avatar>
+            <span
+                aria-hidden='true'
+                className='absolute -bottom-0.5 -right-0.5 flex size-5 items-center justify-center rounded-full border-2 border-surface-1 bg-surface-3 text-text-secondary group-hover:border-surface-2'
+            >
+                <TypeIcon className='size-3' />
+            </span>
+        </>
+    )
+}
+
 /**
  * NotificationRow (C-29), a mention, a reply, a task or a server item: the
  * person's avatar 40 with the type's round at its corner, or for an item no
@@ -79,6 +108,7 @@ export interface NotificationRowProps {
  * đọc" for the dot (D-99), off while offline (D-24). A row with nowhere to go
  * is no link and has no hover; the `article` itself is then the row's stop in
  * the feed. Its `article` is named as the row reads: "Chưa đọc. Minh nhắc tới bạn: …".
+ * The avatar of who did it, above the link, opens their profile (D-253).
  */
 export function NotificationRow({
     item,
@@ -99,6 +129,7 @@ export function NotificationRow({
     accepted = false
 }: NotificationRowProps) {
     const { t } = useTranslation('notifications')
+    const { t: tc } = useTranslation()
     const unread = !item.readAt
     const TypeIcon = accepted ? UserCheck : (TYPE_ICONS[item.type as keyof typeof TYPE_ICONS] ?? AtSign)
     const SystemIcon = SYSTEM_ICONS[item.type as keyof typeof SYSTEM_ICONS]
@@ -158,20 +189,23 @@ export function NotificationRow({
                 >
                     <SystemIcon className='size-5' />
                 </span>
+            ) : item.actor ? (
+                // Who did it opens their profile, outside a server, beside the avatar; the inbox stays open (06 › Tương tác, D-253).
+                <ProfileTrigger
+                    userId={item.actor.id}
+                    serverId={null}
+                    name={name ?? t('row.deletedAccount')}
+                    avatarUrl={item.actor.avatarUrl}
+                    label={tc('shell.profileOf', { name: name ?? t('row.deletedAccount') })}
+                    // Like the row's other buttons, a Tab stop only in the row keyboard focus is on (06 › Bàn phím).
+                    tabbable={current}
+                    className='relative z-[2] size-10 shrink-0 rounded-full'
+                >
+                    <ActorAvatar avatarUrl={item.actor.avatarUrl} name={name} type={TypeIcon} />
+                </ProfileTrigger>
             ) : (
                 <span className='relative size-10 shrink-0'>
-                    <Avatar className='size-10'>
-                        <AvatarImage src={item.actor?.avatarUrl ?? undefined} alt='' className='object-cover' />
-                        <AvatarFallback className='bg-surface-3 text-body font-semibold text-text-primary'>
-                            <AvatarInitial name={name} />
-                        </AvatarFallback>
-                    </Avatar>
-                    <span
-                        aria-hidden='true'
-                        className='absolute -bottom-0.5 -right-0.5 flex size-5 items-center justify-center rounded-full border-2 border-surface-1 bg-surface-3 text-text-secondary group-hover:border-surface-2'
-                    >
-                        <TypeIcon className='size-3' />
-                    </span>
+                    <ActorAvatar avatarUrl={null} name={name} type={TypeIcon} />
                 </span>
             )}
             <span className='flex min-w-0 flex-1 flex-col'>

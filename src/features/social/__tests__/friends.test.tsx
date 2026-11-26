@@ -7,7 +7,7 @@ import { toast, Toaster } from 'sonner'
 import i18n from '@/i18n'
 import { ShellContext, type ConnectionNotice } from '@/components/shell/shell-context'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import { userKeys } from '@/features/users'
+import { connectProfilePopover, userKeys } from '@/features/users'
 import { expectNoA11yViolations } from '@/test/a11y'
 import { AxiosError } from 'axios'
 import { apiError } from '@/test/helpers'
@@ -533,6 +533,23 @@ describe('Dòng hoạt động trên FriendRow (C-30, D-252)', () => {
             })
         )
         await waitFor(() => expect(rowOf('Chi')).toHaveTextContent('Đang học một mình · Hết giờ nghỉ'))
+        await expectNoA11yViolations()
+    })
+})
+
+// Last in the file: from here the popover is connected (a stand-in, only whom and where).
+describe('Hồ sơ từ FriendRow (09 S-DM-02 › Đi tới, D-253)', () => {
+    it("the avatar opens their profile outside a server, a Tab stop of its own above the row's DM button (L8b2-c)", async () => {
+        connectProfilePopover(({ userId, serverId }) => <p>{`hồ sơ ${userId} ${serverId ?? 'ngoài server'}`}</p>)
+        socialApi.fetchRelationships.mockResolvedValue([friend('binh', 'Bình', 'online')])
+        const { router } = renderFriends({ at: '/friends?tab=all' })
+        const avatar = within(await findRow('Bình')).getByRole('button', { name: 'Hồ sơ của Bình' })
+        expect(avatar).not.toHaveAttribute('tabindex')
+
+        await userEvent.setup().click(avatar)
+        expect(await screen.findByText('hồ sơ binh ngoài server')).toBeInTheDocument()
+        // The click is the avatar's, not the row's: no DM opened.
+        expect(router.state.location.pathname).toBe('/friends')
         await expectNoA11yViolations()
     })
 })

@@ -646,7 +646,7 @@ describe('AppShell (S-SHELL-01)', () => {
             const panel = await screen.findByRole('complementary', { name: 'People in the room — 13' })
             const rows = await within(panel).findAllByRole('listitem', {}, { timeout: 5000 })
             expect(rows).toHaveLength(13)
-            expect(rows[0]).toHaveAccessibleName('Người 1, mic on')
+            expect(within(rows[0]!).getByRole('button')).toHaveAccessibleName('Người 1, mic on')
             await expectNoA11yViolations()
 
             // As a column too it closes with its own button, the focus back on the seat (C-08).

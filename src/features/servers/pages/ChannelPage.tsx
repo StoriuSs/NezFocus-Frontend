@@ -332,6 +332,7 @@ function VoiceChannel({ server, channel, messageId }: { server: Server; channel:
                                 me={me}
                                 hostId={session?.hostId ?? null}
                                 order={rosterOrder}
+                                serverId={server.id}
                             />
                         </Suspense>
                     </RightPanel>

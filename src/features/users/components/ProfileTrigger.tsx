@@ -1,4 +1,4 @@
-import { Suspense, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { Suspense, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import {
     connectedProfilePopover,
@@ -15,13 +15,16 @@ import {
  * Header), turning to the other side at the window's edge. Esc or a click
  * outside closes it, the keyboard back on the button.
  *
- * `label`: the button's name when `children` has none to read (an avatar).
- * `tabbable={false}`: the same person's name beside it is the keyboard's
- * way in, one Tab stop per person.
+ * `label`: the button's name when `children` has none to read (an avatar),
+ * or reads more than it shows (a seat: the name and the mic). `tabbable={false}`:
+ * the same person's name beside it is the keyboard's way in, one Tab stop
+ * per person, or the stop is another's of a group (the seats, ← →, with
+ * `onKeyDown`).
  *
  * Only the button is here: the popover is the connected one, loaded the
  * first time one opens. Not connected (a feature's own tests), the
- * children are drawn as they were, with nothing to open.
+ * children are drawn as they were, with nothing to open (an image named by
+ * `label` when it has one).
  */
 export function ProfileTrigger({
     children,
@@ -30,6 +33,7 @@ export function ProfileTrigger({
     label,
     tabbable = true,
     side = 'right',
+    onKeyDown,
     ...target
 }: ProfileTarget & {
     children: ReactNode
@@ -39,13 +43,15 @@ export function ProfileTrigger({
     label?: string
     tabbable?: boolean
     side?: ProfilePopoverProps['side']
+    onKeyDown?: (event: KeyboardEvent<HTMLButtonElement>) => void
 }) {
     const popover = connectedProfilePopover()
     const [open, setOpen] = useState(false)
     const button = useRef<HTMLButtonElement>(null)
     if (!popover)
         return (
-            <span style={style} className={className}>
+            // An avatar named by `label` (a seat) is still read as one, with nothing to open.
+            <span role={label ? 'img' : undefined} aria-label={label} style={style} className={className}>
                 {children}
             </span>
         )
@@ -77,6 +83,7 @@ export function ProfileTrigger({
                 style={style}
                 className={cn('cursor-pointer text-left', className)}
                 onClick={() => setOpen((was) => !was)}
+                onKeyDown={onKeyDown}
             >
                 {children}
             </button>

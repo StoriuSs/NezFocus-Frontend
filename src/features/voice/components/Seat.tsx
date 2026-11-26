@@ -3,7 +3,9 @@ import { Mic, MicOff, Video } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import '@/i18n/voice'
 import { WithTooltip } from '@/components/ui/tooltip'
+import { ProfileTrigger } from '@/features/users'
 import { personName } from '../lib/people'
+import type { SeatFocus } from '../hooks/useSeatFocus'
 import type { RoomPerson } from '../types'
 import { PersonAvatar } from './PersonAvatar'
 
@@ -14,8 +16,22 @@ import { PersonAvatar } from './PersonAvatar'
  * first, 07 mod-muted), bottom left a camera. Hover: a Tooltip with the name (a screen reader reads
  * it, with the icons, from the seat's own label). Around a study room's ring
  * (C-18) it is no list item (`as='div'`): the ring's own name counts them.
+ *
+ * A click opens their profile in the room's server (07: "bấm ghế → Popover
+ * hồ sơ", D-253): the seat is the button, named as the seat was; the seats
+ * are one Tab stop, ← → between them (`focus`, `useSeatFocus`).
  */
-export function Seat({ person, as: Tag = 'li' }: { person: RoomPerson; as?: 'li' | 'div' }) {
+export function Seat({
+    person,
+    serverId,
+    focus,
+    as: Tag = 'li'
+}: {
+    person: RoomPerson
+    serverId: string
+    focus: SeatFocus
+    as?: 'li' | 'div'
+}) {
     const { t } = useTranslation('voice')
     const name = personName(person.user) ?? t('person.deletedAccount')
     const states = [
@@ -24,20 +40,27 @@ export function Seat({ person, as: Tag = 'li' }: { person: RoomPerson; as?: 'li'
     ].filter(Boolean)
     return (
         <WithTooltip label={name}>
-            <Tag
-                aria-label={[name, ...states].join(', ')}
-                role={Tag === 'div' ? 'img' : undefined}
-                className='relative flex size-14 items-center justify-center rounded-full'
-            >
-                <PersonAvatar person={person.user} className='size-12 text-body' />
-                {person.modMuted || person.micOn ? (
-                    <Indicator className='bottom-0 right-0'>{person.modMuted ? <MicOff /> : <Mic />}</Indicator>
-                ) : null}
-                {person.cameraOn ? (
-                    <Indicator className='bottom-0 left-0'>
-                        <Video />
-                    </Indicator>
-                ) : null}
+            <Tag data-seat={person.user.id} className='flex size-14'>
+                <ProfileTrigger
+                    userId={person.user.id}
+                    serverId={serverId}
+                    name={name}
+                    avatarUrl={person.user.avatarUrl}
+                    label={[name, ...states].join(', ')}
+                    tabbable={focus.tabbable(person.user.id)}
+                    onKeyDown={focus.onKeyDown(person.user.id)}
+                    className='relative flex size-14 items-center justify-center rounded-full'
+                >
+                    <PersonAvatar person={person.user} className='size-12 text-body' />
+                    {person.modMuted || person.micOn ? (
+                        <Indicator className='bottom-0 right-0'>{person.modMuted ? <MicOff /> : <Mic />}</Indicator>
+                    ) : null}
+                    {person.cameraOn ? (
+                        <Indicator className='bottom-0 left-0'>
+                            <Video />
+                        </Indicator>
+                    ) : null}
+                </ProfileTrigger>
             </Tag>
         </WithTooltip>
     )

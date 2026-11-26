@@ -34,7 +34,8 @@ export function useRoomMenu(usable: boolean): RoomMenu {
         setOpen,
         show,
         onContextMenu: (event) => {
-            if (!usable) return
+            // A right click in a popover the row opened (portalled, a profile's) is the browser's.
+            if (!usable || !event.currentTarget.contains(event.target as Node)) return
             event.preventDefault()
             const box = (event.currentTarget.closest('li') ?? event.currentTarget).getBoundingClientRect()
             show({ x: event.clientX - box.left, y: event.clientY - box.top })

@@ -12,6 +12,7 @@ import { useLeaveRoom } from '../hooks/useLeaveRoom'
 import { useModMuted } from '../hooks/useModMuted'
 import { useRoomMenu } from '../hooks/useRoomMenu'
 import type { Device } from '../lib/devices'
+import { useSeatFocus, type SeatFocus } from '../hooks/useSeatFocus'
 import { gridOf, personName, seatsOf } from '../lib/people'
 import { roomActionsOn } from '../lib/room-actions'
 import { switchScreen } from '../lib/session'
@@ -126,6 +127,7 @@ function Stage({
             }
     )
     const ordered = useOrderedPeople(people, me, room.session?.hostId)
+    const seatFocus = useSeatFocus(seatsOf(ordered).shown.map((one) => one.user.id))
     const sharer = useHeldSharer(sharerOf([...screens.keys()], room.people.find((one) => one.screenSharing)?.user.id))
     const sharerPerson = sharer ? (people.find((one) => one.user.id === sharer) ?? listed.get(sharer)) : undefined
     const sharerName = useTileName(sharerPerson?.user ?? EMPTY_USER, false)
@@ -289,7 +291,7 @@ function Stage({
                             id: one.user.id,
                             name: personName(one.user) ?? words('person.deletedAccount')
                         }))}
-                        seats={ringSeats(ordered, byId, onMorePeople)}
+                        seats={ringSeats(room.serverId, seatFocus, ordered, byId, onMorePeople)}
                         content={ringView ? null : tilesArea()}
                         self={
                             ringView && ownPicture ? (
@@ -372,6 +374,8 @@ function Stage({
  * opens the panel "Người trong phòng".
  */
 function ringSeats(
+    serverId: string,
+    focus: SeatFocus,
     ordered: RoomPerson[],
     byId: Map<string, Participant>,
     onMorePeople?: (seat: HTMLButtonElement, order: string[]) => void
@@ -380,7 +384,10 @@ function ringSeats(
     const seats = shown.map((person) => {
         const participant = byId.get(person.user.id)
         const micOn = participant ? participant.isMicrophoneEnabled : person.micOn
-        return { id: person.user.id, seat: <Seat as='div' person={{ ...person, micOn }} /> }
+        return {
+            id: person.user.id,
+            seat: <Seat as='div' serverId={serverId} focus={focus} person={{ ...person, micOn }} />
+        }
     })
     if (more > 0)
         seats.push({

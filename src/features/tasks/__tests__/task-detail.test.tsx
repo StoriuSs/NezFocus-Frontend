@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { toast, Toaster } from 'sonner'
 import i18n from '@/i18n'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import { userKeys } from '@/features/users'
+import { connectProfilePopover, userKeys, type ProfilePopoverProps } from '@/features/users'
 import { expectNoA11yViolations } from '@/test/a11y'
 import { apiError } from '@/test/helpers'
 import type { Task, TaskBoardPlace, TaskCandidate, TaskEvent, TaskHistory, TaskList } from '../types'
@@ -365,5 +365,23 @@ describe('The task detail (S-TASK-02)', () => {
         await userEvent.click(within(shown).getByRole('button', { name: '# viec-nhom · Nhóm đồ án Mobile' }))
 
         expect(onOpenChannel).toHaveBeenCalledWith(expect.objectContaining({ id: 't1', channelId: 'viec-nhom' }))
+    })
+})
+
+// Last in the file: from here the profile popover is connected (a stand-in: whom and where).
+describe("A task's people open their profile (05 S-TASK-02 › Đi tới, D-253)", () => {
+    it("in the task's server, the creator and each assignee", async () => {
+        connectProfilePopover(({ userId, serverId }: ProfilePopoverProps) => (
+            <p>{`hồ sơ ${userId} trong ${serverId}`}</p>
+        ))
+        const user = userEvent.setup()
+        renderDetail()
+        const detail = await dialog()
+
+        await user.click(within(detail).getByRole('button', { name: /^MMinh/ }))
+        expect(await screen.findByText('hồ sơ minh trong nd')).toBeInTheDocument()
+        await user.keyboard('{Escape}')
+        await user.click(within(detail).getByRole('button', { name: /^LLan/ }))
+        expect(await screen.findByText('hồ sơ lan trong nd')).toBeInTheDocument()
     })
 })

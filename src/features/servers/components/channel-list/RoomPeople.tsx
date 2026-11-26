@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { Mic, MicOff, MonitorUp, Video } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Avatar, AvatarFallback, AvatarImage, AvatarInitial } from '@/components/ui/avatar'
-import { useProfile } from '@/features/users'
+import { ProfileTrigger, useProfile } from '@/features/users'
 import {
     LISTED_PEOPLE,
     ModeratorMenu,
@@ -56,9 +56,11 @@ export function RoomPeople({ room, to }: { room: VoiceRoom; to: string }) {
 }
 
 /**
- * One person's row; a moderator gets a menu on it (D-208, ROOM-EDGE
- * `mod-menu-row`): ⋯ at its end (a Tab stop of its own: the row is no
- * button), or a right click on the row.
+ * One person's row: what shows of them (avatar, name, what they have on) is
+ * the button opening their profile in the room's server (D-253, L8b2-b); a
+ * moderator gets a menu on it too (D-208, ROOM-EDGE `mod-menu-row`): ⋯ at
+ * its end (a Tab stop of its own, beside the button), or a right click on
+ * the row.
  */
 function PersonRow({ room, person }: { room: VoiceRoom; person: RoomPerson }) {
     const { t } = useTranslation()
@@ -73,30 +75,37 @@ function PersonRow({ room, person }: { room: VoiceRoom; person: RoomPerson }) {
     ].filter(Boolean)
     return (
         <li
-            aria-label={[name, ...states].join(', ')}
             onContextMenu={menu.onContextMenu}
             className={cn(
-                'group/person relative flex h-7 items-center gap-2 pl-[30px] pr-2 text-label font-medium text-text-secondary',
-                actions.length > 0 && 'rounded-input hover:bg-surface-2',
+                'group/person relative flex h-7 items-center gap-2 rounded-input pr-2 text-label font-medium text-text-secondary hover:bg-surface-2',
                 menu.open && 'bg-surface-2'
             )}
         >
-            <Avatar className='size-5'>
-                <AvatarImage src={user.avatarUrl ?? undefined} alt='' className='object-cover' />
-                <AvatarFallback className='bg-surface-3 text-micro font-semibold text-text-primary'>
-                    <AvatarInitial name={user.displayName ?? user.username} />
-                </AvatarFallback>
-            </Avatar>
-            <span className='min-w-0 flex-1 truncate' aria-hidden='true'>
-                {name}
-            </span>
-            {screenSharing ? <MonitorUp className={STATE} aria-hidden='true' /> : null}
-            {cameraOn ? <Video className={STATE} aria-hidden='true' /> : null}
-            {modMuted ? (
-                <MicOff className={STATE} aria-hidden='true' />
-            ) : micOn ? (
-                <Mic className={STATE} aria-hidden='true' />
-            ) : null}
+            <ProfileTrigger
+                userId={user.id}
+                serverId={room.serverId}
+                name={name}
+                avatarUrl={user.avatarUrl}
+                label={[name, ...states].join(', ')}
+                className='flex h-full min-w-0 flex-1 items-center gap-2 rounded-input pl-[30px]'
+            >
+                <Avatar className='size-5'>
+                    <AvatarImage src={user.avatarUrl ?? undefined} alt='' className='object-cover' />
+                    <AvatarFallback className='bg-surface-3 text-micro font-semibold text-text-primary'>
+                        <AvatarInitial name={user.displayName ?? user.username} />
+                    </AvatarFallback>
+                </Avatar>
+                <span className='min-w-0 flex-1 truncate' aria-hidden='true'>
+                    {name}
+                </span>
+                {screenSharing ? <MonitorUp className={STATE} aria-hidden='true' /> : null}
+                {cameraOn ? <Video className={STATE} aria-hidden='true' /> : null}
+                {modMuted ? (
+                    <MicOff className={STATE} aria-hidden='true' />
+                ) : micOn ? (
+                    <Mic className={STATE} aria-hidden='true' />
+                ) : null}
+            </ProfileTrigger>
             <ModeratorMenu
                 menu={menu}
                 channelId={room.channelId}

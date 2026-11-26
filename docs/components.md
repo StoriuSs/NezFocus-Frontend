@@ -214,7 +214,9 @@ after sign-in, behind `ProtectedRoute`:
   body that does not scroll or pad, a voice room's chat; `leading` and
   `subtitle` for a person's page, C-07 `dm`: their avatar in the icon's place,
   their username after the title, cut first when short of room; `status` after
-  it, their study activity line, D-252). A menu opened from
+  it, their study activity line, D-252; `titleTrigger` wraps the title's words
+  inside the `h1`, their name as the button opening their profile, D-253).
+  A menu opened from
   a panel shown as a sheet counts as inside it. Under the header, the connection
   Banner when the AppShell has one (`ConnectionBanner`, C-16 `reconnecting`
   / `offline`); a page with a message box passes `composer`, so offline adds

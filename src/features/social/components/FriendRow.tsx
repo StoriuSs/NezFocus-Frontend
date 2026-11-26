@@ -8,6 +8,7 @@ import { IconButton } from '@/components/ui/icon-button'
 import { PresenceDot } from '@/components/ui/presence-dot'
 import { WithTooltip } from '@/components/ui/tooltip'
 import { moveFocusInList } from '@/lib/arrow-focus'
+import { ProfileTrigger } from '@/features/users'
 import { activityShown } from '../lib/activity-line'
 import { nameOf } from '../lib/friends-list'
 import type { Relationship } from '../types'
@@ -37,7 +38,10 @@ export interface FriendRowActions {
  *
  * A friend's whole row opens the DM (C-30): its name part is a button
  * stretched over the row, under the actions, out of the Tab order (the 💬
- * is the keyboard's way, and the arrow keys move between rows' 💬).
+ * is the keyboard's way, and the arrow keys move between rows' 💬). The
+ * avatar, above it, opens their profile outside a server (09 S-DM-02 › Đi
+ * tới, D-111): a Tab stop of its own, the keyboard's one way to it here
+ * (L8b2-c).
  */
 export function FriendRow({
     entry,
@@ -52,6 +56,7 @@ export function FriendRow({
     actions: FriendRowActions
 }) {
     const { t } = useTranslation('social')
+    const { t: tc } = useTranslation()
     const name = nameOf(entry.user)
     const shownName = name ?? t('friends.deleted')
 
@@ -66,7 +71,14 @@ export function FriendRow({
                     className='absolute inset-0 rounded-input'
                 />
             ) : null}
-            <span className='relative shrink-0'>
+            <ProfileTrigger
+                userId={entry.user.id}
+                serverId={null}
+                name={shownName}
+                avatarUrl={entry.user.avatarUrl}
+                label={tc('shell.profileOf', { name: shownName })}
+                className='relative shrink-0 rounded-full'
+            >
                 <Avatar className='size-10'>
                     <AvatarImage src={entry.user.avatarUrl ?? undefined} alt='' className='object-cover' />
                     <AvatarFallback className='bg-surface-3 text-body font-semibold text-text-primary'>
@@ -80,7 +92,7 @@ export function FriendRow({
                         className='absolute -bottom-0.5 -right-0.5'
                     />
                 ) : null}
-            </span>
+            </ProfileTrigger>
             <span className='flex min-w-0 flex-1 flex-col gap-0.5'>
                 {/* Short of room, the username goes first (D-108): it shrinks 999 times faster than the name. */}
                 <span className='flex min-w-0 items-center gap-2'>

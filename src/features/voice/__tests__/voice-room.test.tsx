@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import { toast, Toaster } from 'sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import { userKeys } from '@/features/users'
+import { connectProfilePopover, userKeys, type ProfilePopoverProps } from '@/features/users'
 import { expectNoA11yViolations } from '@/test/a11y'
 import { apiError } from '@/test/helpers'
 import type { DeviceAnswer, JoinDevices, LinkEvents } from '@/lib/livekit'
@@ -197,7 +197,7 @@ describe("a voice room's preview page (S-ROOM-01 voice-preview)", () => {
         expect(
             within(seats)
                 .getAllByRole('listitem')
-                .map((seat) => seat.getAttribute('aria-label'))
+                .map((seat) => within(seat).getByRole('img').getAttribute('aria-label'))
         ).toEqual(['Tuấn, mic on', 'Minh, camera on', 'Nam'])
         expect(screen.getByText('3 people in the room')).toBeVisible()
         expect(screen.getByText('You')).toBeVisible()
@@ -210,7 +210,9 @@ describe("a voice room's preview page (S-ROOM-01 voice-preview)", () => {
     it('marks a seat muted by a moderator, whatever their own mic says (C-20: mod-muted first)', async () => {
         show(room({ people: [person('nam', 'Nam', { modMuted: true, micOn: true })] }))
         const seats = screen.getByRole('list', { name: 'People in the room' })
-        expect(within(seats).getByRole('listitem')).toHaveAccessibleName('Nam, muted by a moderator')
+        expect(within(within(seats).getByRole('listitem')).getByRole('img')).toHaveAccessibleName(
+            'Nam, muted by a moderator'
+        )
     })
 
     it("turns the camera on for one's own mirrored tile, and off when the page goes without joining (D-53, 07 câu L3b-c)", async () => {
@@ -1562,5 +1564,30 @@ describe('voice in every tab (useVoiceSession)', () => {
             await act(async () => vi.advanceTimersByTimeAsync(1000))
             expect(await screen.findByText('You were disconnected from the room')).toBeVisible()
         })
+    })
+})
+
+// Last in the file: from here the profile popover is connected (a stand-in: whom and where).
+describe("the seats open their profile in the room's server (07 › Tương tác, D-253)", () => {
+    it('one Tab stop for the seats, ← → between them; a click opens the profile in the room’s server', async () => {
+        connectProfilePopover(({ userId, serverId }: ProfilePopoverProps) => (
+            <p>{`profile of ${userId} in ${serverId}`}</p>
+        ))
+        const user = userEvent.setup()
+        show(room())
+        const seats = within(screen.getByRole('list', { name: 'People in the room' })).getAllByRole('button')
+        expect(seats.map((seat) => seat.getAttribute('tabindex'))).toEqual([null, '-1', '-1'])
+
+        act(() => seats[0]!.focus())
+        await user.keyboard('{ArrowRight}')
+        expect(seats[1]).toHaveFocus()
+        expect(seats.map((seat) => seat.getAttribute('tabindex'))).toEqual(['-1', null, '-1'])
+        await user.keyboard('{ArrowRight}{ArrowRight}')
+        expect(seats[2]).toHaveFocus()
+        await user.keyboard('{ArrowLeft}')
+        expect(seats[1]).toHaveFocus()
+
+        await user.click(seats[2]!)
+        expect(await screen.findByText('profile of nam in ot')).toBeInTheDocument()
     })
 })

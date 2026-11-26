@@ -32,7 +32,10 @@ import { IconButton } from '@/components/ui/icon-button'
  * A person's page (C-07 `dm`): `leading` in the icon's place (their avatar),
  * `subtitle` after the title (their username, `label` `text-tertiary`), cut
  * before the title when short of room (D-108); `status` after it (their
- * activity line, C-07 `dm`, C-30), cut before the buttons.
+ * activity line, C-07 `dm`, C-30), cut before the buttons;
+ * `titleTrigger` wraps the title's words inside the `h1` (their name as the
+ * button opening their profile, 09 S-DM-03, D-253), the `h1` cutting them
+ * as before.
  */
 export function ShellPage({
     title,
@@ -49,6 +52,7 @@ export function ShellPage({
     leading,
     subtitle,
     status,
+    titleTrigger,
     className
 }: {
     title: string
@@ -65,6 +69,7 @@ export function ShellPage({
     leading?: ReactNode
     subtitle?: string
     status?: ReactNode
+    titleTrigger?: (title: string) => ReactNode
     className?: string
 }) {
     const { t } = useTranslation()
@@ -106,7 +111,7 @@ export function ShellPage({
                         )}
                         title={title}
                     >
-                        {title}
+                        {titleTrigger ? titleTrigger(title) : title}
                     </h1>
                     {subtitle ? (
                         // Shrinks 999 times faster than the title: the username goes first.

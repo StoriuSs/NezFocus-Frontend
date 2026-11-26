@@ -183,6 +183,24 @@ function DmChat({ dm, messageId }: { dm: Dm; messageId?: string }) {
     return (
         <ShellPage
             title={name}
+            // Their name and avatar open their profile, outside a server (S-CHAT-05, D-252 4e, L8b2-a); the panel's [👤] shows it in full.
+            // A deleted account's name stays words (its h1 spans the Header): its avatar alone opens it.
+            titleTrigger={
+                gone
+                    ? undefined
+                    : (title) => (
+                          <ProfileTrigger
+                              userId={person.id}
+                              serverId={null}
+                              name={name}
+                              avatarUrl={person.avatarUrl}
+                              side='bottom'
+                              className='block truncate rounded-input hover:underline'
+                          >
+                              {title}
+                          </ProfileTrigger>
+                      )
+            }
             subtitle={gone ? undefined : (person.username ?? undefined)}
             status={
                 studies && dm.activity ? (
@@ -190,13 +208,14 @@ function DmChat({ dm, messageId }: { dm: Dm; messageId?: string }) {
                 ) : undefined
             }
             leading={
-                // Their profile, outside a server (S-CHAT-05, D-252 4e); the panel's [👤] shows it in full.
+                // The same button as the name, off the Tab order: one stop per person (a deleted account's: the stop).
                 <ProfileTrigger
                     userId={person.id}
                     serverId={null}
                     name={name}
                     avatarUrl={person.avatarUrl}
                     label={tc('shell.profileOf', { name })}
+                    tabbable={gone}
                     side='bottom'
                     className='shrink-0 rounded-full'
                 >

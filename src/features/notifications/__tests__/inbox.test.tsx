@@ -4,7 +4,7 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import userEvent from '@testing-library/user-event'
 import { Volume2 } from 'lucide-react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { MemoryRouter, useLocation, useNavigationType } from 'react-router-dom'
+import { MemoryRouter, useLocation, useNavigate, useNavigationType } from 'react-router-dom'
 import { toast, Toaster } from 'sonner'
 import i18n from '@/i18n'
 import { ShellContext, type ConnectionNotice } from '@/components/shell/shell-context'
@@ -206,10 +206,15 @@ const PLACES: InboxPlaces = {
 function WhereAmI() {
     const { pathname, search } = useLocation()
     const how = useNavigationType()
+    const navigate = useNavigate()
     return (
         <>
             <output aria-label='where'>{`${pathname}${search}`}</output>
             <output aria-label='how'>{how}</output>
+            {/* A way out the inbox does not draw: a profile's "Nhắn tin" opened from a row's avatar (D-253). */}
+            <button type='button' onClick={() => void navigate('/dm/dm-minh')}>
+                elsewhere
+            </button>
         </>
     )
 }
@@ -320,6 +325,17 @@ describe('Hộp thư thông báo (S-NOTI-01)', () => {
         expect(notificationsApi.markNotificationsRead).toHaveBeenCalledWith({ ids: [MINH.id] })
         expect(onClose).toHaveBeenCalled()
         expect(where()).toBe(`/channels/${ND}/${HOI_DAP_ND}/m4`)
+    })
+
+    it("closes when the page changes from inside it without a row (a profile's Message, D-253), as every way out does", async () => {
+        const user = userEvent.setup()
+        const { onClose } = renderInbox()
+        await screen.findByRole('link', { name: /Minh nhắc tới bạn/ })
+        expect(onClose).not.toHaveBeenCalled()
+
+        await user.click(screen.getByRole('button', { name: 'elsewhere' }))
+        expect(where()).toBe('/dm/dm-minh')
+        expect(onClose).toHaveBeenCalled()
     })
 
     it('says a voice room’s chat by the room’s icon and name, no "#", and opens its message there (S-ROOM-08)', async () => {

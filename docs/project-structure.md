@@ -492,7 +492,8 @@ Habits worth keeping:
   the popover hands off is drawn by the AppShell's `ProfileDialogs`, so it
   outlives its opener (the messages of someone just blocked fold away). Not
   connected (a feature's own tests), the avatar or name is drawn as before,
-  with nothing to open.
+  with nothing to open (an image named by its `label` when it has one: a
+  seat, a person in a room).
   A port can also be handed down as a prop by the page that shows the
   other feature: the chat's mentions need the server's members, roles and
   channels (`MentionSource` in `messaging/types.ts`), and the channel page

@@ -98,6 +98,11 @@ export default function InboxPanel({ places, onClose }: { places: InboxPlaces; o
     const offline = connection === 'offline'
     const acceptRequest = useAcceptFriendRequest()
     const declineRequest = useRemoveRelationship()
+    // The page changed from inside it without a row (a profile's "Nhắn tin", D-253): closed, as every way out does.
+    const openedAt = useRef(location.pathname)
+    useEffect(() => {
+        if (location.pathname !== openedAt.current) onClose()
+    }, [location.pathname, onClose])
     /** Requests accepted in this opening: kept, as "now friends", until it closes (D-248). */
     const [accepted, setAccepted] = useState<ReadonlyMap<string, Notification>>(new Map())
     const items = useMemo(() => withKept(itemsOf(inbox.data), accepted), [inbox.data, accepted])

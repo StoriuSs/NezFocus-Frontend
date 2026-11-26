@@ -426,6 +426,7 @@ function Detail({
                     <dd>
                         <PersonRow
                             person={task.creator}
+                            serverId={task.serverId}
                             me={myId}
                             presence={presence.get(task.creator.id)}
                             leftServer={task.creator.leftServer}
@@ -472,6 +473,7 @@ function Detail({
                                 <li key={person.id}>
                                     <PersonRow
                                         person={person}
+                                        serverId={task.serverId}
                                         me={myId}
                                         presence={presence.get(person.id)}
                                         lostAccess={!person.viewsChannel}

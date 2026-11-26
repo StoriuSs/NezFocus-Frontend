@@ -120,6 +120,10 @@ const names = (categoryId: string) =>
         .getAllByRole('link')
         .map((link) => link.textContent)
 
+/** The people under a room, each named by what shows of them (the button to their profile; here not connected, an image). */
+const personRows = () =>
+    screen.getAllByRole('img').filter((item) => item.parentElement?.tagName === 'LI' && item.hasAttribute('aria-label'))
+
 const refused = (rule: string) =>
     new AxiosError('422', '422', undefined, undefined, {
         status: 422,
@@ -567,7 +571,7 @@ describe('The channel list for a member', () => {
                 ])
             )
             await screen.findByRole('link', { name: /Phòng học im lặng/ })
-            const people = screen.getAllByRole('listitem').filter((item) => item.hasAttribute('aria-label'))
+            const people = personRows()
             expect(people.map((item) => item.getAttribute('aria-label'))).toEqual([
                 'AN',
                 'TUAN, mic on',
@@ -581,7 +585,7 @@ describe('The channel list for a member', () => {
             renderColumn(withPeople(Array.from({ length: 13 }, (_, i) => person(`p${i}`))))
             const more = await screen.findByRole('link', { name: '+3 more' })
             expect(more).toHaveAttribute('href', '/channels/ot/phong')
-            expect(screen.getAllByRole('listitem').filter((item) => item.hasAttribute('aria-label'))).toHaveLength(10)
+            expect(personRows()).toHaveLength(10)
         })
 
         it('offers a moderator Mute and Disconnect on people ranked below, Unmute on someone muted (D-208, mod-menu-row)', async () => {
@@ -597,7 +601,7 @@ describe('The channel list for a member', () => {
                 channels: data.channels.map((c) => (c.type === 'voice' ? { ...c, permissions: MODERATOR } : c))
             })
             await screen.findByRole('link', { name: /Phòng học im lặng/ })
-            const rows = screen.getAllByRole('listitem').filter((item) => item.hasAttribute('aria-label'))
+            const rows = personRows()
             expect(rows.map((item) => item.getAttribute('aria-label'))).toEqual([
                 'AN',
                 'TUAN, mic on',
@@ -627,7 +631,7 @@ describe('The channel list for a member', () => {
             renderColumn(withPeople([person('an'), person('tuan')]))
             await screen.findByRole('link', { name: /Phòng học im lặng/ })
             expect(screen.queryByRole('button', { name: /^Manage/ })).toBeNull()
-            const tuan = screen.getAllByRole('listitem').find((item) => item.getAttribute('aria-label') === 'TUAN')
+            const tuan = personRows().find((item) => item.getAttribute('aria-label') === 'TUAN')
             // Not prevented: the browser's own menu still opens.
             expect(fireEvent.contextMenu(tuan!)).toBe(true)
             expect(screen.queryByRole('menu')).toBeNull()

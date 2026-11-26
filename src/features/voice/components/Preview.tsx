@@ -20,6 +20,7 @@ import { useMinuteClock } from '@/hooks/useMinuteClock'
 import { endsAtText } from '@/lib/time-zones'
 import { useOrderedPeople } from '../hooks/useOrderedPeople'
 import type { Device } from '../lib/devices'
+import { useSeatFocus } from '../hooks/useSeatFocus'
 import { personName, seatsOf } from '../lib/people'
 import { forgetProblem, joinRoom, stopPreviewCamera } from '../lib/session'
 import type { VoiceRoom } from '../types'
@@ -79,6 +80,7 @@ export function Preview({
     // The first by the order of C-18 sits at 12 o'clock, the Host first of all (C-18 › Chưa vào phòng).
     const seats = useOrderedPeople(others, undefined, room.session?.hostId)
     const { shown, more } = seatsOf(seats)
+    const seatFocus = useSeatFocus(shown.map((person) => person.user.id))
     const nameOf = (userId: string) => {
         const person = room.people.find((one) => one.user.id === userId)
         return (person && personName(person.user)) ?? t('person.deletedAccount')
@@ -161,7 +163,7 @@ export function Preview({
                             seats={[
                                 ...shown.map((person) => ({
                                     id: person.user.id,
-                                    seat: <Seat as='div' person={person} />
+                                    seat: <Seat as='div' serverId={room.serverId} focus={seatFocus} person={person} />
                                 })),
                                 ...(more > 0
                                     ? [
@@ -185,7 +187,12 @@ export function Preview({
                         {seats.length > 0 ? (
                             <ul aria-label={t('room.people')} className='flex flex-wrap justify-center gap-4'>
                                 {shown.map((person) => (
-                                    <Seat key={person.user.id} person={person} />
+                                    <Seat
+                                        key={person.user.id}
+                                        serverId={room.serverId}
+                                        focus={seatFocus}
+                                        person={person}
+                                    />
                                 ))}
                                 {more > 0 ? (
                                     <li>
