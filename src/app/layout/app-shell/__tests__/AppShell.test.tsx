@@ -612,6 +612,50 @@ describe('AppShell (S-SHELL-01)', () => {
             }
         })
 
+        it("seats my friends first on a room's preview page, from the relationships read as the app opens (C-18, D-254)", async () => {
+            const someone = (id: string, micOn = false) => ({
+                user: { id, username: id, displayName: id.toUpperCase(), avatarUrl: null },
+                roleIds: [],
+                isOwner: false,
+                joinedAt: '2026-11-22T14:00:00.000Z',
+                micOn,
+                cameraOn: false,
+                screenSharing: false,
+                modMuted: false
+            })
+            socialApi.fetchRelationships.mockResolvedValueOnce([
+                {
+                    type: 'friend',
+                    since: '2026-10-01T00:00:00.000Z',
+                    presence: 'online',
+                    activity: null,
+                    note: null,
+                    user: { id: 'chi', username: 'chi', displayName: 'CHI', avatarUrl: null }
+                }
+            ])
+            serversApi.fetchServers.mockResolvedValue([
+                {
+                    ...OT,
+                    channels: OT.channels.map((one) =>
+                        one.id === 'quiet'
+                            ? { ...one, voiceStates: [someone('tuan', true), someone('binh'), someone('chi')] }
+                            : one
+                    )
+                },
+                ND
+            ])
+            renderAt('/channels/ot/quiet')
+            await waitFor(
+                () =>
+                    expect(
+                        [...document.querySelectorAll('[data-seat]:not([data-seat="true"])')].map((seat) =>
+                            seat.getAttribute('data-seat')
+                        )
+                    ).toEqual(['chi', 'tuan', 'binh']),
+                { timeout: 10_000 }
+            )
+        }, 15_000)
+
         it('opens "People in the room" from the "+N" seat, one right panel at a time (C-18, 07 room-13-people)', async () => {
             const crowd = Array.from({ length: 13 }, (_, index) => ({
                 user: { id: `p${index}`, username: `p${index}`, displayName: `Người ${index}`, avatarUrl: null },

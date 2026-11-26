@@ -9,7 +9,13 @@
  * with "Message" (`useMessagePerson`). Keep page-only modules out: this
  * index is in the AppShell's download.
  */
-export { relationshipsQuery, useBlockedIds, useIncomingRequestCount, useRelationships } from './api/useRelationships'
+export {
+    relationshipsQuery,
+    useBlockedIds,
+    useFriendIds,
+    useIncomingRequestCount,
+    useRelationships
+} from './api/useRelationships'
 export { useAcceptFriendRequest, useRemoveRelationship } from './api/useRelationshipActions'
 export { useDms } from './api/useDms'
 export { useMessagePerson } from './api/useDmActions'
@@ -18,6 +24,8 @@ export { connectChatLinks, type ChatLinks } from './lib/chat-links'
 /** Someone's study activity (C-30, D-252): its line in a row, its block in a profile; their room through `RoomLookup`. */
 export { ActivityBlock, ActivityLine } from './components/ActivityLine'
 export { activityShown, type Activity } from './lib/activity-line'
+/** The name someone shows by: their display name, else their username; none once deleted (D-108, D-182). */
+export { nameOf } from './lib/friends-list'
 export { connectRoomLookup, type RoomLookup, type SeenRoom } from './lib/room-lookup'
 /**
  * The profile popover's parts (S-CHAT-05, D-253), drawn by the servers

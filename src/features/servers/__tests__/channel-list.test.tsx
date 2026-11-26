@@ -11,6 +11,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { expectNoA11yViolations } from '@/test/a11y'
 import { queryWrapper } from '@/test/helpers'
+import { relationshipsQuery, type Relationship } from '@/features/social'
 import { serverKeys } from '../api/keys'
 import type { RoomPerson, Server, ServerChannel } from '../types'
 import { session as studySession } from '@/test/study-sessions'
@@ -579,6 +580,35 @@ describe('The channel list for a member', () => {
                 'NAM'
             ])
             await expectNoA11yViolations()
+        })
+
+        it('puts my friends right after me, before a mic or camera on (C-06, D-254)', async () => {
+            const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } })
+            const friend = (id: string): Relationship => ({
+                type: 'friend',
+                since: '2026-10-01T00:00:00.000Z',
+                presence: 'online',
+                note: null,
+                activity: null,
+                user: { id, username: id, displayName: null, avatarUrl: null }
+            })
+            client.setQueryData(relationshipsQuery.queryKey, [friend('nam')])
+            renderColumn(
+                withPeople([
+                    person('tuan', { micOn: true }),
+                    person('nam'),
+                    person('an'),
+                    person('minh', { cameraOn: true })
+                ]),
+                client
+            )
+            await screen.findByRole('link', { name: /Phòng học im lặng/ })
+            expect(personRows().map((item) => item.getAttribute('aria-label'))).toEqual([
+                'AN',
+                'NAM',
+                'TUAN, mic on',
+                'MINH, camera on'
+            ])
         })
 
         it('shows 10, then "+N more" opening the room (not unfolded in place)', async () => {

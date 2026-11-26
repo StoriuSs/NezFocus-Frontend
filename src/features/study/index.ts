@@ -57,7 +57,7 @@ export { useListClock } from './hooks/useListClock'
 export { useSessionClock } from './hooks/useSessionClock'
 export { phaseName, sessionLineText } from './lib/phase-words'
 export * from './lib/study-cycle'
-export { clockText, isLater, minutesLeft, remainingMs, roomSessionOf, roundOf } from './lib/phases'
+export { clockText, isLater, minutesLeft, remainingMs, roomSessionOf, roundOf, type PhaseState } from './lib/phases'
 export { listenForSessions, type SessionSink } from './api/liveSessions'
 export { useEndedHere } from './hooks/useEndedHere'
 /** Leaving as the Host asks first ("Rời phòng?", D-44, D-50, D-77); the dialog is the AppShell's, lazy. */

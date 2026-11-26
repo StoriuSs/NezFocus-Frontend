@@ -87,10 +87,13 @@ export function ChannelRow({
     lifted,
     acceptsDrops,
     onKeyDown,
-    onSettings
+    onSettings,
+    friends
 }: {
     server: Server
     channel: ServerChannel
+    /** One's friends, first under a room (C-06, D-254); null while not read. */
+    friends: ReadonlySet<string> | null
     /** Being moved: its place stays, at 40%. */
     lifted: boolean
     /** False while a category is dragged: only headings take it. */
@@ -186,7 +189,7 @@ export function ChannelRow({
                 </span>
             ) : null}
             {channel.focusSession ? <PhaseListLine session={channel.focusSession} /> : null}
-            {channel.voiceStates?.length ? <RoomPeople room={voiceRoomOf(server, channel)} to={path} /> : null}
+            {channel.voiceStates?.length ? <RoomPeople room={voiceRoomOf(server, channel, friends)} to={path} /> : null}
         </li>
     )
 }

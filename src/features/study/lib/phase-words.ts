@@ -1,5 +1,5 @@
 import type { TFunction } from 'i18next'
-import { clockText, minutesLeft, remainingMs } from './phases'
+import { clockText, minutesLeft, remainingMs, type PhaseState } from './phases'
 import type { AnySession } from '../types'
 
 /**
@@ -15,7 +15,7 @@ export function leftText(t: TFunction<'common'>, ms: number): string {
 }
 
 /** The phase's name, "Tạm dừng" while paused, "Hết giờ nghỉ" for a Solo waiting (C-19), in the shell's words. */
-export const phaseName = (t: TFunction<'common'>, session: AnySession): string =>
+export const phaseName = (t: TFunction<'common'>, session: PhaseState): string =>
     t(
         session.status === 'paused'
             ? 'shell.study.phase.paused'
@@ -25,7 +25,7 @@ export const phaseName = (t: TFunction<'common'>, session: AnySession): string =
     )
 
 /** "Tập trung · còn 18 phút"; paused, "Tạm dừng"; waiting, "Hết giờ nghỉ" (C-19 `list`): minutes, no seconds. */
-export const sessionLineText = (t: TFunction<'common'>, session: AnySession, now: number): string =>
+export const sessionLineText = (t: TFunction<'common'>, session: PhaseState, now: number): string =>
     session.status === 'paused' || session.status === 'waiting'
         ? phaseName(t, session)
         : t('shell.study.line', { phase: phaseName(t, session), left: leftText(t, remainingMs(session, now)) })

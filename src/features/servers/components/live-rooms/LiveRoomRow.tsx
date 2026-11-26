@@ -3,19 +3,22 @@ import { Link } from 'react-router-dom'
 import { ChevronRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import '@/i18n/study'
-import { PhaseLeft, PhaseTag } from '@/components/shell/PhaseTag'
 import { Tag } from '@/components/settings/SettingsRow'
-import { minutesLeft, remainingMs, sessionLineText, useListClock } from '@/features/study'
+import { AvatarStack } from '@/components/ui/avatar-stack'
+import { sessionLineText, useListClock } from '@/features/study'
 import { cn } from '@/lib/utils'
+import { livePeopleText } from '../../lib/live-people'
 import type { LiveRoom, StudyRow } from '../../lib/live-rooms'
 import { channelPath } from '../../lib/paths'
+import { ListPhase } from './ListPhase'
 
 /**
  * A room studying now on the Study page (C-44 LiveRoomRow): its phase in
  * minutes ("Tập trung · còn 18 phút", again as each minute goes, also for
  * the room one is in: the dock counts the seconds), its name and "Bạn ở
- * đây", then "{N} người · {Server}" ("Chỉ có bạn" alone in it), the
- * server's name cut first. The whole row is a link to the room (its preview
+ * đây", then up to three friends' avatars and "Bình, Chi và 6 người ·
+ * {Server}" (`livePeopleText`: "Chỉ có bạn" alone in it), the server's name
+ * cut first. The whole row is a link to the room (its preview
  * page, or the room one is in), handing it the session shown (`StudyRow`:
  * gone by the time the page opens, it says so, 08 › Edge); a chevron at its right. `leaving`: its
  * session ended, fading out (`useLiveRooms`: none with Giảm chuyển động). One Tab stop for
@@ -34,8 +37,7 @@ export const LiveRoomRow = forwardRef<
     const { t } = useTranslation('study')
     const { t: tShell } = useTranslation()
     const now = useListClock(room.session)
-    const paused = room.session.status === 'paused'
-    const people = room.people > 0 ? t('overview.rooms.people', { count: room.people }) : t('overview.rooms.alone')
+    const people = livePeopleText(t, room)
     const label = t(room.here ? 'overview.rooms.labelHere' : 'overview.rooms.label', {
         room: room.name,
         server: room.serverName,
@@ -58,18 +60,19 @@ export const LiveRoomRow = forwardRef<
             )}
         >
             <span className='flex min-w-0 flex-1 flex-col'>
-                <span className='flex text-label'>
-                    <PhaseTag phase={room.session.phase} paused={paused}>
-                        {paused ? null : <PhaseLeft minutes={minutesLeft(remainingMs(room.session, now))} />}
-                    </PhaseTag>
-                </span>
+                <ListPhase phase={room.session} now={now} />
                 <span className='flex min-w-0 items-center gap-2'>
                     <span className='truncate text-body font-semibold text-text-primary'>{room.name}</span>
                     {room.here ? <Tag>{t('overview.rooms.here')}</Tag> : null}
                 </span>
-                <span className='flex min-w-0 text-label text-text-secondary'>
-                    <span className='shrink-0 whitespace-pre'>{`${people} · `}</span>
-                    <span className='truncate'>{room.serverName}</span>
+                <span className='flex min-w-0 items-center gap-2 text-label text-text-secondary'>
+                    {room.friends.length > 0 ? (
+                        <AvatarStack people={room.friends.slice(0, 3)} size={22} ring='ring-bg' />
+                    ) : null}
+                    <span className='flex min-w-0'>
+                        <span className='shrink-0 whitespace-pre'>{`${people} · `}</span>
+                        <span className='truncate'>{room.serverName}</span>
+                    </span>
                 </span>
             </span>
             <ChevronRight

@@ -52,7 +52,8 @@ const room: VoiceRoom = {
     timeoutUntil: null,
     canMute: true,
     canMove: true,
-    outranked: new Set(['tuan'])
+    outranked: new Set(['tuan']),
+    friends: null
 }
 
 const bits = (...positions: number[]) => String(positions.reduce((all, bit) => all | (1n << BigInt(bit)), 0n))

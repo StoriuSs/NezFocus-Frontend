@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useFriendIds } from '@/features/social'
 import { useProfile } from '@/features/users'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { useServers } from '../api/useServers'
@@ -39,10 +40,11 @@ export function useLiveRooms() {
     const servers = useServers()
     const me = useProfile().data?.id
     const still = useMediaQuery('(prefers-reduced-motion: reduce)')
-    // Who one is decides the first room: no order is worked out before it is known.
+    const friends = useFriendIds()
+    // Who one is and one's friends decide the first rooms: no order is worked out before they are known.
     const rooms = useMemo(
-        () => (servers.data && me !== undefined ? liveRoomsOf(servers.data, me) : undefined),
-        [servers.data, me]
+        () => (servers.data && me !== undefined && friends ? liveRoomsOf(servers.data, me, friends) : undefined),
+        [servers.data, me, friends]
     )
     const [held, setHeld] = useState<Held>({ source: undefined, order: [], leaving: [] })
 

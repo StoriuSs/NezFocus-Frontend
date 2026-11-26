@@ -1,4 +1,5 @@
 import type { RoomSession } from '@/features/study'
+import type { RoomPerson } from '@/features/voice'
 import { can } from './permissions'
 import type { Server } from '../types'
 
@@ -11,6 +12,8 @@ export interface LiveRoom {
     session: RoomSession
     /** Who is in it, oneself left out (C-44 › Dòng người). */
     people: number
+    /** One's friends in it, in the order they joined: the first two named, three avatars (C-44, D-254). */
+    friends: RoomPerson['user'][]
     /** One is in it ("Bạn ở đây"), in this tab or another. */
     here: boolean
 }
@@ -65,15 +68,25 @@ export function studyingRoomOf(
     return found?.focusSession ? { session: found.focusSession, name: found.name } : null
 }
 
+const NOBODY: ReadonlySet<string> = new Set()
+
 /**
  * Every room with a session, running or paused, in one's servers that one
- * sees and may join (REQ-STUDY-09: CONNECT; a channel held is one seen; a
- * timeout leaves no CONNECT).
+ * sees (a channel held is one seen) and, unless `seenOnly`, may join
+ * (REQ-STUDY-09: CONNECT; a timeout leaves no CONNECT). `friends`: one's
+ * friends, named on the rows and counted in the order (D-254). The friends
+ * studying (S-STUDY-02) count those in every room seen (`seenOnly`, D-252 4g).
  */
-export function liveRoomsOf(servers: Server[], me: string | undefined): LiveRoom[] {
+export function liveRoomsOf(
+    servers: Server[],
+    me: string | undefined,
+    friends: ReadonlySet<string> = NOBODY,
+    seenOnly = false
+): LiveRoom[] {
     return servers.flatMap((server) =>
         server.channels.flatMap((channel) => {
-            if (channel.type !== 'voice' || !channel.focusSession || !can(channel.permissions, 'CONNECT')) return []
+            if (channel.type !== 'voice' || !channel.focusSession) return []
+            if (!seenOnly && !can(channel.permissions, 'CONNECT')) return []
             const people = channel.voiceStates ?? []
             const here = me !== undefined && people.some((person) => person.user.id === me)
             return [
@@ -84,6 +97,9 @@ export function liveRoomsOf(servers: Server[], me: string | undefined): LiveRoom
                     name: channel.name,
                     session: channel.focusSession,
                     people: people.length - (here ? 1 : 0),
+                    friends: people
+                        .filter((person) => person.user.id !== me && friends.has(person.user.id))
+                        .map((person) => person.user),
                     here
                 }
             ]
@@ -92,12 +108,13 @@ export function liveRoomsOf(servers: Server[], me: string | undefined): LiveRoom
 }
 
 /**
- * The Study page's order (REQ-STUDY-09, D-217 until friends come in M6): the
- * room one is in, then more people, then the session started earlier; the
- * room's id settles the rest, so every order is the same.
+ * The Study page's order (REQ-STUDY-09): the room one is in, then more
+ * friends, then more people, then the session started earlier; the room's
+ * id settles the rest, so every order is the same.
  */
 export function compareRooms(a: LiveRoom, b: LiveRoom): number {
     if (a.here !== b.here) return a.here ? -1 : 1
+    if (a.friends.length !== b.friends.length) return b.friends.length - a.friends.length
     if (a.people !== b.people) return b.people - a.people
     const started = Date.parse(a.session.startedAt) - Date.parse(b.session.startedAt)
     if (started !== 0) return started

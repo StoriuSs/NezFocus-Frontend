@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ComponentType } from 'react'
+import { Suspense, useEffect, useRef, useState, type ComponentType, type ReactNode } from 'react'
 import { Loader2, Pause, Play, SkipForward, SlidersHorizontal, Square } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import '@/i18n/study'
@@ -46,16 +46,20 @@ const MAIN_CONTROL =
  * the start with the last Solo's cycle; in a room's session, why not
  * (`inRoom`, REQ-STUDY-05).
  *
- * The round controls are the voice feature's, handed in (`Control`). Not
- * here yet: the floating window (M7), the friends studying (M6, D-217).
+ * The round controls are the voice feature's, handed in (`Control`), and so
+ * is the line of friends studying now (`friends`, the servers feature's,
+ * D-254), under the minutes while running, paused or none (not while
+ * waiting, nor under a summary). Not here yet: the floating window (M7).
  */
 export default function SoloStage({
     Control,
-    inRoom
+    inRoom,
+    friends
 }: {
     Control: ComponentType<ControlProps>
     /** The room whose session one takes part in: no Solo starts meanwhile. */
     inRoom: string | null
+    friends?: ReactNode
 }) {
     const { t } = useTranslation('study')
     const solo = useSoloSession()
@@ -182,6 +186,7 @@ export default function SoloStage({
                     ) : solo.isPending ? null : (
                         todayLine
                     )}
+                    {waiting || shownEnded || solo.isPending ? null : <Suspense fallback={null}>{friends}</Suspense>}
                 </div>
             </div>
             {session ? (

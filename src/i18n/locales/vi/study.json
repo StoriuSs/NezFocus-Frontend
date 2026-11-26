@@ -231,6 +231,11 @@
             "people_one": "{{count}} người",
             "people_other": "{{count}} người",
             "alone": "Chỉ có bạn",
+            "oneFriend_one": "{{a}} và {{count}} người",
+            "oneFriend_other": "{{a}} và {{count}} người",
+            "twoFriends_one": "{{a}}, {{b}} và {{count}} người",
+            "twoFriends_other": "{{a}}, {{b}} và {{count}} người",
+            "friendPair": "{{a}}, {{b}}",
             "here": "Bạn ở đây",
             "label": "{{room}}, {{server}}, {{phase}}, {{people}}",
             "labelHere": "{{room}}, {{server}}, {{phase}}, {{people}}, bạn đang ở đây",
@@ -343,5 +348,14 @@
         "joins_other": "vào {{count}} lần",
         "underAMinute": "dưới 1 phút",
         "errorBody": "Kiểm tra kết nối mạng rồi thử lại."
+    },
+    "friends": {
+        "line_one": "{{count}} bạn đang học lúc này",
+        "line_other": "{{count}} bạn đang học lúc này",
+        "title": "Bạn bè đang học",
+        "count_one": "{{count}} bạn",
+        "count_other": "{{count}} bạn",
+        "solo": "Đang học một mình",
+        "roomLabel": "{{name}}, {{room}}, {{server}}, {{phase}}"
     }
 }

@@ -12,13 +12,13 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
+import { AvatarStack } from '@/components/ui/avatar-stack'
 import { IconButton } from '@/components/ui/icon-button'
 import { WithTooltip } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import type { DueLine } from '../lib/due-text'
 import { meFirst, nameOf } from '../lib/people'
 import type { Task, TaskStatus } from '../types'
-import { AvatarStack } from './AvatarStack'
 
 const STATUSES: TaskStatus[] = ['todo', 'doing', 'done']
 /** The foot of ⋯ (right 4, top 6, 28 high): the menu opens under it, right edges in line. */

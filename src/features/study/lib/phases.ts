@@ -27,8 +27,14 @@ export function nextPhaseOf(session: AnySession): SessionPhase {
         : 'short_break'
 }
 
+/**
+ * Where a phase stands, all its words and minutes need: a session's, or a
+ * Solo seen in someone's activity (`activity.solo`, D-240: no paused time).
+ */
+export type PhaseState = Pick<AnySession, 'status' | 'phase' | 'phaseEndsAt' | 'pausedRemainingMs'>
+
 /** What is left of the phase at `now` (the server's time), in milliseconds: frozen while paused. */
-export function remainingMs(session: AnySession, now: number): number {
+export function remainingMs(session: PhaseState, now: number): number {
     if (session.status === 'paused') return Math.max(0, session.pausedRemainingMs ?? 0)
     if (session.status !== 'running' || !session.phaseEndsAt) return 0
     return Math.max(0, Date.parse(session.phaseEndsAt) - now)

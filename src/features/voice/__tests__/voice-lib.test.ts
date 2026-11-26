@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { renderHook } from '@testing-library/react'
+import { useOrderedPeople } from '../hooks/useOrderedPeople'
 import { gridOf, orderPeople, personName, seatsOf } from '../lib/people'
 import { forgetRoom, keepRoom, takeRoomToRejoin, wasReloaded } from '../lib/rejoin'
 import { askMicrophone, closeCamera, openCamera, whenDeviceAllowed } from '../lib/devices'
@@ -40,6 +42,44 @@ describe('the order people show in a room (C-06, C-18)', () => {
         expect(orderPeople(people, 'an', [], 'an')).toEqual(['an', 'tuan', 'nam', 'binh'])
         // Already shown: no one moves for the Host.
         expect(orderPeople(people, 'an', ['an', 'tuan', 'nam', 'binh'], 'binh')).toEqual(['an', 'tuan', 'nam', 'binh'])
+    })
+
+    it("puts one's friends after oneself, before a mic or camera on; after the Host around the ring (C-06, C-18, D-254)", () => {
+        const people = [
+            person('nam'),
+            person('tuan', { micOn: true }),
+            person('an'),
+            person('chi'),
+            person('binh', { cameraOn: true })
+        ]
+        // Among friends, too, a camera or mic on first (Bình), then who joined first.
+        const friends = new Set(['chi', 'binh'])
+        expect(orderPeople(people, 'an', [], null, friends)).toEqual(['an', 'binh', 'chi', 'tuan', 'nam'])
+        expect(orderPeople(people, 'an', [], 'tuan', friends)).toEqual(['an', 'tuan', 'binh', 'chi', 'nam'])
+        // Not joined (the preview page): the Host, then friends, at 12 o'clock first.
+        expect(orderPeople(people, undefined, [], 'nam', friends)).toEqual(['nam', 'binh', 'chi', 'tuan', 'an'])
+        // Already shown: a friend coming in goes to the end, as anyone.
+        expect(orderPeople(people, 'an', ['an', 'tuan', 'nam'], null, friends)).toEqual([
+            'an',
+            'tuan',
+            'nam',
+            'chi',
+            'binh'
+        ])
+    })
+
+    it("does not keep an order worked out before one's friends are known: they still come first once read (D-254)", () => {
+        const people = [person('tuan', { micOn: true }), person('an'), person('chi')]
+        const view = renderHook(
+            ({ friends }: { friends: ReadonlySet<string> | null }) => useOrderedPeople(people, 'an', null, friends),
+            { initialProps: { friends: null as ReadonlySet<string> | null } }
+        )
+        expect(view.result.current.map((one) => one.user.id)).toEqual(['an', 'tuan', 'chi'])
+        view.rerender({ friends: new Set(['chi']) })
+        expect(view.result.current.map((one) => one.user.id)).toEqual(['an', 'chi', 'tuan'])
+        // Known now, the order holds: no one moves for a friend made meanwhile.
+        view.rerender({ friends: new Set(['chi', 'tuan']) })
+        expect(view.result.current.map((one) => one.user.id)).toEqual(['an', 'chi', 'tuan'])
     })
 
     it('keeps places once shown: a mic switched on moves no one, newcomers go to the end, oneself first', () => {

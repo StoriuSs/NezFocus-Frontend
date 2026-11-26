@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { blockedIdsOf, incomingCountOf } from '../lib/relationship-cache'
+import { blockedIdsOf, friendIdsOf, incomingCountOf } from '../lib/relationship-cache'
 import { socialKeys } from './keys'
 import { listenForRelationships } from './liveRelationships'
 import { fetchRelationships } from './social.api'
@@ -54,4 +54,21 @@ export function useBlockedIds(): ReadonlySet<string> {
     }, [client])
     const ids = useQuery({ ...relationshipsQuery, select: blockedIdsOf }).data
     return useMemo(() => (ids?.length ? new Set(ids) : NOBODY), [ids])
+}
+
+/**
+ * My friends, as a set the same from one render to the next while they stay
+ * the same: a room's people put them first (C-06, C-18), the Study page's
+ * rows name them (C-44, D-254). Null while the list is not read yet, so an
+ * order worked out meanwhile is not kept; nobody when it could not be read.
+ */
+export function useFriendIds(): ReadonlySet<string> | null {
+    const client = useQueryClient()
+    useEffect(() => {
+        listenForRelationships(client)
+    }, [client])
+    const query = useQuery({ ...relationshipsQuery, select: friendIdsOf })
+    const ids = query.data
+    const failed = query.isError
+    return useMemo(() => (ids ? (ids.length ? new Set(ids) : NOBODY) : failed ? NOBODY : null), [ids, failed])
 }

@@ -43,3 +43,7 @@ export const incomingCountOf = (list: Relationship[] | undefined): number =>
 /** Whom I blocked, by id (a server's chat folds their messages, D-250). */
 export const blockedIdsOf = (list: Relationship[] | undefined): string[] =>
     list?.filter((entry) => entry.type === 'blocked').map((entry) => entry.user.id) ?? []
+
+/** My friends, by id (friends first in a room, D-254; the Study page's rows). */
+export const friendIdsOf = (list: Relationship[] | undefined): string[] =>
+    list?.filter((entry) => entry.type === 'friend').map((entry) => entry.user.id) ?? []

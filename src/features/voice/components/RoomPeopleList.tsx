@@ -15,23 +15,26 @@ import { PersonAvatar } from './PersonAvatar'
  * khiển" under the Host's, then the camera if on and the mic as it is
  * (`mic-off` when off or muted by a moderator). The row opens their
  * profile in the room's server (`serverId`), on the panel's left (D-253).
+ * Friends after oneself and the Host when the order is worked out afresh (`friends`, D-254).
  */
 export default function RoomPeopleList({
     people,
     me,
     hostId,
     order,
-    serverId
+    serverId,
+    friends
 }: {
     people: RoomPerson[]
     serverId: string
     me: string | undefined
     hostId: string | null
     order: readonly string[]
+    friends: ReadonlySet<string> | null
 }) {
     const { t } = useTranslation('voice')
     const byId = new Map(people.map((person) => [person.user.id, person]))
-    const ordered = orderPeople(people, me, order, hostId).flatMap((id) => byId.get(id) ?? [])
+    const ordered = orderPeople(people, me, order, hostId, friends ?? undefined).flatMap((id) => byId.get(id) ?? [])
     return (
         <ul className='flex flex-col gap-1 py-1' aria-label={t('room.people')}>
             {ordered.map((person) => {

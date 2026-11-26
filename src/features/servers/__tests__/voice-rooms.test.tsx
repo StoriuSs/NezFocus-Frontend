@@ -147,8 +147,15 @@ describe('a voice room as the voice feature takes it', () => {
             timeoutUntil: null,
             canMute: false,
             canMove: false,
-            outranked: new Set()
+            outranked: new Set(),
+            friends: null
         })
+    })
+
+    it('hands who in the room is one of my friends, for the order of its people (C-06, C-18, D-254)', () => {
+        const ot = server('ot', [channel('thao-luan', { voiceStates: [person('tuan'), person('binh')] })])
+        expect(voiceRoomOf(ot, ot.channels[0]!, new Set(['binh', 'chi'])).friends).toEqual(new Set(['binh']))
+        expect(voiceRoomOf(ot, ot.channels[0]!, null).friends).toBeNull()
     })
 
     it('hands the study session, the cycle, and who may start or control one (REQ-STUDY-01, 03)', () => {

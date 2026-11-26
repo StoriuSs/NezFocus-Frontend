@@ -15,6 +15,7 @@ import { WithTooltip } from '@/components/ui/tooltip'
 import { LIST_SHOWS, useMediaQuery } from '@/hooks/useMediaQuery'
 import { PHASE_ROOM } from '@/lib/phase-colors'
 import { ChannelChat, ChatDropZone, PinsPanel, useChannelReadState } from '@/features/messaging'
+import { useFriendIds } from '@/features/social'
 import { EndedOnArrival } from '@/features/study'
 import { TaskBoard } from '@/features/tasks'
 import { useProfile } from '@/features/users'
@@ -193,6 +194,8 @@ function VoiceChannel({ server, channel, messageId }: { server: Server; channel:
     // The "+N" seat that opened it, and the order of the seats then (the panel lists them so, C-18).
     const rosterSeat = useRef<HTMLButtonElement | null>(null)
     const [rosterOrder, setRosterOrder] = useState<string[]>([])
+    // Friends first on the seats and in the panel (C-18, D-254).
+    const friends = useFriendIds()
     const openRoster = (seat: HTMLButtonElement, order: string[]) => {
         rosterSeat.current = seat
         setRosterOrder(order)
@@ -333,6 +336,7 @@ function VoiceChannel({ server, channel, messageId }: { server: Server; channel:
                                 hostId={session?.hostId ?? null}
                                 order={rosterOrder}
                                 serverId={server.id}
+                                friends={friends}
                             />
                         </Suspense>
                     </RightPanel>
@@ -370,7 +374,7 @@ function VoiceChannel({ server, channel, messageId }: { server: Server; channel:
         >
             <Suspense fallback={<PageLoader className='min-h-0 flex-1' />}>
                 <VoiceRoomView
-                    room={voiceRoomOf(server, channel)}
+                    room={voiceRoomOf(server, channel, friends)}
                     joinedSession={joinedSession}
                     onMorePeople={openRoster}
                 />

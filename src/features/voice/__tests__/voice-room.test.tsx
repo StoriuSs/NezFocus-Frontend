@@ -146,6 +146,7 @@ const room = (more: Partial<VoiceRoom> = {}): VoiceRoom => ({
     canMute: false,
     canMove: false,
     outranked: new Set(),
+    friends: new Set(),
     ...more
 })
 

@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { useMentionedChannels } from '@/features/messaging'
+import { useFriendIds } from '@/features/social'
 import {
     closestCenter,
     DndContext,
@@ -49,6 +50,8 @@ export function ChannelList({ server }: { server: Server }) {
     const showDialog = useChannelDialogs((state) => state.show)
     const { folded, setFolded } = useFoldedCategories(server.id)
     const mentioned = useMentionedChannels(server.id)
+    // Read here, not in a row: the rows' module is the role settings' too, which need no friends.
+    const friends = useFriendIds()
     const [dragged, setDragged] = useState<Dragged | null>(null)
     const [target, setTarget] = useState<Target | null>(null)
     const [byKeyboard, setByKeyboard] = useState(false)
@@ -232,6 +235,7 @@ export function ChannelList({ server }: { server: Server }) {
                     <ChannelRow
                         server={server}
                         channel={channel}
+                        friends={friends}
                         // A lifted category takes its channels with it: the whole group fades.
                         lifted={
                             dragged?.kind === 'channel'

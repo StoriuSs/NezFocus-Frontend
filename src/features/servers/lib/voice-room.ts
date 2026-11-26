@@ -13,9 +13,15 @@ import type { Server, ServerChannel } from '../types'
  * goes by the room's MUTE_MEMBERS / MOVE_MEMBERS and by rank, worked out
  * here as plain values: who in the room ranks below one, the owner above
  * all and no one above themselves. A study room's session, its cycle, and
- * who may start or control one (REQ-STUDY-01, 03) come the same way.
+ * who may start or control one (REQ-STUDY-01, 03) come the same way, and
+ * who in it is one's friend (`friends`: the social feature's, D-254; null
+ * while not read, or where no order is shown).
  */
-export function voiceRoomOf(server: Server, channel: ServerChannel): VoiceRoom {
+export function voiceRoomOf(
+    server: Server,
+    channel: ServerChannel,
+    friends: ReadonlySet<string> | null = null
+): VoiceRoom {
     const people = channel.voiceStates ?? []
     return {
         serverId: server.id,
@@ -35,7 +41,9 @@ export function voiceRoomOf(server: Server, channel: ServerChannel): VoiceRoom {
         timeoutUntil: server.timeoutUntil,
         canMute: can(channel.permissions, 'MUTE_MEMBERS'),
         canMove: can(channel.permissions, 'MOVE_MEMBERS'),
-        outranked: new Set(people.filter((person) => isBelow(server, person)).map((person) => person.user.id))
+        outranked: new Set(people.filter((person) => isBelow(server, person)).map((person) => person.user.id)),
+        friends:
+            friends && new Set(people.filter((person) => friends.has(person.user.id)).map((person) => person.user.id))
     }
 }
 

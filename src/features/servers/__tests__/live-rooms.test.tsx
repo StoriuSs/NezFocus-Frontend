@@ -21,6 +21,7 @@ vi.mock('../api/servers.api', () => serversApi)
 const { compareRooms, keptOrder, liveRoomsOf, orderOf, studyingRoomOf } = await import('../lib/live-rooms')
 const { AWAY_REORDER_MS, LEAVING_MS } = await import('../hooks/useLiveRooms')
 const { serverKeys } = await import('../api/keys')
+const { relationshipsQuery } = await import('@/features/social')
 const { default: LiveRooms } = await import('../components/live-rooms/LiveRooms')
 
 const CONNECT = 1n << 15n
@@ -198,6 +199,8 @@ describe("the Study page's rooms (08 S-STUDY-01, C-44)", () => {
     })
     beforeEach(() => {
         client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } })
+        // No friends unless a test says so: the order waits for them (D-254).
+        client.setQueryData(relationshipsQuery.queryKey, [])
         noteServerTime('2026-11-22T14:47:18.000Z')
         serversApi.fetchServers.mockReset()
         serversApi.fetchServers.mockImplementation(() => new Promise(() => undefined))

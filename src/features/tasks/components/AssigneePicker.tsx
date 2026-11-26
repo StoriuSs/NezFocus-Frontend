@@ -4,6 +4,7 @@ import { Check, ChevronDown, Search, User } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import '@/i18n/tasks'
 import { Avatar, AvatarFallback, AvatarImage, AvatarInitial } from '@/components/ui/avatar'
+import { AvatarStack } from '@/components/ui/avatar-stack'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { PresenceDot } from '@/components/ui/presence-dot'
@@ -11,7 +12,6 @@ import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { cn, folded } from '@/lib/utils'
 import { nameOf } from '../lib/people'
 import type { TaskBoardPlace, TaskCandidate } from '../types'
-import { AvatarStack } from './AvatarStack'
 
 /**
  * "Người được giao" (C-25 `multi`, S-TASK-03 `assignee-picker`): the field

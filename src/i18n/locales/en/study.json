@@ -231,6 +231,11 @@
             "people_one": "{{count}} person",
             "people_other": "{{count}} people",
             "alone": "Just you",
+            "oneFriend_one": "{{a}} and {{count}} other",
+            "oneFriend_other": "{{a}} and {{count}} others",
+            "twoFriends_one": "{{a}}, {{b}} and {{count}} other",
+            "twoFriends_other": "{{a}}, {{b}} and {{count}} others",
+            "friendPair": "{{a}} and {{b}}",
             "here": "You're here",
             "label": "{{room}}, {{server}}, {{phase}}, {{people}}",
             "labelHere": "{{room}}, {{server}}, {{phase}}, {{people}}, you're here",
@@ -343,5 +348,14 @@
         "joins_other": "joined {{count}} times",
         "underAMinute": "under 1 minute",
         "errorBody": "Check your connection and try again."
+    },
+    "friends": {
+        "line_one": "{{count}} friend studying now",
+        "line_other": "{{count}} friends studying now",
+        "title": "Friends studying",
+        "count_one": "{{count}} friend",
+        "count_other": "{{count}} friends",
+        "solo": "Studying alone",
+        "roomLabel": "{{name}}, {{room}}, {{server}}, {{phase}}"
     }
 }

@@ -1,4 +1,4 @@
-import { forwardRef } from 'react'
+import { forwardRef, type ReactNode } from 'react'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -44,14 +44,14 @@ function Where() {
 }
 
 let client: QueryClient
-function page({ inRoom = null as string | null, at = '/study/solo' } = {}) {
+function page({ inRoom = null as string | null, at = '/study/solo', friends = undefined as ReactNode } = {}) {
     return render(
         <QueryClientProvider client={client}>
             <Toaster />
             <MemoryRouter initialEntries={[at]}>
                 <Where />
                 <Routes>
-                    <Route path='*' element={<SoloStage Control={Control} inRoom={inRoom} />} />
+                    <Route path='*' element={<SoloStage Control={Control} inRoom={inRoom} friends={friends} />} />
                 </Routes>
             </MemoryRouter>
         </QueryClientProvider>
@@ -298,6 +298,42 @@ describe('Its end elsewhere (stopped-other-tab, ended-expired)', () => {
         page()
         expect(await screen.findByRole('button', { name: 'Bắt đầu Tập trung 50 phút' })).toBeVisible()
         expect(screen.queryByText('Phiên học đã kết thúc')).toBeNull()
+    })
+})
+
+describe('The friends studying, handed in (08 S-STUDY-02 › Dòng dưới vòng, D-254)', () => {
+    const friends = <button type='button'>2 bạn đang học lúc này</button>
+
+    it('sits under the minutes with no Solo yet, and while it runs or is paused', async () => {
+        page({ friends })
+        expect(await screen.findByRole('button', { name: '2 bạn đang học lúc này' })).toBeVisible()
+        act(() => tellSolo(client, solo()))
+        expect(await screen.findByText('31:42')).toBeVisible()
+        expect(screen.getByRole('button', { name: '2 bạn đang học lúc này' })).toBeVisible()
+        act(() => tellSolo(client, solo({ status: 'paused', pausedRemainingMs: 1_902_000, version: 1 })))
+        expect(await screen.findByText('Đồng hồ đứng yên, không tính phút')).toBeVisible()
+        expect(screen.getByRole('button', { name: '2 bạn đang học lúc này' })).toBeVisible()
+    })
+
+    it('is not there while the break is over and waiting, nor under the summary', async () => {
+        noteServerTime('2026-11-22T15:30:48.000Z')
+        studyApi.fetchSolo.mockResolvedValue({ session: waitingSolo(), startCycle: FIFTY_TEN })
+        page({ friends })
+        expect(await screen.findByText('Hết giờ nghỉ')).toBeVisible()
+        expect(screen.queryByRole('button', { name: '2 bạn đang học lúc này' })).toBeNull()
+        act(() =>
+            tellSolo(
+                client,
+                waitingSolo({
+                    status: 'ended',
+                    endedReason: 'stopped',
+                    endedAt: '2026-11-22T15:30:00.000Z',
+                    version: 3
+                })
+            )
+        )
+        expect(await screen.findByText('Phiên học đã kết thúc')).toBeVisible()
+        expect(screen.queryByRole('button', { name: '2 bạn đang học lúc này' })).toBeNull()
     })
 })
 

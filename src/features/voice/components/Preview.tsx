@@ -78,7 +78,7 @@ export function Preview({
     useToastEdge('barTop', buttons)
     const others = room.people.filter((person) => person.user.id !== me?.id)
     // The first by the order of C-18 sits at 12 o'clock, the Host first of all (C-18 › Chưa vào phòng).
-    const seats = useOrderedPeople(others, undefined, room.session?.hostId)
+    const seats = useOrderedPeople(others, undefined, room.session?.hostId, room.friends)
     const { shown, more } = seatsOf(seats)
     const seatFocus = useSeatFocus(shown.map((person) => person.user.id))
     const nameOf = (userId: string) => {

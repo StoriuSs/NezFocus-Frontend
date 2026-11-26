@@ -15,6 +15,8 @@ export { useRoomLookup } from './hooks/useRoomLookup'
 export { NoServers } from './components/NoServers'
 /** The Study page's rooms studying now (08 S-STUDY-01), lazy: it brings the `study` words; shown inside a Suspense. */
 export const LiveRooms = lazy(() => import('./components/live-rooms/LiveRooms'))
+/** The Solo page's "N bạn đang học lúc này" and its popover (08 S-STUDY-02, D-254), lazy the same way. */
+export const FriendsStudying = lazy(() => import('./components/live-rooms/FriendsStudying'))
 export { RoomDock } from './components/RoomDock'
 export { JoinedSessionCues } from './components/JoinedSessionCues'
 export { useVoiceRooms } from './hooks/useVoiceRooms'

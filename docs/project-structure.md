@@ -79,7 +79,8 @@ react-starter/
     │   │   │                  #   liveServers (socket events: each server read again, D-178)
     │   │   ├── components/    # CreateServerDialog, NoServers, ServerIcon, ServerMenuItems, RoomHeader (a study
     │   │   │                  #   room's Host chip and Ring / Grid switch); channel-list/, live-rooms/ (the Study page's
-    │   │   │                  #   rooms studying now: LiveRooms, lazy from the index, and LiveRoomRow, C-44),
+    │   │   │                  #   rooms studying now: LiveRooms, lazy from the index, and LiveRoomRow, C-44; the
+    │   │   │                  #   Solo page's friends studying, FriendsStudying, lazy from the index, D-254),
     │   │   │                  #   dialogs/ (channels, categories; RadioChoices, the radio rows of who may post / start;
     │   │   │                  #   a room's study part),
     │   │   │                  #   invites/, membership/ (leave, hand over, delete;
@@ -97,7 +98,8 @@ react-starter/
     │   │   │                  #   useInboxPlaces (the names and paths the inbox is handed),
     │   │   │                  #   useChannelChat (what the chat of a text channel or a voice room is handed),
     │   │   │                  #   useRemovedWhileAway (kicked / banned while away: the Toast of H1, run by the AppShell),
-    │   │   │                  #   useLiveRooms (the Study page's rooms in the order held while one looks, 08 Q4)
+    │   │   │                  #   useLiveRooms (the Study page's rooms in the order held while one looks, 08 Q4),
+    │   │   │                  #   useFriendsStudying (one's friends studying now, 08 S-STUDY-02)
     │   │   ├── lib/           # paths (SERVERS_PATHS and channelPath, messagePath, messageLink, invitePath,
     │   │   │                  #   serverSettingsPath, roleEditPath, isId), app-links (how a link in a message
     │   │   │                  #   shows: a message chip, "can't view", a page of the app, D-117; and a channel
@@ -107,7 +109,9 @@ react-starter/
     │   │   │                  #   membership, permissions, roles, server-name, settings-sections, typed-name,
     │   │   │                  #   channel-settings (the form of channel / room settings: schema, what is sent),
     │   │   │                  #   room-people (a room's people and study session swapped in the list),
-    │   │   │                  #   live-rooms (the rooms studying now and their order, REQ-STUDY-09, D-217)
+    │   │   │                  #   live-rooms (the rooms studying now and their order, REQ-STUDY-09, D-217, D-254),
+    │   │   │                  #   live-people (a row's people, its words), friends-studying (who of one's friends
+    │   │   │                  #   studies now, and the popover's order kept while open)
     │   │   ├── pages/         # ChannelPage (/channels/:serverId/:channelId?, and /…/:messageId: the channel
     │   │   │                  #   at a message, D-48), ServerSettingsPage
     │   │   │                  #   (/servers/:serverId/settings/…), InvitePage (/invite/:code)
@@ -465,12 +469,12 @@ Habits worth keeping:
   hands it the names of channels and servers;
   `users, realtime ← study ← voice ← servers`: the study feature knows no
   room but what it is handed (`StudyRoomView`, and the room's round control
-  as a prop), the servers feature keeps each room's session in its list from
+  as a prop; the Solo page's friends studying are the servers feature's, handed in by the page too, D-254), the servers feature keeps each room's session in its list from
   what study hears (`listenForSessions`, a port: study declares the sink,
   `liveServers.ts` hands one, D-231); `users, realtime, messaging, study ← social ← notifications`: someone's activity line counts the minutes of a phase with the study feature's clock (`useListClock`, `minutesLeft`) and names the room they are in through the `RoomLookup` port (`social/lib/room-lookup.ts`, answered by `servers/hooks/useRoomLookup.ts`, connected by the AppShell; the member panel of servers shows the same `ActivityLine`, D-252); the inbox answers a friend request with the social feature's hooks and opens a DM with "Message", the Privacy page (users) counts the people blocked through the `BlockList` port the AppShell connects (D-248) and the read states (messaging) skip their messages through the same port (D-250), and a DM's page shows the chat with the DM's parts (`dm` of `ChannelChat`, D-249), reading the links in its messages and drawing the servers of its profile panel (`server`, D-251) through the `ChatLinks` port (`social/lib/chat-links.ts`, a hook the servers feature answers with `servers/hooks/useChatLinks.ts`, connected by the AppShell; servers imports social: the channel page hands the chat whom one blocked, `useBlockedIds`, D-250); `users, realtime ← voice ← servers`: the channel page shows a room's page
   and the channel list the people in each room, the servers feature handing
   voice each room as a `VoiceRoom` (`servers/lib/voice-room.ts`), what one
-  may do there read from the bits and whom one outranks there (D-208), and keeping who is in it in its own list
+  may do there read from the bits, whom one outranks there (D-208) and who there is one's friend (`useFriendIds` of social, D-254), and keeping who is in it in its own list
   (`voice_state.updated` in `liveServers.ts`, D-205)). When the one imported
   needs the other, it declares a port and is handed it: deleting the account
   (auth) asks the servers it owns through `ServerOwnership`

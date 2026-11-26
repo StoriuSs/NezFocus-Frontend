@@ -2,23 +2,27 @@ import type { RoomPerson } from '../types'
 
 const active = (person: RoomPerson) => person.micOn || person.cameraOn || person.screenSharing
 
+const NOBODY: ReadonlySet<string> = new Set()
+
 /**
- * The order people show in a room (C-06, C-18): oneself first, then those
- * with their mic or camera on, then by who joined first (the list comes in
- * that order). Worked out when the list is first shown; after that, as C-06
- * says, people keep their places: those gone leave, newcomers go to the end
- * (oneself still first), so a mic switched on moves no one. Friends come
- * before the rest in C-06; there are none yet (M6). Around a study room's
- * ring the Host comes right after oneself (C-18), when worked out afresh.
+ * The order people show in a room (C-06, C-18): oneself first, then one's
+ * friends, then those with their mic or camera on, then by who joined first
+ * (the list comes in that order). Worked out when the list is first shown;
+ * after that, as C-06 says, people keep their places: those gone leave,
+ * newcomers go to the end (oneself still first), so a mic switched on moves
+ * no one. Around a study room's ring the Host comes right after oneself,
+ * before friends (C-18), when worked out afresh.
  *
  * `before`: the ids as last shown (none, or none still here: worked out afresh).
  * `host`: the study session's Host, if any.
+ * `friends`: one's friends (D-254).
  */
 export function orderPeople(
     people: RoomPerson[],
     me: string | undefined,
     before: readonly string[],
-    host?: string | null
+    host?: string | null,
+    friends: ReadonlySet<string> = NOBODY
 ): string[] {
     const here = new Set(people.map((person) => person.user.id))
     const kept = before.filter((id) => here.has(id))
@@ -28,6 +32,7 @@ export function orderPeople(
                   .sort(
                       (a, b) =>
                           Number(b.user.id === host) - Number(a.user.id === host) ||
+                          Number(friends.has(b.user.id)) - Number(friends.has(a.user.id)) ||
                           Number(active(b)) - Number(active(a))
                   )
                   .map((person) => person.user.id)

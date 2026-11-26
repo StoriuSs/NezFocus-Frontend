@@ -44,6 +44,8 @@ export interface VoiceRoom {
     canMove: boolean
     /** Who in the room ranks below one (never oneself, never the owner): the only people a moderator's menu shows on. */
     outranked: ReadonlySet<string>
+    /** Who in the room is one's friend, shown before the rest (C-06, C-18, D-254); null while not known yet. */
+    friends: ReadonlySet<string> | null
 }
 
 /** Finds rooms for the tab-wide hooks (`useVoiceSession`): the servers' data, handed by the app. */

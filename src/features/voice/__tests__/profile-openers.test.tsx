@@ -40,6 +40,7 @@ describe("The panel of a room's people opens their profile in the room's server 
                 hostId='an'
                 order={['an', 'nam']}
                 serverId='ot'
+                friends={null}
             />
         )
         const rows = screen.getAllByRole('listitem')

@@ -3,7 +3,7 @@ import { Timer } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { PageLoader } from '@/components/PageLoader'
 import { ShellPage } from '@/components/shell/ShellPage'
-import { useStudyingRoom } from '@/features/servers'
+import { FriendsStudying, useStudyingRoom } from '@/features/servers'
 import { SoloStage, useSoloSession } from '@/features/study'
 import { RoomControl } from '@/features/voice'
 import { PHASE_ROOM } from '@/lib/phase-colors'
@@ -14,7 +14,8 @@ import { PHASE_ROOM } from '@/lib/phase-colors'
  * M7), the stage of one's Solo, its ground the phase's while it runs or is
  * paused (`phase-*-room`, crossfading as the phase changes), `bg` otherwise.
  * Opened with no Solo it is its start (`idle`); in a room's session, why no
- * Solo starts (REQ-STUDY-05).
+ * Solo starts (REQ-STUDY-05). Under the ring, the friends studying now (the
+ * servers feature's, handed in as the round controls are, D-254).
  */
 export default function StudySolo() {
     const { t } = useTranslation()
@@ -34,7 +35,7 @@ export default function StudySolo() {
             }
         >
             <Suspense fallback={<PageLoader className='min-h-0 flex-1' />}>
-                <SoloStage Control={RoomControl} inRoom={studying?.name ?? null} />
+                <SoloStage Control={RoomControl} inRoom={studying?.name ?? null} friends={<FriendsStudying />} />
             </Suspense>
         </ShellPage>
     )

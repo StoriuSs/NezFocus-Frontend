@@ -126,7 +126,7 @@ function Stage({
                 modMuted: false
             }
     )
-    const ordered = useOrderedPeople(people, me, room.session?.hostId)
+    const ordered = useOrderedPeople(people, me, room.session?.hostId, room.friends)
     const seatFocus = useSeatFocus(seatsOf(ordered).shown.map((one) => one.user.id))
     const sharer = useHeldSharer(sharerOf([...screens.keys()], room.people.find((one) => one.screenSharing)?.user.id))
     const sharerPerson = sharer ? (people.find((one) => one.user.id === sharer) ?? listed.get(sharer)) : undefined

@@ -33,7 +33,7 @@ const ROW_MORE_FOOT = { right: 8, top: 24 }
  */
 export function RoomPeople({ room, to }: { room: VoiceRoom; to: string }) {
     const { t } = useTranslation()
-    const ordered = useOrderedPeople(room.people, useProfile().data?.id)
+    const ordered = useOrderedPeople(room.people, useProfile().data?.id, undefined, room.friends)
     const shown = ordered.slice(0, LISTED_PEOPLE)
     const more = ordered.length - shown.length
     return (
