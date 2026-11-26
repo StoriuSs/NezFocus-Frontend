@@ -29,7 +29,7 @@ import {
     useServers,
     type SettingsSection
 } from '@/features/servers'
-import { DmList, SOCIAL_PATHS, useIncomingRequestCount } from '@/features/social'
+import { CallDockSlot, DmList, SOCIAL_PATHS, useIncomingRequestCount } from '@/features/social'
 import { SOLO_PATH, SoloDockSlot, STATS_PATH } from '@/features/study'
 import { USERS_PATHS } from '@/features/users'
 import { moveFocusInList } from '@/lib/arrow-focus'
@@ -240,8 +240,8 @@ function ServerSettingsColumn({ serverId }: { serverId: string | undefined }) {
 /**
  * The 240-wide list column (`surface-1`) next to the rail. Which list it
  * shows is the route's choice, in its `handle` (ShellHandle). At its bottom,
- * the InRoomDock while in a voice room, and one's Solo's under it (C-09,
- * `column`, D-103).
+ * the InRoomDock while in a voice room or a call, and one's Solo's under it
+ * (C-09, `column`, D-103; `call` + `solo`, 09).
  */
 export function ListColumn({ className, id }: { className?: string; id?: string }) {
     const matches = useMatches()
@@ -261,6 +261,7 @@ export function ListColumn({ className, id }: { className?: string; id?: string 
             {column === 'messages' && <MessagesColumn />}
             <div className='mt-auto flex flex-col'>
                 <RoomDock shape='column' />
+                <CallDockSlot shape='column' />
                 <SoloDockSlot shape='column' />
             </div>
         </div>

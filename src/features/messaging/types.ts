@@ -122,13 +122,16 @@ export type SendBlock =
  * composer's place for someone one blocked, and whose messages are not shown
  * (that person's, system ones about them too: no "N blocked messages" in a DM);
  * told when a message is refused for the other one may no longer be written
- * to (`onRefused`, D-250), so the page reads where the DM stands again.
+ * to (`onRefused`, D-250), so the page reads where the DM stands again;
+ * how "Gọi lại" on a call's message calls again (`callBack`, C-10 `system`,
+ * D-255), none where no call may start.
  */
 export interface DmChatParts {
     intro: ReactNode
     footer?: ReactNode
     hidden?: string | null
     onRefused?: () => void
+    callBack?: (video: boolean) => void
 }
 
 export interface ChatPermissions {
@@ -250,6 +253,8 @@ export interface MessageHandlers {
     show: (messageId: string) => void
     /** A task's detail opened over the page, from its due-date reminder (05 S-TASK-01); none where no task opens. */
     showTask?: (taskId: string) => void
+    /** "Gọi lại" on a DM's call message (C-10 `system`, D-255): the same kind of call; none where no call may start. */
+    callBack?: (video: boolean) => void
     /** How a link in a message shows: null for another site. */
     readLink: (href: string) => AppLink | null
     /** The server's side of mentions: how a channel token shows, one's own roles (REQ-MSG-03). */

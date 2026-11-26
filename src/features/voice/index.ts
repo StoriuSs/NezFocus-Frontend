@@ -18,6 +18,15 @@ export const InRoomDock = lazy(() => import('./components/InRoomDock'))
 export const RoomPeopleList = lazy(() => import('./components/RoomPeopleList'))
 export { useVoiceSession } from './hooks/useVoiceSession'
 /**
+ * For a 1-1 call (social, D-255): one media link an account (D-210), so the
+ * room this tab is in is left, with no Toast, as the call starts or is
+ * answered; the browser asked for the mic before calling (D-36); the call's
+ * page switches its mic with the same shortcut (Ctrl+Shift+M).
+ */
+export { leaveRoom } from './lib/session'
+export { askMicrophone } from './lib/devices'
+export { useMicShortcut, type MicControl } from './hooks/useMicShortcut'
+/**
  * A room's round control (C-21), for the Solo page (08 S-STUDY-02): lazy, so
  * it and voice.css stay out of the shell's chunk; shown inside a Suspense.
  */

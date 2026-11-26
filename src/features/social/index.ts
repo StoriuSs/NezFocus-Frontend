@@ -41,4 +41,12 @@ export { relationshipWith } from './lib/dm-profile'
 export { isGone } from './lib/dm-chat'
 export { messagesPlace, rememberMessagesPlace } from './lib/messages-place'
 export { dmPath, friendsPath, isMessagesPath, messagesPlaceOf, SOCIAL_PATHS } from './lib/paths'
+/**
+ * 1-1 calls (09 S-CALL-01 / 02, D-255): `CallWatch`, mounted once by the
+ * AppShell (my calls kept live, the incoming card, the ring, the tab's
+ * title, a reload going back in); the call's dock (C-09 `call`), over the
+ * Solo's in the list column and the strips. The card and the dock are lazy.
+ */
+export { CallWatch } from './components/call/CallWatch'
+export { CallDockSlot } from './components/call/CallDockSlot'
 export type { ActivityUpdated, FriendsTab, PersonProfile, Relationship, SocialPerson } from './types'

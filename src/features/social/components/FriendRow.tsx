@@ -1,9 +1,15 @@
 import { useTranslation } from 'react-i18next'
-import { EllipsisVertical, MessageCircle } from 'lucide-react'
+import { EllipsisVertical, MessageCircle, Phone, Video } from 'lucide-react'
 import '@/i18n/social'
 import { Avatar, AvatarFallback, AvatarImage, AvatarInitial } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu'
 import { IconButton } from '@/components/ui/icon-button'
 import { PresenceDot } from '@/components/ui/presence-dot'
 import { WithTooltip } from '@/components/ui/tooltip'
@@ -18,6 +24,8 @@ import { Gated } from './Gated'
 export interface FriendRowActions {
     /** To the DM with a friend (09 S-DM-02 › Đi tới): the row, or its 💬. */
     onMessage: (entry: Relationship) => void
+    /** ⋯ › Gọi thoại / Gọi video (09 S-DM-02 › Đi tới): their DM and its call page `calling`. */
+    onCall: (entry: Relationship, video: boolean) => void
     onAccept: (entry: Relationship) => void
     onDecline: (entry: Relationship) => void
     onCancel: (entry: Relationship) => void
@@ -31,9 +39,10 @@ export interface FriendRowActions {
  * and the username, the second line, and the actions, always shown (09 Q7):
  * a friend's 💬 "Message" and ⋯ (Remove friend · Block); a request to me
  * Accept / Decline; mine Cancel request with its time column; someone
- * blocked Unblock. The calls of ⋯ come with the calls (D-248). Offline, the
- * actions are off with "You need a connection" (S-DM-02), but Message still
- * opens the DM. Rows are 60 high, a `border` line between them, gone around
+ * blocked Unblock. ⋯ of a friend: Gọi thoại · Gọi video · a rule · Remove
+ * friend · Block (C-30); the calls off while a call of mine goes on (`inCall`,
+ * 09 › Một cuộc gọi một lúc). Offline, the actions are off with "You need a
+ * connection" (S-DM-02), but Message still opens the DM. Rows are 60 high, a `border` line between them, gone around
  * the row hovered.
  *
  * A friend's whole row opens the DM (C-30): its name part is a button
@@ -47,12 +56,15 @@ export function FriendRow({
     entry,
     time,
     offline,
+    inCall = false,
     actions
 }: {
     entry: Relationship
     /** The time column of a request (FriendRow/pending, D-110): "19:48", "Hôm qua"… */
     time?: string
     offline: boolean
+    /** A call of mine goes on: ⋯'s calls are off. */
+    inCall?: boolean
     actions: FriendRowActions
 }) {
     const { t } = useTranslation('social')
@@ -109,7 +121,7 @@ export function FriendRow({
                 <span className='w-[84px] shrink-0 text-right text-label text-text-tertiary'>{time}</span>
             )}
             <span className='relative flex shrink-0 items-center gap-2'>
-                <Actions entry={entry} name={shownName} offline={offline} actions={actions} />
+                <Actions entry={entry} name={shownName} offline={offline} inCall={inCall} actions={actions} />
             </span>
         </li>
     )
@@ -148,11 +160,13 @@ function Actions({
     entry,
     name,
     offline,
+    inCall,
     actions
 }: {
     entry: Relationship
     name: string
     offline: boolean
+    inCall: boolean
     actions: FriendRowActions
 }) {
     const { t } = useTranslation('social')
@@ -221,6 +235,18 @@ function Actions({
                             </DropdownMenuTrigger>
                         </WithTooltip>
                         <DropdownMenuContent align='end'>
+                            <DropdownMenuItem
+                                disabled={offline || inCall}
+                                onSelect={() => actions.onCall(entry, false)}
+                            >
+                                <Phone aria-hidden='true' />
+                                {t('call.voiceCall')}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem disabled={offline || inCall} onSelect={() => actions.onCall(entry, true)}>
+                                <Video aria-hidden='true' />
+                                {t('call.videoCall')}
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
                             <DropdownMenuItem disabled={offline} onSelect={() => actions.onUnfriend(entry)}>
                                 {t('friends.unfriend')}
                             </DropdownMenuItem>

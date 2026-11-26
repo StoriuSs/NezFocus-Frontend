@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import i18n from '@/i18n'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { expectNoA11yViolations } from '@/test/a11y'
@@ -42,7 +43,7 @@ const call = (caller: typeof BINH, more: Record<string, unknown>, at = '2026-10-
     createdAt: at
 })
 
-const row = (message: Message) =>
+const row = (message: Message, onCallBack?: (video: boolean) => void) =>
     render(
         <TooltipProvider>
             <div role='log' aria-label='Tin nhắn với Bình'>
@@ -54,6 +55,7 @@ const row = (message: Message) =>
                     tabbable
                     me='an'
                     onShow={vi.fn()}
+                    onCallBack={onCallBack}
                 />
             </div>
         </TooltipProvider>
@@ -93,5 +95,28 @@ describe("a call's message in the DM (09 Q4, D-250)", () => {
         expect(icon(screen.getByRole('article', { name: 'Bình đã gọi video · dưới 1 phút, 16:45' }))).toHaveClass(
             'lucide-video'
         )
+    })
+})
+
+// C-10 `system`, D-255: "Gọi lại" on a call not answered, the same kind of call.
+describe('Gọi lại on a call message (C-10, D-255)', () => {
+    it('calls again with the same kind from a missed, refused or failed call', async () => {
+        const callBack = vi.fn()
+        const { unmount } = row(call(BINH, { status: 'missed', endReason: 'no_answer' }), callBack)
+        await userEvent.click(screen.getByRole('button', { name: 'Gọi lại' }))
+        expect(callBack).toHaveBeenCalledWith(false)
+        unmount()
+        row(call(AN, { status: 'declined', video: true }), callBack)
+        await userEvent.click(screen.getByRole('button', { name: 'Gọi lại' }))
+        expect(callBack).toHaveBeenLastCalledWith(true)
+        await expectNoA11yViolations()
+    })
+
+    it('has none on an answered call, nor where no call may start', () => {
+        const { unmount } = row(call(AN, { durationSeconds: 90 }), vi.fn())
+        expect(screen.queryByRole('button', { name: 'Gọi lại' })).toBeNull()
+        unmount()
+        row(call(BINH, { status: 'missed', endReason: 'no_answer' }))
+        expect(screen.queryByRole('button', { name: 'Gọi lại' })).toBeNull()
     })
 })

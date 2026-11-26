@@ -594,6 +594,29 @@ D-250). A message refused in a DM (CANNOT_MESSAGE_USER) is `refused`, not
 `failed`: the chat tells the page (`dm.onRefused`), which reads the list
 again. The changes are pure functions (`lib/dm-list.ts`).
 
+## Calls, kept live
+
+My calls (09 S-CALL-01 / 02, D-245, D-255) are one query, `socialKeys.call()`
+(`useMyCall`, read as the AppShell opens through `CallWatch`: `GET /me/call`,
+`{ current, incoming }`, `staleTime: Infinity`; not part of `ready`, D-242).
+`liveCalls.ts` hands every `call.ringing` / `call.updated` / `call.ended`,
+and each command's answer, to `callHeard` (`lib/call-session.ts`), which
+places the call (`withCall` of `lib/call-cache.ts`: ringing to me among
+the incoming ones, made or answered as the current one, over in neither)
+and drops a word of a call already known to be over (`stillNews`, L4a B6:
+two events of one call may come out of order). Each `ready` reads the query
+again and lets go of a call this tab held that is no longer there.
+
+What this tab does with its call is not server state: `call.store.ts`
+(Zustand) holds the call it made or answered, its phase (`calling`,
+`joining`, `connected`, `reconnecting`), its mic and camera, the LiveKit
+room, the result the page shows for a few seconds and a one-off notice
+(missed, answered in another tab) for `CallWatch` to say; the link itself
+lives in `call-session.ts`, outside React, as a voice room's does. The id
+of the call this tab holds is in its session storage (`call-keep.ts`): a
+reload goes back into it, another tab never does. `POST /dms/{id}/calls`
+is `@Idempotent` (`useCallPress` sends it through `useIdempotentMutation`).
+
 A DM's profile panel (C-50, D-251) draws the person, their dot and whether
 I may message them from the DM, where we stand from the relationships (so
 its Tag, its button and the `not-friend` strip follow every change), and

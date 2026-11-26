@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Pin, UserRound } from 'lucide-react'
@@ -14,6 +14,10 @@ import { WithTooltip } from '@/components/ui/tooltip'
 import { ChannelChat, ChatDropZone, PinsPanel, type MentionSource } from '@/features/messaging'
 import { ProfileTrigger } from '@/features/users'
 import { useDmList } from '../api/useDms'
+import { useMyCall } from '../api/useMyCall'
+import { useCallStore } from '../call.store'
+import { CallButtons } from '../components/call/CallButtons'
+import { useCallPress } from '../hooks/useCallPress'
 import { useRelationships } from '../api/useRelationships'
 import { socialKeys } from '../api/keys'
 import { ActivityLine } from '../components/ActivityLine'
@@ -32,6 +36,9 @@ import { nameOf } from '../lib/friends-list'
 import { dmMessageLink, dmMessagePath, friendsPath } from '../lib/paths'
 import type { Dm } from '../types'
 import '../social.css'
+
+/** The call's page (C-48), with LiveKit's React parts: fetched only once a call of the DM is held here. */
+const CallStage = lazy(() => import('../components/call/CallStage'))
 
 /** A message id is a UUID: anything else in `/dm/{id}/{…}` is no page. */
 const isId = (id: string | undefined): id is string =>
@@ -57,8 +64,12 @@ const isId = (id: string | undefined): id is string =>
  * list again, so the page turns `cannot-message`. While I may message
  * them and we are not friends, the `not-friend` strip under the Header
  * (D-251). Their study activity after the username and in the panel, where
- * the dot shows and they are not offline (C-07 `dm`, C-30, D-252); the calls
- * with L9.
+ * the dot shows and they are not offline (C-07 `dm`, C-30, D-252).
+ *
+ * Calls (09 S-CALL-01, D-255): Gọi thoại · Gọi video in the Header where I
+ * may message them; "Gọi lại" on a call's message. While this tab holds a
+ * call of this DM, or for the seconds its result shows, the call's page
+ * takes the content area (C-48; its chat in the right panel comes with L9b).
  */
 export default function DirectMessage() {
     const { dmId = '', messageId } = useParams()
@@ -167,6 +178,25 @@ function DmChat({ dm, messageId }: { dm: Dm; messageId?: string }) {
     }
     // The same from one render to the next: the chat tells it once per refused message, not on each new `parts`.
     const onRefused = useCallback(() => void client.refetchQueries({ queryKey: socialKeys.dms() }), [client])
+    // This tab's call of this DM, or its result: the call's page in place of the chat (C-48).
+    const onCall = useCallStore((store) => store.current?.call.dmId === dm.id || store.result?.call.dmId === dm.id)
+    // "Gọi lại" where a call may start: I may message them, online, no call of mine going on (09 S-CALL-01).
+    const inCall = useMyCall((my) => my.current !== null).data ?? false
+    const { call } = useCallPress()
+    // The call's page gone with the focus in it (its result closed): to the composer, as the strip's going does.
+    const hadCall = useRef(onCall)
+    useEffect(() => {
+        const had = hadCall.current
+        hadCall.current = onCall
+        if (!had || onCall) return
+        const focused = document.activeElement
+        if (!focused || focused === document.body) chat.current?.querySelector('textarea')?.focus()
+    }, [onCall])
+    const dmId = dm.id
+    const callBack = useMemo(
+        () => (standing === 'open' && !offline && !inCall ? (video: boolean) => void call(dmId, video) : undefined),
+        [standing, offline, inCall, call, dmId]
+    )
     const parts = useMemo(
         () => ({
             intro: <DmIntro person={person} />,
@@ -175,9 +205,10 @@ function DmChat({ dm, messageId }: { dm: Dm; messageId?: string }) {
                     <BlockedStrip name={name} offline={offline} unblocking={busy} onUnblock={unblockPerson} />
                 ) : undefined,
             hidden: standing === 'blocked-by-me' ? person.id : null,
-            onRefused
+            onRefused,
+            callBack
         }),
-        [person, standing, name, offline, busy, unblockPerson, onRefused]
+        [person, standing, name, offline, busy, unblockPerson, onRefused, callBack]
     )
 
     return (
@@ -229,15 +260,18 @@ function DmChat({ dm, messageId }: { dm: Dm; messageId?: string }) {
                     />
                 </ProfileTrigger>
             }
-            composer={standing === 'open'}
+            composer={standing === 'open' && !onCall}
             bodyClassName='flex flex-col overflow-y-hidden'
             overlay={
-                <Suspense fallback={null}>
-                    <ChatDropZone channelId={dm.id} channelName={name} dm permissions={permissions} />
-                </Suspense>
+                onCall ? undefined : (
+                    <Suspense fallback={null}>
+                        <ChatDropZone channelId={dm.id} channelName={name} dm permissions={permissions} />
+                    </Suspense>
+                )
             }
             actions={
                 <>
+                    {standing === 'open' ? <CallButtons dmId={dm.id} offline={offline} /> : null}
                     <WithTooltip label={t('dm.pins')} side='bottom'>
                         <IconButton ref={pinsButton} label={t('dm.pins')} on={pins.open} onClick={pins.toggle}>
                             <Pin />
@@ -291,7 +325,16 @@ function DmChat({ dm, messageId }: { dm: Dm; messageId?: string }) {
                     onClose={() => setConfirming(null)}
                 />
             ) : null}
-            <div ref={chat} className='flex min-h-0 flex-1 flex-col'>
+            {onCall ? (
+                <Suspense fallback={<PageLoader className='min-h-0 flex-1' />}>
+                    <CallStage person={person} name={name} />
+                </Suspense>
+            ) : null}
+            <div
+                ref={chat}
+                data-call-hidden={onCall || undefined}
+                className={onCall ? 'hidden' : 'flex min-h-0 flex-1 flex-col'}
+            >
                 {strip ? <FriendStrip kind={strip} name={name} offline={offline} moves={moves} /> : null}
                 <Suspense fallback={<PageLoader className='min-h-0 flex-1' />}>
                     <ChannelChat

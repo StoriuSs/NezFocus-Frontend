@@ -162,7 +162,8 @@
     "label": "{{text}}, {{time}}",
     "call": "<0>{{name}}</0> đã gọi",
     "videoCall": "<0>{{name}}</0> đã gọi video",
-    "you": "Bạn"
+    "you": "Bạn",
+    "callBack": "Gọi lại"
   },
   "mention": {
     "unknownUser": "@người dùng không rõ",

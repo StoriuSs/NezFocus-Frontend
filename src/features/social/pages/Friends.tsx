@@ -21,9 +21,11 @@ import { getApiErrorType } from '@/lib/api-error'
 import { useRelationships } from '../api/useRelationships'
 import { useAcceptFriendRequest, useRemoveRelationship, useUnblockPerson } from '../api/useRelationshipActions'
 import { useMessagePerson } from '../api/useDmActions'
+import { useMyCall } from '../api/useMyCall'
 import { AddFriendDialog } from '../components/AddFriendDialog'
 import { ConfirmRelationshipDialog, type ConfirmKind } from '../components/ConfirmRelationshipDialog'
 import { FriendRow, type FriendRowActions } from '../components/FriendRow'
+import { useCallPress } from '../hooks/useCallPress'
 import { countsOf, defaultTabOf, groupsOf, heldGroups, nameOf, type FriendGroup } from '../lib/friends-list'
 import { tabOf } from '../lib/paths'
 import { requestTime } from '../lib/request-time'
@@ -204,6 +206,8 @@ function FriendGroups({
     const remove = useRemoveRelationship()
     const unblock = useUnblockPerson()
     const { message } = useMessagePerson()
+    const { callPerson } = useCallPress()
+    const inCall = useMyCall((my) => my.current !== null).data ?? false
     const [confirming, setConfirming] = useState<{ kind: ConfirmKind; entry: Relationship } | null>(null)
     // Held for the list as it was shown: another tab, side or search shows its own at once.
     const view = `${tab}|${side}|${query}`
@@ -215,6 +219,7 @@ function FriendGroups({
 
     const actions: FriendRowActions = {
         onMessage: (entry) => message(entry.user.id),
+        onCall: (entry, video) => void callPerson(entry.user.id, video),
         onAccept: (entry) =>
             accept.mutate(entry.user.id, {
                 onSuccess: () => toast(t('toasts.friends', { name: nameIn(entry) })),
@@ -274,6 +279,7 @@ function FriendGroups({
                                         key={entry.user.id}
                                         entry={entry}
                                         offline={offline}
+                                        inCall={inCall}
                                         actions={actions}
                                         time={
                                             tab === 'pending' && entry.since

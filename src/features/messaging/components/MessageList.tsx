@@ -227,6 +227,7 @@ export function MessageList({
                                             me={handlers.me}
                                             onShow={handlers.show}
                                             onShowTask={handlers.showTask}
+                                            onCallBack={handlers.callBack}
                                         />
                                     ) : (
                                         <MessageRow

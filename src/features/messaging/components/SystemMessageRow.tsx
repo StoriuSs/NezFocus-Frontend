@@ -90,8 +90,10 @@ export const isShownSystem = (message: Message) =>
  *
  * A DM's call (09 Q4, D-250): "**Bình** đã gọi · Cuộc gọi nhỡ", "**Bạn** đã
  * gọi video · 12 phút"; "phone-missed" in `danger` for a missed one,
- * "phone-off" refused or failed, "phone" / "video" answered. "Gọi lại" comes
- * with the calls (L9).
+ * "phone-off" refused or failed, "phone" / "video" answered; one not
+ * answered (missed, refused, never connected) ends with Button `text · S`
+ * "Gọi lại", the same kind of call (C-10, D-255), where a call may start
+ * (`onCallBack`).
  *
  * A due-date reminder (05 S-TASK-01 › Tin nhắc hạn): "Còn 24 giờ tới hạn:
  * {task} · An, Chi · Hôm qua 23:59" and Button `text · S` "Xem việc", which
@@ -110,7 +112,8 @@ export const SystemMessageRow = memo(function SystemMessageRow({
     tabbable,
     me,
     onShow,
-    onShowTask
+    onShowTask,
+    onCallBack
 }: {
     rowKey: string
     message: Message
@@ -122,6 +125,8 @@ export const SystemMessageRow = memo(function SystemMessageRow({
     onShow: (messageId: string) => void
     /** A task's detail opened on this page (`?task=`, 05 Q6); left out where none can open. */
     onShowTask?: (taskId: string) => void
+    /** "Gọi lại" on a DM's call message not answered (D-255); left out where no call may start. */
+    onCallBack?: (video: boolean) => void
 }) {
     const { t } = useTranslation('messaging')
     const { t: common } = useTranslation()
@@ -226,6 +231,20 @@ export const SystemMessageRow = memo(function SystemMessageRow({
                         </>
                     ) : null}{' '}
                     {moment('text-label text-text-tertiary')}
+                    {call && call.outcome !== 'ended' && onCallBack ? (
+                        <>
+                            {' '}
+                            <Button
+                                variant='text'
+                                size='sm'
+                                onClick={() => onCallBack(call.video)}
+                                // A shade over the hovered row's surface-1, as C-01 `text` is over the page.
+                                className='h-7 px-3 align-middle hover:bg-surface-2'
+                            >
+                                {t('system.callBack')}
+                            </Button>
+                        </>
+                    ) : null}
                 </p>
             )}
         </article>

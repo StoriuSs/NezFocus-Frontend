@@ -139,5 +139,71 @@
         "none": "Bạn và {{name}} chưa là bạn bè",
         "outgoing": "Đã gửi lời mời kết bạn cho {{name}}",
         "incoming": "{{name}} muốn kết bạn"
+    },
+    "call": {
+        "voiceCall": "Gọi thoại",
+        "videoCall": "Gọi video",
+        "inCall": "Bạn đang trong một cuộc gọi",
+        "inCallWith": "Bạn đang trong cuộc gọi với {{name}}",
+        "inThisCall": "Bạn đang trong cuộc gọi này",
+        "calling": "Đang gọi…",
+        "callingVideo": "Đang gọi video…",
+        "connecting": "Đang kết nối…",
+        "reconnecting": "Đang kết nối lại…",
+        "voiceKind": "Cuộc gọi thoại",
+        "videoKind": "Cuộc gọi video",
+        "you": "Bạn",
+        "region": "Cuộc gọi với {{name}}",
+        "connected": "Đã kết nối với {{name}}",
+        "result": {
+            "declined": "Cuộc gọi bị từ chối",
+            "busy": "{{name}} đang bận",
+            "noAnswer": "{{name}} không trả lời",
+            "dropped": "Mất kết nối",
+            "failed": "Không kết nối được",
+            "ended": "Cuộc gọi đã kết thúc"
+        },
+        "callAgain": "Gọi lại",
+        "close": "Đóng",
+        "mic": "Mic",
+        "camera": "Camera",
+        "minimize": "Thu nhỏ",
+        "end": "Kết thúc",
+        "cancel": "Hủy",
+        "micOn": "Bật mic (Ctrl Shift M)",
+        "micOff": "Tắt mic (Ctrl Shift M)",
+        "micBlocked": "Trình duyệt đang chặn mic",
+        "cameraOn": "Bật camera",
+        "cameraOff": "Tắt camera",
+        "cameraBlocked": "Trình duyệt đang chặn camera",
+        "minimizeHint": "Thu nhỏ cuộc gọi",
+        "endHint": "Kết thúc cuộc gọi",
+        "cancelHint": "Hủy cuộc gọi",
+        "micMuted": "{{name}} đang tắt mic",
+        "speaking": "{{name}} đang nói",
+        "incoming": {
+            "region": "Cuộc gọi đến",
+            "voice": "Cuộc gọi thoại đến",
+            "video": "Cuộc gọi video đến",
+            "announce": "{{name}} đang gọi, cuộc gọi thoại",
+            "announceVideo": "{{name}} đang gọi, cuộc gọi video",
+            "decline": "Từ chối",
+            "accept": "Nghe",
+            "acceptVideo": "Nghe có video"
+        },
+        "ringingTitle": "{{name}} đang gọi",
+        "toasts": {
+            "missed": "Cuộc gọi nhỡ từ {{name}}",
+            "openDm": "Mở tin nhắn",
+            "answeredElsewhere": "Đã nghe máy ở tab khác",
+            "cannotCall": "Không thể gọi cho người dùng này",
+            "micBlocked": "Trình duyệt đang chặn mic nên chưa gọi được.",
+            "micBlockedAnswer": "Trình duyệt đang chặn mic nên chưa nghe máy được.",
+            "overAway": "Cuộc gọi với {{name}} đã kết thúc · {{clock}}"
+        },
+        "dock": {
+            "region": "Đang gọi",
+            "open": "Mở cuộc gọi với {{name}}"
+        }
     }
 }

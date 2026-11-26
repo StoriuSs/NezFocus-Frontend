@@ -19,6 +19,10 @@ export const friendsPath = (tab?: FriendsTab) => (tab ? `${SOCIAL_PATHS.friends}
 /** `/dm/{id}`. */
 export const dmPath = (dmId: string) => `/dm/${dmId}`
 
+/** Whether `pathname` is a DM's page: the DM, or one of its messages (`/dm/{id}/{message}`). */
+export const isDmPage = (pathname: string, dmId: string) =>
+    pathname === dmPath(dmId) || pathname.startsWith(`${dmPath(dmId)}/`)
+
 /** `/dm/{id}/{message}`. */
 export const dmMessagePath = (dmId: string, messageId: string) => `${dmPath(dmId)}/${messageId}`
 

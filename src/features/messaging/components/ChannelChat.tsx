@@ -237,6 +237,7 @@ export default function ChannelChat({
     // A message refused in a DM (CANNOT_MESSAGE_USER): the page reads where the DM stands again (D-250).
     const refused = messages.some((message) => isOutgoing(message) && message.state === 'refused')
     const onRefused = dm?.onRefused
+    const callBack = dm?.callBack
     useEffect(() => {
         if (refused) onRefused?.()
     }, [refused, onRefused])
@@ -334,6 +335,7 @@ export default function ChannelChat({
             unpin: (message) => unpin(message.id),
             show: jump.show,
             showTask,
+            callBack,
             readLink,
             mentions,
             openFile: (message, file, from) => setViewing({ messageId: message.id, fileId: file.id, from, open: true })
@@ -352,6 +354,7 @@ export default function ChannelChat({
             unpin,
             jump.show,
             showTask,
+            callBack,
             readLink
         ]
     )

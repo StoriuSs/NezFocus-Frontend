@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { renderHook } from '@testing-library/react'
-import { useDocumentTitle, useTitleClock, useTitleCount } from '../useDocumentTitle'
+import { useDocumentTitle, useTitleClock, useTitleCount, useTitleRing } from '../useDocumentTitle'
 
 describe('useDocumentTitle (X-01)', () => {
     it('shows the page with the product after it, and the product alone once the page closes', () => {
@@ -51,5 +51,25 @@ describe('useDocumentTitle (X-01)', () => {
         expect(document.title).toBe('(2) Page not found · NezFocus')
         count.unmount()
         page.unmount()
+    })
+})
+
+// 09 S-CALL-02 Q12, D-255: a call ringing comes first, over the session's clock too.
+describe('useTitleRing', () => {
+    it('shows who calls in place of the clock and the page, the count first, and gives them back', () => {
+        const page = renderHook(() => useDocumentTitle('Học'))
+        const count = renderHook(() => useTitleCount(3))
+        const clock = renderHook(() => useTitleClock('18:42 · Tập trung'))
+        const ring = renderHook(({ text }: { text: string | null }) => useTitleRing(text), {
+            initialProps: { text: 'Tuấn đang gọi' as string | null }
+        })
+        expect(document.title).toBe('(3) Tuấn đang gọi · NezFocus')
+        ring.rerender({ text: null })
+        expect(document.title).toBe('(3) 18:42 · Tập trung · NezFocus')
+        ring.unmount()
+        clock.unmount()
+        count.unmount()
+        page.unmount()
+        expect(document.title).toBe('NezFocus')
     })
 })

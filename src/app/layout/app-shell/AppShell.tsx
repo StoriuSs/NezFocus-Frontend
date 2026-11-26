@@ -19,6 +19,8 @@ import { useServerGoneWatch } from '@/features/servers/hooks/useServerGoneWatch'
 import { serverOwnership } from '@/features/servers/api/serverOwnership'
 import { connectServerOwnership } from '@/features/auth'
 import {
+    CallDockSlot,
+    CallWatch,
     connectChatLinks,
     connectRoomLookup,
     friendsPath,
@@ -225,8 +227,9 @@ export default function AppShell() {
                         </ErrorBoundary>
                     </main>
                 </div>
-                {/* Below 1024 the list column is a sheet: the docks are strips across the window, a room's over a Solo's (C-09). */}
+                {/* Below 1024 the list column is a sheet: the docks are strips across the window, a room's or a call's over a Solo's (C-09). */}
                 <RoomDock shape='strip' />
+                <CallDockSlot shape='strip' />
                 <SoloDockSlot shape='strip' />
             </div>
             {/* The tab's title, the phase sound and the streak toast of the session one is in, on every page (07 S-ROOM-05). */}
@@ -235,6 +238,8 @@ export default function AppShell() {
             <ProfileDialogs />
             {/* One's Solo: its title, sound and streak toast while it runs, its toast as it ends (08 S-STUDY-02). */}
             <SoloWatch />
+            {/* 1-1 calls on every page: the incoming card, the ring, the tab's title, a reload going back in (09, D-255). */}
+            <CallWatch />
             {creatingServer ? (
                 <Suspense fallback={null}>
                     <CreateServerDialog />

@@ -70,3 +70,20 @@ export interface DmUpdated {
     dm: Dm
     shown: boolean
 }
+
+/**
+ * A 1-1 call as I see it (REQ-SOCIAL-05, D-242, D-245): `user` is the other
+ * one; `status` `ringing` → `active` → `ended`, or `declined` / `missed`
+ * (`end_reason` `no_answer` / `cancelled` / `busy`) / `failed`. A command
+ * that came late answers the call as it is: read `status`, not the HTTP code.
+ */
+export type Call = ApiModel<'CallResponseDto'>
+/** `GET /me/call`: the call I make or am in, and the ones ringing to me (two at most, oldest first). */
+export type MyCall = ApiModel<'MyCallResponseDto'>
+/** `POST /calls/{id}/join`: the call, and LiveKit's address and token while it is `active` (D-246). */
+export type CallJoin = ApiModel<'JoinCallResponseDto'>
+
+/** `call.ringing` / `call.updated` / `call.ended` (SRS 5.2): the call as I see it. */
+export interface CallChanged {
+    call: Call
+}

@@ -162,7 +162,8 @@
     "label": "{{text}}, {{time}}",
     "call": "<0>{{name}}</0> called",
     "videoCall": "<0>{{name}}</0> made a video call",
-    "you": "You"
+    "you": "You",
+    "callBack": "Call back"
   },
   "mention": {
     "unknownUser": "@unknown user",

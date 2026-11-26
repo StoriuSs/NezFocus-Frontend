@@ -4,11 +4,12 @@ import { siteConfig } from '@/config/site'
 // One tab title for the whole app: the page's part, the session's clock and the unread number, set from different places.
 let page: string | null = null
 let clock: string | null = null
+let ring: string | null = null
 let count = 0
 
 function show() {
-    // The session one is in takes the page's place, on every page (07 S-ROOM-05, X-01).
-    const part = clock ?? page
+    // A call ringing, then the session one is in, take the page's place, on every page (07 S-ROOM-05, X-01, 09 Q12).
+    const part = ring ?? clock ?? page
     const title = part === null ? siteConfig.name : `${part} · ${siteConfig.name}`
     document.title = count > 0 ? `(${count > 99 ? '99+' : count}) ${title}` : title
 }
@@ -64,4 +65,20 @@ export function useTitleClock(text: string | null): void {
         },
         []
     )
+}
+
+/**
+ * A call ringing to one (09 S-CALL-02 Q12, D-255): "(3) Tuấn đang gọi ·
+ * NezFocus", in place of the page and of the session's clock, the unread
+ * number still first; `null` once the card closes: as before.
+ */
+export function useTitleRing(text: string | null): void {
+    useEffect(() => {
+        ring = text
+        show()
+        return () => {
+            ring = null
+            show()
+        }
+    }, [text])
 }

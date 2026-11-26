@@ -12,5 +12,7 @@ export const socialKeys = {
     /** The people a DM's composer suggests after @: the other one (D-238). */
     dmMentions: (dmId: string, query: string) => [...socialKeys.all, 'dm-mentions', dmId, query] as const,
     /** The roles a DM's composer suggests: none (D-238), as a query the chat's MentionSource takes. */
-    dmRoles: () => [...socialKeys.all, 'dm-roles'] as const
+    dmRoles: () => [...socialKeys.all, 'dm-roles'] as const,
+    /** The call I make or am in and the ones ringing to me (`GET /me/call`, D-245), kept live by `call.*`. */
+    call: () => [...socialKeys.all, 'call'] as const
 }

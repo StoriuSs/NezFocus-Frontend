@@ -139,5 +139,71 @@
         "none": "You and {{name}} aren't friends",
         "outgoing": "Friend request sent to {{name}}",
         "incoming": "{{name}} wants to be friends"
+    },
+    "call": {
+        "voiceCall": "Voice call",
+        "videoCall": "Video call",
+        "inCall": "You are in another call",
+        "inCallWith": "You are in a call with {{name}}",
+        "inThisCall": "You are in this call",
+        "calling": "Calling…",
+        "callingVideo": "Video calling…",
+        "connecting": "Connecting…",
+        "reconnecting": "Reconnecting…",
+        "voiceKind": "Voice call",
+        "videoKind": "Video call",
+        "you": "You",
+        "region": "Call with {{name}}",
+        "connected": "Connected with {{name}}",
+        "result": {
+            "declined": "Call declined",
+            "busy": "{{name}} is busy",
+            "noAnswer": "{{name}} did not answer",
+            "dropped": "Connection lost",
+            "failed": "Could not connect",
+            "ended": "Call ended"
+        },
+        "callAgain": "Call again",
+        "close": "Close",
+        "mic": "Mic",
+        "camera": "Camera",
+        "minimize": "Minimize",
+        "end": "End",
+        "cancel": "Cancel",
+        "micOn": "Unmute (Ctrl Shift M)",
+        "micOff": "Mute (Ctrl Shift M)",
+        "micBlocked": "The browser is blocking the microphone",
+        "cameraOn": "Turn camera on",
+        "cameraOff": "Turn camera off",
+        "cameraBlocked": "The browser is blocking the camera",
+        "minimizeHint": "Minimize the call",
+        "endHint": "End the call",
+        "cancelHint": "Cancel the call",
+        "micMuted": "{{name}} is muted",
+        "speaking": "{{name}} is speaking",
+        "incoming": {
+            "region": "Incoming call",
+            "voice": "Incoming voice call",
+            "video": "Incoming video call",
+            "announce": "{{name}} is calling, voice call",
+            "announceVideo": "{{name}} is calling, video call",
+            "decline": "Decline",
+            "accept": "Answer",
+            "acceptVideo": "Answer with video"
+        },
+        "ringingTitle": "{{name}} is calling",
+        "toasts": {
+            "missed": "Missed call from {{name}}",
+            "openDm": "Open messages",
+            "answeredElsewhere": "Answered in another tab",
+            "cannotCall": "You cannot call this user",
+            "micBlocked": "The browser is blocking the microphone, so the call was not made.",
+            "micBlockedAnswer": "The browser is blocking the microphone, so the call was not answered.",
+            "overAway": "Call with {{name}} ended · {{clock}}"
+        },
+        "dock": {
+            "region": "In a call",
+            "open": "Open the call with {{name}}"
+        }
     }
 }
